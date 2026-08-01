@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
+import { FormationRoster } from './components/FormationRoster';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import {
@@ -69,7 +71,7 @@ export default function App() {
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">PHASE V / CONCURRENT OPERATIONS</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VI / FORCE ORGANISATION</p><h1>FUTURE CONQUEST</h1></div>
       <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
     </header>
 
@@ -92,15 +94,11 @@ export default function App() {
       </div>
 
       <aside className="command-panel">
-        <section className="task-groups">
-          <p className="panel-label">TASK GROUPS</p>
-          <div className="task-group-list">
-            {groups.length ? groups.map(group => <button key={group.id} className={group.id === selectedGroup?.id ? 'active' : ''} onClick={() => setState(current => selectTaskGroup(current, group.id))}>
-              <span><strong>{group.name}</strong><small>{TERRITORIES[group.location].centre} · {group.status}</small></span>
-              <span className="group-stats"><b>{formatNumber(group.personnel)}</b><small>{group.supply}% supply</small></span>
-            </button>) : <p>No coherent task groups remain.</p>}
-          </div>
-        </section>
+        <FormationRoster
+          state={state}
+          selectedGroup={selectedGroup}
+          onSelect={id => setState(current => selectTaskGroup(current, id))}
+        />
 
         <section className="active-operations">
           <p className="panel-label">ACTIVE OPERATIONS</p>
@@ -131,6 +129,8 @@ export default function App() {
             </dl>
           </> : <><h2>No formation available</h2><p className="centre">The expedition can no longer issue operational orders.</p></>}
         </section>
+
+        <ForceOrganisationPanel state={state} selectedGroup={selectedGroup} onChange={setState} />
 
         <section className="territory-card">
           <p className="panel-label">MAP INTELLIGENCE</p>

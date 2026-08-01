@@ -1,4 +1,5 @@
 import { SLICE_IDS, TERRITORIES } from './data';
+import { occupationRequirement } from './formation-organisation';
 import type {
   Difficulty,
   EnemyFormation,
@@ -9,8 +10,9 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.3';
-const LEGACY_SAVE_KEY = 'future-conquest-slice-v0.2';
+const SAVE_KEY = 'future-conquest-slice-v0.4';
+const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
+const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const randomFor = (seed: number, turn: number, salt: number) => {
   let value = (seed + turn * 99991 + salt * 7919) >>> 0;
@@ -37,8 +39,10 @@ function addEvent(state: GameState, text: string, tone: GameEvent['tone']): Game
   return { ...state, events: [next, ...state.events].slice(0, 100) };
 }
 
+const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);
+
 export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
-  return Boolean(group && !group.order && (group.status === 'ready' || group.status === 'garrison'));
+  return Boolean(group && group.personnel > 0 && !group.order && (group.status === 'ready' || group.status === 'garrison'));
 }
 
 export function getOperationForGroup(state: GameState, groupId: string): Operation | undefined {
@@ -52,13 +56,13 @@ export function getOperationAtTarget(state: GameState, territoryId: string): Ope
 
 function suppliedTerritories(state: GameState): Set<string> {
   const supplied = new Set<string>();
-  if (state.territories[state.portalTerritory]?.controller !== 'player') return supplied;
+  if (state.territories[state.portalTerritory]?.controller !== 'player' || state.territories[state.portalTerritory]?.occupation === 'unsecured') return supplied;
   const queue = [state.portalTerritory];
   supplied.add(state.portalTerritory);
   while (queue.length) {
     const current = queue.shift()!;
     for (const neighbour of TERRITORIES[current].neighbours) {
-      if (!supplied.has(neighbour) && state.territories[neighbour]?.controller === 'player') {
+      if (!supplied.has(neighbour) && state.territories[neighbour]?.controller === 'player' && state.territories[neighbour]?.occupation !== 'unsecured') {
         supplied.add(neighbour);
         queue.push(neighbour);
       }
@@ -74,7 +78,7 @@ function refreshSupply(state: GameState): GameState {
   const personnel = Object.values(state.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
   const capacity = [...connected].reduce((sum, id) => {
     const territory = territories[id];
-    const occupationFactor = territory.occupation === 'administered' ? 1 : territory.occupation === 'controlled' ? 0.72 : 0.42;
+    const occupationFactor = territory.occupation === 'unsecured' ? 0 : territory.occupation === 'administered' ? 1 : territory.occupation === 'controlled' ? 0.72 : 0.42;
     return sum + TERRITORIES[id].supply * occupationFactor;
   }, 0);
   const supply = clamp(Math.round((capacity * 1150) / Math.max(1, personnel) * 100), 12, 100);
@@ -127,7 +131,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     capturedTurn: id === portalTerritory ? 1 : undefined
   }])) as Record<string, TerritoryState>;
   const state: GameState = {
-    version: 3,
+    version: 4,
     seed,
     difficulty,
     turn: 1,
@@ -309,6 +313,7 @@ function operationParticipants(state: GameState, operation: Operation): TaskGrou
     .map(id => state.taskGroups[id])
     .filter((group): group is TaskGroup => Boolean(
       group &&
+      group.personnel > 0 &&
       group.status === 'attacking' &&
       group.order?.type === 'attack' &&
       group.order.operationId === operation.id
@@ -357,7 +362,7 @@ function resolveOperations(state: GameState): GameState {
     const defender = enemyStrengthAt(next, operation.target);
     operation.enemyPower = defender.power;
     const individualPowers = participants.map((group, index) => (
-      (group.personnel / 1000 * 4.1 + group.functionalArmour / 1000 * 1.9)
+      (group.personnel / 1000 * 4.1 + deployableArmour(group) / 1000 * 1.9)
       * (0.58 + group.morale / 150)
       * (0.55 + group.supply / 190)
       * (0.9 + randomFor(next.seed, next.turn, saltFor(operation.id) + index * 17) * 0.22)
@@ -387,11 +392,15 @@ function resolveOperations(state: GameState): GameState {
       totalKilled += killed;
       totalWounded += wounded;
 
-      const armourDamage = Math.min(group.functionalArmour, Math.max(2, Math.round(group.functionalArmour * (ratio < 1 ? 0.018 : 0.009))));
+      const exposedArmour = deployableArmour(group);
+      const armourDamage = Math.min(
+        group.functionalArmour,
+        Math.max(exposedArmour > 0 ? 1 : 0, Math.round(exposedArmour * (ratio < 1 ? 0.018 : 0.009)))
+      );
       group.functionalArmour -= armourDamage;
       group.damagedArmour += armourDamage;
       remainingPersonnel += group.personnel;
-      remainingArmour += group.functionalArmour;
+      remainingArmour += deployableArmour(group);
       if (group.order) group.order.progress = operation.progress;
     }
 
@@ -402,11 +411,14 @@ function resolveOperations(state: GameState): GameState {
     const remainingDefenders = operation.enemyFormationIds.reduce((sum, id) => sum + (enemyFormations[id]?.personnel ?? 0), 0);
     if (operation.progress >= 100 || remainingDefenders < 220) {
       const territory = territories[operation.target];
+      const requiredPresence = occupationRequirement(operation.target);
+      const secured = remainingPersonnel >= requiredPresence;
       territory.controller = 'player';
-      territory.occupation = 'contested';
-      territory.legitimacy = 46;
-      territory.resistance = 42;
+      territory.occupation = secured ? 'contested' : 'unsecured';
+      territory.legitimacy = secured ? 46 : 18;
+      territory.resistance = secured ? 42 : 72;
       territory.fortification = 0;
+      territory.supplied = false;
       territory.capturedTurn = next.turn;
       for (const group of participants) {
         group.location = operation.target;
@@ -419,8 +431,10 @@ function resolveOperations(state: GameState): GameState {
       delete operations[operationId];
       next = addEvent(
         next,
-        `${TERRITORIES[operation.target].centre} has fallen to ${participants.map(group => group.name).join(' and ')}. Remaining defenders withdrew; occupation is unstable.`,
-        'good'
+        secured
+          ? `${TERRITORIES[operation.target].centre} has fallen to ${participants.map(group => group.name).join(' and ')}. Remaining defenders withdrew; occupation is unstable.`
+          : `${TERRITORIES[operation.target].centre} has been seized by ${participants.map(group => group.name).join(' and ')}. Only ${remainingPersonnel} personnel remain against an occupation requirement of ${requiredPresence}; the province is unsecured.`,
+        secured ? 'good' : 'warning'
       );
     } else if (operation.progress <= -70 || operation.days >= 8 || remainingPersonnel < 420) {
       for (const group of participants) {
@@ -457,6 +471,27 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
     const garrisonPower = Object.values(taskGroups)
       .filter(group => group.location === id && group.status === 'garrison')
       .reduce((sum, group) => sum + group.personnel / 1000, 0);
+    const localPresence = Object.values(taskGroups)
+      .filter(group => group.location === id && group.status !== 'moving' && group.status !== 'attacking')
+      .reduce((sum, group) => sum + group.personnel, 0);
+    if (territory.occupation === 'unsecured') {
+      const requiredPresence = occupationRequirement(id);
+      if (localPresence >= requiredPresence) {
+        territory.occupation = 'contested';
+        territory.capturedTurn = next.turn;
+        territory.legitimacy = Math.max(territory.legitimacy, 34);
+        territory.resistance = Math.min(territory.resistance, 58);
+        next = addEvent(next, `${TERRITORIES[id].centre} now has ${localPresence} personnel against an occupation requirement of ${requiredPresence}; territorial control is being established.`, 'good');
+      } else {
+        territory.legitimacy = clamp(territory.legitimacy - 1.2, 0, 100);
+        territory.resistance = clamp(territory.resistance + 1.5, 0, 100);
+        territory.fortification = 0;
+        if ((next.turn - (territory.capturedTurn ?? next.turn)) % 3 === 0) {
+          next = addEvent(next, `${TERRITORIES[id].centre} remains unsecured: ${localPresence} personnel present, ${requiredPresence} required.`, 'warning');
+        }
+        continue;
+      }
+    }
     territory.legitimacy = clamp(territory.legitimacy + (territory.supplied ? 0.45 : -0.4) + garrisonPower * 0.4, 0, 100);
     territory.resistance = clamp(territory.resistance - (territory.supplied ? 0.32 : -0.8) - garrisonPower * 0.7, 0, 100);
     territory.fortification = clamp(territory.fortification + garrisonPower * 0.55, 0, 45);
@@ -538,7 +573,7 @@ function pruneOperations(state: GameState): GameState {
   for (const [operationId, operation] of Object.entries(operations)) {
     operation.participantGroupIds = operation.participantGroupIds.filter(groupId => {
       const group = state.taskGroups[groupId];
-      return Boolean(group && group.status === 'attacking' && group.order?.operationId === operationId);
+      return Boolean(group && group.personnel > 0 && group.status === 'attacking' && group.order?.operationId === operationId);
     });
     for (const groupId of Object.keys(operation.origins)) {
       if (!operation.participantGroupIds.includes(groupId)) delete operation.origins[groupId];
@@ -555,7 +590,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
   if (!frontier.length) return state;
   frontier.sort((a, b) => {
-    const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + group.functionalArmour * 0.25, 0) + state.territories[id].fortification * 80;
+    const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + deployableArmour(group) * 0.25, 0) + state.territories[id].fortification * 80;
     return defence(a) - defence(b);
   });
   const target = frontier[0];
@@ -565,7 +600,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   formations.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
   const attacker = formations[0];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
-  const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + group.functionalArmour / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
+  const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' && group.personnel > 0 ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
   const attackerPower = (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150) * difficultyRules[state.difficulty].enemy;
   const roll = 0.84 + randomFor(state.seed, state.turn, 919) * 0.34;
   const enemyFormations = structuredClone(state.enemyFormations);
@@ -642,9 +677,10 @@ export function endTurn(state: GameState): GameState {
   next = syncOperationDefenders(next);
   next = refreshSupply(next);
   const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
+  const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
   next.escalation = clamp(Math.max(3 + controlled * 2.35, next.escalation - 0.08), 0, 100);
   const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
-  if (controlled === SLICE_IDS.length) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are under future control. Regional victory achieved.', 'good');
+  if (controlled === SLICE_IDS.length && unsecured === 0) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
   else if (personnel < 1200 || next.territories[next.portalTerritory].controller !== 'player') next = addEvent({ ...next, status: 'defeat' }, 'The expedition has lost operational cohesion or access to the portal.', 'danger');
   return next;
 }
@@ -684,8 +720,10 @@ function migrateLegacyGame(parsed: LegacyGameState): GameState {
     if (group?.order?.type === 'attack') group.order.operationId = operationId;
   }
   const { battle: _battle, ...withoutBattle } = parsed;
-  return { ...withoutBattle, version: 3, taskGroups, operations };
+  return { ...withoutBattle, version: 4, taskGroups, operations };
 }
+
+type LegacyV3GameState = Omit<GameState, 'version'> & { version: 3 };
 
 export function saveGame(state: GameState) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -695,9 +733,18 @@ export function loadGame(): GameState | null {
   const current = localStorage.getItem(SAVE_KEY);
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
-    if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return parsed as GameState;
+    if (parsed.version === 4 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return parsed as GameState;
   }
-  const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
+
+  const prior = localStorage.getItem(LEGACY_V3_SAVE_KEY);
+  if (prior) {
+    const parsed = JSON.parse(prior) as Partial<LegacyV3GameState>;
+    if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) {
+      return { ...(parsed as LegacyV3GameState), version: 4 };
+    }
+  }
+
+  const legacy = localStorage.getItem(LEGACY_V2_SAVE_KEY);
   if (!legacy) return null;
   const parsed = JSON.parse(legacy) as Partial<LegacyGameState>;
   if (parsed.version !== 2 || !parsed.taskGroups || !parsed.enemyFormations) return null;
@@ -705,6 +752,7 @@ export function loadGame(): GameState | null {
 }
 
 export const __testOnly = {
+  deployableArmour,
   refreshSupply,
   resolveOperations,
   pruneOperations,
