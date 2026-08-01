@@ -1,5 +1,6 @@
 import geojson from '../assets/vertical-slice-map.json';
 import { SLICE_IDS, TERRITORIES } from '../game/data';
+import { getAdjacentOrderTargets } from '../game/order-targeting';
 import type { GameState } from '../game/types';
 
 interface Props {
@@ -29,6 +30,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
     if (formation.personnel > 0) result[formation.location] = (result[formation.location] ?? 0) + 1;
     return result;
   }, {});
+  const adjacentTargets = new Set(getAdjacentOrderTargets(state));
 
   return <svg className="map" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="North-western Europe campaign map">
     <defs>
@@ -42,12 +44,25 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       const selected = state.selectedTerritory === id;
       const targeted = state.targetTerritory === id;
       const active = state.battle?.target === id;
-      return <path key={id} d={geometryPath(feature.geometry)} onClick={() => onSelect(id)} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
+      const reachable = adjacentTargets.has(id) && !selected && !targeted && !active;
+      const reachStyle = reachable ? {
+        stroke: territory.controller === 'enemy' ? '#ffb45c' : '#8ff9ed',
+        strokeWidth: 3,
+        strokeDasharray: '8 5'
+      } : undefined;
+      return <path key={id} d={geometryPath(feature.geometry)} onClick={() => onSelect(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
     })}
     {features.map((feature: any) => {
       const id = feature.properties.territory_id as string;
       const [x, y] = anchors[id];
-      return <g key={`${id}-label`} className="map-label" onClick={() => onSelect(id)}><circle cx={x} cy={y - 8} r="3" /><text x={x} y={y + 8}>{TERRITORIES[id].centre}</text>{!state.territories[id].supplied && state.territories[id].controller === 'player' && <text className="isolated-label" x={x} y={y + 23}>ISOLATED</text>}</g>;
+      const reachable = adjacentTargets.has(id);
+      const action = state.territories[id].controller === 'enemy' ? 'ATTACK' : 'MOVE';
+      return <g key={`${id}-label`} className="map-label" onClick={() => onSelect(id)}>
+        {reachable && <text x={x} y={y - 25} style={{ fill: state.territories[id].controller === 'enemy' ? '#ffb45c' : '#8ff9ed', fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '1px', textAnchor: 'middle', paintOrder: 'stroke', stroke: '#07131c', strokeWidth: 3 }}>{action}</text>}
+        <circle cx={x} cy={y - 8} r="3" />
+        <text x={x} y={y + 8}>{TERRITORIES[id].centre}</text>
+        {!state.territories[id].supplied && state.territories[id].controller === 'player' && <text className="isolated-label" x={x} y={y + 23}>ISOLATED</text>}
+      </g>;
     })}
     {Object.entries(enemyCounts).map(([territoryId, count]) => {
       const [x, y] = anchors[territoryId];
