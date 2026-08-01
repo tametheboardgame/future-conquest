@@ -1,0 +1,85 @@
+{
+  "version": "0.1",
+  "purpose": "Test independent contemporary formations as persistent campaign units across every portal start and army setting.",
+  "run_count": 1212,
+  "summaries": [
+    {
+      "mode": "campaign",
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 63,
+      "completion_day_p10": 60,
+      "completion_day_p90": 68,
+      "within_target_rate_percent": 92.7,
+      "territories_controlled_median": 101,
+      "modern_formations_raised_median": 139,
+      "modern_led_victories_median": 50,
+      "order_refusals_median": 79,
+      "defections_median": 1,
+      "modern_killed_median": 6845,
+      "future_killed_median": 272,
+      "lowest_supply_percent_median": 30
+    },
+    {
+      "mode": "standard",
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 100,
+      "completion_day_p10": 92,
+      "completion_day_p90": 108,
+      "within_target_rate_percent": 98.3,
+      "territories_controlled_median": 101,
+      "modern_formations_raised_median": 144,
+      "modern_led_victories_median": 69,
+      "order_refusals_median": 45,
+      "defections_median": 0,
+      "modern_killed_median": 9642,
+      "future_killed_median": 157,
+      "lowest_supply_percent_median": 60
+    },
+    {
+      "mode": "veteran",
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 167,
+      "completion_day_p10": 153,
+      "completion_day_p90": 181,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "modern_formations_raised_median": 147,
+      "modern_led_victories_median": 80,
+      "order_refusals_median": 34,
+      "defections_median": 0,
+      "modern_killed_median": 11966,
+      "future_killed_median": 91,
+      "lowest_supply_percent_median": 100
+    },
+    {
+      "mode": "desperate",
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 265,
+      "completion_day_p10": 244,
+      "completion_day_p90": 283,
+      "within_target_rate_percent": 99.7,
+      "territories_controlled_median": 101,
+      "modern_formations_raised_median": 149,
+      "modern_led_victories_median": 84,
+      "order_refusals_median": 67,
+      "defections_median": 0,
+      "modern_killed_median": 13587,
+      "future_killed_median": 75,
+      "lowest_supply_percent_median": 100
+    }
+  ],
+  "findings": [
+    "Modern formations are represented as losable units rather than a support multiplier.",
+    "Order acceptance depends on loyalty, readiness, cohesion, national proximity and expeditionary command friction.",
+    "The Desperate setting is tested under the same political and mobilisation rules as every other army setting."
+  ],
+  "limitations": [
+    "This package uses a reduced battle resolver and will next be folded into the validated multi-day operational resolver.",
+    "National force inventories and alliances remain placeholders until the dated World State package.",
+    "Occupation legitimacy is represented by policy profiles rather than event-driven civilian politics."
+  ]
+}

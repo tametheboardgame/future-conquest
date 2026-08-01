@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1",
+  "activation_delay_days": 10,
+  "formation_personnel": 2500,
+  "minimum_operational_personnel": 900,
+  "mobilisable_share_by_urbanisation": {
+    "low": 0.55,
+    "medium": 0.7,
+    "high": 0.85,
+    "very-high": 1.0
+  },
+  "available_personnel_by_urbanisation": {
+    "low": 1800,
+    "medium": 3200,
+    "high": 5200,
+    "very-high": 7500
+  },
+  "roles": {
+    "security": {"combat_factor": 0.65, "equipment_loss_factor": 0.75, "supply_demand": 0.75},
+    "infantry": {"combat_factor": 0.9, "equipment_loss_factor": 0.9, "supply_demand": 0.9},
+    "mechanised": {"combat_factor": 1.25, "equipment_loss_factor": 1.15, "supply_demand": 1.25},
+    "combined-arms": {"combat_factor": 1.55, "equipment_loss_factor": 1.35, "supply_demand": 1.55}
+  },
+  "command_friction": {"national": 1.0, "adjacent": 0.9, "expeditionary": 0.78},
+  "order_thresholds": {"hold": 35, "defend": 42, "support": 50, "attack_adjacent": 58, "attack_expeditionary": 70},
+  "loyalty": {
+    "initial_base": 68,
+    "accepted_government_bonus": 10,
+    "coercive_occupation_penalty": 18,
+    "civilian_harm_penalty": 12,
+    "victory_gain": 2,
+    "defeat_loss": 6,
+    "unsupplied_daily_loss": 2,
+    "heavy_casualty_loss": 5,
+    "refusal_loss": 3,
+    "defection_threshold": 22
+  },
+  "casualty_replacement": {"daily_share": 0.003, "maximum_original_strength_share": 0.85},
+  "equipment_recovery": {"victory": 0.72, "withdrawal": 0.4, "rout": 0.12},
+  "retreat": {"cohesion_threshold": 28, "personnel_threshold_share": 0.36},
+  "political_models": {
+    "negotiated": {"accepted_government": true, "coercive": false, "civilian_harm": 0.05},
+    "mixed": {"accepted_government": true, "coercive": true, "civilian_harm": 0.12},
+    "coercive": {"accepted_government": false, "coercive": true, "civilian_harm": 0.22}
+  }
+}

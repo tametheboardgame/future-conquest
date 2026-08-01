@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.1",
+  "simulation_days": 500,
+  "seeds_per_start": 3,
+  "future_task_group_size": 2500,
+  "modes": [
+    {"id":"campaign","future_personnel":100000,"target_turn_range":[60,100],"political_model":"negotiated","command_cycle":{"active_days":4,"cycle_days":5}},
+    {"id":"standard","future_personnel":50000,"target_turn_range":[90,150],"political_model":"negotiated","command_cycle":{"active_days":4,"cycle_days":5}},
+    {"id":"veteran","future_personnel":25000,"target_turn_range":[140,220],"political_model":"negotiated","command_cycle":{"active_days":1,"cycle_days":1}},
+    {"id":"desperate","future_personnel":10000,"target_turn_range":[220,365],"political_model":"negotiated","command_cycle":{"active_days":2,"cycle_days":3}}
+  ],
+  "enemy_growth_per_day": 0.012,
+  "enemy_base_power": 4.5,
+  "future_power_per_1000": 4.6,
+  "future_daily_loss_share": 0.0018,
+  "modern_daily_loss_share": 0.007,
+  "battle_duration_days": 3,
+  "supply_capacity_per_point": 5000,
+  "civilian_capacity_reserve": 0.25
+}
