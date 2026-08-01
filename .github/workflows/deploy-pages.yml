@@ -3,119 +3,56 @@ name: Build and deploy Future Conquest
 on:
   push:
     branches:
-      - agent/formation-organisation-core
+      - main
+      - 'agent/**'
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  release-review-hardening:
-    if: github.actor != 'github-actions[bot]'
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout feature branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: agent/formation-organisation-core
-          fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Apply release-review corrections
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          engine_path = Path('src/game/engine.ts')
-          engine = engine_path.read_text()
-
-          old = "export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {\n  return Boolean(group && !group.order && (group.status === 'ready' || group.status === 'garrison'));\n}"
-          new = "const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);\n\nexport function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {\n  return Boolean(group && group.personnel > 0 && !group.order && (group.status === 'ready' || group.status === 'garrison'));\n}"
-          assert old in engine, 'order eligibility block not found'
-          engine = engine.replace(old, new, 1)
-
-          old = "(group.personnel / 1000 * 4.1 + group.functionalArmour / 1000 * 1.9)"
-          new = "(group.personnel / 1000 * 4.1 + deployableArmour(group) / 1000 * 1.9)"
-          assert engine.count(old) == 1, f'unexpected offensive armour formula count: {engine.count(old)}'
-          engine = engine.replace(old, new, 1)
-
-          old = "      remainingArmour += group.functionalArmour;"
-          new = "      remainingArmour += deployableArmour(group);"
-          assert engine.count(old) == 1, f'unexpected remaining armour count: {engine.count(old)}'
-          engine = engine.replace(old, new, 1)
-
-          old = "group.functionalArmour / 1000 * 1.5"
-          new = "deployableArmour(group) / 1000 * 1.5"
-          assert engine.count(old) == 1, f'unexpected defensive armour formula count: {engine.count(old)}'
-          engine = engine.replace(old, new, 1)
-
-          old = "export const __testOnly = {\n  refreshSupply,"
-          new = "export const __testOnly = {\n  deployableArmour,\n  refreshSupply,"
-          assert old in engine, 'test exports block not found'
-          engine = engine.replace(old, new, 1)
-          engine_path.write_text(engine)
-
-          test_path = Path('tests/formation-organisation.test.cjs')
-          tests = test_path.read_text()
-          old = "const { beginOperation, endTurn, loadGame, newGame } = require('../.test-dist/engine.js');"
-          new = "const { __testOnly, beginOperation, canIssueOperationalOrder, endTurn, loadGame, newGame, setGarrison } = require('../.test-dist/engine.js');"
-          assert old in tests, 'engine test import not found'
-          tests = tests.replace(old, new, 1)
-
-          marker = "test('formations with residual recovery establishment cannot be dissolved', () => {"
-          addition = """test('zero-person formations cannot receive orders or project unmanned armour power', () => {
-  let state = newGame(2);
-  state = transferFormationResources(state, {
-    sourceId: 'TG-1',
-    targetId: 'TG-2',
-    personnel: state.taskGroups['TG-1'].personnel,
-    functionalArmour: 0,
-    damagedArmour: 0
-  });
-  const empty = state.taskGroups['TG-1'];
-  assert.equal(empty.personnel, 0);
-  assert.ok(empty.functionalArmour > 0);
-  assert.equal(canIssueOperationalOrder(empty), false);
-  assert.equal(__testOnly.deployableArmour(empty), 0);
-  assert.equal(setGarrison(state), state);
-
-  state.selectedTaskGroupId = 'TG-1';
-  state.targetTerritory = 'FR-01';
-  assert.equal(beginOperation(state), state);
-});
-
-test('deployable armour is limited by available personnel', () => {
-  const state = newGame(2);
-  const group = state.taskGroups['TG-1'];
-  group.personnel = 2;
-  group.functionalArmour = 2500;
-  assert.equal(__testOnly.deployableArmour(group), 2);
-});
-
-"""
-          assert marker in tests, 'test insertion marker not found'
-          tests = tests.replace(marker, addition + marker, 1)
-          test_path.write_text(tests)
-          PY
       - name: Install dependencies
         run: npm ci
-      - name: Run complete regression suite
+      - name: Run engine tests
         run: npm test
-      - name: Build production game
+      - name: Build game
         run: npm run build
-      - name: Restore workflow and commit reviewed implementation
-        run: |
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/deploy-pages.yml
-          rm -f .github/workflows/release-review-hardening.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/game/engine.ts tests/formation-organisation.test.cjs .github/workflows/deploy-pages.yml
-          git add -u .github/workflows/release-review-hardening.yml
-          git commit -m "Prevent unmanned formations receiving orders"
-          git push origin HEAD:agent/formation-organisation-core
+      - name: Configure Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
