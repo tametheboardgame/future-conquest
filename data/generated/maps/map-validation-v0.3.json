@@ -5,17 +5,17 @@
   "duplicates": [],
   "invalid_geometries": [],
   "strategic_centres_outside_generalised_geometry": [
-    "GB-05",
     "HR-02",
     "IT-02"
   ],
   "label_anchors_outside_territory": [],
-  "detected_land_edges": 206,
+  "detected_land_edges": 208,
   "land_isolated_territories": [
     "CY-01",
     "DK-02",
     "GR-03",
     "IS-01",
+    "IT-04",
     "IT-05",
     "MT-01"
   ],
