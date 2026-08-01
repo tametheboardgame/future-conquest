@@ -5,7 +5,9 @@
   "description": "Design data and tooling for the Future Conquest strategy game.",
   "type": "module",
   "scripts": {
+    "map:fetch-nuts": "node scripts/maps/fetch-nuts.mjs",
     "map:build": "node scripts/maps/build-map.mjs",
+    "map:build-admin": "node scripts/maps/build-admin-map.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
