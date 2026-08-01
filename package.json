@@ -10,12 +10,15 @@
     "map:build-admin": "node scripts/maps/build-admin-map.mjs",
     "map:build-strategic": "node scripts/maps/build-strategic-geography.mjs",
     "map:render-strategic": "node scripts/maps/render-strategic-geography.mjs",
+    "map:build-terrain": "node scripts/maps/build-terrain-profiles.mjs",
+    "map:render-terrain": "node scripts/maps/render-terrain-profiles.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",
     "csv-parse": "^6.1.0",
     "d3-geo": "^3.1.1",
+    "shapefile": "^0.6.6",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2",
     "world-cities-json": "^1.0.1"
