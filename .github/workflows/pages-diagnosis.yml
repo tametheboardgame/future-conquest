@@ -1,0 +1,119 @@
+name: Temporary Pages deployment diagnosis
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect failed Pages deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const runId = 30709026754;
+            const targetSha = '9aa7ec36b469f9a7a235e4448ba796bf0501e000';
+
+            const run = await github.rest.actions.getWorkflowRun({owner, repo, run_id: runId});
+            core.notice(`RUN=${JSON.stringify({
+              status: run.data.status,
+              conclusion: run.data.conclusion,
+              run_attempt: run.data.run_attempt,
+              html_url: run.data.html_url,
+              event: run.data.event,
+              head_branch: run.data.head_branch,
+              head_sha: run.data.head_sha
+            })}`);
+
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner, repo, run_id: runId, filter: 'latest', per_page: 100
+            });
+            core.notice(`JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({
+              id: job.id,
+              name: job.name,
+              status: job.status,
+              conclusion: job.conclusion,
+              started_at: job.started_at,
+              completed_at: job.completed_at,
+              html_url: job.html_url,
+              runner_name: job.runner_name,
+              steps: job.steps
+            })))}`);
+
+            try {
+              const env = await github.rest.repos.getEnvironment({
+                owner, repo, environment_name: 'github-pages'
+              });
+              core.notice(`ENVIRONMENT=${JSON.stringify({
+                protection_rules: env.data.protection_rules,
+                deployment_branch_policy: env.data.deployment_branch_policy,
+                html_url: env.data.html_url
+              })}`);
+            } catch (error) {
+              core.warning(`ENVIRONMENT_ERROR=${error.status}:${error.message}`);
+            }
+
+            try {
+              const pages = await github.rest.repos.getPages({owner, repo});
+              core.notice(`PAGES=${JSON.stringify({
+                status: pages.data.status,
+                html_url: pages.data.html_url,
+                build_type: pages.data.build_type,
+                source: pages.data.source,
+                public: pages.data.public
+              })}`);
+            } catch (error) {
+              core.warning(`PAGES_ERROR=${error.status}:${error.message}`);
+            }
+
+            const deployments = await github.rest.repos.listDeployments({
+              owner, repo, sha: targetSha, environment: 'github-pages', per_page: 20
+            });
+            core.notice(`DEPLOYMENTS=${JSON.stringify(deployments.data.map(d => ({
+              id: d.id,
+              ref: d.ref,
+              sha: d.sha,
+              environment: d.environment,
+              task: d.task,
+              created_at: d.created_at,
+              updated_at: d.updated_at,
+              statuses_url: d.statuses_url
+            })))}`);
+
+            for (const deployment of deployments.data) {
+              const statuses = await github.rest.repos.listDeploymentStatuses({
+                owner, repo, deployment_id: deployment.id, per_page: 20
+              });
+              core.notice(`DEPLOYMENT_${deployment.id}_STATUSES=${JSON.stringify(statuses.data.map(s => ({
+                state: s.state,
+                description: s.description,
+                environment: s.environment,
+                environment_url: s.environment_url,
+                log_url: s.log_url,
+                created_at: s.created_at,
+                updated_at: s.updated_at
+              })))}`);
+            }
+
+            try {
+              await github.rest.pulls.update({
+                owner, repo,
+                pull_number: context.payload.pull_request.number,
+                state: 'closed'
+              });
+              await github.rest.git.deleteRef({
+                owner, repo, ref: 'heads/agent/pages-diagnosis'
+              });
+            } catch (error) {
+              core.warning(`CLEANUP_ERROR=${error.message}`);
+            }
