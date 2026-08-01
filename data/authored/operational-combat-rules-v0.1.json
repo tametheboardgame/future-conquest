@@ -1,0 +1,19 @@
+{
+  "schema_version":"0.1",
+  "maximum_battle_days":14,
+  "progress":{"initial":0,"capture_threshold":100,"repulse_threshold":-80,"decisive_attacker":45,"attacker_success":25,"stalemate":0,"defender_success":-20,"decisive_defender":-40},
+  "withdrawal":{"default_cohesion_threshold":35,"default_casualty_share_threshold":0.12,"ordered_retreat_extra_loss":{"two_or_more_routes":0.03,"one_route":0.08,"no_route":0.25},"rout_extra_loss":{"two_or_more_routes":0.08,"one_route":0.18,"no_route":0.4}},
+  "medical_outcomes":{
+    "holds_battlefield":{"killed":0.2,"critical":0.15,"recoverable":0.65,"captured":0},
+    "ordered_retreat":{"killed":0.28,"critical":0.2,"recoverable":0.47,"captured":0.05},
+    "rout":{"killed":0.36,"critical":0.22,"recoverable":0.32,"captured":0.1},
+    "encircled":{"killed":0.42,"critical":0.18,"recoverable":0.2,"captured":0.2}
+  },
+  "medical_return_days":{"recoverable_wounded":7,"critical_wounded":45},
+  "salvage_recovery":{"holds_battlefield":0.85,"ordered_retreat":0.45,"rout":0.15,"encircled":0.05},
+  "energy_weapon_recovery":{"holds_battlefield":0.95,"ordered_retreat":0.7,"rout":0.35,"encircled":0.1},
+  "field_maintenance":{"full_supply_daily_damaged_to_functional":0.01,"strained_multiplier":0.7,"low_multiplier":0.35,"critical_multiplier":0.1,"isolated_multiplier":0,"parts_per_repair":0.25},
+  "cohesion_delta":{"decisive-attacker":{"attacker":4,"defender":-22},"attacker-success":{"attacker":2,"defender":-12},"stalemate":{"attacker":-5,"defender":-4},"defender-success":{"attacker":-13,"defender":2},"decisive-defender":{"attacker":-23,"defender":4}},
+  "reinforcement":{"minimum_route_status":"contested","arrival_cohesion":80,"same_day_power_share":0.65},
+  "technology_capture_escalation_per_suit":0.02,"technology_capture_escalation_per_energy_weapon":0.005
+}

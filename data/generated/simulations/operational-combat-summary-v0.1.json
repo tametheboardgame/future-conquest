@@ -1,0 +1,249 @@
+{
+  "version": "0.1",
+  "purpose": "Multi-day operational combat validation",
+  "run_count": 9000,
+  "scenario_reports": [
+    {
+      "scenario_id": "rapid-security-seizure",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 0,
+        "defender-withdraws": 100,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 0,
+        "attacker-repulsed": 0
+      },
+      "duration_days": {
+        "p10": 2,
+        "median": 2,
+        "p90": 2
+      },
+      "attacker_combat_casualties_median": 5,
+      "defender_combat_casualties_median": 584,
+      "attacker_active_median": 2495,
+      "defender_active_median": 4417,
+      "future_suit_state_median": {
+        "attacker_functional": 2224,
+        "attacker_damaged": 260,
+        "attacker_unarmoured": 11,
+        "defender_functional": 0,
+        "defender_damaged": 0,
+        "defender_unarmoured": 0
+      },
+      "future_aftermath_median": {
+        "killed": 1,
+        "critical_wounded": 1,
+        "recoverable_wounded": 3,
+        "captured": 0,
+        "recovered_suits": 9,
+        "captured_suits": 2,
+        "captured_energy_weapons": 1
+      },
+      "technology_escalation_median": 0.04
+    },
+    {
+      "scenario_id": "reinforced-mechanised-breakthrough",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 99.5,
+        "defender-withdraws": 0.5,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 0,
+        "attacker-repulsed": 0
+      },
+      "duration_days": {
+        "p10": 3,
+        "median": 3,
+        "p90": 3
+      },
+      "attacker_combat_casualties_median": 44,
+      "defender_combat_casualties_median": 836,
+      "attacker_active_median": 4956,
+      "defender_active_median": 4164,
+      "future_suit_state_median": {
+        "attacker_functional": 4136,
+        "attacker_damaged": 728,
+        "attacker_unarmoured": 93,
+        "defender_functional": 0,
+        "defender_damaged": 0,
+        "defender_unarmoured": 0
+      },
+      "future_aftermath_median": {
+        "killed": 9,
+        "critical_wounded": 7,
+        "recoverable_wounded": 29,
+        "captured": 0,
+        "recovered_suits": 79,
+        "captured_suits": 14,
+        "captured_energy_weapons": 7
+      },
+      "technology_escalation_median": 0.32
+    },
+    {
+      "scenario_id": "cautious-probe-combined-air",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 0,
+        "defender-withdraws": 0,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 0,
+        "attacker-repulsed": 100
+      },
+      "duration_days": {
+        "p10": 2,
+        "median": 2,
+        "p90": 2
+      },
+      "attacker_combat_casualties_median": 86,
+      "defender_combat_casualties_median": 94,
+      "attacker_active_median": 2414,
+      "defender_active_median": 7906,
+      "future_suit_state_median": {
+        "attacker_functional": 1912,
+        "attacker_damaged": 440,
+        "attacker_unarmoured": 62,
+        "defender_functional": 0,
+        "defender_damaged": 0,
+        "defender_unarmoured": 0
+      },
+      "future_aftermath_median": {
+        "killed": 24,
+        "critical_wounded": 17,
+        "recoverable_wounded": 40,
+        "captured": 4,
+        "recovered_suits": 28,
+        "captured_suits": 35,
+        "captured_energy_weapons": 44
+      },
+      "technology_escalation_median": 0.92
+    },
+    {
+      "scenario_id": "future-defence-reinforced",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 97.7,
+        "defender-withdraws": 0,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 2.3,
+        "attacker-repulsed": 0
+      },
+      "duration_days": {
+        "p10": 4,
+        "median": 4,
+        "p90": 6
+      },
+      "attacker_combat_casualties_median": 799,
+      "defender_combat_casualties_median": 389,
+      "attacker_active_median": 14201,
+      "defender_active_median": 7111,
+      "future_suit_state_median": {
+        "attacker_functional": 0,
+        "attacker_damaged": 0,
+        "attacker_unarmoured": 0,
+        "defender_functional": 5207,
+        "defender_damaged": 1584,
+        "defender_unarmoured": 336
+      },
+      "future_aftermath_median": {
+        "killed": 109,
+        "critical_wounded": 78,
+        "recoverable_wounded": 183,
+        "captured": 19,
+        "recovered_suits": 154,
+        "captured_suits": 188,
+        "captured_energy_weapons": 215
+      },
+      "technology_escalation_median": 4.83
+    },
+    {
+      "scenario_id": "degraded-urban-offensive",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 0,
+        "defender-withdraws": 0,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 100,
+        "attacker-repulsed": 0
+      },
+      "duration_days": {
+        "p10": 2,
+        "median": 2,
+        "p90": 2
+      },
+      "attacker_combat_casualties_median": 83,
+      "defender_combat_casualties_median": 140,
+      "attacker_active_median": 2417,
+      "defender_active_median": 4860,
+      "future_suit_state_median": {
+        "attacker_functional": 235,
+        "attacker_damaged": 849,
+        "attacker_unarmoured": 1336,
+        "defender_functional": 0,
+        "defender_damaged": 0,
+        "defender_unarmoured": 0
+      },
+      "future_aftermath_median": {
+        "killed": 23,
+        "critical_wounded": 17,
+        "recoverable_wounded": 39,
+        "captured": 4,
+        "recovered_suits": 2,
+        "captured_suits": 3,
+        "captured_energy_weapons": 27
+      },
+      "technology_escalation_median": 0.19
+    },
+    {
+      "scenario_id": "encircled-future-defence",
+      "iterations": 1500,
+      "result_percent": {
+        "attacker-captures-objective": 100,
+        "defender-withdraws": 0,
+        "operational-stalemate": 0,
+        "attacker-withdraws": 0,
+        "attacker-repulsed": 0
+      },
+      "duration_days": {
+        "p10": 3,
+        "median": 3,
+        "p90": 3
+      },
+      "attacker_combat_casualties_median": 129,
+      "defender_combat_casualties_median": 1140,
+      "attacker_active_median": 9871,
+      "defender_active_median": 1360,
+      "future_suit_state_median": {
+        "attacker_functional": 0,
+        "attacker_damaged": 0,
+        "attacker_unarmoured": 0,
+        "defender_functional": 831,
+        "defender_damaged": 408,
+        "defender_unarmoured": 121
+      },
+      "future_aftermath_median": {
+        "killed": 479,
+        "critical_wounded": 205,
+        "recoverable_wounded": 228,
+        "captured": 228,
+        "recovered_suits": 5,
+        "captured_suits": 87,
+        "captured_energy_weapons": 1109
+      },
+      "technology_escalation_median": 7.28
+    }
+  ],
+  "validation": {
+    "rapid_security_battle_short": true,
+    "reinforcement_changes_operational_endurance": true,
+    "cautious_probe_preserves_force": true,
+    "degraded_urban_attack_fails": true,
+    "battlefield_salvage_is_recorded": true,
+    "encirclement_creates_technology_risk": true
+  },
+  "limitations": [
+    "Reinforcements merge into one operational side rather than remaining independently targetable.",
+    "Medical return is reported but not advanced through the wider campaign calendar.",
+    "Equipment salvage produces recovered pools but repair allocation remains a later player decision.",
+    "Modern ammunition, vehicle losses and airbase availability remain abstract support factors."
+  ]
+}
