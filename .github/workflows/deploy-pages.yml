@@ -1,6 +1,9 @@
 name: Build and deploy Future Conquest
 
 on:
+  push:
+    branches:
+      - agent/formation-organisation-core
   pull_request:
     branches:
       - main
