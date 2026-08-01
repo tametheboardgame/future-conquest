@@ -1,0 +1,60 @@
+name: Connector Pages status check
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/connector-pages-status.yml]
+
+permissions:
+  actions: read
+  contents: write
+  pages: read
+  pull-requests: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo}=context.repo;
+            const targetSha='9aa7ec36b469f9a7a235e4448ba796bf0501e000';
+            let deployRun=null;
+            for(let attempt=0; attempt<8; attempt++){
+              const response=await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                head_sha:targetSha,
+                event:'push',
+                per_page:50
+              });
+              deployRun=response.data.workflow_runs.find(run=>run.name==='Deploy playable vertical slice')||null;
+              if(deployRun?.status==='completed') break;
+              if(attempt<7) await new Promise(resolve=>setTimeout(resolve,7500));
+            }
+            core.notice(`DEPLOY_RUN=${JSON.stringify(deployRun ? {
+              id:deployRun.id,
+              status:deployRun.status,
+              conclusion:deployRun.conclusion,
+              html_url:deployRun.html_url,
+              head_sha:deployRun.head_sha,
+              event:deployRun.event
+            } : null)}`);
+            try{
+              const pages=await github.rest.repos.getPages({owner,repo});
+              core.notice(`PAGES_SITE=${JSON.stringify({
+                status:pages.data.status,
+                html_url:pages.data.html_url,
+                build_type:pages.data.build_type,
+                cname:pages.data.cname
+              })}`);
+            }catch(error){
+              core.warning(`PAGES_SITE_ERROR=${error.status}:${error.message}`);
+            }
+            try{
+              await github.rest.pulls.update({owner,repo,pull_number:context.payload.pull_request.number,state:'closed'});
+              await github.rest.git.deleteRef({owner,repo,ref:'heads/agent/connector-status-check'});
+            }catch(error){
+              core.warning(`STATUS_CLEANUP_ERROR=${error.message}`);
+            }
