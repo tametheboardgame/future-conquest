@@ -1,0 +1,45 @@
+name: Apply formation organisation core
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/formation-organisation-core'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply source transformations
+        run: node scripts/apply-formation-organisation.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: Run complete regression suite
+        run: npm test
+      - name: Build production game
+        run: npm run build
+      - name: Remove temporary transformation files
+        run: |
+          rm scripts/apply-formation-organisation.mjs
+          rm .github/workflows/apply-formation-organisation.yml
+      - name: Commit completed implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests docs
+          git add -u scripts/apply-formation-organisation.mjs .github/workflows/apply-formation-organisation.yml
+          git commit -m "Complete formation organisation core"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
