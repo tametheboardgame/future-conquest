@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "territory_count": 101,
+  "country_count": 42,
+  "country_sourced_boundaries": 16,
+  "provisional_internal_boundaries": 84,
+  "source": "Natural Earth countries-10m via world-atlas 2.0.2",
+  "city_source": "SimpleMaps-derived city coordinates via world-cities-json 1.0.1",
+  "warnings": [
+    "Internal boundaries are a first visual partition and are not approved administrative boundaries.",
+    "The eastern theatre is clipped at 60 degrees east for the browser campaign frame.",
+    "Political claims and actual control are intentionally absent from this geometry."
+  ]
+}
