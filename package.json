@@ -22,6 +22,7 @@
     "simulate:integrated-campaign": "node scripts/simulate-integrated-campaign.mjs",
     "simulate:modern-formations": "node scripts/simulate-modern-formations.mjs",
     "simulate:escalation-occupation": "node scripts/simulate-escalation-occupation.mjs",
+    "simulate:integrated-foundation-v0.2": "node scripts/simulate-integrated-foundation-v0.2.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
