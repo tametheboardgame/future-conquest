@@ -1,0 +1,4 @@
+node_modules/
+.cache/
+assets/maps/generated/*.png
+npm-debug.log*

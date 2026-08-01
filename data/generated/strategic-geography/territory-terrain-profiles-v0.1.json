@@ -1,0 +1,2435 @@
+[
+  {
+    "territory_id": "AL-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 46.7,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 418495,
+    "physical_regions": [
+      {
+        "name": "Pindus",
+        "class": "Range/mtn",
+        "coverage_percent": 36.8
+      },
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 9.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "AT-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 91.5,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 91.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "AT-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 46.6,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1973403,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 45.4
+      },
+      {
+        "name": "BÃ¶hmerwald",
+        "class": "Range/mtn",
+        "coverage_percent": 1.2
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "Eastern Austria combines Alpine margins with the Vienna Basin and eastern lowlands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BA-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 93.9,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 419957,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 93.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BE-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 95.1,
+    "mapped_city_population": 1743000,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 95.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BE-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 42.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 26.3,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Ardennes",
+        "class": "Range/mtn",
+        "coverage_percent": 42.4
+      },
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 26.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BG-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 33.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1547779,
+    "physical_regions": [
+      {
+        "name": "Balkan Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 33.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BG-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 29.5,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 2.7,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Balkan Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 29.5
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 2.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BY-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 33.1,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 33.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "BY-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 32.6,
+    "mapped_city_population": 2009786,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 32.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "CH-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 72.9,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 52
+      },
+      {
+        "name": "Jura Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 21
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "The Swiss Plateau territory includes upland margins but is not predominantly Alpine terrain.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "CH-02",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 96.5,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 96.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "CY-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 330000,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Cyprus combines coastal plains with the Troodos and Kyrenia uplands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "CZ-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 18.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1335084,
+    "physical_regions": [
+      {
+        "name": "BÃ¶hmerwald",
+        "class": "Range/mtn",
+        "coverage_percent": 10.6
+      },
+      {
+        "name": "Sudetes",
+        "class": "Range/mtn",
+        "coverage_percent": 4.3
+      },
+      {
+        "name": "Ore Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 3.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "CZ-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 33.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 18.7
+      },
+      {
+        "name": "Tatra Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 8.6
+      },
+      {
+        "name": "Sudetes",
+        "class": "Range/mtn",
+        "coverage_percent": 6.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 3.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 92.8,
+    "mapped_city_population": 2484800,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 92.8
+      },
+      {
+        "name": "Harz",
+        "class": "Range/mtn",
+        "coverage_percent": 3.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 43.1,
+    "mapped_city_population": 1083498,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 43.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 10.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 764104,
+    "physical_regions": [
+      {
+        "name": "Vosges Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 5.6
+      },
+      {
+        "name": "Harz",
+        "class": "Range/mtn",
+        "coverage_percent": 4.7
+      },
+      {
+        "name": "Ore Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 0.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 10.2,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 46.9,
+    "mapped_city_population": 4473101,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 46.9
+      },
+      {
+        "name": "Harz",
+        "class": "Range/mtn",
+        "coverage_percent": 4.2
+      },
+      {
+        "name": "Ore Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 3.6
+      },
+      {
+        "name": "Sudetes",
+        "class": "Range/mtn",
+        "coverage_percent": 2.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-05",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2787724,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 2.2
+      },
+      {
+        "name": "Vosges Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 0.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DE-06",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 30.7,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2606021,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 20.4
+      },
+      {
+        "name": "BÃ¶hmerwald",
+        "class": "Range/mtn",
+        "coverage_percent": 8.4
+      },
+      {
+        "name": "Ore Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 1.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DK-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Jutland is predominantly low and readily traversable.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "DK-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1366301,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "The Danish islands are predominantly low and highly connected.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "EE-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "severe",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 100,
+    "mapped_city_population": 438341,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 90.5
+      },
+      {
+        "name": "North-Estonian Coastal Plain",
+        "class": "Plain",
+        "coverage_percent": 89.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 26.5,
+    "plateau_percent": 98.9,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 98.9
+      },
+      {
+        "name": "Cantabrian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 26.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 26.7,
+    "plateau_percent": 98.7,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 775000,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 98.7
+      },
+      {
+        "name": "Cantabrian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 19.6
+      },
+      {
+        "name": "Pyrenees",
+        "class": "Range/mtn",
+        "coverage_percent": 7.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 27.8,
+    "plateau_percent": 86.4,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 4800000,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 86.4
+      },
+      {
+        "name": "Pyrenees",
+        "class": "Range/mtn",
+        "coverage_percent": 27.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 4.6,
+    "plateau_percent": 100,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 6211000,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 100
+      },
+      {
+        "name": "Sierra Morena",
+        "class": "Range/mtn",
+        "coverage_percent": 4.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-05",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0.7,
+    "plateau_percent": 98,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 792492,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 98
+      },
+      {
+        "name": "Sierra Morena",
+        "class": "Range/mtn",
+        "coverage_percent": 0.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ES-06",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 40.7,
+    "plateau_percent": 99.1,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2067250,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 99.1
+      },
+      {
+        "name": "Sierra Nevada",
+        "class": "Range/mtn",
+        "coverage_percent": 20.5
+      },
+      {
+        "name": "Sierra Morena",
+        "class": "Range/mtn",
+        "coverage_percent": 20.2
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FI-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "severe",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1268296,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Southern Finland mixes low relief, forests and lakes.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FI-02",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "severe",
+    "urbanisation": "low",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Central Finland is dominated by forests, lakes and moderate relief rather than named mountain regions.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FI-03",
+    "terrain_class": "subarctic",
+    "winter_severity": "extreme",
+    "urbanisation": "low",
+    "base_movement_cost": 1.5,
+    "mountain_percent": 1.1,
+    "plateau_percent": 3.6,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Finnmarksvidda",
+        "class": "Plateau",
+        "coverage_percent": 3.6
+      },
+      {
+        "name": "Scandinavian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 1.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 97.1,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 97.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 52.7,
+    "mapped_city_population": 11060000,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 52.7
+      },
+      {
+        "name": "Ardennes",
+        "class": "Range/mtn",
+        "coverage_percent": 3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 26,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Vosges Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 16.8
+      },
+      {
+        "name": "Jura Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 9.2
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 12.4,
+    "plateau_percent": 9.8,
+    "plain_lowland_percent": 39.9,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 39.9
+      },
+      {
+        "name": "Pyrenees",
+        "class": "Range/mtn",
+        "coverage_percent": 12.4
+      },
+      {
+        "name": "Massif Central",
+        "class": "Plateau",
+        "coverage_percent": 8
+      },
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 1.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-05",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 17.2,
+    "plateau_percent": 34.4,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Massif Central",
+        "class": "Plateau",
+        "coverage_percent": 34.4
+      },
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 15.2
+      },
+      {
+        "name": "Jura Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 1.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "FR-06",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 32.9,
+    "plateau_percent": 7.4,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 870731,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 25.6
+      },
+      {
+        "name": "Massif Central",
+        "class": "Plateau",
+        "coverage_percent": 7.4
+      },
+      {
+        "name": "Pyrenees",
+        "class": "Range/mtn",
+        "coverage_percent": 7.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 10.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Cruach nam Miseag",
+        "class": "Range/mtn",
+        "coverage_percent": 10.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-02",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 4262832,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Northern England combines urban lowlands with Pennine uplands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-03",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2919600,
+    "physical_regions": [
+      {
+        "name": "Cambrian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 0.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-04",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 12973248,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Southern England is mainly accessible lowland with local uplands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-05",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 52,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Cambrian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 52
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GB-06",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Northern Ireland combines rolling lowlands and modest uplands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GR-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 18.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 824676,
+    "physical_regions": [
+      {
+        "name": "Pindus",
+        "class": "Range/mtn",
+        "coverage_percent": 18.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GR-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 12.1,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 3041131,
+    "physical_regions": [
+      {
+        "name": "Pindus",
+        "class": "Range/mtn",
+        "coverage_percent": 12.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "GR-03",
+    "terrain_class": "mountainous",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Crete and the larger Aegean islands are rugged despite their maritime climate.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "HR-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 15.2,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 5.7,
+    "mapped_city_population": 809268,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 15.2
+      },
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 5.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "HR-02",
+    "terrain_class": "mountainous",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 70.9,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 70.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "HU-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 35.8,
+    "mapped_city_population": 2997958,
+    "physical_regions": [
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 35.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "HU-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 10.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 87.5,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 87.5
+      },
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 10.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IE-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Western Ireland combines rough coastal uplands with central and river lowlands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IE-02",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1173179,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Eastern Ireland and Dublin are predominantly accessible rolling lowland.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IS-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "severe",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 8.9,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "VatnajÃ¶kull",
+        "class": "Range/mtn",
+        "coverage_percent": 8.9
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IT-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 46.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2237132,
+    "physical_regions": [
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 37.1
+      },
+      {
+        "name": "Appennino Ligure",
+        "class": "Range/mtn",
+        "coverage_percent": 9.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IT-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 44.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Appennino Ligure",
+        "class": "Range/mtn",
+        "coverage_percent": 44.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IT-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 52.1,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 966144,
+    "physical_regions": [
+      {
+        "name": "Appennino Ligure",
+        "class": "Range/mtn",
+        "coverage_percent": 28.1
+      },
+      {
+        "name": "Calabria",
+        "class": "Range/mtn",
+        "coverage_percent": 24
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "Southern Italy contains major Apennine and Calabrian barriers but also substantial coastal and agricultural lowlands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IT-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Sicily combines mountain massifs with broad coastal and interior agricultural areas.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "IT-05",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Sardinia is rugged but contains traversable plains and plateaux.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "LT-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 100,
+    "mapped_city_population": 708203,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 99.9
+      },
+      {
+        "name": "North-Estonian Coastal Plain",
+        "class": "Plain",
+        "coverage_percent": 34.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "LU-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 27.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Ardennes",
+        "class": "Range/mtn",
+        "coverage_percent": 27.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "LV-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 100,
+    "mapped_city_population": 920643,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 99
+      },
+      {
+        "name": "North-Estonian Coastal Plain",
+        "class": "Plain",
+        "coverage_percent": 69.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "MD-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 48,
+    "mapped_city_population": 702300,
+    "physical_regions": [
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 48
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "ME-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 98,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 98
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "MK-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "mild",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 640000,
+    "physical_regions": [
+      {
+        "name": "Pindus",
+        "class": "Range/mtn",
+        "coverage_percent": 0.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "MT-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 480134,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Malta is low and compact, with broken limestone relief rather than major mountains.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "NL-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 94.7,
+    "mapped_city_population": 2007722,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 94.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "NL-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 98.5,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 98.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "NO-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "severe",
+    "urbanisation": "high",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 65.5,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1064235,
+    "physical_regions": [
+      {
+        "name": "Scandinavian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 50.4
+      },
+      {
+        "name": "Hardangervidda",
+        "class": "Range/mtn",
+        "coverage_percent": 15.2
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "NO-02",
+    "terrain_class": "mountainous",
+    "winter_severity": "severe",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 76.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Scandinavian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 76.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "NO-03",
+    "terrain_class": "subarctic",
+    "winter_severity": "extreme",
+    "urbanisation": "low",
+    "base_movement_cost": 1.5,
+    "mountain_percent": 42.3,
+    "plateau_percent": 7.4,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Scandinavian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 42.3
+      },
+      {
+        "name": "Finnmarksvidda",
+        "class": "Plateau",
+        "coverage_percent": 7.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PL-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 99.7,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 99.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PL-02",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 6.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 49.5,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 49.5
+      },
+      {
+        "name": "Sudetes",
+        "class": "Range/mtn",
+        "coverage_percent": 6.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PL-03",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 26.8,
+    "mapped_city_population": 1860281,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 26.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PL-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "medium",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 67,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 800653,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 33.7
+      },
+      {
+        "name": "Tatra Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 32.6
+      },
+      {
+        "name": "Sudetes",
+        "class": "Range/mtn",
+        "coverage_percent": 0.6
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "Southern Poland and Silesia include the Carpathian and Sudeten edges alongside dense basins and lowlands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PL-05",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 3.3,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 34.3,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 34.3
+      },
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 3.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PT-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 99.5,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1278210,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 99.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "PT-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 99.1,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 2719000,
+    "physical_regions": [
+      {
+        "name": "Iberian Peninsula",
+        "class": "Plateau",
+        "coverage_percent": 99.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RO-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 100,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 14.6,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 80.6
+      },
+      {
+        "name": "Southern Carpathians",
+        "class": "Range/mtn",
+        "coverage_percent": 20.9
+      },
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 14.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RO-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 61.8,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 9.1,
+    "mapped_city_population": 1883425,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 33.5
+      },
+      {
+        "name": "Southern Carpathians",
+        "class": "Range/mtn",
+        "coverage_percent": 28.2
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 9.1
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "Wallachia combines the Southern Carpathian edge with the broad Romanian Plain.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RO-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 35.4,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 30.5,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 35.4
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 30.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RS-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 36.5,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 42,
+    "mapped_city_population": 1378682,
+    "physical_regions": [
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 42
+      },
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 36.5
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RS-02",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 37,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 31.6
+      },
+      {
+        "name": "Balkan Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 4.5
+      },
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 0.5
+      },
+      {
+        "name": "Southern Carpathians",
+        "class": "Range/mtn",
+        "coverage_percent": 0.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RU-01",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 98.2,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 98.2
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RU-02",
+    "terrain_class": "subarctic",
+    "winter_severity": "severe",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.5,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 62.6,
+    "mapped_city_population": 5384342,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 60.7
+      },
+      {
+        "name": "Bolshezemelskaya Tundra",
+        "class": "Tundra",
+        "coverage_percent": 1.5
+      },
+      {
+        "name": "Vychegda Lowland",
+        "class": "Lowland",
+        "coverage_percent": 1.3
+      },
+      {
+        "name": "North-Estonian Coastal Plain",
+        "class": "Plain",
+        "coverage_percent": 0.5
+      }
+    ],
+    "review_status": "authored-override",
+    "override_reason": "Northwest Russia includes Karelia, Murmansk and Arkhangelsk as well as the St Petersburg corridor.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RU-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 25.8,
+    "plain_lowland_percent": 20.4,
+    "mapped_city_population": 17332000,
+    "physical_regions": [
+      {
+        "name": "Central Russian Upland",
+        "class": "Plateau",
+        "coverage_percent": 25.8
+      },
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 19
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 1.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RU-04",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 9.2,
+    "plateau_percent": 2.1,
+    "plain_lowland_percent": 60,
+    "mapped_city_population": 9357363,
+    "physical_regions": [
+      {
+        "name": "North European Plain",
+        "class": "Plain",
+        "coverage_percent": 28.7
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 16
+      },
+      {
+        "name": "Bolshezemelskaya Tundra",
+        "class": "Tundra",
+        "coverage_percent": 13.5
+      },
+      {
+        "name": "Vychegda Lowland",
+        "class": "Lowland",
+        "coverage_percent": 10.5
+      },
+      {
+        "name": "Ural Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 9.2
+      },
+      {
+        "name": "Kazakh Steppe",
+        "class": "Plain",
+        "coverage_percent": 4.7
+      },
+      {
+        "name": "Volga Upland",
+        "class": "Plateau",
+        "coverage_percent": 2.1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "RU-05",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 15.8,
+    "plateau_percent": 14.1,
+    "plain_lowland_percent": 78,
+    "mapped_city_population": 4152719,
+    "physical_regions": [
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 64.9
+      },
+      {
+        "name": "Caucasus Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 15.8
+      },
+      {
+        "name": "Caspian Depression",
+        "class": "Lowland",
+        "coverage_percent": 13.1
+      },
+      {
+        "name": "Stavropol Upland",
+        "class": "Plateau",
+        "coverage_percent": 6.2
+      },
+      {
+        "name": "Central Russian Upland",
+        "class": "Plateau",
+        "coverage_percent": 5.7
+      },
+      {
+        "name": "Volga Upland",
+        "class": "Plateau",
+        "coverage_percent": 2.2
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "SE-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Southern Sweden is mainly low and well connected, with forests and local uplands.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "SE-02",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "severe",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 1611776,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Central Sweden combines lake country, forest and urban lowland.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "SE-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "severe",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 17.7,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Scandinavian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 17.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "SI-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 48,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 286745,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 37.4
+      },
+      {
+        "name": "Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 10.7
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "SK-01",
+    "terrain_class": "mountainous",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.6,
+    "mountain_percent": 97.9,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 2.8,
+    "mapped_city_population": 475503,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 71
+      },
+      {
+        "name": "Tatra Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 26.9
+      },
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 2.8
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "TR-01",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "mild",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 20641833,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Eastern Thrace and Istanbul combine rolling terrain with dense urban and transport corridors.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "UA-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 20.2,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 3,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Carpathian Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 19.3
+      },
+      {
+        "name": "Great Hungarian Plain",
+        "class": "Plain",
+        "coverage_percent": 3
+      },
+      {
+        "name": "Tatra Mountains",
+        "class": "Range/mtn",
+        "coverage_percent": 1
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "UA-02",
+    "terrain_class": "mixed-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 1.1,
+    "mountain_percent": 0,
+    "plateau_percent": 17.6,
+    "plain_lowland_percent": 16.6,
+    "mapped_city_population": 2963199,
+    "physical_regions": [
+      {
+        "name": "Dnieper Upland",
+        "class": "Plateau",
+        "coverage_percent": 17.6
+      },
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 16.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "UA-03",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "very-high",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 23,
+    "plain_lowland_percent": 76.5,
+    "mapped_city_population": 3356118,
+    "physical_regions": [
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 76.5
+      },
+      {
+        "name": "Azov Upland",
+        "class": "Plateau",
+        "coverage_percent": 12.9
+      },
+      {
+        "name": "Central Russian Upland",
+        "class": "Plateau",
+        "coverage_percent": 9.8
+      },
+      {
+        "name": "Dnieper Upland",
+        "class": "Plateau",
+        "coverage_percent": 0.3
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "UA-04",
+    "terrain_class": "open-lowland",
+    "winter_severity": "moderate",
+    "urbanisation": "high",
+    "base_movement_cost": 0.9,
+    "mountain_percent": 0,
+    "plateau_percent": 4.4,
+    "plain_lowland_percent": 77.9,
+    "mapped_city_population": 1017699,
+    "physical_regions": [
+      {
+        "name": "Pontic-Caspian steppe",
+        "class": "Plain",
+        "coverage_percent": 77.9
+      },
+      {
+        "name": "Dnieper Upland",
+        "class": "Plateau",
+        "coverage_percent": 4.4
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "UA-05",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "moderate",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 0,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [],
+    "review_status": "authored-override",
+    "override_reason": "Crimea combines northern steppe with the mountainous southern coast.",
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  },
+  {
+    "territory_id": "XK-01",
+    "terrain_class": "mixed-upland",
+    "winter_severity": "mild",
+    "urbanisation": "low",
+    "base_movement_cost": 1.3,
+    "mountain_percent": 37.6,
+    "plateau_percent": 0,
+    "plain_lowland_percent": 0,
+    "mapped_city_population": 0,
+    "physical_regions": [
+      {
+        "name": "Dinaric Alps",
+        "class": "Range/mtn",
+        "coverage_percent": 37.6
+      }
+    ],
+    "review_status": "data-derived-draft",
+    "override_reason": null,
+    "source": "Natural-Earth-physical-regions-v5.1.1"
+  }
+]

@@ -13,3 +13,9 @@ This directory contains project-owned geographic and strategic definitions, incl
 
 Generated geometry belongs in a separate build-output location once the map pipeline is established.
 
+Current transport definitions:
+
+- `transport-hubs-v0.1.json` selects campaign-scale rail, motorway and
+  intermodal hubs.
+- `critical-crossings-v0.1.json` selects fixed links, straits, river crossings,
+  passes and constrained approaches that can alter strategic movement.

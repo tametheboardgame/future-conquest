@@ -1,0 +1,31 @@
+{
+  "version": "0.2",
+  "territory_count": 101,
+  "unique_id_count": 101,
+  "duplicates": [],
+  "invalid_geometries": [
+    "AT-01",
+    "FI-02",
+    "GB-05",
+    "IE-01",
+    "NO-02"
+  ],
+  "centres_outside_territory": [
+    "GB-05",
+    "HR-02",
+    "IT-02"
+  ],
+  "detected_land_edges": 207,
+  "land_isolated_territories": [
+    "CY-01",
+    "DK-02",
+    "GR-03",
+    "IS-01",
+    "IT-05",
+    "MT-01"
+  ],
+  "explicit_route_count": 16,
+  "unreachable_after_explicit_routes": [],
+  "connected_campaign_graph": true,
+  "status": "requires-correction"
+}

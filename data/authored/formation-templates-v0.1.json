@@ -1,0 +1,15 @@
+{
+  "schema_version":"0.1",
+  "templates":[
+    {"id":"future-detachment","side":"future","personnel":500,"map_role":"specialist-detachment","default_armour_mix":{"fully_armoured":0.9,"damaged_armour":0.1,"unarmoured_energy_rifle":0},"readiness":90,"cohesion":90,"mobility":95,"concealment":85},
+    {"id":"future-task-group","side":"future","personnel":2500,"map_role":"primary-player-formation","default_armour_mix":{"fully_armoured":0.9,"damaged_armour":0.1,"unarmoured_energy_rifle":0},"readiness":90,"cohesion":90,"mobility":90,"concealment":75},
+    {"id":"future-command","side":"future","personnel":7500,"map_role":"grouped-command-container","default_armour_mix":{"fully_armoured":0.9,"damaged_armour":0.1,"unarmoured_energy_rifle":0},"readiness":90,"cohesion":88,"mobility":80,"concealment":55},
+    {"id":"modern-security","side":"modern","personnel":2000,"map_role":"police-security-garrison","modern_type":"security_light","readiness":60,"cohesion":60,"mobility":55,"loyalty":75},
+    {"id":"modern-infantry-brigade","side":"modern","personnel":5000,"map_role":"line-infantry","modern_type":"infantry","readiness":75,"cohesion":75,"mobility":60,"loyalty":85},
+    {"id":"modern-mechanised-brigade","side":"modern","personnel":5000,"map_role":"mobile-combined-force","modern_type":"mechanised","readiness":80,"cohesion":80,"mobility":85,"loyalty":85},
+    {"id":"modern-armoured-brigade","side":"modern","personnel":4500,"map_role":"breakthrough-force","modern_type":"armoured","readiness":80,"cohesion":80,"mobility":75,"loyalty":85},
+    {"id":"modern-combined-command","side":"modern","personnel":8000,"map_role":"regional-combined-arms","modern_type":"combined_arms","readiness":85,"cohesion":85,"mobility":75,"loyalty":90},
+    {"id":"local-garrison","side":"modern","personnel":1000,"map_role":"occupation-and-security","modern_type":"security_light","readiness":55,"cohesion":55,"mobility":40,"loyalty":65}
+  ],
+  "runtime_state_fields":["formation_id","template_id","controller","territory_id","personnel_active","personnel_wounded","armour_fully_functional","armour_damaged","armour_broken_recoverable","unarmoured_energy_rifle","readiness","cohesion","morale","supply_band","stance","entrenchment","fatigue","experience","loyalty","commander","orders","movement_points_remaining","combat_rounds_today"]
+}

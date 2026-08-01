@@ -1,0 +1,215 @@
+{
+  "version": "0.1",
+  "purpose": "First-pass strategic combat balance harness",
+  "run_count": 14000,
+  "scenario_reports": [
+    {
+      "scenario_id": "future-v-security",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 100,
+        "attacker-success": 0,
+        "stalemate": 0,
+        "defender-success": 0,
+        "decisive-defender": 0
+      },
+      "median_power_ratio": 8.509,
+      "attacker_casualties": {
+        "p10": 2,
+        "median": 3,
+        "p90": 3
+      },
+      "defender_casualties": {
+        "p10": 263,
+        "median": 290,
+        "p90": 317
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 13,
+        "attacker_newly_broken_median": 4,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    },
+    {
+      "scenario_id": "future-v-mechanised",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 55.9,
+        "attacker-success": 44.1,
+        "stalemate": 0,
+        "defender-success": 0,
+        "decisive-defender": 0
+      },
+      "median_power_ratio": 2.028,
+      "attacker_casualties": {
+        "p10": 16,
+        "median": 18,
+        "p90": 20
+      },
+      "defender_casualties": {
+        "p10": 90,
+        "median": 138,
+        "p90": 164
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 79,
+        "attacker_newly_broken_median": 24,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    },
+    {
+      "scenario_id": "future-v-combined-air",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 0,
+        "attacker-success": 0,
+        "stalemate": 0,
+        "defender-success": 0,
+        "decisive-defender": 100
+      },
+      "median_power_ratio": 0.372,
+      "attacker_casualties": {
+        "p10": 37,
+        "median": 41,
+        "p90": 45
+      },
+      "defender_casualties": {
+        "p10": 47,
+        "median": 54,
+        "p90": 62
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 108,
+        "attacker_newly_broken_median": 32,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    },
+    {
+      "scenario_id": "damaged-future-v-mechanised",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 0,
+        "attacker-success": 0,
+        "stalemate": 0,
+        "defender-success": 97.4,
+        "decisive-defender": 2.6
+      },
+      "median_power_ratio": 0.602,
+      "attacker_casualties": {
+        "p10": 43,
+        "median": 48,
+        "p90": 53
+      },
+      "defender_casualties": {
+        "p10": 49,
+        "median": 56,
+        "p90": 62
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 63,
+        "attacker_newly_broken_median": 19,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    },
+    {
+      "scenario_id": "unarmoured-future-v-infantry",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 0,
+        "attacker-success": 0,
+        "stalemate": 0,
+        "defender-success": 0.9,
+        "decisive-defender": 99.2
+      },
+      "median_power_ratio": 0.405,
+      "attacker_casualties": {
+        "p10": 63,
+        "median": 70,
+        "p90": 77
+      },
+      "defender_casualties": {
+        "p10": 52,
+        "median": 59,
+        "p90": 67
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 2,
+        "attacker_newly_broken_median": 1,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    },
+    {
+      "scenario_id": "future-hold-v-combined",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 0,
+        "attacker-success": 94.5,
+        "stalemate": 5.5,
+        "defender-success": 0,
+        "decisive-defender": 0
+      },
+      "median_power_ratio": 1.469,
+      "attacker_casualties": {
+        "p10": 180,
+        "median": 202,
+        "p90": 228
+      },
+      "defender_casualties": {
+        "p10": 63,
+        "median": 71,
+        "p90": 78
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 0,
+        "attacker_newly_broken_median": 0,
+        "defender_newly_damaged_median": 232,
+        "defender_newly_broken_median": 70
+      }
+    },
+    {
+      "scenario_id": "allied-modern-v-modern",
+      "iterations": 2000,
+      "outcome_percent": {
+        "decisive-attacker": 0,
+        "attacker-success": 0,
+        "stalemate": 0,
+        "defender-success": 83.3,
+        "decisive-defender": 16.8
+      },
+      "median_power_ratio": 0.553,
+      "attacker_casualties": {
+        "p10": 85,
+        "median": 95,
+        "p90": 145
+      },
+      "defender_casualties": {
+        "p10": 46,
+        "median": 53,
+        "p90": 59
+      },
+      "future_armour_damage": {
+        "attacker_newly_damaged_median": 0,
+        "attacker_newly_broken_median": 0,
+        "defender_newly_damaged_median": 0,
+        "defender_newly_broken_median": 0
+      }
+    }
+  ],
+  "validation": {
+    "future_dominates_security": true,
+    "combined_arms_can_stop_small_future_force": true,
+    "armour_depletion_changes_outcome": true,
+    "modern_allies_not_automatic_winners": true
+  },
+  "limitations": [
+    "Resolves one abstract engagement rather than a multi-day battle.",
+    "Does not yet model intelligence, surprise, general command, retreat routes or reinforcement arrival.",
+    "Air and artillery are support multipliers rather than separately targetable formations.",
+    "Casualty and armour-damage rates are balancing values, not real-world predictions."
+  ]
+}

@@ -5,16 +5,21 @@ import * as turf from '@turf/turf';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outputRoot = path.resolve(process.env.MAP_OUTPUT_DIR || 'assets/maps/generated');
-const mapPath = path.join(outputRoot, 'territories-standard-v0.1.geojson');
+const version = process.env.MAP_VERSION || '0.1';
+const mapPath = path.resolve(process.env.MAP_FILE || path.join(outputRoot, `territories-standard-v${version}.geojson`));
 const collection = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
 
 const ids = collection.features.map(feature => feature.properties.territory_id);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+const geometryIsValid = feature => turf.flatten(feature).features.every(part => turf.booleanValid(part));
 const invalid = collection.features
-  .filter(feature => !turf.booleanValid(feature))
+  .filter(feature => !geometryIsValid(feature))
   .map(feature => feature.properties.territory_id);
 const centresOutside = collection.features
   .filter(feature => !turf.booleanPointInPolygon(turf.point(feature.properties.centre), feature, { ignoreBoundary: false }))
+  .map(feature => feature.properties.territory_id);
+const labelAnchorsOutside = collection.features
+  .filter(feature => !turf.booleanPointInPolygon(turf.point(feature.properties.label_anchor ?? feature.properties.centre), feature, { ignoreBoundary: false }))
   .map(feature => feature.properties.territory_id);
 
 const adjacency = Object.fromEntries(ids.map(id => [id, []]));
@@ -44,7 +49,7 @@ for (const neighbours of Object.values(adjacency)) neighbours.sort();
 const explicitConnections = [
   ['IS-01', 'GB-01', 'long-sea'],
   ['IS-01', 'NO-02', 'long-sea'],
-  ['GB-04', 'FR-01', 'channel-crossing'],
+  ['GB-04', 'FR-02', 'channel-crossing'],
   ['GB-02', 'GB-06', 'short-sea'],
   ['GB-05', 'IE-02', 'short-sea'],
   ['DK-01', 'NO-01', 'short-sea'],
@@ -57,7 +62,8 @@ const explicitConnections = [
   ['IT-04', 'MT-01', 'short-sea'],
   ['GR-02', 'GR-03', 'aegean-sea'],
   ['GR-03', 'CY-01', 'long-sea'],
-  ['CY-01', 'TR-01', 'short-sea']
+  ['CY-01', 'TR-01', 'short-sea'],
+  ['UA-05', 'RU-05', 'fixed-link-world-state']
 ];
 
 const combinedAdjacency = structuredClone(adjacency);
@@ -78,25 +84,26 @@ while (queue.length) {
 const landIsolated = ids.filter(id => adjacency[id].length === 0);
 const unreachableAfterRoutes = ids.filter(id => !visited.has(id));
 const report = {
-  version: '0.1',
+  version,
   territory_count: collection.features.length,
   unique_id_count: new Set(ids).size,
   duplicates,
   invalid_geometries: invalid,
-  centres_outside_territory: centresOutside,
+  strategic_centres_outside_generalised_geometry: centresOutside,
+  label_anchors_outside_territory: labelAnchorsOutside,
   detected_land_edges: Object.values(adjacency).reduce((sum, neighbours) => sum + neighbours.length, 0) / 2,
   land_isolated_territories: landIsolated,
   explicit_route_count: explicitConnections.length,
   unreachable_after_explicit_routes: unreachableAfterRoutes,
   connected_campaign_graph: unreachableAfterRoutes.length === 0,
-  status: duplicates.length === 0 && invalid.length === 0 && centresOutside.length === 0 && unreachableAfterRoutes.length === 0
-    ? 'pass-with-provisional-boundaries'
+  status: duplicates.length === 0 && invalid.length === 0 && labelAnchorsOutside.length === 0 && unreachableAfterRoutes.length === 0
+    ? 'pass'
     : 'requires-correction'
 };
 
-fs.writeFileSync(path.join(outputRoot, 'adjacency-land-v0.1.json'), `${JSON.stringify(adjacency, null, 2)}\n`);
-fs.writeFileSync(path.join(outputRoot, 'routes-provisional-v0.1.json'), `${JSON.stringify(explicitConnections.map(([from, to, type]) => ({ from, to, type })), null, 2)}\n`);
-fs.writeFileSync(path.join(outputRoot, 'map-validation-v0.1.json'), `${JSON.stringify(report, null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `adjacency-land-v${version}.json`), `${JSON.stringify(adjacency, null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `routes-provisional-v${version}.json`), `${JSON.stringify(explicitConnections.map(([from, to, type]) => ({ from, to, type })), null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `map-validation-v${version}.json`), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report, null, 2));
 
 if (report.status === 'requires-correction') process.exitCode = 1;

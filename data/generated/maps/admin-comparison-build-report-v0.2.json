@@ -1,0 +1,300 @@
+{
+  "version": "0.2",
+  "territory_count": 101,
+  "administrative_comparison_territories": 88,
+  "provisional_or_fallback_territories": 13,
+  "mapped_source_regions": 1302,
+  "country_coverage": [
+    {
+      "country_code": "IS",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 2
+    },
+    {
+      "country_code": "IE",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 8
+    },
+    {
+      "country_code": "GB",
+      "status": "administrative-comparison",
+      "source_year": 2021,
+      "source_level": 2,
+      "source_region_count": 41
+    },
+    {
+      "country_code": "PT",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 24
+    },
+    {
+      "country_code": "ES",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 52
+    },
+    {
+      "country_code": "FR",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 96
+    },
+    {
+      "country_code": "BE",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 44
+    },
+    {
+      "country_code": "NL",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 40
+    },
+    {
+      "country_code": "LU",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 1
+    },
+    {
+      "country_code": "DE",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 400
+    },
+    {
+      "country_code": "CH",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 26
+    },
+    {
+      "country_code": "AT",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 35
+    },
+    {
+      "country_code": "CZ",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 14
+    },
+    {
+      "country_code": "SK",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 8
+    },
+    {
+      "country_code": "HU",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 20
+    },
+    {
+      "country_code": "PL",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 73
+    },
+    {
+      "country_code": "DK",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 11
+    },
+    {
+      "country_code": "NO",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 16
+    },
+    {
+      "country_code": "SE",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 21
+    },
+    {
+      "country_code": "FI",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 19
+    },
+    {
+      "country_code": "EE",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 5
+    },
+    {
+      "country_code": "LV",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 5
+    },
+    {
+      "country_code": "LT",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 10
+    },
+    {
+      "country_code": "IT",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 107
+    },
+    {
+      "country_code": "MT",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 2
+    },
+    {
+      "country_code": "SI",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 12
+    },
+    {
+      "country_code": "HR",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 21
+    },
+    {
+      "country_code": "BA",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 2,
+      "source_region_count": 3
+    },
+    {
+      "country_code": "RS",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 25
+    },
+    {
+      "country_code": "ME",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 1
+    },
+    {
+      "country_code": "XK",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 7
+    },
+    {
+      "country_code": "AL",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 12
+    },
+    {
+      "country_code": "MK",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 8
+    },
+    {
+      "country_code": "GR",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 52
+    },
+    {
+      "country_code": "BG",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 28
+    },
+    {
+      "country_code": "RO",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 42
+    },
+    {
+      "country_code": "MD",
+      "status": "provisional",
+      "source_region_count": 0
+    },
+    {
+      "country_code": "UA",
+      "status": "provisional",
+      "source_region_count": 0
+    },
+    {
+      "country_code": "BY",
+      "status": "provisional",
+      "source_region_count": 0
+    },
+    {
+      "country_code": "RU",
+      "status": "provisional",
+      "source_region_count": 0
+    },
+    {
+      "country_code": "TR",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 10
+    },
+    {
+      "country_code": "CY",
+      "status": "administrative-comparison",
+      "source_year": 2024,
+      "source_level": 3,
+      "source_region_count": 1
+    }
+  ],
+  "warnings": [
+    "Region assignment is automated for comparison and requires manual review.",
+    "Belarus, Moldova, Ukraine and Russia retain Pass 1 geometry.",
+    "Political claims and actual control remain outside geometry."
+  ]
+}

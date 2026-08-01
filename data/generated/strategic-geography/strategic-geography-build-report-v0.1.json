@@ -1,0 +1,631 @@
+{
+  "version": "0.1",
+  "generated_at": "2026-08-01T12:35:13.753Z",
+  "territory_count": 101,
+  "strategic_centre_count": 101,
+  "major_city_candidate_count": 80,
+  "strategic_airport_candidate_count": 620,
+  "port_candidate_count": 1029,
+  "selected_major_city_count": 14,
+  "selected_strategic_airport_count": 189,
+  "selected_port_count": 128,
+  "territories_without_strategic_airport": [
+    "CH-02",
+    "GB-05"
+  ],
+  "coastal_territories_without_wpi_port": [],
+  "counts_by_territory": {
+    "AL-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 3
+    },
+    "AT-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 0
+    },
+    "AT-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "BA-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 1
+    },
+    "BE-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 7
+    },
+    "BE-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 0
+    },
+    "BG-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 9,
+      "ports": 0
+    },
+    "BG-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 10,
+      "ports": 2
+    },
+    "BY-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 0
+    },
+    "BY-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 0
+    },
+    "CH-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "CH-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 0,
+      "ports": 0
+    },
+    "CY-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 6
+    },
+    "CZ-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 0
+    },
+    "CZ-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "DE-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 13,
+      "ports": 32
+    },
+    "DE-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 10,
+      "ports": 0
+    },
+    "DE-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 0
+    },
+    "DE-04": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 3
+    },
+    "DE-05": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "DE-06": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 0
+    },
+    "DK-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 7,
+      "ports": 40
+    },
+    "DK-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 1,
+      "ports": 29
+    },
+    "EE-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 1,
+      "ports": 7
+    },
+    "ES-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 9
+    },
+    "ES-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 3,
+      "ports": 4
+    },
+    "ES-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 6,
+      "ports": 10
+    },
+    "ES-04": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 6,
+      "ports": 0
+    },
+    "ES-05": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 12
+    },
+    "ES-06": {
+      "strategic_centres": 1,
+      "major_cities": 2,
+      "strategic_airports": 7,
+      "ports": 13
+    },
+    "FI-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 13
+    },
+    "FI-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 9,
+      "ports": 17
+    },
+    "FI-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 7,
+      "ports": 6
+    },
+    "FR-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 5,
+      "ports": 21
+    },
+    "FR-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 13,
+      "ports": 12
+    },
+    "FR-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "FR-04": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 10
+    },
+    "FR-05": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 0
+    },
+    "FR-06": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 8,
+      "ports": 22
+    },
+    "GB-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 82
+    },
+    "GB-02": {
+      "strategic_centres": 1,
+      "major_cities": 3,
+      "strategic_airports": 4,
+      "ports": 26
+    },
+    "GB-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 1
+    },
+    "GB-04": {
+      "strategic_centres": 1,
+      "major_cities": 3,
+      "strategic_airports": 18,
+      "ports": 53
+    },
+    "GB-05": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 0,
+      "ports": 12
+    },
+    "GB-06": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 1,
+      "ports": 9
+    },
+    "GR-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 8
+    },
+    "GR-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 9,
+      "ports": 32
+    },
+    "GR-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 24
+    },
+    "HR-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 0
+    },
+    "HR-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 16
+    },
+    "HU-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "HU-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 2,
+      "ports": 0
+    },
+    "IE-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 15
+    },
+    "IE-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 1,
+      "ports": 6
+    },
+    "IS-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 2,
+      "ports": 21
+    },
+    "IT-01": {
+      "strategic_centres": 1,
+      "major_cities": 2,
+      "strategic_airports": 16,
+      "ports": 13
+    },
+    "IT-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 10,
+      "ports": 12
+    },
+    "IT-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 8,
+      "ports": 22
+    },
+    "IT-04": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 16
+    },
+    "IT-05": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 10
+    },
+    "LT-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 2
+    },
+    "LU-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 1,
+      "ports": 0
+    },
+    "LV-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 5
+    },
+    "MD-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 0
+    },
+    "ME-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 2,
+      "ports": 4
+    },
+    "MK-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 0
+    },
+    "MT-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 1,
+      "ports": 2
+    },
+    "NL-01": {
+      "strategic_centres": 1,
+      "major_cities": 2,
+      "strategic_airports": 12,
+      "ports": 15
+    },
+    "NL-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 3
+    },
+    "NO-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 6,
+      "ports": 61
+    },
+    "NO-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 2,
+      "ports": 22
+    },
+    "NO-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 5,
+      "ports": 52
+    },
+    "PL-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 5,
+      "ports": 7
+    },
+    "PL-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 10,
+      "ports": 3
+    },
+    "PL-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 0
+    },
+    "PL-04": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 0
+    },
+    "PL-05": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 5,
+      "ports": 0
+    },
+    "PT-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 2,
+      "ports": 5
+    },
+    "PT-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 5
+    },
+    "RO-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 0
+    },
+    "RO-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 7,
+      "ports": 0
+    },
+    "RO-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 4,
+      "ports": 11
+    },
+    "RS-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 3,
+      "ports": 0
+    },
+    "RS-02": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 1,
+      "ports": 0
+    },
+    "RU-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 3,
+      "ports": 2
+    },
+    "RU-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 24,
+      "ports": 17
+    },
+    "RU-03": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 21,
+      "ports": 0
+    },
+    "RU-04": {
+      "strategic_centres": 1,
+      "major_cities": 8,
+      "strategic_airports": 39,
+      "ports": 0
+    },
+    "RU-05": {
+      "strategic_centres": 1,
+      "major_cities": 4,
+      "strategic_airports": 36,
+      "ports": 12
+    },
+    "SE-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 2,
+      "ports": 27
+    },
+    "SE-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 9,
+      "ports": 36
+    },
+    "SE-03": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 6,
+      "ports": 29
+    },
+    "SI-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 3,
+      "ports": 2
+    },
+    "SK-01": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 4,
+      "ports": 0
+    },
+    "TR-01": {
+      "strategic_centres": 1,
+      "major_cities": 4,
+      "strategic_airports": 9,
+      "ports": 24
+    },
+    "UA-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 5,
+      "ports": 0
+    },
+    "UA-02": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 0
+    },
+    "UA-03": {
+      "strategic_centres": 1,
+      "major_cities": 3,
+      "strategic_airports": 9,
+      "ports": 3
+    },
+    "UA-04": {
+      "strategic_centres": 1,
+      "major_cities": 1,
+      "strategic_airports": 5,
+      "ports": 14
+    },
+    "UA-05": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 1,
+      "ports": 9
+    },
+    "XK-01": {
+      "strategic_centres": 1,
+      "major_cities": 0,
+      "strategic_airports": 1,
+      "ports": 0
+    }
+  },
+  "caveats": [
+    "Candidate layers are evidence inputs, not the final gameplay-critical selection.",
+    "Civil-airport data does not yet identify military airbases.",
+    "Port importance requires manual scoring because this WPI service exposes location and name only.",
+    "Current control and operational status belong in the dated World State layer."
+  ]
+}

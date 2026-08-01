@@ -1,0 +1,115 @@
+{
+  "version": "0.1",
+  "purpose": "Integrated 101-territory campaign simulation with persistent formations, battles, medical returns, repairs and permanent losses.",
+  "run_count": 1212,
+  "summaries": [
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "target_turn_range": [
+        60,
+        100
+      ],
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 69,
+      "completion_day_p10": 66,
+      "completion_day_p90": 76,
+      "within_target_rate_percent": 99.7,
+      "territories_controlled_median": 101,
+      "active_personnel_median": 98747,
+      "killed_median": 662,
+      "wounded_unavailable_median": 598,
+      "functional_armour_median": 87728,
+      "damaged_armour_median": 10516,
+      "unarmoured_median": 477,
+      "battles_lost_median": 6,
+      "technology_escalation_median": 3.4,
+      "lowest_supply_percent_median": 29.3
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "target_turn_range": [
+        90,
+        150
+      ],
+      "runs": 303,
+      "completion_rate_percent": 100,
+      "completion_day_median": 104,
+      "completion_day_p10": 99,
+      "completion_day_p90": 110,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "active_personnel_median": 48750,
+      "killed_median": 778,
+      "wounded_unavailable_median": 473,
+      "functional_armour_median": 42380,
+      "damaged_armour_median": 6074,
+      "unarmoured_median": 294,
+      "battles_lost_median": 6,
+      "technology_escalation_median": 4,
+      "lowest_supply_percent_median": 59.7
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "target_turn_range": [
+        140,
+        220
+      ],
+      "runs": 303,
+      "completion_rate_percent": 99.3,
+      "completion_day_median": 149,
+      "completion_day_p10": 140,
+      "completion_day_p90": 163,
+      "within_target_rate_percent": 91.7,
+      "territories_controlled_median": 101,
+      "active_personnel_median": 23083,
+      "killed_median": 1214,
+      "wounded_unavailable_median": 656,
+      "functional_armour_median": 18084,
+      "damaged_armour_median": 4721,
+      "unarmoured_median": 252,
+      "battles_lost_median": 12,
+      "technology_escalation_median": 7.4,
+      "lowest_supply_percent_median": 100
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "target_turn_range": [
+        220,
+        365
+      ],
+      "runs": 303,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 48,
+      "active_personnel_median": 7639,
+      "killed_median": 2040,
+      "wounded_unavailable_median": 0,
+      "functional_armour_median": 1183,
+      "damaged_armour_median": 5970,
+      "unarmoured_median": 481,
+      "battles_lost_median": 38,
+      "technology_escalation_median": 20.5,
+      "lowest_supply_percent_median": 100
+    }
+  ],
+  "findings": [
+    "At least one army setting cannot currently complete the integrated campaign and requires diagnosis, not automatic numeric easing.",
+    "Permanent casualties exceed fifteen per cent in at least one army setting.",
+    "At least one completed or attempted campaign ends with fewer than half of its original troops in functional armour.",
+    "Desperate mode now requires independent allied modern formations capable of conducting operations, not a larger support multiplier."
+  ],
+  "limitations": [
+    "Enemy forces are generated from resistance and escalation archetypes rather than a dated World State.",
+    "Local modern forces provide garrison relief and battle support but do not yet operate as independent allied formations.",
+    "Battles use the validated operational relationships in a reduced campaign-scale resolver.",
+    "Diplomacy, nuclear escalation, the general and civilian political events are not yet active."
+  ]
+}

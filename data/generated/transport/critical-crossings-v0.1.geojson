@@ -1,0 +1,845 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-CHANNEL-TUNNEL",
+        "name": "Channel Tunnel",
+        "crossing_type": "fixed-link",
+        "territory_from": "GB-04",
+        "territory_to": "FR-02",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 8,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.12,
+            51.09
+          ],
+          [
+            1.78,
+            50.92
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-DOVER-CALAIS",
+        "name": "Dover-Calais",
+        "crossing_type": "short-sea",
+        "territory_from": "GB-04",
+        "territory_to": "FR-02",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 3,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.31,
+            51.13
+          ],
+          [
+            1.86,
+            50.97
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-ORESUND",
+        "name": "Oresund fixed link",
+        "crossing_type": "fixed-link",
+        "territory_from": "DK-02",
+        "territory_to": "SE-01",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 6,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            12.64,
+            55.64
+          ],
+          [
+            12.91,
+            55.58
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-FEHMARN",
+        "name": "Fehmarn Belt corridor",
+        "crossing_type": "future-fixed-link",
+        "territory_from": "DE-01",
+        "territory_to": "DK-02",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 6,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.08,
+            54.5
+          ],
+          [
+            11.31,
+            54.65
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-MESSINA",
+        "name": "Strait of Messina",
+        "crossing_type": "short-sea",
+        "territory_from": "IT-03",
+        "territory_to": "IT-04",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            15.64,
+            38.19
+          ],
+          [
+            15.56,
+            38.23
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-BOSPORUS",
+        "name": "Bosporus",
+        "crossing_type": "strait-fixed-links",
+        "territory_from": "TR-01",
+        "territory_to": "TR-01",
+        "base_capacity": 5,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 6,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            28.99,
+            41.05
+          ],
+          [
+            29.04,
+            41.05
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-DARDANELLES",
+        "name": "Dardanelles",
+        "crossing_type": "strait-fixed-link",
+        "territory_from": "TR-01",
+        "territory_to": "TR-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 5,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            26.67,
+            40.19
+          ],
+          [
+            26.56,
+            40.25
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-KERCH",
+        "name": "Kerch Strait",
+        "crossing_type": "strait-fixed-link",
+        "territory_from": "UA-05",
+        "territory_to": "RU-05",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 6,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            36.51,
+            45.3
+          ],
+          [
+            36.59,
+            45.35
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-SUWALKI",
+        "name": "Suwalki corridor",
+        "crossing_type": "land-gap",
+        "territory_from": "PL-05",
+        "territory_to": "LT-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            23.1,
+            54.05
+          ],
+          [
+            23.35,
+            54.35
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-BRENNER",
+        "name": "Brenner Pass",
+        "crossing_type": "mountain-pass",
+        "territory_from": "AT-01",
+        "territory_to": "IT-01",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 5,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            11.5,
+            47
+          ],
+          [
+            11.5,
+            46.9
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-GOTTHARD",
+        "name": "Gotthard corridor",
+        "crossing_type": "alpine-tunnel",
+        "territory_from": "CH-01",
+        "territory_to": "CH-02",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 6,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            8.59,
+            46.67
+          ],
+          [
+            8.67,
+            46.55
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-MONT-BLANC",
+        "name": "Mont Blanc corridor",
+        "crossing_type": "alpine-tunnel",
+        "territory_from": "FR-05",
+        "territory_to": "IT-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 5,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.87,
+            45.92
+          ],
+          [
+            6.97,
+            45.82
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-FREJUS",
+        "name": "Frejus corridor",
+        "crossing_type": "alpine-tunnel",
+        "territory_from": "FR-05",
+        "territory_to": "IT-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 5,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.68,
+            45.2
+          ],
+          [
+            7.05,
+            45.14
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-PYRENEES-WEST",
+        "name": "Western Pyrenees approaches",
+        "crossing_type": "mountain-corridor",
+        "territory_from": "ES-02",
+        "territory_to": "FR-04",
+        "base_capacity": 4,
+        "vulnerability": "medium",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -1.75,
+            43.34
+          ],
+          [
+            -1.47,
+            43.36
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-PYRENEES-EAST",
+        "name": "Eastern Pyrenees approaches",
+        "crossing_type": "mountain-corridor",
+        "territory_from": "ES-03",
+        "territory_to": "FR-06",
+        "base_capacity": 4,
+        "vulnerability": "medium",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            2.87,
+            42.45
+          ],
+          [
+            3,
+            42.5
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-IRON-GATES",
+        "name": "Iron Gates",
+        "crossing_type": "river-crossing",
+        "territory_from": "RS-01",
+        "territory_to": "RO-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 4,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            22.51,
+            44.67
+          ],
+          [
+            22.67,
+            44.7
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-GIURGIU-RUSE",
+        "name": "Giurgiu-Ruse crossing",
+        "crossing_type": "river-bridge",
+        "territory_from": "RO-02",
+        "territory_to": "BG-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 4,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            25.97,
+            43.9
+          ],
+          [
+            25.96,
+            43.85
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-VIDIN-CALAFAT",
+        "name": "Vidin-Calafat crossing",
+        "crossing_type": "river-bridge",
+        "territory_from": "RO-02",
+        "territory_to": "BG-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 4,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            22.94,
+            43.99
+          ],
+          [
+            22.89,
+            44
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-NARVA",
+        "name": "Narva crossing",
+        "crossing_type": "river-border",
+        "territory_from": "EE-01",
+        "territory_to": "RU-02",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 4,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            28.19,
+            59.38
+          ],
+          [
+            28.21,
+            59.37
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-BREST-TERESPOL",
+        "name": "Brest-Terespol corridor",
+        "crossing_type": "river-gauge-border",
+        "territory_from": "BY-01",
+        "territory_to": "PL-05",
+        "base_capacity": 4,
+        "vulnerability": "high",
+        "destroyable": true,
+        "repair_turns": 4,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            23.68,
+            52.1
+          ],
+          [
+            23.62,
+            52.08
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-DANUBE-BRATISLAVA",
+        "name": "Bratislava Danube crossings",
+        "crossing_type": "river-crossing",
+        "territory_from": "SK-01",
+        "territory_to": "HU-01",
+        "base_capacity": 4,
+        "vulnerability": "medium",
+        "destroyable": true,
+        "repair_turns": 3,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            17.11,
+            48.12
+          ],
+          [
+            17.13,
+            48.04
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-CARPATHIAN-DUKLA",
+        "name": "Dukla Pass approaches",
+        "crossing_type": "mountain-pass",
+        "territory_from": "PL-04",
+        "territory_to": "SK-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            21.68,
+            49.47
+          ],
+          [
+            21.68,
+            49.4
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-CARPATHIAN-UZHOK",
+        "name": "Uzhok Pass approaches",
+        "crossing_type": "mountain-pass",
+        "territory_from": "SK-01",
+        "territory_to": "UA-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            22.85,
+            49.05
+          ],
+          [
+            22.88,
+            49
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-MORAVA-GAP",
+        "name": "Morava-Vardar corridor",
+        "crossing_type": "river-valley",
+        "territory_from": "RS-02",
+        "territory_to": "MK-01",
+        "base_capacity": 4,
+        "vulnerability": "medium",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            21.75,
+            42.7
+          ],
+          [
+            21.72,
+            42.4
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-LJUBLJANA-GAP",
+        "name": "Ljubljana Gap",
+        "crossing_type": "mountain-corridor",
+        "territory_from": "SI-01",
+        "territory_to": "IT-01",
+        "base_capacity": 3,
+        "vulnerability": "medium",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            13.85,
+            45.85
+          ],
+          [
+            13.7,
+            45.82
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-TRANSYLVANIAN-GAP",
+        "name": "Southern Carpathian approaches",
+        "crossing_type": "mountain-corridor",
+        "territory_from": "RO-01",
+        "territory_to": "RO-02",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            24.5,
+            45.7
+          ],
+          [
+            24.7,
+            45.4
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-FINLAND-GULF",
+        "name": "Helsinki-Tallinn corridor",
+        "crossing_type": "short-sea",
+        "territory_from": "FI-01",
+        "territory_to": "EE-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            24.96,
+            60.16
+          ],
+          [
+            24.76,
+            59.45
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-IRISH-SEA",
+        "name": "Dublin-Holyhead corridor",
+        "crossing_type": "short-sea",
+        "territory_from": "IE-02",
+        "territory_to": "GB-05",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -6.2,
+            53.35
+          ],
+          [
+            -4.63,
+            53.31
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-BALTIC-SWEDEN",
+        "name": "Stockholm-Turku corridor",
+        "crossing_type": "short-sea",
+        "territory_from": "SE-02",
+        "territory_to": "FI-01",
+        "base_capacity": 3,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            18.2,
+            59.35
+          ],
+          [
+            22.25,
+            60.45
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "X-SKAGERRAK",
+        "name": "Oslo-Jutland corridor",
+        "crossing_type": "short-sea",
+        "territory_from": "NO-01",
+        "territory_to": "DK-01",
+        "base_capacity": 2,
+        "vulnerability": "high",
+        "destroyable": false,
+        "repair_turns": 2,
+        "operational_status_source": "world-state"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            10.7,
+            59.75
+          ],
+          [
+            10.6,
+            57.72
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "version": "0.1",
+  "valid": true,
+  "counts": {
+    "territories": 101,
+    "hubs": 58,
+    "crossings": 30,
+    "rail_hubs": 58,
+    "motorway_hubs": 58,
+    "intermodal_hubs": 52
+  },
+  "crossing_types": {
+    "alpine-tunnel": 3,
+    "fixed-link": 2,
+    "future-fixed-link": 1,
+    "land-gap": 1,
+    "mountain-corridor": 4,
+    "mountain-pass": 3,
+    "river-border": 1,
+    "river-bridge": 2,
+    "river-crossing": 2,
+    "river-gauge-border": 1,
+    "river-valley": 1,
+    "short-sea": 6,
+    "strait-fixed-link": 2,
+    "strait-fixed-links": 1
+  },
+  "errors": [],
+  "warnings": [
+    "X-BOSPORUS is an internal strategic crossing",
+    "X-DARDANELLES is an internal strategic crossing"
+  ],
+  "design_notes": [
+    "Objects represent campaign-scale network structure, not tactical infrastructure detail.",
+    "Base capacity is a relative gameplay band from 1 to 5, not a real-world throughput measurement.",
+    "Operational status, control, damage and closures belong to the dated World State layer."
+  ]
+}

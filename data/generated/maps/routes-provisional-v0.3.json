@@ -1,0 +1,87 @@
+[
+  {
+    "from": "IS-01",
+    "to": "GB-01",
+    "type": "long-sea"
+  },
+  {
+    "from": "IS-01",
+    "to": "NO-02",
+    "type": "long-sea"
+  },
+  {
+    "from": "GB-04",
+    "to": "FR-02",
+    "type": "channel-crossing"
+  },
+  {
+    "from": "GB-02",
+    "to": "GB-06",
+    "type": "short-sea"
+  },
+  {
+    "from": "GB-05",
+    "to": "IE-02",
+    "type": "short-sea"
+  },
+  {
+    "from": "DK-01",
+    "to": "NO-01",
+    "type": "short-sea"
+  },
+  {
+    "from": "DK-02",
+    "to": "SE-01",
+    "type": "fixed-link"
+  },
+  {
+    "from": "SE-02",
+    "to": "FI-01",
+    "type": "baltic-sea"
+  },
+  {
+    "from": "FI-01",
+    "to": "EE-01",
+    "type": "baltic-sea"
+  },
+  {
+    "from": "PL-01",
+    "to": "SE-01",
+    "type": "baltic-sea"
+  },
+  {
+    "from": "IT-03",
+    "to": "IT-04",
+    "type": "strait-crossing"
+  },
+  {
+    "from": "IT-02",
+    "to": "IT-05",
+    "type": "short-sea"
+  },
+  {
+    "from": "IT-04",
+    "to": "MT-01",
+    "type": "short-sea"
+  },
+  {
+    "from": "GR-02",
+    "to": "GR-03",
+    "type": "aegean-sea"
+  },
+  {
+    "from": "GR-03",
+    "to": "CY-01",
+    "type": "long-sea"
+  },
+  {
+    "from": "CY-01",
+    "to": "TR-01",
+    "type": "short-sea"
+  },
+  {
+    "from": "UA-05",
+    "to": "RU-05",
+    "type": "fixed-link-world-state"
+  }
+]

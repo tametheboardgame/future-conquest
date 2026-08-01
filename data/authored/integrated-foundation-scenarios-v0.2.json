@@ -1,0 +1,33 @@
+{
+  "schema_version":"0.2",
+  "simulation_days":500,
+  "seeds_per_start":3,
+  "task_group_size":2500,
+  "minimum_future_commitment":700,
+  "minimum_modern_commitment":900,
+  "future_power_per_1000":4.6,
+  "modern_power_per_1000":2.4,
+  "base_enemy_power":5.2,
+  "enemy_growth_per_day":0.0018,
+  "base_battle_days":3,
+  "future_daily_casualty_share":0.0017,
+  "modern_daily_casualty_share":0.0065,
+  "future_armour_damage_share":0.006,
+  "daily_armour_wear_share":0.0002,
+  "daily_repair_share":0.003,
+  "initial_parts_per_suit":0.012,
+  "repair_parts_cost":0.5,
+  "supply_capacity_per_point":5000,
+  "garrison_by_urbanisation":{"low":180,"medium":300,"high":450,"very-high":650},
+  "modes":[
+    {"id":"campaign","future_personnel":100000,"maximum_concurrent_battles":4,"target_turn_range":[60,100],"command_cycle":{"active_days":4,"cycle_days":5}},
+    {"id":"standard","future_personnel":50000,"maximum_concurrent_battles":3,"target_turn_range":[90,150],"command_cycle":{"active_days":4,"cycle_days":5}},
+    {"id":"veteran","future_personnel":25000,"maximum_concurrent_battles":2,"target_turn_range":[140,220],"command_cycle":{"active_days":1,"cycle_days":1}},
+    {"id":"desperate","future_personnel":10000,"maximum_concurrent_battles":1,"target_turn_range":[220,365],"command_cycle":{"active_days":2,"cycle_days":3}}
+  ],
+  "strategies":[
+    {"id":"restrained","occupation_policy":"negotiated_transition","humanitarian_priority":0.9,"infrastructure_destruction_chance":0.015,"technology_loss_chance":0.008,"attack_ratio":1.05},
+    {"id":"pragmatic","occupation_policy":"client_government","humanitarian_priority":0.55,"infrastructure_destruction_chance":0.045,"technology_loss_chance":0.014,"attack_ratio":0.95},
+    {"id":"coercive","occupation_policy":"military_administration","humanitarian_priority":0.15,"infrastructure_destruction_chance":0.12,"technology_loss_chance":0.025,"attack_ratio":0.82}
+  ]
+}
