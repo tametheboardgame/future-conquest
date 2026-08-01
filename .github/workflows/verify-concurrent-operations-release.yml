@@ -1,0 +1,163 @@
+name: Verify concurrent operations release
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify main deployment and live release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = 'a4f0397eab990b3a7f93ed3aefd139e48da5ea2b';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let mainRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner,
+                  repo,
+                  head_sha: targetSha,
+                  per_page: 50
+                });
+                mainRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (mainRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!mainRun) {
+                failures.push('No main-branch workflow run was found for the merge commit.');
+              } else {
+                core.notice(`MAIN_RUN=${JSON.stringify({
+                  id: mainRun.id,
+                  status: mainRun.status,
+                  conclusion: mainRun.conclusion,
+                  html_url: mainRun.html_url
+                })}`);
+                if (mainRun.status !== 'completed' || mainRun.conclusion !== 'success') {
+                  failures.push(`Main workflow result was ${mainRun.status}/${mainRun.conclusion}.`);
+                }
+
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: mainRun.id,
+                  filter: 'latest',
+                  per_page: 100
+                });
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                core.notice(`MAIN_JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({
+                  name: job.name,
+                  status: job.status,
+                  conclusion: job.conclusion,
+                  steps: job.steps?.map(step => ({ name: step.name, conclusion: step.conclusion }))
+                })))}`);
+                if (build?.conclusion !== 'success') failures.push(`Build job was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Deploy job was ${deploy?.conclusion ?? 'missing'}.`);
+                const testStep = build?.steps?.find(step => step.name === 'Run engine tests');
+                if (testStep?.conclusion !== 'success') failures.push(`Engine tests were ${testStep?.conclusion ?? 'missing'}.`);
+                const buildStep = build?.steps?.find(step => step.name === 'Build game');
+                if (buildStep?.conclusion !== 'success') failures.push(`Production build was ${buildStep?.conclusion ?? 'missing'}.`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({
+                owner,
+                repo,
+                sha: targetSha,
+                environment: 'github-pages',
+                per_page: 20
+              });
+              if (!deployments.data.length) {
+                failures.push('No github-pages deployment exists for the merge commit.');
+              } else {
+                let deploymentSucceeded = false;
+                for (const deployment of deployments.data) {
+                  const statuses = await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 20
+                  });
+                  core.notice(`DEPLOYMENT_${deployment.id}=${JSON.stringify(statuses.data.map(status => ({
+                    state: status.state,
+                    environment_url: status.environment_url,
+                    description: status.description
+                  })))}`);
+                  if (statuses.data.some(status => status.state === 'success')) deploymentSucceeded = true;
+                }
+                if (!deploymentSucceeded) failures.push('The github-pages deployment has no successful status.');
+              }
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const scriptMatch = index.match(/<script[^>]+src="([^"]+\.js)"/);
+                if (!scriptMatch) {
+                  failures.push('No production JavaScript bundle was found in the live index.');
+                } else {
+                  const bundleUrl = new URL(scriptMatch[1], siteUrl).toString();
+                  const bundleResponse = await fetch(bundleUrl, { cache: 'no-store' });
+                  if (!bundleResponse.ok) {
+                    failures.push(`Live bundle returned HTTP ${bundleResponse.status}.`);
+                  } else {
+                    const bundle = await bundleResponse.text();
+                    const concurrentMarker = bundle.includes('CONCURRENT OPERATIONS');
+                    const joinMarker = bundle.includes('Join operation');
+                    const resolveMarker = bundle.includes('Resolve all orders');
+                    core.notice(`LIVE_CONTENT=${JSON.stringify({
+                      siteUrl,
+                      bundleUrl,
+                      concurrentMarker,
+                      joinMarker,
+                      resolveMarker
+                    })}`);
+                    if (!concurrentMarker || !joinMarker || !resolveMarker) {
+                      failures.push('The live bundle does not contain all concurrent-operations release markers.');
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: context.payload.pull_request.number,
+                  state: 'closed'
+                });
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: 'heads/agent/verify-concurrent-operations-release'
+                });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
