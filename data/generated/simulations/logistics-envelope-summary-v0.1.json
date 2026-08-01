@@ -1,0 +1,206 @@
+{
+  "version": "0.1",
+  "purpose": "Movement, supply and garrison stress test. This is not a combat or victory simulation.",
+  "assumptions": {
+    "schema_version": "0.1",
+    "simulation_days": 365,
+    "portal_reserve_days": 14,
+    "captured_capacity_activation_days": 7,
+    "minimum_mobile_group_personnel": 5000,
+    "base_daily_armour_wear_percent": 0.05,
+    "modes": [
+      {
+        "id": "campaign",
+        "future_personnel": 100000,
+        "maximum_spearheads": 6
+      },
+      {
+        "id": "standard",
+        "future_personnel": 50000,
+        "maximum_spearheads": 4
+      },
+      {
+        "id": "veteran",
+        "future_personnel": 25000,
+        "maximum_spearheads": 3
+      },
+      {
+        "id": "desperate",
+        "future_personnel": 10000,
+        "maximum_spearheads": 2
+      }
+    ],
+    "occupation_policies": [
+      {
+        "id": "future-only",
+        "local_handover_share": 0,
+        "handover_delay_days": null
+      },
+      {
+        "id": "integrated-local-forces",
+        "local_handover_share": 0.9,
+        "handover_delay_days": 10
+      }
+    ],
+    "garrison_personnel": {
+      "low": 200,
+      "medium": 350,
+      "high": 500,
+      "very-high": 700
+    },
+    "capture_duration": {
+      "base_days": 1,
+      "upland_or_extreme_terrain_extra_days": 1,
+      "high_urbanisation_extra_days": 1
+    }
+  },
+  "run_count": 808,
+  "summaries": [
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_policy": "future-only",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 36,
+      "completion_day_p10": 35,
+      "completion_day_p90": 39,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 1.8,
+      "personnel_stall_rate_percent": 0,
+      "slowest_successful_start": "MT-01",
+      "worst_reach_start": "AL-01"
+    },
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_policy": "integrated-local-forces",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 36,
+      "completion_day_p10": 35,
+      "completion_day_p90": 39,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 1.8,
+      "personnel_stall_rate_percent": 0,
+      "slowest_successful_start": "MT-01",
+      "worst_reach_start": "AL-01"
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_policy": "future-only",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 57,
+      "completion_day_p10": 57,
+      "completion_day_p90": 59,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 2.85,
+      "personnel_stall_rate_percent": 0,
+      "slowest_successful_start": "MT-01",
+      "worst_reach_start": "AL-01"
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_policy": "integrated-local-forces",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 52,
+      "completion_day_p10": 52,
+      "completion_day_p90": 53,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 2.6,
+      "personnel_stall_rate_percent": 0,
+      "slowest_successful_start": "MT-01",
+      "worst_reach_start": "AL-01"
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_policy": "future-only",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "territories_controlled_median": 45,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 18.25,
+      "personnel_stall_rate_percent": 100,
+      "slowest_successful_start": null,
+      "worst_reach_start": "RO-01"
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_policy": "integrated-local-forces",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 69,
+      "completion_day_p10": 69,
+      "completion_day_p90": 70,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 3.45,
+      "personnel_stall_rate_percent": 0,
+      "slowest_successful_start": "MT-01",
+      "worst_reach_start": "AL-01"
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_policy": "future-only",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "territories_controlled_median": 10,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 18.25,
+      "personnel_stall_rate_percent": 100,
+      "slowest_successful_start": null,
+      "worst_reach_start": "BE-01"
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_policy": "integrated-local-forces",
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 206,
+      "completion_day_p10": 204,
+      "completion_day_p90": 207,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "armour_wear_percent_median": 10.3,
+      "personnel_stall_rate_percent": 97,
+      "slowest_successful_start": "BY-01",
+      "worst_reach_start": "AL-01"
+    }
+  ],
+  "findings": [
+    "Future-only occupation creates a finite garrison wall, confirming that allied or client forces are mechanically necessary.",
+    "Supply does not bind in the logistics-first expansion envelope; slower combat, corridor bottlenecks or reduced captured-capacity activation must create the intended pressure."
+  ],
+  "limitations": [
+    "No enemy force strength, combat casualties, diplomacy, escalation or resistance is modelled.",
+    "Conquest order uses a deterministic logistics-first heuristic rather than player or AI planning.",
+    "Local-force handover assumes availability after a delay and does not yet model loyalty or political cost.",
+    "Sea-route shipping availability and crossing damage are not varied in this first pass."
+  ]
+}

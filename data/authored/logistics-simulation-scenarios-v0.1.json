@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1",
+  "simulation_days": 365,
+  "portal_reserve_days": 14,
+  "captured_capacity_activation_days": 7,
+  "minimum_mobile_group_personnel": 5000,
+  "base_daily_armour_wear_percent": 0.05,
+  "modes": [
+    {"id":"campaign","future_personnel":100000,"maximum_spearheads":6},
+    {"id":"standard","future_personnel":50000,"maximum_spearheads":4},
+    {"id":"veteran","future_personnel":25000,"maximum_spearheads":3},
+    {"id":"desperate","future_personnel":10000,"maximum_spearheads":2}
+  ],
+  "occupation_policies": [
+    {"id":"future-only","local_handover_share":0,"handover_delay_days":null},
+    {"id":"integrated-local-forces","local_handover_share":0.9,"handover_delay_days":10}
+  ],
+  "garrison_personnel": {"low":200,"medium":350,"high":500,"very-high":700},
+  "capture_duration": {
+    "base_days":1,
+    "upland_or_extreme_terrain_extra_days":1,
+    "high_urbanisation_extra_days":1
+  }
+}

@@ -15,6 +15,7 @@
     "map:build-transport": "node scripts/maps/build-transport-structure.mjs",
     "map:render-transport": "node scripts/maps/render-transport-structure.mjs",
     "systems:build-movement-supply": "node scripts/maps/build-movement-supply-baseline.mjs",
+    "simulate:logistics": "node scripts/simulate-logistics-envelope.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
