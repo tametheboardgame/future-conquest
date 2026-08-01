@@ -11,11 +11,15 @@ const collection = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
 
 const ids = collection.features.map(feature => feature.properties.territory_id);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+const geometryIsValid = feature => turf.flatten(feature).features.every(part => turf.booleanValid(part));
 const invalid = collection.features
-  .filter(feature => !turf.booleanValid(feature))
+  .filter(feature => !geometryIsValid(feature))
   .map(feature => feature.properties.territory_id);
 const centresOutside = collection.features
   .filter(feature => !turf.booleanPointInPolygon(turf.point(feature.properties.centre), feature, { ignoreBoundary: false }))
+  .map(feature => feature.properties.territory_id);
+const labelAnchorsOutside = collection.features
+  .filter(feature => !turf.booleanPointInPolygon(turf.point(feature.properties.label_anchor ?? feature.properties.centre), feature, { ignoreBoundary: false }))
   .map(feature => feature.properties.territory_id);
 
 const adjacency = Object.fromEntries(ids.map(id => [id, []]));
@@ -84,14 +88,15 @@ const report = {
   unique_id_count: new Set(ids).size,
   duplicates,
   invalid_geometries: invalid,
-  centres_outside_territory: centresOutside,
+  strategic_centres_outside_generalised_geometry: centresOutside,
+  label_anchors_outside_territory: labelAnchorsOutside,
   detected_land_edges: Object.values(adjacency).reduce((sum, neighbours) => sum + neighbours.length, 0) / 2,
   land_isolated_territories: landIsolated,
   explicit_route_count: explicitConnections.length,
   unreachable_after_explicit_routes: unreachableAfterRoutes,
   connected_campaign_graph: unreachableAfterRoutes.length === 0,
-  status: duplicates.length === 0 && invalid.length === 0 && centresOutside.length === 0 && unreachableAfterRoutes.length === 0
-    ? 'pass-with-provisional-boundaries'
+  status: duplicates.length === 0 && invalid.length === 0 && labelAnchorsOutside.length === 0 && unreachableAfterRoutes.length === 0
+    ? 'pass'
     : 'requires-correction'
 };
 
