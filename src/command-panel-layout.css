@@ -1,0 +1,32 @@
+.command-panel {
+  display: block;
+  height: 754px;
+  max-height: 754px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.command-panel > section {
+  display: block;
+  min-height: 0;
+  flex: none;
+}
+
+.command-panel .territory-card,
+.command-panel .operation-card {
+  min-height: 0;
+}
+
+.command-panel .operation-card {
+  padding-bottom: 18px;
+}
+
+.command-panel .operation-card .primary,
+.command-panel .operation-card .secondary {
+  margin-top: 10px;
+}
+
+.command-panel .controls {
+  margin-top: 0;
+}
