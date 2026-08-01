@@ -17,6 +17,7 @@
     "systems:build-movement-supply": "node scripts/maps/build-movement-supply-baseline.mjs",
     "simulate:logistics": "node scripts/simulate-logistics-envelope.mjs",
     "simulate:logistics-v0.2": "node scripts/simulate-logistics-envelope-v0.2.mjs",
+    "simulate:combat": "node scripts/simulate-combat-balance.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
