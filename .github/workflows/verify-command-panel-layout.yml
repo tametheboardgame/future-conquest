@@ -1,0 +1,96 @@
+name: Temporary command panel layout verification
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed command panel layout
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = '69a241f1206f35bc43e56eb87687fb4a603aae6b';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let mainRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, head_sha: targetSha, per_page: 50 });
+                mainRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (mainRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!mainRun || mainRun.conclusion !== 'success') {
+                failures.push(`Main workflow was ${mainRun?.status ?? 'missing'}/${mainRun?.conclusion ?? 'missing'}.`);
+              } else {
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: mainRun.id, filter: 'latest', per_page: 100 });
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                core.notice(`MAIN_RUN=${JSON.stringify({ id: mainRun.id, url: mainRun.html_url, conclusion: mainRun.conclusion })}`);
+                core.notice(`JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({ name: job.name, conclusion: job.conclusion })))}`);
+                if (build?.conclusion !== 'success') failures.push(`Build job was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Deploy job was ${deploy?.conclusion ?? 'missing'}.`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({ owner, repo, sha: targetSha, environment: 'github-pages', per_page: 20 });
+              let deploymentSucceeded = false;
+              for (const deployment of deployments.data) {
+                const statuses = await github.rest.repos.listDeploymentStatuses({ owner, repo, deployment_id: deployment.id, per_page: 20 });
+                if (statuses.data.some(status => status.state === 'success')) deploymentSucceeded = true;
+              }
+              if (!deploymentSucceeded) failures.push('No successful GitHub Pages deployment exists for the layout fix commit.');
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const cssMatch = index.match(/<link[^>]+href="([^"]+\.css)"/);
+                if (!cssMatch) {
+                  failures.push('Could not locate the live stylesheet.');
+                } else {
+                  const cssUrl = new URL(cssMatch[1], siteUrl).toString();
+                  const cssResponse = await fetch(cssUrl, { cache: 'no-store' });
+                  const css = cssResponse.ok ? await cssResponse.text() : '';
+                  const markers = {
+                    blockPanel: css.includes('.command-panel{display:block'),
+                    stableScrollbar: css.includes('scrollbar-gutter:stable'),
+                    nonFlexSections: css.includes('.command-panel>section{display:block;min-height:0;flex:none'),
+                    controlsFlow: css.includes('.command-panel .controls{margin-top:0')
+                  };
+                  core.notice(`LIVE=${JSON.stringify({ siteUrl, cssUrl, markers })}`);
+                  if (!Object.values(markers).every(Boolean)) failures.push('The live stylesheet does not contain all command-panel layout markers.');
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({ owner, repo, pull_number: context.payload.pull_request.number, state: 'closed' });
+                await github.rest.git.deleteRef({ owner, repo, ref: 'heads/agent/verify-command-panel-layout' });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
