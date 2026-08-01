@@ -34,8 +34,29 @@ temporary closures are deliberately supplied by the World State snapshot.
   this is not an error and will become a meaningful strategic distinction.
 
 These are evidence layers, not the number of icons that will appear in the game.
-The next selection pass will score nodes and normally expose only the most
-important one to three of each type per territory.
+The selection pass scores nodes and exposes no more than two additional major
+cities, two strategic airports and two ports per territory. The first result is:
+
+- 14 additional major cities beyond the 101 strategic centres.
+- 189 selected strategic airports and airfields.
+- 128 selected ports.
+
+Airport scoring uses runway length, source classification and scheduled service.
+Port scoring uses harbour size, supported vessel size, cargo facilities, rail,
+fuel, water and provisions. The complete candidate layers remain available.
+
+## Terrain profiles
+
+All 101 territories now have a broad terrain class, winter-severity band,
+urbanisation band and base movement-cost multiplier. Natural Earth physical
+regions provide the initial mountain, plateau, plain, lowland and tundra
+coverage. Twenty-four explicit authored overrides handle islands and strategic
+territories whose broad geography is not represented adequately by those
+cartographic regions.
+
+The resulting first-pass distribution is deliberately broad rather than
+tactical: open lowland, mixed lowland, mixed upland, mountainous and subarctic.
+No terrain profile remains unreviewed because of missing source coverage.
 
 ## Gameplay principles
 
@@ -52,8 +73,7 @@ important one to three of each type per territory.
 
 ## Next pass
 
-1. Score and select gameplay-critical cities, airports and ports.
-2. Add broad terrain profiles to all 101 territories.
-3. Add the limited set of crossings that materially alter the campaign graph.
-4. Add trunk rail and motorway hubs without attempting street-level routing.
-5. Render a review map with independently toggleable layers.
+1. Add the limited set of crossings that materially alter the campaign graph.
+2. Add trunk rail and motorway hubs without attempting street-level routing.
+3. Convert movement costs into turn and supply effects during gameplay design.
+4. Replace remaining heuristic urbanisation with a continuous population layer.
