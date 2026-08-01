@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { beginOperation, endTurn, loadGame, newGame } = require('../.test-dist/engine.js');
+const { __testOnly, beginOperation, canIssueOperationalOrder, endTurn, loadGame, newGame, setGarrison } = require('../.test-dist/engine.js');
 const {
   canReorganiseFormation,
   dissolveFormation,
@@ -91,6 +91,35 @@ test('active formations cannot be reorganised', () => {
   assert.equal(splitFormation(state, { sourceId: 'TG-1', name: 'Not Allowed', personnel: 2, functionalArmour: 0, damagedArmour: 0 }), state);
 });
 
+test('zero-person formations cannot receive orders or project unmanned armour power', () => {
+  let state = newGame(2);
+  state = transferFormationResources(state, {
+    sourceId: 'TG-1',
+    targetId: 'TG-2',
+    personnel: state.taskGroups['TG-1'].personnel,
+    functionalArmour: 0,
+    damagedArmour: 0
+  });
+  const empty = state.taskGroups['TG-1'];
+  assert.equal(empty.personnel, 0);
+  assert.ok(empty.functionalArmour > 0);
+  assert.equal(canIssueOperationalOrder(empty), false);
+  assert.equal(__testOnly.deployableArmour(empty), 0);
+  assert.equal(setGarrison(state), state);
+
+  state.selectedTaskGroupId = 'TG-1';
+  state.targetTerritory = 'FR-01';
+  assert.equal(beginOperation(state), state);
+});
+
+test('deployable armour is limited by available personnel', () => {
+  const state = newGame(2);
+  const group = state.taskGroups['TG-1'];
+  group.personnel = 2;
+  group.functionalArmour = 2500;
+  assert.equal(__testOnly.deployableArmour(group), 2);
+});
+
 test('formations with residual recovery establishment cannot be dissolved', () => {
   const state = newGame(2);
   state.taskGroups['TG-1'].personnel = 0;
@@ -141,7 +170,6 @@ test('an undersized victorious formation captures but does not secure a province
   assert.equal(state.territories[target].occupation, 'contested');
   assert.equal(state.territories[target].capturedTurn, state.turn);
 });
-
 
 test('version 3 concurrent-operation saves migrate to version 4', () => {
   const storage = new Map();
