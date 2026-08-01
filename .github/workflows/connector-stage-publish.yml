@@ -1,155 +1,80 @@
 name: Connector staged publication
 
 on:
-  push:
-    branches:
-      - agent/connector-stage-publish
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/connector-stage-publish.yml]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Reconstruct and publish guarded commit
-        uses: actions/github-script@v7
+      - uses: actions/github-script@v7
         with:
           script: |
-            const zlib = require('node:zlib');
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const baseSha = '9033277c6b25da9960a40e4496a6514ab5137c6d';
-            const targetRef = 'heads/agent/playable-vertical-slice';
-            const stagingRef = 'heads/agent/connector-stage-publish';
-
-            const packageChunks = [
-              '023c5884b11de3a6ac013e32b7db1d06db387251',
-              'ecbc7a59a9e12e6649705e1de300ab71c61266b5',
-              '0e20d663e8669b7cb04105d9d34b12bd0fb71749',
-              'a3c03eb898a0586bf8020c6a58cfaf0a83d39e83',
-              'c709cb49167c908d4896bf39f5eba54f22485ad4',
-              '4310a09b2fe5629056b7db3d0a2e8da65f4d3329',
-              'f9b39215853cd8f5581aedaff9c8faab3bda034b'
+            const zlib=require('node:zlib');
+            const {owner,repo}=context.repo;
+            const baseSha='9033277c6b25da9960a40e4496a6514ab5137c6d';
+            const targetRef='heads/agent/playable-vertical-slice';
+            const stagingRef='heads/agent/connector-stage-publish';
+            const packageChunks=['023c5884b11de3a6ac013e32b7db1d06db387251','ecbc7a59a9e12e6649705e1de300ab71c61266b5','0e20d663e8669b7cb04105d9d34b12bd0fb71749','a3c03eb898a0586bf8020c6a58cfaf0a83d39e83','c709cb49167c908d4896bf39f5eba54f22485ad4','4310a09b2fe5629056b7db3d0a2e8da65f4d3329','f9b39215853cd8f5581aedaff9c8faab3bda034b'];
+            const mapChunks=['323cb4646d82e2e265e063a550a50114a10a863b','625750e866a5e4b422e7185216782f01967210d0','a30dd8809159e7770da75bd9b05d05a57b60beff','017712cbda403f2e9db9b9603129ec73222e288e'];
+            async function read(sha){
+              const r=await github.rest.git.getBlob({owner,repo,file_sha:sha});
+              return Buffer.from(r.data.content.replace(/\n/g,''),'base64').toString('utf8');
+            }
+            async function rebuild(chunks,expected,label){
+              let encoded='';
+              for(const sha of chunks) encoded+=await read(sha);
+              const raw=zlib.gunzipSync(Buffer.from(encoded,'base64'));
+              const r=await github.rest.git.createBlob({owner,repo,content:raw.toString('base64'),encoding:'base64'});
+              if(r.data.sha!==expected) throw new Error(`${label} SHA mismatch: ${r.data.sha}`);
+              return r.data.sha;
+            }
+            async function guard(stage){
+              const r=await github.rest.git.getRef({owner,repo,ref:targetRef});
+              if(r.data.object.sha!==baseSha) throw new Error(`${stage}: expected ${baseSha}, got ${r.data.object.sha}`);
+            }
+            await guard('Initial guard failed');
+            const packageLockSha=await rebuild(packageChunks,'6ebe9d59d755b4d949e958deeae95622f6b0dea5','package-lock.json');
+            const mapSha=await rebuild(mapChunks,'7535144d3edd717d8bb70dedc95606fa327ffbde','vertical-slice-map.json');
+            const entries=[
+              ['.gitignore','783c1326209e9fcfacb2e97e585c9d3eaf15eacc'],
+              ['.github/workflows/deploy-pages.yml','f9c3cae448c5ee173ba27d55c617ae0cfcc3d2d7'],
+              ['index.html','7af59705c3606aef2ac344275d7ab08f698ba58b'],
+              ['package.json','5beea9d2f102684d755ade539f99934c11df15a8'],
+              ['package-lock.json',packageLockSha],
+              ['tsconfig.json','d32ff682003e0ff5d8a6e6bb3663d4c35a45b116'],
+              ['tsconfig.app.json','dab1731ce41d0013671898ba3d6802c7f74d739e'],
+              ['tsconfig.node.json','dc627e7f9c21a13b328d16532133f188dec0dce8'],
+              ['vite.config.ts','b3df5c4c9120dbb23c9b4018269b8ef8d2957e29'],
+              ['scripts/build-vertical-slice-map.mjs','129b71c657a899d5851afdfa847b76ba033b529f'],
+              ['docs/design/playable-vertical-slice-v0.1.md','f25e727256ec3c87f04f6541ce29988686a95c29'],
+              ['src/main.tsx','5b585d3c40a6d37dcaa70da1672edbeb03a955fe'],
+              ['src/App.tsx','8b2c804860cb5aa82882af9373e5a0bd8482f026'],
+              ['src/styles.css','31af5fe73a4703704cc491125063e3c581b06d5c'],
+              ['src/vite-env.d.ts','11f02fe2a0061d6e6e1f271b21da95423b448b32'],
+              ['src/components/MapView.tsx','00015fd85af3a96443f6e1b701c68a867dc11ddd'],
+              ['src/game/types.ts','46e1022d8d915e72d33ad1931349f6eefa830fab'],
+              ['src/game/data.ts','3a3b5a06b6c456bd61ab10cd559953d9daf4b0dc'],
+              ['src/game/engine.ts','a592efcf518f9d78cc12fc0248f8c58cda77f606'],
+              ['src/assets/vertical-slice-map.json',mapSha]
             ];
-            const mapChunks = [
-              '323cb4646d82e2e265e063a550a50114a10a863b',
-              '625750e866a5e4b422e7185216782f01967210d0',
-              'a30dd8809159e7770da75bd9b05d05a57b60beff',
-              '017712cbda403f2e9db9b9603129ec73222e288e'
-            ];
-
-            async function readTextBlob(sha) {
-              const response = await github.rest.git.getBlob({ owner, repo, file_sha: sha });
-              return Buffer.from(response.data.content.replace(/\n/g, ''), 'base64').toString('utf8');
-            }
-
-            async function reconstruct(chunks, expectedSha, label) {
-              let encoded = '';
-              for (const sha of chunks) encoded += await readTextBlob(sha);
-              const raw = zlib.gunzipSync(Buffer.from(encoded, 'base64'));
-              const created = await github.rest.git.createBlob({
-                owner,
-                repo,
-                content: raw.toString('base64'),
-                encoding: 'base64'
-              });
-              if (created.data.sha !== expectedSha) {
-                throw new Error(`${label} SHA mismatch: expected ${expectedSha}, got ${created.data.sha}`);
-              }
-              return created.data.sha;
-            }
-
-            const initialRef = await github.rest.git.getRef({ owner, repo, ref: targetRef });
-            if (initialRef.data.object.sha !== baseSha) {
-              throw new Error(`Guard failed before reconstruction: expected ${baseSha}, got ${initialRef.data.object.sha}`);
-            }
-
-            const packageLockSha = await reconstruct(
-              packageChunks,
-              '6ebe9d59d755b4d949e958deeae95622f6b0dea5',
-              'package-lock.json'
-            );
-            const mapSha = await reconstruct(
-              mapChunks,
-              '7535144d3edd717d8bb70dedc95606fa327ffbde',
-              'src/assets/vertical-slice-map.json'
-            );
-
-            const entries = [
-              ['.gitignore', '783c1326209e9fcfacb2e97e585c9d3eaf15eacc'],
-              ['.github/workflows/deploy-pages.yml', 'f9c3cae448c5ee173ba27d55c617ae0cfcc3d2d7'],
-              ['index.html', '7af59705c3606aef2ac344275d7ab08f698ba58b'],
-              ['package.json', '5beea9d2f102684d755ade539f99934c11df15a8'],
-              ['package-lock.json', packageLockSha],
-              ['tsconfig.json', 'd32ff682003e0ff5d8a6e6bb3663d4c35a45b116'],
-              ['tsconfig.app.json', 'dab1731ce41d0013671898ba3d6802c7f74d739e'],
-              ['tsconfig.node.json', 'dc627e7f9c21a13b328d16532133f188dec0dce8'],
-              ['vite.config.ts', 'b3df5c4c9120dbb23c9b4018269b8ef8d2957e29'],
-              ['scripts/build-vertical-slice-map.mjs', '129b71c657a899d5851afdfa847b76ba033b529f'],
-              ['docs/design/playable-vertical-slice-v0.1.md', 'f25e727256ec3c87f04f6541ce29988686a95c29'],
-              ['src/main.tsx', '5b585d3c40a6d37dcaa70da1672edbeb03a955fe'],
-              ['src/App.tsx', '8b2c804860cb5aa82882af9373e5a0bd8482f026'],
-              ['src/styles.css', '31af5fe73a4703704cc491125063e3c581b06d5c'],
-              ['src/vite-env.d.ts', '11f02fe2a0061d6e6e1f271b21da95423b448b32'],
-              ['src/components/MapView.tsx', '00015fd85af3a96443f6e1b701c68a867dc11ddd'],
-              ['src/game/types.ts', '46e1022d8d915e72d33ad1931349f6eefa830fab'],
-              ['src/game/data.ts', '3a3b5a06b6c456bd61ab10cd559953d9daf4b0dc'],
-              ['src/game/engine.ts', 'a592efcf518f9d78cc12fc0248f8c58cda77f606'],
-              ['src/assets/vertical-slice-map.json', mapSha]
-            ];
-
-            if (entries.length !== 20 || new Set(entries.map(([path]) => path)).size !== 20) {
-              throw new Error('Expected exactly 20 unique project paths');
-            }
-
-            const baseCommit = await github.rest.git.getCommit({ owner, repo, commit_sha: baseSha });
-            const tree = await github.rest.git.createTree({
-              owner,
-              repo,
-              base_tree: baseCommit.data.tree.sha,
-              tree: entries.map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha }))
-            });
-
-            const completeTree = await github.rest.git.getTree({
-              owner,
-              repo,
-              tree_sha: tree.data.sha,
-              recursive: 'true'
-            });
-            const actual = new Map(completeTree.data.tree.map(item => [item.path, item.sha]));
-            for (const [path, sha] of entries) {
-              if (actual.get(path) !== sha) {
-                throw new Error(`Constructed tree mismatch for ${path}: expected ${sha}, got ${actual.get(path)}`);
-              }
-            }
-
-            const commit = await github.rest.git.createCommit({
-              owner,
-              repo,
-              message: 'Build first playable vertical slice',
-              tree: tree.data.sha,
-              parents: [baseSha]
-            });
-
-            const finalGuard = await github.rest.git.getRef({ owner, repo, ref: targetRef });
-            if (finalGuard.data.object.sha !== baseSha) {
-              throw new Error(`Guard failed before branch update: expected ${baseSha}, got ${finalGuard.data.object.sha}`);
-            }
-
-            await github.rest.git.updateRef({
-              owner,
-              repo,
-              ref: targetRef,
-              sha: commit.data.sha,
-              force: false
-            });
-
+            if(entries.length!==20||new Set(entries.map(x=>x[0])).size!==20) throw new Error('Expected 20 unique paths');
+            const base=await github.rest.git.getCommit({owner,repo,commit_sha:baseSha});
+            const tree=await github.rest.git.createTree({owner,repo,base_tree:base.data.tree.sha,tree:entries.map(([path,sha])=>({path,mode:'100644',type:'blob',sha}))});
+            const full=await github.rest.git.getTree({owner,repo,tree_sha:tree.data.sha,recursive:'true'});
+            const actual=new Map(full.data.tree.map(x=>[x.path,x.sha]));
+            for(const [path,sha] of entries) if(actual.get(path)!==sha) throw new Error(`Tree mismatch: ${path}`);
+            const commit=await github.rest.git.createCommit({owner,repo,message:'Build first playable vertical slice',tree:tree.data.sha,parents:[baseSha]});
+            await guard('Final guard failed');
+            await github.rest.git.updateRef({owner,repo,ref:targetRef,sha:commit.data.sha,force:false});
             core.notice(`Published commit ${commit.data.sha}`);
-            core.setOutput('commit_sha', commit.data.sha);
-
-            try {
-              await github.rest.git.deleteRef({ owner, repo, ref: stagingRef });
-            } catch (error) {
-              core.warning(`Target commit succeeded, but staging ref cleanup failed: ${error.message}`);
-            }
+            try{
+              await github.rest.pulls.update({owner,repo,pull_number:context.payload.pull_request.number,state:'closed'});
+              await github.rest.git.deleteRef({owner,repo,ref:stagingRef});
+            }catch(e){core.warning(`Publication succeeded; staging cleanup failed: ${e.message}`);}
