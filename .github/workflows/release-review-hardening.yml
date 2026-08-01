@@ -1,9 +1,9 @@
 name: Release review hardening
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/formation-organisation-core
+      - main
 
 permissions:
   contents: write
