@@ -19,8 +19,8 @@ temporary closures are deliberately supplied by the World State snapshot.
 | Strategic airports | Large airports or an open runway of at least 8,000 feet | Enemy air operations, rapid redeployment and capture objectives |
 | Ports | World Port Index candidates | Sea crossings, commandeered shipping and overseas supply |
 | Terrain | Next pass | Movement, concealment, attrition and combat modifiers |
-| Critical crossings | Next pass | Chokepoints, bridges, tunnels and straits |
-| Rail and motorway hubs | Next pass | Strategic movement and supply throughput |
+| Critical crossings | 30 selected objects | Chokepoints, bridges, tunnels, passes and straits |
+| Rail and motorway hubs | 58 selected objects | Strategic movement and supply throughput |
 
 ## Candidate build result
 
@@ -71,9 +71,15 @@ No terrain profile remains unreviewed because of missing source coverage.
 5. Military installations will be represented at strategic scale only. The game
    does not require or benefit from tactical security detail.
 
+## Transport structure
+
+The first transport pass adds 58 trunk-network hubs and 30 critical crossings.
+They are campaign abstractions grounded in TEN-T and UNECE network references,
+not a street-level route graph. Stable structure remains in the base geography;
+control, damage, closures and construction status come from World State.
+
 ## Next pass
 
-1. Add the limited set of crossings that materially alter the campaign graph.
-2. Add trunk rail and motorway hubs without attempting street-level routing.
-3. Convert movement costs into turn and supply effects during gameplay design.
-4. Replace remaining heuristic urbanisation with a continuous population layer.
+1. Connect hubs and crossings to explicit movement and supply rules.
+2. Define how damaged crossings alter or disable territory edges.
+3. Replace remaining heuristic urbanisation with a continuous population layer.

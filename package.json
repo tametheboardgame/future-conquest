@@ -12,6 +12,8 @@
     "map:render-strategic": "node scripts/maps/render-strategic-geography.mjs",
     "map:build-terrain": "node scripts/maps/build-terrain-profiles.mjs",
     "map:render-terrain": "node scripts/maps/render-terrain-profiles.mjs",
+    "map:build-transport": "node scripts/maps/build-transport-structure.mjs",
+    "map:render-transport": "node scripts/maps/render-transport-structure.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {
