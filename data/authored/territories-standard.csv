@@ -1,0 +1,102 @@
+territory_id,country_code,country_name,display_name,strategic_centre,coastal,island,rapid_group
+IS-01,IS,Iceland,Iceland,Reykjavik,true,true,NORTH_ATLANTIC
+IE-01,IE,Ireland,Western Ireland,Galway,true,true,IRELAND
+IE-02,IE,Ireland,Eastern Ireland and Dublin,Dublin,true,true,IRELAND
+GB-01,GB,United Kingdom,Scotland,Edinburgh,true,true,BRITAIN_NORTH
+GB-02,GB,United Kingdom,Northern England,Manchester,true,true,BRITAIN_NORTH
+GB-03,GB,United Kingdom,Midlands,Birmingham,false,true,BRITAIN_SOUTH
+GB-04,GB,United Kingdom,Southern England and London,London,true,true,BRITAIN_SOUTH
+GB-05,GB,United Kingdom,Wales,Cardiff,true,true,BRITAIN_SOUTH
+GB-06,GB,United Kingdom,Northern Ireland,Belfast,true,true,IRELAND
+PT-01,PT,Portugal,Northern Portugal and Porto,Porto,true,false,PORTUGAL
+PT-02,PT,Portugal,Southern Portugal and Lisbon,Lisbon,true,false,PORTUGAL
+ES-01,ES,Spain,Galicia and Asturias,A Coruna,true,false,SPAIN_NORTH
+ES-02,ES,Spain,Basque Country and Upper Ebro,Bilbao,true,false,SPAIN_NORTH
+ES-03,ES,Spain,Catalonia and Aragon,Barcelona,true,false,SPAIN_EAST
+ES-04,ES,Spain,Central Spain and Madrid,Madrid,false,false,SPAIN_CENTRAL
+ES-05,ES,Spain,Mediterranean Spain,Valencia,true,false,SPAIN_EAST
+ES-06,ES,Spain,Andalusia,Seville,true,false,SPAIN_SOUTH
+FR-01,FR,France,Northwest France,Rennes,true,false,FRANCE_WEST
+FR-02,FR,France,Paris Basin,Paris,false,false,FRANCE_NORTH
+FR-03,FR,France,Northeast France,Strasbourg,false,false,FRANCE_NORTH
+FR-04,FR,France,Atlantic and Southwest France,Bordeaux,true,false,FRANCE_WEST
+FR-05,FR,France,Central and Alpine France,Lyon,false,false,FRANCE_SOUTH
+FR-06,FR,France,Mediterranean France,Marseille,true,false,FRANCE_SOUTH
+BE-01,BE,Belgium,Flanders and Brussels,Brussels,true,false,BENELUX
+BE-02,BE,Belgium,Wallonia,Namur,false,false,BENELUX
+NL-01,NL,Netherlands,Randstad and Southern Netherlands,Amsterdam,true,false,NETHERLANDS
+NL-02,NL,Netherlands,Northern and Eastern Netherlands,Groningen,true,false,NETHERLANDS
+LU-01,LU,Luxembourg,Luxembourg,Luxembourg,false,false,BENELUX
+DE-01,DE,Germany,Northern Germany,Hamburg,true,false,GERMANY_NORTH
+DE-02,DE,Germany,Rhine-Ruhr,Dusseldorf,false,false,GERMANY_WEST
+DE-03,DE,Germany,Central Germany,Frankfurt,false,false,GERMANY_WEST
+DE-04,DE,Germany,Eastern Germany and Berlin,Berlin,false,false,GERMANY_EAST
+DE-05,DE,Germany,Southwest Germany,Stuttgart,false,false,GERMANY_SOUTH
+DE-06,DE,Germany,Bavaria,Munich,false,false,GERMANY_SOUTH
+CH-01,CH,Switzerland,Swiss Plateau,Bern,false,false,SWITZERLAND
+CH-02,CH,Switzerland,Alpine Switzerland,Chur,false,false,SWITZERLAND
+AT-01,AT,Austria,Western Austria,Innsbruck,false,false,AUSTRIA
+AT-02,AT,Austria,Eastern Austria and Vienna,Vienna,false,false,AUSTRIA
+CZ-01,CZ,Czechia,Bohemia and Prague,Prague,false,false,CZECHIA
+CZ-02,CZ,Czechia,Moravia and Silesia,Brno,false,false,CZECHIA
+SK-01,SK,Slovakia,Slovakia,Bratislava,false,false,SLOVAKIA
+HU-01,HU,Hungary,Western Hungary and Budapest,Budapest,false,false,HUNGARY
+HU-02,HU,Hungary,Eastern Hungary,Debrecen,false,false,HUNGARY
+PL-01,PL,Poland,Pomerania and the Baltic Coast,Gdansk,true,false,POLAND_NORTH
+PL-02,PL,Poland,Western Poland,Poznan,false,false,POLAND_WEST
+PL-03,PL,Poland,Central Poland and Warsaw,Warsaw,false,false,POLAND_CENTRAL
+PL-04,PL,Poland,Southern Poland and Silesia,Krakow,false,false,POLAND_SOUTH
+PL-05,PL,Poland,Eastern Poland,Lublin,false,false,POLAND_EAST
+DK-01,DK,Denmark,Jutland,Aarhus,true,false,DENMARK
+DK-02,DK,Denmark,Danish Islands and Copenhagen,Copenhagen,true,true,DENMARK
+NO-01,NO,Norway,Southern Norway and Oslo,Oslo,true,false,NORWAY_SOUTH
+NO-02,NO,Norway,Western and Central Norway,Trondheim,true,false,NORWAY_WEST
+NO-03,NO,Norway,Northern Norway,Tromso,true,false,NORWAY_NORTH
+SE-01,SE,Sweden,Southern Sweden,Malmo,true,false,SWEDEN_SOUTH
+SE-02,SE,Sweden,Central Sweden and Stockholm,Stockholm,true,false,SWEDEN_CENTRAL
+SE-03,SE,Sweden,Northern Sweden,Lulea,true,false,SWEDEN_NORTH
+FI-01,FI,Finland,Southern Finland and Helsinki,Helsinki,true,false,FINLAND_SOUTH
+FI-02,FI,Finland,Central Finland,Tampere,true,false,FINLAND_CENTRAL
+FI-03,FI,Finland,Northern Finland,Rovaniemi,true,false,FINLAND_NORTH
+EE-01,EE,Estonia,Estonia,Tallinn,true,false,BALTIC_NORTH
+LV-01,LV,Latvia,Latvia,Riga,true,false,BALTIC_NORTH
+LT-01,LT,Lithuania,Lithuania,Vilnius,true,false,BALTIC_SOUTH
+IT-01,IT,Italy,Northern Italy and the Po Valley,Milan,true,false,ITALY_NORTH
+IT-02,IT,Italy,Central Italy,Rome,true,false,ITALY_CENTRAL
+IT-03,IT,Italy,Southern Italy,Naples,true,false,ITALY_SOUTH
+IT-04,IT,Italy,Sicily,Palermo,true,true,ITALY_ISLANDS
+IT-05,IT,Italy,Sardinia,Cagliari,true,true,ITALY_ISLANDS
+MT-01,MT,Malta,Malta,Valletta,true,true,ITALY_ISLANDS
+SI-01,SI,Slovenia,Slovenia,Ljubljana,true,false,NORTH_BALKANS
+HR-01,HR,Croatia,Northern Croatia and Zagreb,Zagreb,false,false,NORTH_BALKANS
+HR-02,HR,Croatia,Adriatic Croatia,Split,true,false,ADRIATIC_BALKANS
+BA-01,BA,Bosnia and Herzegovina,Bosnia and Herzegovina,Sarajevo,true,false,WEST_BALKANS
+RS-01,RS,Serbia,Northern Serbia and Belgrade,Belgrade,false,false,SERBIA
+RS-02,RS,Serbia,Southern Serbia,Nis,false,false,SERBIA
+ME-01,ME,Montenegro,Montenegro,Podgorica,true,false,WEST_BALKANS
+XK-01,XK,Kosovo,Kosovo,Pristina,false,false,WEST_BALKANS
+AL-01,AL,Albania,Albania,Tirana,true,false,ALBANIA_MACEDONIA
+MK-01,MK,North Macedonia,North Macedonia,Skopje,false,false,ALBANIA_MACEDONIA
+GR-01,GR,Greece,Northern Greece,Thessaloniki,true,false,GREECE_NORTH
+GR-02,GR,Greece,Southern Greece and Athens,Athens,true,false,GREECE_SOUTH
+GR-03,GR,Greece,Crete and the Aegean Islands,Heraklion,true,true,GREECE_ISLANDS
+BG-01,BG,Bulgaria,Western Bulgaria and Sofia,Sofia,false,false,BULGARIA
+BG-02,BG,Bulgaria,Eastern Bulgaria and the Black Sea coast,Varna,true,false,BULGARIA
+RO-01,RO,Romania,Transylvania,Cluj-Napoca,false,false,ROMANIA_WEST
+RO-02,RO,Romania,Wallachia and Bucharest,Bucharest,false,false,ROMANIA_SOUTH
+RO-03,RO,Romania,Moldavia and Dobruja,Iasi,true,false,ROMANIA_EAST
+MD-01,MD,Moldova,Moldova,Chisinau,false,false,MOLDOVA
+UA-01,UA,Ukraine,Western Ukraine,Lviv,false,false,UKRAINE_WEST
+UA-02,UA,Ukraine,Kyiv and Northern Ukraine,Kyiv,false,false,UKRAINE_NORTH
+UA-03,UA,Ukraine,Eastern Ukraine,Kharkiv,false,false,UKRAINE_EAST
+UA-04,UA,Ukraine,Southern Ukraine and the lower Dnipro,Odesa,true,false,UKRAINE_SOUTH
+UA-05,UA,Ukraine,Crimea,Simferopol,true,false,CRIMEA
+BY-01,BY,Belarus,Western Belarus,Brest,false,false,BELARUS
+BY-02,BY,Belarus,Eastern Belarus and Minsk,Minsk,false,false,BELARUS
+RU-01,RU,Russia,Kaliningrad,Kaliningrad,true,false,RUSSIA_BALTIC
+RU-02,RU,Russia,Northwest Russia and St Petersburg,St Petersburg,true,false,RUSSIA_NORTHWEST
+RU-03,RU,Russia,Central Russia and Moscow,Moscow,false,false,RUSSIA_CENTRAL
+RU-04,RU,Russia,Volga Russia,Nizhny Novgorod,false,false,RUSSIA_VOLGA
+RU-05,RU,Russia,Southern European Russia,Rostov-on-Don,true,false,RUSSIA_SOUTH
+TR-01,TR,Turkiye,Eastern Thrace and Istanbul,Istanbul,true,false,THRACE
+CY-01,CY,Cyprus,Cyprus,Nicosia,true,true,CYPRUS
