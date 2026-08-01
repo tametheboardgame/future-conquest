@@ -1,0 +1,42 @@
+name: Apply concurrent operations release hardening
+
+on:
+  push:
+    branches:
+      - agent/concurrent-operations-core
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/concurrent-operations-core
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply defender-roster hardening
+        run: node scripts/apply-concurrent-release-hardening.mjs
+      - name: Run complete test suite
+        run: npm test
+      - name: Build production game
+        run: npm run build
+      - name: Remove temporary publication files
+        run: rm scripts/apply-concurrent-release-hardening.mjs .github/workflows/apply-concurrent-release-hardening.yml
+      - name: Commit hardened release candidate
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game/engine.ts tests/concurrent-operation-defenders.test.cjs scripts/apply-concurrent-release-hardening.mjs .github/workflows/apply-concurrent-release-hardening.yml
+          git commit -m "Track dynamic defenders in concurrent operations"
+          git push origin HEAD:agent/concurrent-operations-core
