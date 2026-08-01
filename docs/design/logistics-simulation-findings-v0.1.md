@@ -1,5 +1,8 @@
 # Logistics simulation findings v0.1
 
+Superseded for balancing purposes by v0.2 after the approved Core Mechanics
+Review. Retained as the original comparison baseline.
+
 ## Purpose
 
 This simulation tests whether the map, movement, garrison and supply assumptions

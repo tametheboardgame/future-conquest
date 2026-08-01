@@ -1,0 +1,26 @@
+{
+  "schema_version":"0.2",
+  "simulation_days":365,
+  "portal_reserve_days":7,
+  "captured_capacity_activation_days":7,
+  "initial_capacity_share":0.1,
+  "minimum_mobile_group_personnel":3500,
+  "base_daily_armour_wear_percent":0.05,
+  "distance_loss_per_edge":0.07,
+  "minimum_distance_efficiency":0.25,
+  "modes":[
+    {"id":"campaign","future_personnel":100000,"maximum_spearheads":6,"target_turn_range":[60,100]},
+    {"id":"standard","future_personnel":50000,"maximum_spearheads":4,"target_turn_range":[90,150]},
+    {"id":"veteran","future_personnel":25000,"maximum_spearheads":3,"target_turn_range":[140,220]},
+    {"id":"desperate","future_personnel":10000,"maximum_spearheads":2,"target_turn_range":[220,365]}
+  ],
+  "occupation_profiles":[
+    {"id":"future-only","local_handover_share":0,"handover_delay_days":null,"loyalty":1,"civilian_capacity_reserve":0.2,"resistance_multiplier":1},
+    {"id":"negotiated-integration","local_handover_share":0.9,"handover_delay_days":10,"loyalty":0.85,"civilian_capacity_reserve":0.25,"resistance_multiplier":1},
+    {"id":"coercive-integration","local_handover_share":0.75,"handover_delay_days":14,"loyalty":0.65,"civilian_capacity_reserve":0.18,"resistance_multiplier":1.2},
+    {"id":"brutal-occupation","local_handover_share":0.55,"handover_delay_days":21,"loyalty":0.4,"civilian_capacity_reserve":0.1,"resistance_multiplier":1.5}
+  ],
+  "garrison_personnel":{"low":200,"medium":350,"high":500,"very-high":700},
+  "capture_duration":{"base_days":3,"upland_or_extreme_terrain_extra_days":1,"high_urbanisation_extra_days":1},
+  "loyalty_reserve_factor":0.25
+}

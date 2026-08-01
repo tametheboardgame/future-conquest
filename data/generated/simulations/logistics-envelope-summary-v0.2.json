@@ -1,0 +1,339 @@
+{
+  "version": "0.2",
+  "purpose": "Mechanics-review logistics envelope. Not a combat or victory prediction.",
+  "run_count": 1616,
+  "summaries": [
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_profile": "future-only",
+      "target_turn_range": [
+        60,
+        100
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 77,
+      "completion_day_p10": 74,
+      "completion_day_p90": 89,
+      "within_target_rate_percent": 98,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 23.2,
+      "days_low_or_worse_median": 10,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 4.21
+    },
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_profile": "negotiated-integration",
+      "target_turn_range": [
+        60,
+        100
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 78,
+      "completion_day_p10": 74,
+      "completion_day_p90": 91,
+      "within_target_rate_percent": 97,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 21.7,
+      "days_low_or_worse_median": 11,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 4.28
+    },
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_profile": "coercive-integration",
+      "target_turn_range": [
+        60,
+        100
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 98,
+      "completion_day_p10": 93,
+      "completion_day_p90": 112,
+      "within_target_rate_percent": 65.3,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 18.9,
+      "days_low_or_worse_median": 15,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 5.44
+    },
+    {
+      "mode": "campaign",
+      "future_personnel": 100000,
+      "occupation_profile": "brutal-occupation",
+      "target_turn_range": [
+        60,
+        100
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 120,
+      "completion_day_p10": 115,
+      "completion_day_p90": 138,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 14.7,
+      "days_low_or_worse_median": 18,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 6.72
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_profile": "future-only",
+      "target_turn_range": [
+        90,
+        150
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 105,
+      "completion_day_p10": 104,
+      "completion_day_p90": 110,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 49.6,
+      "days_low_or_worse_median": 2,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 5.35
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_profile": "negotiated-integration",
+      "target_turn_range": [
+        90,
+        150
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 106,
+      "completion_day_p10": 104,
+      "completion_day_p90": 111,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 46.1,
+      "days_low_or_worse_median": 3,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 5.4
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_profile": "coercive-integration",
+      "target_turn_range": [
+        90,
+        150
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 132,
+      "completion_day_p10": 130,
+      "completion_day_p90": 139,
+      "within_target_rate_percent": 98,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 36.8,
+      "days_low_or_worse_median": 5,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 6.76
+    },
+    {
+      "mode": "standard",
+      "future_personnel": 50000,
+      "occupation_profile": "brutal-occupation",
+      "target_turn_range": [
+        90,
+        150
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 163,
+      "completion_day_p10": 161,
+      "completion_day_p90": 171,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 28.4,
+      "days_low_or_worse_median": 7,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 8.43
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_profile": "future-only",
+      "target_turn_range": [
+        140,
+        220
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 50,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 268,
+      "armour_wear_percent_median": 18.25
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_profile": "negotiated-integration",
+      "target_turn_range": [
+        140,
+        220
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 137,
+      "completion_day_p10": 136,
+      "completion_day_p90": 139,
+      "within_target_rate_percent": 9.9,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 6.85
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_profile": "coercive-integration",
+      "target_turn_range": [
+        140,
+        220
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 171,
+      "completion_day_p10": 170,
+      "completion_day_p90": 174,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 8.55
+    },
+    {
+      "mode": "veteran",
+      "future_personnel": 25000,
+      "occupation_profile": "brutal-occupation",
+      "target_turn_range": [
+        140,
+        220
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 303,
+      "completion_day_p10": 301,
+      "completion_day_p90": 308,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 74.8,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 15.22
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_profile": "future-only",
+      "target_turn_range": [
+        220,
+        365
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 13,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 326,
+      "armour_wear_percent_median": 18.25
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_profile": "negotiated-integration",
+      "target_turn_range": [
+        220,
+        365
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 100,
+      "completion_day_median": 348,
+      "completion_day_p10": 344,
+      "completion_day_p90": 350,
+      "within_target_rate_percent": 100,
+      "territories_controlled_median": 101,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 0,
+      "armour_wear_percent_median": 17.4
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_profile": "coercive-integration",
+      "target_turn_range": [
+        220,
+        365
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 48,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 153,
+      "armour_wear_percent_median": 18.25
+    },
+    {
+      "mode": "desperate",
+      "future_personnel": 10000,
+      "occupation_profile": "brutal-occupation",
+      "target_turn_range": [
+        220,
+        365
+      ],
+      "starting_territories_tested": 101,
+      "completion_rate_percent": 0,
+      "completion_day_median": null,
+      "completion_day_p10": null,
+      "completion_day_p90": null,
+      "within_target_rate_percent": 0,
+      "territories_controlled_median": 27,
+      "minimum_supply_percent_median": 100,
+      "days_low_or_worse_median": 0,
+      "personnel_pause_days_median": 225,
+      "armour_wear_percent_median": 18.25
+    }
+  ],
+  "findings": [
+    "All four army sizes remain geographically viable under negotiated local-force integration.",
+    "The revised supply model now creates meaningful Low or worse supply exposure in at least one army setting.",
+    "Veteran and Desperate modes still require local-force integration to cover the complete map.",
+    "At least one accepted duration target still requires combat-layer pacing rather than further logistics-only tuning."
+  ],
+  "limitations": [
+    "Resistance is represented as time delay rather than resolved combat.",
+    "Loyalty is a deterministic reserve burden, not yet an event or defection system.",
+    "Civilian demand is a reserved capacity share and does not yet react dynamically to player conduct.",
+    "Crossing destruction, enemy interdiction, casualties and escalation are not yet simulated."
+  ]
+}
