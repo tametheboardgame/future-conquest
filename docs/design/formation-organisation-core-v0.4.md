@@ -12,9 +12,9 @@ Available formations can now be:
 - merged with another available formation in the same province
 - used as the source or destination of personnel and armour transfers
 - renamed
-- dissolved after all personnel and equipment have been reassigned
+- dissolved after all personnel, establishment capacity and equipment have been reassigned
 
-Moving, attacking and recovering formations cannot be reorganised. This prevents active orders and operation participation from becoming internally inconsistent.
+Moving, attacking and recovering formations cannot be reorganised. This prevents active orders and operation participation from becoming internally inconsistent. Reorganisation is also disabled once the campaign has ended.
 
 ## Arbitrary force size
 
@@ -39,7 +39,7 @@ Split, merge and transfer operations conserve:
 - functional armour
 - damaged armour
 
-Personnel establishment capacity moves proportionally with transferred or split personnel so wounded recovery capacity is not silently created or destroyed.
+Personnel establishment capacity moves proportionally with transferred or split personnel so wounded recovery capacity is not silently created or destroyed. A zero-person formation cannot be dissolved while it still retains recovery establishment; it must be merged or have its full establishment transferred first.
 
 ## Territorial occupation
 
@@ -52,13 +52,14 @@ Each territory has an occupation requirement derived from:
 
 When an operation wins with insufficient surviving personnel, the territory becomes **unsecured**. An unsecured territory:
 
+- is visually distinguished on the map
 - remains vulnerable to counterattack
 - does not carry supply routes
 - contributes no supply capacity
 - cannot satisfy the campaign victory condition
 - accumulates resistance until enough personnel are present
 
-Once local non-moving, non-attacking personnel meet the occupation requirement, the territory advances to contested control and can enter the existing occupation process.
+Once local non-moving, non-attacking personnel meet the occupation requirement, the territory advances to contested control and begins a new occupation clock from that day rather than inheriting the original combat-capture date.
 
 ## Interface
 
@@ -78,6 +79,19 @@ The save format advances to version 4.
 - version 4 saves load directly
 - version 3 concurrent-operation saves migrate without data loss
 - version 2 single-battle saves continue through the existing operation migration and are returned as version 4
+
+## Validation coverage
+
+Regression coverage includes:
+
+- exact two-person detachment creation
+- personnel, establishment and armour conservation through split, transfer and merge
+- invalid allocations and cross-province transfers
+- active-formation reorganisation locks
+- residual-establishment dissolution protection
+- unsecured capture and later occupation
+- version 3 and version 2 save migration
+- scalable roster and organisation-panel source checks
 
 ## Deferred work
 
