@@ -1,0 +1,95 @@
+name: Temporary attack hotfix verification
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed attack targeting hotfix
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = 'bdc2d97b86a6f7d052047f309e36161f48093e36';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let mainRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, head_sha: targetSha, per_page: 50 });
+                mainRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (mainRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!mainRun || mainRun.conclusion !== 'success') {
+                failures.push(`Main workflow was ${mainRun?.status ?? 'missing'}/${mainRun?.conclusion ?? 'missing'}.`);
+              } else {
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: mainRun.id, filter: 'latest', per_page: 100 });
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                core.notice(`MAIN_RUN=${JSON.stringify({ id: mainRun.id, url: mainRun.html_url, conclusion: mainRun.conclusion })}`);
+                core.notice(`JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({ name: job.name, conclusion: job.conclusion })))}`);
+                if (build?.conclusion !== 'success') failures.push(`Build job was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Deploy job was ${deploy?.conclusion ?? 'missing'}.`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({ owner, repo, sha: targetSha, environment: 'github-pages', per_page: 20 });
+              let deploymentSucceeded = false;
+              for (const deployment of deployments.data) {
+                const statuses = await github.rest.repos.listDeploymentStatuses({ owner, repo, deployment_id: deployment.id, per_page: 20 });
+                if (statuses.data.some(status => status.state === 'success')) deploymentSucceeded = true;
+              }
+              if (!deploymentSucceeded) failures.push('No successful GitHub Pages deployment exists for the hotfix commit.');
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const scriptMatch = index.match(/<script[^>]+src="([^"]+\.js)"/);
+                if (!scriptMatch) {
+                  failures.push('Could not locate the live JavaScript bundle.');
+                } else {
+                  const bundleUrl = new URL(scriptMatch[1], siteUrl).toString();
+                  const bundleResponse = await fetch(bundleUrl, { cache: 'no-store' });
+                  const bundle = bundleResponse.ok ? await bundleResponse.text() : '';
+                  const markers = {
+                    attackLabel: bundle.includes('ATTACK'),
+                    outOfRange: bundle.includes('Out of operational range'),
+                    adjacentInstruction: bundle.includes('Only directly adjacent provinces can receive orders')
+                  };
+                  core.notice(`LIVE=${JSON.stringify({ siteUrl, bundleUrl, markers })}`);
+                  if (!Object.values(markers).every(Boolean)) failures.push('The live bundle does not contain all attack-targeting hotfix markers.');
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({ owner, repo, pull_number: context.payload.pull_request.number, state: 'closed' });
+                await github.rest.git.deleteRef({ owner, repo, ref: 'heads/agent/verify-attack-hotfix' });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
