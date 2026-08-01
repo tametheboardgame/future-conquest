@@ -5,6 +5,11 @@
   "description": "Design data and tooling for the Future Conquest strategy game.",
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build:slice-map": "node scripts/build-vertical-slice-map.mjs",
+    "prebuild": "npm run build:slice-map",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
     "map:fetch-nuts": "node scripts/maps/fetch-nuts.mjs",
     "map:build": "node scripts/maps/build-map.mjs",
     "map:build-admin": "node scripts/maps/build-admin-map.mjs",
@@ -32,6 +37,15 @@
     "shapefile": "^0.6.6",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2",
-    "world-cities-json": "^1.0.1"
+    "world-cities-json": "^1.0.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
   }
 }
