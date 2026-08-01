@@ -78,8 +78,16 @@ They are campaign abstractions grounded in TEN-T and UNECE network references,
 not a street-level route graph. Stable structure remains in the base geography;
 control, damage, closures and construction status come from World State.
 
+## Movement and supply connection
+
+Terrain, hubs and crossings now feed a first-pass movement and supply model.
+All 101 territories have derived entry cost and local throughput values. Fifty-five
+territories currently support strategic redeployment when their qualifying hubs
+are friendly, operational and connected by a secure path.
+
 ## Next pass
 
-1. Connect hubs and crossings to explicit movement and supply rules.
-2. Define how damaged crossings alter or disable territory edges.
+1. Simulate force movement, supply demand and armour wear over representative
+   opening campaigns.
+2. Define formation scale, combat stances and modern-force integration.
 3. Replace remaining heuristic urbanisation with a continuous population layer.

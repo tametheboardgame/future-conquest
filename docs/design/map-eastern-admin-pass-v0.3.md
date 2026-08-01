@@ -30,7 +30,8 @@ World State layer. The same separation will apply to every disputed area.
 - 101 territories and 101 unique IDs.
 - 0 provisional/fallback territories.
 - 1,431 source regions assigned across the complete map.
-- 206 detected land connections plus 16 explicit crossing routes.
+- 208 detected land connections plus 17 explicit crossing routes, including the
+  World-State-controlled Kerch fixed link.
 - Complete campaign graph connected.
 - All polygon components pass geometry validation. Multipart territories are
   validated component by component because valid island groups can fail a

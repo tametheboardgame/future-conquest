@@ -19,7 +19,7 @@
     "IT-05",
     "MT-01"
   ],
-  "explicit_route_count": 16,
+  "explicit_route_count": 17,
   "unreachable_after_explicit_routes": [],
   "connected_campaign_graph": true,
   "status": "pass"

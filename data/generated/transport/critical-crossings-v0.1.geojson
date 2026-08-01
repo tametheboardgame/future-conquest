@@ -428,7 +428,7 @@
         "name": "Iron Gates",
         "crossing_type": "river-crossing",
         "territory_from": "RS-01",
-        "territory_to": "RO-02",
+        "territory_to": "RO-01",
         "base_capacity": 2,
         "vulnerability": "high",
         "destroyable": true,

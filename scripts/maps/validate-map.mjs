@@ -49,7 +49,7 @@ for (const neighbours of Object.values(adjacency)) neighbours.sort();
 const explicitConnections = [
   ['IS-01', 'GB-01', 'long-sea'],
   ['IS-01', 'NO-02', 'long-sea'],
-  ['GB-04', 'FR-01', 'channel-crossing'],
+  ['GB-04', 'FR-02', 'channel-crossing'],
   ['GB-02', 'GB-06', 'short-sea'],
   ['GB-05', 'IE-02', 'short-sea'],
   ['DK-01', 'NO-01', 'short-sea'],
@@ -62,7 +62,8 @@ const explicitConnections = [
   ['IT-04', 'MT-01', 'short-sea'],
   ['GR-02', 'GR-03', 'aegean-sea'],
   ['GR-03', 'CY-01', 'long-sea'],
-  ['CY-01', 'TR-01', 'short-sea']
+  ['CY-01', 'TR-01', 'short-sea'],
+  ['UA-05', 'RU-05', 'fixed-link-world-state']
 ];
 
 const combinedAdjacency = structuredClone(adjacency);

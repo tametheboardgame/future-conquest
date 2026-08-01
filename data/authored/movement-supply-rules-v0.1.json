@@ -1,0 +1,63 @@
+{
+  "schema_version": "0.1",
+  "turn_length_days": 1,
+  "movement": {
+    "operation_points_per_formation": 6,
+    "destination_terrain_cost": {
+      "open-lowland": 2,
+      "mixed-lowland": 2,
+      "mixed-upland": 3,
+      "mountainous": 4,
+      "subarctic": 4
+    },
+    "contested_entry_surcharge": 1,
+    "hostile_entry_surcharge": 2,
+    "winter_surcharge": {"mild":0,"moderate":0,"severe":1,"extreme":2},
+    "strategic_redeployment": {
+      "minimum_friendly_hub_capacity": 3,
+      "maximum_edges": 3,
+      "operation_point_cost": 6,
+      "requires_secure_friendly_path": true,
+      "requires_full_or_strained_supply": true,
+      "ends_formation_turn": true
+    }
+  },
+  "supply": {
+    "urban_local_capacity": {"low":2,"medium":3,"high":4,"very-high":5},
+    "hub_capacity_weight": 1,
+    "additional_hub_bonus_cap": 2,
+    "selected_port_bonus_cap": 2,
+    "selected_airport_bonus_cap": 1,
+    "friendly_territory_transit_cost": 1,
+    "contested_territory_transit_cost": 3,
+    "bands": [
+      {"id":"full","minimum_percent":100,"movement_modifier":0,"combat_readiness_modifier":0,"armour_wear_multiplier":1},
+      {"id":"strained","minimum_percent":67,"movement_modifier":0,"combat_readiness_modifier":-1,"armour_wear_multiplier":1.15},
+      {"id":"low","minimum_percent":34,"movement_modifier":-1,"combat_readiness_modifier":-2,"armour_wear_multiplier":1.5},
+      {"id":"critical","minimum_percent":1,"movement_modifier":-2,"combat_readiness_modifier":-3,"armour_wear_multiplier":2},
+      {"id":"isolated","minimum_percent":0,"movement_modifier":-3,"combat_readiness_modifier":-4,"armour_wear_multiplier":3}
+    ],
+    "formation_demand_per_1000_personnel": {
+      "future_infantry": 1,
+      "modern_infantry": 1.2,
+      "modern_mechanised": 2,
+      "modern_air_or_naval": 3
+    }
+  },
+  "crossing_denial": {
+    "fixed-link":{"effect":"edge-disabled","movement_surcharge":null,"supply_capacity_multiplier":0},
+    "future-fixed-link":{"effect":"world-state-dependent","movement_surcharge":null,"supply_capacity_multiplier":0},
+    "alpine-tunnel":{"effect":"major-penalty","movement_surcharge":3,"supply_capacity_multiplier":0.25},
+    "strait-fixed-link":{"effect":"major-penalty","movement_surcharge":3,"supply_capacity_multiplier":0.25},
+    "strait-fixed-links":{"effect":"major-penalty","movement_surcharge":3,"supply_capacity_multiplier":0.25},
+    "river-bridge":{"effect":"major-penalty","movement_surcharge":2,"supply_capacity_multiplier":0.35},
+    "river-crossing":{"effect":"major-penalty","movement_surcharge":2,"supply_capacity_multiplier":0.35},
+    "river-border":{"effect":"major-penalty","movement_surcharge":2,"supply_capacity_multiplier":0.35},
+    "river-gauge-border":{"effect":"major-penalty","movement_surcharge":2,"supply_capacity_multiplier":0.25},
+    "mountain-pass":{"effect":"major-penalty","movement_surcharge":2,"supply_capacity_multiplier":0.4},
+    "mountain-corridor":{"effect":"moderate-penalty","movement_surcharge":1,"supply_capacity_multiplier":0.6},
+    "river-valley":{"effect":"moderate-penalty","movement_surcharge":1,"supply_capacity_multiplier":0.6},
+    "land-gap":{"effect":"moderate-penalty","movement_surcharge":1,"supply_capacity_multiplier":0.6},
+    "short-sea":{"effect":"edge-disabled-without-shipping","movement_surcharge":null,"supply_capacity_multiplier":0}
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "version": "0.1",
+  "valid": true,
+  "counts": {
+    "territory_baselines": 101,
+    "crossing_effects": 30,
+    "strategic_redeployment_territories": 55,
+    "crossings_requiring_edge_review": 1
+  },
+  "supply_capacity_range": {
+    "minimum": 2,
+    "maximum": 13,
+    "mean": 7.69
+  },
+  "errors": [],
+  "warnings": [
+    "X-FEHMARN is not yet attached to an existing campaign edge"
+  ],
+  "balancing_status": "first-pass-values-require-simulation"
+}

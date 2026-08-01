@@ -11,7 +11,7 @@
   },
   {
     "from": "GB-04",
-    "to": "FR-01",
+    "to": "FR-02",
     "type": "channel-crossing"
   },
   {
@@ -78,5 +78,10 @@
     "from": "CY-01",
     "to": "TR-01",
     "type": "short-sea"
+  },
+  {
+    "from": "UA-05",
+    "to": "RU-05",
+    "type": "fixed-link-world-state"
   }
 ]
