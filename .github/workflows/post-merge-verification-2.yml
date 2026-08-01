@@ -1,0 +1,174 @@
+name: Temporary corrected post-merge verification
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify main deployment and live site
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = 'a5127d70773693bcbf9b006701cce32ad2c053e2';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let deploymentRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner,
+                  repo,
+                  head_sha: targetSha,
+                  per_page: 50
+                });
+                deploymentRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (deploymentRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!deploymentRun) {
+                failures.push('No completed main-branch push workflow was found for the merge commit.');
+              } else {
+                core.notice(`MAIN_RUN=${JSON.stringify({
+                  id: deploymentRun.id,
+                  status: deploymentRun.status,
+                  conclusion: deploymentRun.conclusion,
+                  event: deploymentRun.event,
+                  head_branch: deploymentRun.head_branch,
+                  head_sha: deploymentRun.head_sha,
+                  html_url: deploymentRun.html_url
+                })}`);
+                if (deploymentRun.status !== 'completed' || deploymentRun.conclusion !== 'success') {
+                  failures.push(`Main workflow did not complete successfully: ${deploymentRun.status}/${deploymentRun.conclusion}`);
+                }
+
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: deploymentRun.id,
+                  filter: 'latest',
+                  per_page: 100
+                });
+                core.notice(`MAIN_JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({
+                  name: job.name,
+                  status: job.status,
+                  conclusion: job.conclusion,
+                  steps: job.steps?.map(step => ({ name: step.name, conclusion: step.conclusion }))
+                })))}`);
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                if (build?.conclusion !== 'success') failures.push(`Main build job conclusion was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Pages deploy job conclusion was ${deploy?.conclusion ?? 'missing'}.`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({
+                owner,
+                repo,
+                sha: targetSha,
+                environment: 'github-pages',
+                per_page: 20
+              });
+              core.notice(`DEPLOYMENTS=${JSON.stringify(deployments.data.map(deployment => ({
+                id: deployment.id,
+                ref: deployment.ref,
+                sha: deployment.sha,
+                environment: deployment.environment,
+                created_at: deployment.created_at
+              })))}`);
+              if (!deployments.data.length) {
+                failures.push('No github-pages deployment record exists for the merge commit.');
+              } else {
+                let successfulDeployment = false;
+                for (const deployment of deployments.data) {
+                  const statuses = await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 20
+                  });
+                  core.notice(`DEPLOYMENT_${deployment.id}_STATUSES=${JSON.stringify(statuses.data.map(status => ({
+                    state: status.state,
+                    description: status.description,
+                    environment_url: status.environment_url,
+                    log_url: status.log_url,
+                    created_at: status.created_at
+                  })))}`);
+                  if (statuses.data.some(status => status.state === 'success')) successfulDeployment = true;
+                }
+                if (!successfulDeployment) failures.push('No successful github-pages deployment status exists for the merge commit.');
+              }
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              core.notice(`PAGES=${JSON.stringify({
+                html_url: pages.data.html_url,
+                build_type: pages.data.build_type,
+                public: pages.data.public
+              })}`);
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const scriptMatch = index.match(/<script[^>]+src="([^"]+\.js)"/);
+                if (!scriptMatch) {
+                  failures.push('Could not find the production JavaScript bundle in the live index.');
+                } else {
+                  const bundleUrl = new URL(scriptMatch[1], siteUrl).toString();
+                  const bundleResponse = await fetch(bundleUrl, { cache: 'no-store' });
+                  if (!bundleResponse.ok) {
+                    failures.push(`Live JavaScript bundle returned HTTP ${bundleResponse.status}.`);
+                  } else {
+                    const bundle = await bundleResponse.text();
+                    const formationCommandPresent = bundle.includes('FORMATION COMMAND');
+                    const hardeningTextPresent = bundle.includes('No operational task groups remain');
+                    core.notice(`LIVE_CONTENT=${JSON.stringify({
+                      siteUrl,
+                      bundleUrl,
+                      formationCommandPresent,
+                      hardeningTextPresent
+                    })}`);
+                    if (!formationCommandPresent || !hardeningTextPresent) {
+                      failures.push('The live bundle does not contain the merged formation-command release markers.');
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: context.payload.pull_request.number,
+                  state: 'closed'
+                });
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: 'heads/agent/post-merge-verification-2'
+                });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
