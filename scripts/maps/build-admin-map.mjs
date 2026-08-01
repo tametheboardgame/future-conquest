@@ -191,6 +191,17 @@ for (let index = 0; index < outputFeatures.length; index += 1) {
     const repaired = repairPolygon(outputFeatures[index]);
     if (repaired) outputFeatures[index] = turf.feature(repaired.geometry, properties);
   }
+  outputFeatures[index] = turf.simplify(outputFeatures[index], {
+    tolerance: outputFeatures[index].properties.territory_id === 'RU-03' ? 0.005 : 0.01,
+    highQuality: true,
+    mutate: false
+  });
+  outputFeatures[index] = turf.truncate(outputFeatures[index], { precision: 5, mutate: false });
+  if (!turf.flatten(outputFeatures[index]).features.every(part => turf.booleanValid(part))) {
+    const properties = outputFeatures[index].properties;
+    const repaired = repairPolygon(outputFeatures[index]);
+    if (repaired) outputFeatures[index] = turf.feature(repaired.geometry, properties);
+  }
   outputFeatures[index] = turf.rewind(outputFeatures[index], { reverse: true, mutate: false });
   const strategicCentre = turf.point(outputFeatures[index].properties.centre);
   const centreInside = turf.booleanPointInPolygon(strategicCentre, outputFeatures[index], { ignoreBoundary: false });
