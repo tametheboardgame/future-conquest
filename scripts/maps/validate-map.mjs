@@ -5,7 +5,8 @@ import * as turf from '@turf/turf';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outputRoot = path.resolve(process.env.MAP_OUTPUT_DIR || 'assets/maps/generated');
-const mapPath = path.join(outputRoot, 'territories-standard-v0.1.geojson');
+const version = process.env.MAP_VERSION || '0.1';
+const mapPath = path.resolve(process.env.MAP_FILE || path.join(outputRoot, `territories-standard-v${version}.geojson`));
 const collection = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
 
 const ids = collection.features.map(feature => feature.properties.territory_id);
@@ -78,7 +79,7 @@ while (queue.length) {
 const landIsolated = ids.filter(id => adjacency[id].length === 0);
 const unreachableAfterRoutes = ids.filter(id => !visited.has(id));
 const report = {
-  version: '0.1',
+  version,
   territory_count: collection.features.length,
   unique_id_count: new Set(ids).size,
   duplicates,
@@ -94,9 +95,9 @@ const report = {
     : 'requires-correction'
 };
 
-fs.writeFileSync(path.join(outputRoot, 'adjacency-land-v0.1.json'), `${JSON.stringify(adjacency, null, 2)}\n`);
-fs.writeFileSync(path.join(outputRoot, 'routes-provisional-v0.1.json'), `${JSON.stringify(explicitConnections.map(([from, to, type]) => ({ from, to, type })), null, 2)}\n`);
-fs.writeFileSync(path.join(outputRoot, 'map-validation-v0.1.json'), `${JSON.stringify(report, null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `adjacency-land-v${version}.json`), `${JSON.stringify(adjacency, null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `routes-provisional-v${version}.json`), `${JSON.stringify(explicitConnections.map(([from, to, type]) => ({ from, to, type })), null, 2)}\n`);
+fs.writeFileSync(path.join(outputRoot, `map-validation-v${version}.json`), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report, null, 2));
 
 if (report.status === 'requires-correction') process.exitCode = 1;
