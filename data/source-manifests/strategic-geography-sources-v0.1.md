@@ -25,9 +25,15 @@
 
 ## Planned sources
 
-- Natural Earth public-domain physical vectors for broad terrain and hydrography
 - OpenStreetMap / Geofabrik daily extracts under ODbL 1.0 for strategic transport
   hubs and critical crossings
+
+## Natural Earth
+
+- Dataset: 1:10m geography regions polygons, version 5.1.1
+- Terms: public domain
+- Use: broad mountain, plateau, plain, lowland and tundra coverage for territory
+  terrain profiles
 
 Raw downloads remain reproducible build inputs and are not committed. Generated
 candidate layers retain source identifiers for auditing and refresh comparison.
