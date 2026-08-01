@@ -3,6 +3,7 @@ node_modules/
 assets/maps/generated/*.png
 npm-debug.log*
 dist/
+.test-dist/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts

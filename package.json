@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node scripts/run-engine-tests.mjs",
     "build:slice-map": "node scripts/build-vertical-slice-map.mjs",
     "prebuild": "npm run build:slice-map",
     "build": "tsc -b && vite build",
