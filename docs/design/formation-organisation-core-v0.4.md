@@ -92,6 +92,7 @@ Regression coverage includes:
 - unsecured capture and later occupation
 - version 3 and version 2 save migration
 - scalable roster and organisation-panel source checks
+- formal release-review checks for empty formations and personnel-limited deployable armour
 
 ## Deferred work
 
