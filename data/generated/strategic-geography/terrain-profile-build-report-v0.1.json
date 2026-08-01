@@ -1,0 +1,23 @@
+{
+  "version": "0.1",
+  "territory_count": 101,
+  "terrain_class_counts": {
+    "mountainous": 14,
+    "mixed-upland": 47,
+    "open-lowland": 21,
+    "mixed-lowland": 16,
+    "subarctic": 3
+  },
+  "winter_severity_counts": {
+    "mild": 28,
+    "moderate": 62,
+    "severe": 9,
+    "extreme": 2
+  },
+  "profiles_requiring_manual_review": [],
+  "caveats": [
+    "Natural Earth physical regions are cartographic generalisations, not an elevation model.",
+    "Movement costs are initial balancing values and not measured travel-time estimates.",
+    "Urbanisation currently reflects mapped major-city population rather than continuous settlement density."
+  ]
+}
