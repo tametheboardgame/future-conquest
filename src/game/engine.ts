@@ -471,6 +471,7 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
       const requiredPresence = occupationRequirement(id);
       if (localPresence >= requiredPresence) {
         territory.occupation = 'contested';
+        territory.capturedTurn = next.turn;
         territory.legitimacy = Math.max(territory.legitimacy, 34);
         territory.resistance = Math.min(territory.resistance, 58);
         next = addEvent(next, `${TERRITORIES[id].centre} now has ${localPresence} personnel against an occupation requirement of ${requiredPresence}; territorial control is being established.`, 'good');

@@ -99,7 +99,7 @@ export function ForceOrganisationPanel({ state, selectedGroup, onChange }: Props
       <button disabled={!available} onClick={() => chooseMode('rename')}>Rename</button>
       <button
         className="dissolve-action"
-        disabled={!available || selectedGroup.personnel !== 0 || selectedGroup.functionalArmour !== 0 || selectedGroup.damagedArmour !== 0 || Object.keys(state.taskGroups).length <= 1}
+        disabled={!available || selectedGroup.personnel !== 0 || selectedGroup.maxPersonnel !== 0 || selectedGroup.functionalArmour !== 0 || selectedGroup.damagedArmour !== 0 || Object.keys(state.taskGroups).length <= 1}
         onClick={() => apply(dissolveFormation(state, selectedGroup.id), 'Formation dissolved.')}
       >Dissolve empty formation</button>
     </div>}

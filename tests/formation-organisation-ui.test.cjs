@@ -35,4 +35,5 @@ test('the engine distinguishes unsecured captures from occupied territory', () =
   assert.match(engine, /occupationRequirement/);
   assert.match(engine, /occupation = secured \? 'contested' : 'unsecured'/);
   assert.match(engine, /occupation === 'unsecured'/);
+  assert.match(readFileSync('src/components/MapView.tsx', 'utf8'), /unsecured-control/);
 });

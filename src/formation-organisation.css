@@ -201,3 +201,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.territory.player.unsecured-control {
+  fill: #6a5030;
+  stroke: #ffb45c;
+  stroke-dasharray: 4 3;
+}

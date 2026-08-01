@@ -114,6 +114,7 @@ function sameLocationAndAvailable(state: GameState, firstId: string, secondId: s
 }
 
 export function splitFormation(state: GameState, input: SplitFormationInput): GameState {
+  if (state.status !== 'playing') return state;
   const source = state.taskGroups[input.sourceId];
   if (!canReorganiseFormation(source)) return state;
 
@@ -160,7 +161,7 @@ export function splitFormation(state: GameState, input: SplitFormationInput): Ga
 }
 
 export function mergeFormations(state: GameState, targetId: string, sourceId: string, name?: string): GameState {
-  if (!sameLocationAndAvailable(state, targetId, sourceId)) return state;
+  if (state.status !== 'playing' || !sameLocationAndAvailable(state, targetId, sourceId)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const target = taskGroups[targetId];
   const source = taskGroups[sourceId];
@@ -187,7 +188,7 @@ export function mergeFormations(state: GameState, targetId: string, sourceId: st
 }
 
 export function transferFormationResources(state: GameState, input: TransferFormationInput): GameState {
-  if (!sameLocationAndAvailable(state, input.sourceId, input.targetId)) return state;
+  if (state.status !== 'playing' || !sameLocationAndAvailable(state, input.sourceId, input.targetId)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const source = taskGroups[input.sourceId];
   const target = taskGroups[input.targetId];
@@ -222,6 +223,7 @@ export function transferFormationResources(state: GameState, input: TransferForm
 }
 
 export function renameFormation(state: GameState, groupId: string, name: string): GameState {
+  if (state.status !== 'playing') return state;
   const group = state.taskGroups[groupId];
   const trimmed = name.trim();
   if (!canReorganiseFormation(group) || !trimmed) return state;
@@ -232,9 +234,10 @@ export function renameFormation(state: GameState, groupId: string, name: string)
 }
 
 export function dissolveFormation(state: GameState, groupId: string): GameState {
+  if (state.status !== 'playing') return state;
   const group = state.taskGroups[groupId];
   if (!canReorganiseFormation(group)) return state;
-  if (group.personnel !== 0 || group.functionalArmour !== 0 || group.damagedArmour !== 0) return state;
+  if (group.personnel !== 0 || group.maxPersonnel !== 0 || group.functionalArmour !== 0 || group.damagedArmour !== 0) return state;
   if (Object.keys(state.taskGroups).length <= 1) return state;
 
   const taskGroups = structuredClone(state.taskGroups);

@@ -52,7 +52,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
         strokeWidth: 3,
         strokeDasharray: '8 5'
       } : undefined;
-      return <path key={id} d={geometryPath(feature.geometry)} onClick={() => onSelect(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
+      return <path key={id} d={geometryPath(feature.geometry)} onClick={() => onSelect(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
     })}
     {Object.values(state.operations).flatMap(operation => operation.participantGroupIds.map((groupId, index) => {
       const group = state.taskGroups[groupId];

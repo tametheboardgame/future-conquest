@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { beginOperation, endTurn, newGame } = require('../.test-dist/engine.js');
+const { beginOperation, endTurn, loadGame, newGame } = require('../.test-dist/engine.js');
 const {
   canReorganiseFormation,
   dissolveFormation,
@@ -91,6 +91,14 @@ test('active formations cannot be reorganised', () => {
   assert.equal(splitFormation(state, { sourceId: 'TG-1', name: 'Not Allowed', personnel: 2, functionalArmour: 0, damagedArmour: 0 }), state);
 });
 
+test('formations with residual recovery establishment cannot be dissolved', () => {
+  const state = newGame(2);
+  state.taskGroups['TG-1'].personnel = 0;
+  state.taskGroups['TG-1'].functionalArmour = 0;
+  state.taskGroups['TG-1'].damagedArmour = 0;
+  assert.equal(dissolveFormation(state, 'TG-1'), state);
+});
+
 test('empty formations can be dissolved after resources are reassigned', () => {
   let state = newGame(2);
   state = transferFormationResources(state, {
@@ -131,4 +139,23 @@ test('an undersized victorious formation captures but does not secure a province
   state.taskGroups['TG-2'].status = 'ready';
   state = endTurn(state);
   assert.equal(state.territories[target].occupation, 'contested');
+  assert.equal(state.territories[target].capturedTurn, state.turn);
+});
+
+
+test('version 3 concurrent-operation saves migrate to version 4', () => {
+  const storage = new Map();
+  global.localStorage = {
+    setItem: (key, value) => storage.set(key, value),
+    getItem: key => storage.get(key) ?? null,
+    removeItem: key => storage.delete(key),
+    clear: () => storage.clear()
+  };
+  const prior = newGame(2);
+  prior.version = 3;
+  storage.set('future-conquest-slice-v0.3', JSON.stringify(prior));
+  const loaded = loadGame();
+  assert.ok(loaded);
+  assert.equal(loaded.version, 4);
+  assert.equal(Object.keys(loaded.taskGroups).length, 4);
 });
