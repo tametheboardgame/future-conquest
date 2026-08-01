@@ -30,3 +30,95 @@
 .command-panel .controls {
   margin-top: 0;
 }
+
+.empty-state {
+  margin: 8px 0 0;
+  color: #78919c;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.active-operation-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.active-operation-list article {
+  border: 1px solid #31505e;
+  background: #0d222c;
+  padding: 9px 10px;
+}
+
+.active-operation-list article > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.active-operation-list strong {
+  font: 600 14px Barlow Condensed, sans-serif;
+  color: #eaf4f6;
+}
+
+.active-operation-list span {
+  font: 600 12px IBM Plex Mono, monospace;
+  color: #ffb45c;
+}
+
+.active-operation-list small {
+  display: block;
+  margin-top: 3px;
+  color: #7f99a4;
+  font: 9px IBM Plex Mono, monospace;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.operation-progress {
+  height: 4px;
+  margin-top: 7px;
+  overflow: hidden;
+  background: #243640;
+}
+
+.operation-progress i {
+  display: block;
+  height: 100%;
+  background: #e58a66;
+}
+
+.operation-route {
+  fill: none;
+  stroke: #ffb45c;
+  stroke-width: 2;
+  stroke-dasharray: 8 6;
+  opacity: .82;
+  pointer-events: none;
+  animation: operation-route-flow 1.4s linear infinite;
+}
+
+#operationArrow path {
+  fill: #ffb45c;
+}
+
+.operation-marker {
+  pointer-events: none;
+}
+
+.operation-marker rect {
+  fill: #6a392d;
+  stroke: #ffb45c;
+  stroke-width: 1.5;
+}
+
+.operation-marker text {
+  fill: #fff4e6;
+  stroke: none;
+  font: 700 9px IBM Plex Mono, monospace;
+  text-anchor: middle;
+}
+
+@keyframes operation-route-flow {
+  to { stroke-dashoffset: -28; }
+}

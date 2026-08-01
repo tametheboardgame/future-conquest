@@ -31,11 +31,13 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
     return result;
   }, {});
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
+  const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
 
   return <svg className="map" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="North-western Europe campaign map">
     <defs>
       <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+      <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker>
     </defs>
     <rect width={WIDTH} height={HEIGHT} className="sea" />
     {features.map((feature: any) => {
@@ -43,7 +45,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       const territory = state.territories[id];
       const selected = state.selectedTerritory === id;
       const targeted = state.targetTerritory === id;
-      const active = state.battle?.target === id;
+      const active = activeTargets.has(id);
       const reachable = adjacentTargets.has(id) && !selected && !targeted && !active;
       const reachStyle = reachable ? {
         stroke: territory.controller === 'enemy' ? '#ffb45c' : '#8ff9ed',
@@ -52,13 +54,24 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       } : undefined;
       return <path key={id} d={geometryPath(feature.geometry)} onClick={() => onSelect(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
     })}
+    {Object.values(state.operations).flatMap(operation => operation.participantGroupIds.map((groupId, index) => {
+      const group = state.taskGroups[groupId];
+      const originId = operation.origins[groupId] ?? group?.location;
+      if (!originId || !anchors[originId] || !anchors[operation.target]) return null;
+      const [x1, y1] = anchors[originId];
+      const [x2, y2] = anchors[operation.target];
+      const offset = (index - (operation.participantGroupIds.length - 1) / 2) * 4;
+      return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
+    }))}
     {features.map((feature: any) => {
       const id = feature.properties.territory_id as string;
       const [x, y] = anchors[id];
       const reachable = adjacentTargets.has(id);
       const action = state.territories[id].controller === 'enemy' ? 'ATTACK' : 'MOVE';
+      const operation = Object.values(state.operations).find(activeOperation => activeOperation.target === id);
       return <g key={`${id}-label`} className="map-label" onClick={() => onSelect(id)}>
         {reachable && <text x={x} y={y - 25} style={{ fill: state.territories[id].controller === 'enemy' ? '#ffb45c' : '#8ff9ed', fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '1px', textAnchor: 'middle', paintOrder: 'stroke', stroke: '#07131c', strokeWidth: 3 }}>{action}</text>}
+        {operation && <g className="operation-marker" transform={`translate(${x - 25} ${y - 31})`}><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>}
         <circle cx={x} cy={y - 8} r="3" />
         <text x={x} y={y + 8}>{TERRITORIES[id].centre}</text>
         {!state.territories[id].supplied && state.territories[id].controller === 'player' && <text className="isolated-label" x={x} y={y + 23}>ISOLATED</text>}
@@ -68,9 +81,9 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       const [x, y] = anchors[territoryId];
       return <g key={`enemy-${territoryId}`} className="enemy-marker" transform={`translate(${x + 24} ${y - 24})`}><path d="M0 -10 L10 8 L-10 8 Z" /><text x="0" y="4">{count}</text></g>;
     })}
-    {Object.entries(groupsByTerritory).flatMap(([territoryId, groups]) => {
+    {Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {
       const [x, y] = anchors[territoryId];
-      return groups.map((group, index) => {
+      return territoryGroups.map((group, index) => {
         const dx = -28 + (index % 2) * 29;
         const dy = 23 + Math.floor(index / 2) * 24;
         const selected = group.id === state.selectedTaskGroupId;

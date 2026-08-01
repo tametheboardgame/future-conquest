@@ -6,6 +6,8 @@ import {
   canIssueOperationalOrder,
   endTurn,
   enemyStrengthAt,
+  getOperationAtTarget,
+  getOperationForGroup,
   issueMove,
   loadGame,
   newGame,
@@ -15,18 +17,22 @@ import {
   setGarrison
 } from './game/engine';
 import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-targeting';
-import type { Difficulty, GameState } from './game/types';
+import type { Difficulty, GameState, Operation } from './game/types';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
+const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
 
 export default function App() {
   const [state, setState] = useState<GameState>(() => newGame());
   const [newDifficulty, setNewDifficulty] = useState<Difficulty>('standard');
   const groups = Object.values(state.taskGroups);
+  const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
+  const selectedOperation = selectedGroup ? getOperationForGroup(state, selectedGroup.id) : undefined;
   const selected = state.selectedTerritory ? TERRITORIES[state.selectedTerritory] : null;
   const target = state.targetTerritory ? TERRITORIES[state.targetTerritory] : null;
   const targetState = target ? state.territories[target.id] : null;
+  const targetOperation = target ? getOperationAtTarget(state, target.id) : undefined;
   const targetInfo = selectedGroup && target ? getOrderTargetInfo(state, target.id, selectedGroup.id) : null;
   const adjacentTargetNames = selectedGroup
     ? getAdjacentOrderTargets(state, selectedGroup.id).map(id => TERRITORIES[id].centre).join(', ')
@@ -39,33 +45,22 @@ export default function App() {
   const enemyAtTarget = target && targetState?.controller === 'enemy' ? enemyStrengthAt(state, target.id) : null;
   const escalationLabel = state.escalation >= 88 ? 'Strategic crisis' : state.escalation >= 75 ? 'Coalition war' : state.escalation >= 60 ? 'Intervention' : state.escalation >= 40 ? 'Material support' : state.escalation >= 25 ? 'Sanctions' : state.escalation >= 15 ? 'Monitoring' : 'Local response';
   const canOrderSelected = canIssueOperationalOrder(selectedGroup ?? undefined);
-  const canMove = Boolean(selectedGroup && targetInfo?.kind === 'move' && canOrderSelected && !state.battle && state.status === 'playing');
-  const canAttack = Boolean(selectedGroup && targetInfo?.kind === 'attack' && canOrderSelected && !state.battle && state.status === 'playing');
+  const canMove = Boolean(selectedGroup && targetInfo?.kind === 'move' && canOrderSelected && state.status === 'playing');
+  const canAttack = Boolean(selectedGroup && targetInfo?.kind === 'attack' && canOrderSelected && state.status === 'playing');
 
   const instruction = useMemo(() => {
     if (!selectedGroup) return 'No operational task groups remain. The expedition has lost combat cohesion.';
-    if (state.battle) {
-      const attacker = state.taskGroups[state.battle.attackerGroupId];
-      return `${attacker?.name ?? 'Task group'} is fighting towards ${TERRITORIES[state.battle.target].centre}: ${state.battle.progress}% operational progress.`;
+    if (selectedOperation) {
+      return `${selectedGroup.name} is committed to ${operationTitle(selectedOperation)}: ${selectedOperation.progress}% progress with ${selectedOperation.participantGroupIds.length} participating task group${selectedOperation.participantGroupIds.length === 1 ? '' : 's'}.`;
     }
-    if (selectedGroup.order?.type === 'move') return `${selectedGroup.name} is moving towards ${TERRITORIES[selectedGroup.order.target].centre}. Resolve the day to advance.`;
+    if (selectedGroup.order?.type === 'move') return `${selectedGroup.name} is moving towards ${TERRITORIES[selectedGroup.order.target].centre}. Other formations may still receive orders before the day resolves.`;
     if (selectedGroup.status === 'recovering') return `${selectedGroup.name} is recovering and cannot receive orders until the next supplied day resolves.`;
     if (targetInfo?.kind === 'out-of-range' && target) return `${target.centre} is outside ${selectedGroup.name}'s operational reach from ${TERRITORIES[selectedGroup.location].centre}. Available adjacent targets are marked ATTACK or MOVE.`;
     if (targetInfo?.kind === 'move' && target) return `Movement route selected: ${TERRITORIES[selectedGroup.location].centre} → ${target.centre}.`;
+    if (targetInfo?.kind === 'attack' && targetOperation && target) return `${target.centre} already has an active operation. Review it and select Join operation to reinforce it.`;
     if (targetInfo?.kind === 'attack' && target) return `Attack target selected: ${target.centre}. Review the defenders and select Begin operation.`;
-    return 'Select a task group, then choose a province marked ATTACK or MOVE. Only directly adjacent provinces can receive orders.';
-  }, [selectedGroup, state.battle, state.taskGroups, target, targetInfo]);
-
-  const handleTerritorySelect = (id: string) => {
-    setState(current => {
-      const next = selectTerritory(current, id);
-      const group = current.taskGroups[current.selectedTaskGroupId];
-      return {
-        ...next,
-        targetTerritory: group && id !== group.location ? id : null
-      };
-    });
-  };
+    return 'Issue independent orders to each task group, then resolve the day. Several movements and operations can run simultaneously.';
+  }, [selectedGroup, selectedOperation, target, targetInfo, targetOperation]);
 
   const load = () => {
     const saved = loadGame();
@@ -74,7 +69,7 @@ export default function App() {
 
   return <main className="app-shell">
     <header className="topbar">
-      <div><p className="eyebrow">PHASE IV / FORMATION COMMAND</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE V / CONCURRENT OPERATIONS</p><h1>FUTURE CONQUEST</h1></div>
       <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
     </header>
 
@@ -82,7 +77,7 @@ export default function App() {
       <div><span>Active personnel</span><strong>{formatNumber(totalPersonnel)}</strong></div>
       <div><span>Functional armour</span><strong>{armourPercent}%</strong></div>
       <div><span>Network supply</span><strong>{state.supply}%</strong></div>
-      <div><span>Wounded</span><strong>{formatNumber(state.woundedPool)}</strong></div>
+      <div><span>Active operations</span><strong>{operations.length}</strong></div>
       <div><span>Territories</span><strong>{controlled} / 15</strong></div>
       <div className="escalation"><span>Global escalation · {escalationLabel}</span><div className="meter"><i style={{ width: `${state.escalation}%` }} /></div><strong>{Math.round(state.escalation)}</strong></div>
     </section>
@@ -91,9 +86,9 @@ export default function App() {
       <div className="map-panel">
         <div className="map-heading">
           <p>{instruction}</p>
-          <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Enemy formation · Dashed borders show available orders</div>
+          <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Enemy formation · Dashed routes show active operations</div>
         </div>
-        <MapView state={state} onSelect={handleTerritorySelect} onSelectGroup={id => setState(current => selectTaskGroup(current, id))} />
+        <MapView state={state} onSelect={id => setState(current => selectTerritory(current, id))} onSelectGroup={id => setState(current => selectTaskGroup(current, id))} />
       </div>
 
       <aside className="command-panel">
@@ -105,6 +100,20 @@ export default function App() {
               <span className="group-stats"><b>{formatNumber(group.personnel)}</b><small>{group.supply}% supply</small></span>
             </button>) : <p>No coherent task groups remain.</p>}
           </div>
+        </section>
+
+        <section className="active-operations">
+          <p className="panel-label">ACTIVE OPERATIONS</p>
+          {operations.length ? <div className="active-operation-list">
+            {operations.map(operation => {
+              const names = operation.participantGroupIds.map(id => state.taskGroups[id]?.name).filter(Boolean).join(', ');
+              return <article key={operation.id}>
+                <div><strong>{operationTitle(operation)}</strong><span>{operation.progress}%</span></div>
+                <small>{names || 'No active formations'} · day {operation.days}</small>
+                <div className="operation-progress"><i style={{ width: `${Math.max(0, Math.min(100, operation.progress))}%` }} /></div>
+              </article>;
+            })}
+          </div> : <p className="empty-state">No active operations. Each available task group can receive an independent order.</p>}
         </section>
 
         <section className="selected-group">
@@ -144,13 +153,15 @@ export default function App() {
 
         <section className="operation-card">
           <p className="panel-label">FORMATION ORDERS</p>
-          {!selectedGroup ? <p>No task group is available to receive orders.</p> : state.battle ? <>
-            <h3>{state.taskGroups[state.battle.attackerGroupId]?.name ?? 'Task group'} → {TERRITORIES[state.battle.target].centre}</h3>
-            <p>{state.battle.progress}% operational progress after {state.battle.days} day{state.battle.days === 1 ? '' : 's'}.</p>
-            <div className="forecast"><span>Enemy formations</span><strong>{state.battle.enemyFormationIds.length}</strong></div>
-          </> : selectedGroup.order ? <>
-            <h3>{selectedGroup.order.type === 'move' ? 'Movement underway' : 'Operation underway'}</h3>
-            <p>{selectedGroup.name} is committed to {TERRITORIES[selectedGroup.order.target].centre}. Resolve the next day.</p>
+          {!selectedGroup ? <p>No task group is available to receive orders.</p> : selectedOperation ? <>
+            <h3>{selectedGroup.name} → {TERRITORIES[selectedOperation.target].centre}</h3>
+            <p>This formation is one of {selectedOperation.participantGroupIds.length} task group{selectedOperation.participantGroupIds.length === 1 ? '' : 's'} assigned to the operation.</p>
+            <div className="forecast"><span>Operation progress</span><strong>{selectedOperation.progress}%</strong></div>
+            <div className="forecast"><span>Days engaged</span><strong>{selectedOperation.days}</strong></div>
+            <div className="forecast"><span>Enemy formations</span><strong>{selectedOperation.enemyFormationIds.length}</strong></div>
+          </> : selectedGroup.order?.type === 'move' ? <>
+            <h3>Movement underway</h3>
+            <p>{selectedGroup.name} is moving to {TERRITORIES[selectedGroup.order.target].centre}. Other task groups remain available for separate orders.</p>
             <div className="forecast"><span>Progress</span><strong>{selectedGroup.order.progress}%</strong></div>
           </> : selectedGroup.status === 'recovering' ? <>
             <h3>Formation recovering</h3>
@@ -160,18 +171,22 @@ export default function App() {
             {targetInfo?.kind === 'out-of-range' ? <>
               <p>This province is not adjacent to {TERRITORIES[selectedGroup.location].centre}. Move the task group through controlled territory first.</p>
               <div className="forecast"><span>Available now</span><strong>{adjacentTargetNames}</strong></div>
-            </> : <p>Movement occupies the formation for at least one day. Upland and mountain routes may require longer.</p>}
+            </> : <p>Movement occupies only this formation. Other task groups can move or attack during the same day.</p>}
             <button className="primary" disabled={!canMove} onClick={() => setState(issueMove)}>{canMove ? 'Issue movement order' : 'Out of operational range'}</button>
           </> : target && enemyAtTarget ? <>
             <h3>{TERRITORIES[selectedGroup.location].centre} → {target.centre}</h3>
             {targetInfo?.kind === 'out-of-range' ? <>
               <p>This enemy province is not adjacent to the selected task group. Select a province marked ATTACK or move closer through controlled territory.</p>
               <div className="forecast"><span>Available now</span><strong>{adjacentTargetNames}</strong></div>
+            </> : targetOperation ? <>
+              <p>An operation is already underway. Joining commits {selectedGroup.name} as an additional attacking formation.</p>
+              <div className="forecast"><span>Current participants</span><strong>{targetOperation.participantGroupIds.length}</strong></div>
+              <div className="forecast"><span>Current progress</span><strong>{targetOperation.progress}%</strong></div>
             </> : <p>{target.terrain === 'mountainous' ? 'Severe terrain and entrenched defenders favour the enemy.' : 'A persistent enemy command is defending this territory. Losses will carry into later battles.'}</p>}
             <div className="forecast"><span>Enemy formations</span><strong>{enemyAtTarget.formations}</strong></div>
             <div className="forecast"><span>Estimated personnel</span><strong>{formatNumber(enemyAtTarget.personnel)}</strong></div>
             <div className="forecast"><span>Enemy armour</span><strong>{formatNumber(enemyAtTarget.armour)}</strong></div>
-            <button className="primary danger-action" disabled={!canAttack} onClick={() => setState(beginOperation)}>{canAttack ? 'Begin operation' : 'Out of operational range'}</button>
+            <button className="primary danger-action" disabled={!canAttack} onClick={() => setState(beginOperation)}>{canAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : 'Out of operational range'}</button>
           </> : <>
             <p>Select one of the provinces marked ATTACK or MOVE on the map. Available from {TERRITORIES[selectedGroup.location].centre}: {adjacentTargetNames}.</p>
             <button className="secondary" disabled={!canOrderSelected || state.status !== 'playing'} onClick={() => setState(setGarrison)}>{selectedGroup.status === 'garrison' ? 'Release from garrison' : 'Assign as garrison'}</button>
@@ -179,15 +194,15 @@ export default function App() {
         </section>
 
         <section className="controls">
-          <button className="end-turn" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve day {state.turn}</button>
+          <button className="end-turn" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
           <div><button onClick={() => saveGame(state)}>Save</button><button onClick={load}>Load</button></div>
-          <div className="new-campaign"><select value={newDifficulty} onChange={event => setNewDifficulty(event.target.value as Difficulty)}><option value="story">Story</option><option value="standard">Standard</option><option value="hard">Hard</option></select><button onClick={() => setState(newGame(undefined, newDifficulty))}>New campaign</button></div>
+          <div className="new-campaign"><select value={newDifficulty} onChange={(event: { target: { value: string } }) => setNewDifficulty(event.target.value as Difficulty)}><option value="story">Story</option><option value="standard">Standard</option><option value="hard">Hard</option></select><button onClick={() => setState(newGame(undefined, newDifficulty))}>New campaign</button></div>
         </section>
       </aside>
     </section>
 
     <section className="event-log">
-      <div className="log-heading"><p className="panel-label">COMMAND LOG</p><span>Seed {state.seed}</span></div>
+      <div className="log-heading"><p className="panel-label">COMMAND LOG</p><span>Seed {state.seed} · {state.woundedPool} wounded</span></div>
       {state.status !== 'playing' && <div className={`outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong></div>}
       <div className="events">{state.events.map(event => <article key={event.id} className={event.tone}><time>DAY {String(event.turn).padStart(3, '0')}</time><p>{event.text}</p></article>)}</div>
     </section>

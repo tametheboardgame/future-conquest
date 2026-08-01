@@ -1,12 +1,23 @@
 import { SLICE_IDS, TERRITORIES } from './data';
-import type { Difficulty, EnemyFormation, GameEvent, GameState, TaskGroup, TerritoryState } from './types';
+import type {
+  Difficulty,
+  EnemyFormation,
+  GameEvent,
+  GameState,
+  Operation,
+  TaskGroup,
+  TerritoryState
+} from './types';
 
+const SAVE_KEY = 'future-conquest-slice-v0.3';
+const LEGACY_SAVE_KEY = 'future-conquest-slice-v0.2';
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const randomFor = (seed: number, turn: number, salt: number) => {
   let value = (seed + turn * 99991 + salt * 7919) >>> 0;
   value = (value * 1664525 + 1013904223) >>> 0;
   return value / 4294967296;
 };
+const saltFor = (value: string) => [...value].reduce((sum, char, index) => sum + char.charCodeAt(0) * (index + 1), 0);
 
 const difficultyRules: Record<Difficulty, { enemy: number; counter: number; recovery: number }> = {
   story: { enemy: 0.78, counter: 0.55, recovery: 1.3 },
@@ -23,11 +34,20 @@ const terrainDefence: Record<string, number> = {
 
 function addEvent(state: GameState, text: string, tone: GameEvent['tone']): GameState {
   const next = { id: (state.events[0]?.id ?? 0) + 1, turn: state.turn, text, tone };
-  return { ...state, events: [next, ...state.events].slice(0, 80) };
+  return { ...state, events: [next, ...state.events].slice(0, 100) };
 }
 
 export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
   return Boolean(group && !group.order && (group.status === 'ready' || group.status === 'garrison'));
+}
+
+export function getOperationForGroup(state: GameState, groupId: string): Operation | undefined {
+  const operationId = state.taskGroups[groupId]?.order?.operationId;
+  return operationId ? state.operations[operationId] : undefined;
+}
+
+export function getOperationAtTarget(state: GameState, territoryId: string): Operation | undefined {
+  return Object.values(state.operations).find(operation => operation.target === territoryId);
 }
 
 function suppliedTerritories(state: GameState): Set<string> {
@@ -107,7 +127,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     capturedTurn: id === portalTerritory ? 1 : undefined
   }])) as Record<string, TerritoryState>;
   const state: GameState = {
-    version: 2,
+    version: 3,
     seed,
     difficulty,
     turn: 1,
@@ -121,7 +141,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     escalation: difficulty === 'hard' ? 8 : 3,
     supply: 100,
     woundedPool: 0,
-    battle: null,
+    operations: {},
     status: 'playing',
     events: [{ id: 1, turn: 1, text: `The portal has opened near ${TERRITORIES[portalTerritory].centre}. Four task groups crossed with ten thousand soldiers.`, tone: 'warning' }]
   };
@@ -136,16 +156,18 @@ export function selectTaskGroup(state: GameState, id: string): GameState {
 export function selectTerritory(state: GameState, id: string): GameState {
   if (state.status !== 'playing') return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
-  if (!group) return state;
-  if (id === group.location) return { ...state, selectedTerritory: id, targetTerritory: null };
-  if (TERRITORIES[group.location].neighbours.includes(id)) return { ...state, selectedTerritory: id, targetTerritory: id };
-  return { ...state, selectedTerritory: id, targetTerritory: null };
+  if (!group || !state.territories[id]) return state;
+  return {
+    ...state,
+    selectedTerritory: id,
+    targetTerritory: id === group.location ? null : id
+  };
 }
 
 export function issueMove(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
-  if (!target || state.battle || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'player') return state;
+  if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'player') return state;
   if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   taskGroups[group.id].status = 'moving';
@@ -155,7 +177,7 @@ export function issueMove(state: GameState): GameState {
 
 export function setGarrison(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
-  if (!canIssueOperationalOrder(group) || state.battle?.attackerGroupId === group.id) return state;
+  if (!canIssueOperationalOrder(group)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const next = taskGroups[group.id];
   next.status = next.status === 'garrison' ? 'ready' : 'garrison';
@@ -173,27 +195,59 @@ export function enemyStrengthAt(state: GameState, territoryId: string): { format
   return { formations: formations.length, personnel, armour, power };
 }
 
+function nextOperationId(state: GameState, target: string): string {
+  let suffix = 1;
+  let id = `OP-${state.turn}-${target}-${suffix}`;
+  while (state.operations[id]) {
+    suffix += 1;
+    id = `OP-${state.turn}-${target}-${suffix}`;
+  }
+  return id;
+}
+
 export function beginOperation(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
-  if (state.battle || !target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'enemy') return state;
+  if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'enemy') return state;
   if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
+
+  const taskGroups = structuredClone(state.taskGroups);
+  const operations = structuredClone(state.operations);
+  const existing = getOperationAtTarget(state, target);
   const defenders = Object.values(state.enemyFormations).filter(formation => formation.location === target && formation.personnel > 0);
   const strength = enemyStrengthAt(state, target);
-  const taskGroups = structuredClone(state.taskGroups);
+  const operationId = existing?.id ?? nextOperationId(state, target);
+  const operation: Operation = existing
+    ? operations[existing.id]
+    : {
+        id: operationId,
+        target,
+        participantGroupIds: [],
+        origins: {},
+        progress: 0,
+        days: 0,
+        enemyFormationIds: defenders.map(formation => formation.id),
+        enemyPower: strength.power
+      };
+  operations[operationId] = operation;
+
+  if (!operation.participantGroupIds.includes(group.id)) operation.participantGroupIds.push(group.id);
+  operation.origins[group.id] = group.location;
   taskGroups[group.id].status = 'attacking';
-  taskGroups[group.id].order = { type: 'attack', target, progress: 0, days: 0 };
-  const battle = {
-    id: `B-${state.turn}-${target}`,
-    attackerGroupId: group.id,
-    origin: group.location,
+  taskGroups[group.id].order = {
+    type: 'attack',
     target,
-    progress: 0,
+    progress: operation.progress,
     days: 0,
-    enemyFormationIds: defenders.map(formation => formation.id),
-    enemyPower: strength.power
+    operationId
   };
-  return addEvent({ ...state, taskGroups, battle, targetTerritory: null }, `${group.name} launched an operation from ${TERRITORIES[group.location].centre} towards ${TERRITORIES[target].centre}.`, 'warning');
+
+  const verb = existing ? 'joined the operation' : 'launched an operation';
+  return addEvent(
+    { ...state, taskGroups, operations, targetTerritory: null },
+    `${group.name} ${verb} from ${TERRITORIES[group.location].centre} towards ${TERRITORIES[target].centre}.`,
+    'warning'
+  );
 }
 
 function resolveMovement(state: GameState): GameState {
@@ -230,7 +284,9 @@ function distributeEnemyLosses(formations: Record<string, EnemyFormation>, ids: 
 
 function retreatEnemyFormations(state: GameState, target: string, ids: string[]): GameState {
   const enemyFormations = structuredClone(state.enemyFormations);
-  const retreatOptions = TERRITORIES[target].neighbours.filter(id => state.territories[id].controller === 'enemy');
+  const retreatOptions = TERRITORIES[target].neighbours
+    .filter(id => state.territories[id].controller === 'enemy')
+    .sort((a, b) => TERRITORIES[b].supply - TERRITORIES[a].supply);
   for (const id of ids) {
     const formation = enemyFormations[id];
     if (!formation || formation.personnel <= 0) {
@@ -241,7 +297,6 @@ function retreatEnemyFormations(state: GameState, target: string, ids: string[])
       delete enemyFormations[id];
       continue;
     }
-    retreatOptions.sort((a, b) => TERRITORIES[b].supply - TERRITORIES[a].supply);
     formation.location = retreatOptions[0];
     formation.entrenchment = Math.max(5, formation.entrenchment - 14);
     formation.readiness = Math.max(20, formation.readiness - 12);
@@ -249,70 +304,147 @@ function retreatEnemyFormations(state: GameState, target: string, ids: string[])
   return { ...state, enemyFormations };
 }
 
-function resolveBattle(state: GameState): GameState {
-  if (!state.battle) return state;
+function operationParticipants(state: GameState, operation: Operation): TaskGroup[] {
+  return operation.participantGroupIds
+    .map(id => state.taskGroups[id])
+    .filter((group): group is TaskGroup => Boolean(
+      group &&
+      group.status === 'attacking' &&
+      group.order?.type === 'attack' &&
+      group.order.operationId === operation.id
+    ));
+}
+
+function syncOperationDefenders(state: GameState): GameState {
+  const operations = structuredClone(state.operations);
+  for (const operation of Object.values(operations)) {
+    const defenders = Object.values(state.enemyFormations)
+      .filter(formation => formation.location === operation.target && formation.personnel > 0);
+    operation.enemyFormationIds = defenders.map(formation => formation.id);
+    operation.enemyPower = enemyStrengthAt(state, operation.target).power;
+  }
+  return { ...state, operations };
+}
+
+function resolveOperations(state: GameState): GameState {
+  if (!Object.keys(state.operations).length) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const enemyFormations = structuredClone(state.enemyFormations);
-  let next: GameState = { ...state, taskGroups, enemyFormations, battle: { ...state.battle } };
-  const battle = next.battle!;
-  const group = taskGroups[battle.attackerGroupId];
-  if (!group) return { ...next, battle: null };
-  battle.days += 1;
-  if (group.order) group.order.days += 1;
+  const territories = structuredClone(state.territories);
+  const operations = structuredClone(state.operations);
+  let next: GameState = { ...state, taskGroups, enemyFormations, territories, operations };
+  const victories: Array<{ target: string; enemyFormationIds: string[] }> = [];
 
-  const defender = enemyStrengthAt(next, battle.target);
-  battle.enemyPower = defender.power;
-  const attackPower = (group.personnel / 1000 * 4.1 + group.functionalArmour / 1000 * 1.9)
-    * (0.58 + group.morale / 150)
-    * (0.55 + group.supply / 190)
-    * (0.9 + randomFor(next.seed, next.turn, 13) * 0.22);
-  const ratio = attackPower / Math.max(1, defender.power);
-  battle.progress += clamp(Math.round((ratio - 1) * 31 + 18), -28, 42);
-  if (group.order) group.order.progress = battle.progress;
+  for (const operationId of Object.keys(operations).sort()) {
+    const operation = operations[operationId];
+    operation.enemyFormationIds = Object.values(enemyFormations)
+      .filter(formation => formation.location === operation.target && formation.personnel > 0)
+      .map(formation => formation.id);
+    const participants = operationParticipants(next, operation);
+    if (!participants.length) {
+      delete operations[operationId];
+      continue;
+    }
+    operation.participantGroupIds = participants.map(group => group.id);
+    operation.days += 1;
+    for (const group of participants) {
+      if (group.order) {
+        group.order.days += 1;
+        group.order.progress = operation.progress;
+      }
+    }
 
-  const casualtyRate = clamp((0.012 / Math.max(0.55, ratio)) * (0.82 + randomFor(next.seed, next.turn, 29) * 0.38), 0.004, 0.035);
-  const casualties = Math.max(4, Math.round(group.personnel * casualtyRate));
-  const wounded = Math.round(casualties * 0.61);
-  const killed = casualties - wounded;
-  group.personnel = Math.max(0, group.personnel - casualties);
-  group.morale = clamp(group.morale - (ratio < 0.8 ? 6 : 2), 10, 100);
-  next.woundedPool += wounded;
+    const defender = enemyStrengthAt(next, operation.target);
+    operation.enemyPower = defender.power;
+    const individualPowers = participants.map((group, index) => (
+      (group.personnel / 1000 * 4.1 + group.functionalArmour / 1000 * 1.9)
+      * (0.58 + group.morale / 150)
+      * (0.55 + group.supply / 190)
+      * (0.9 + randomFor(next.seed, next.turn, saltFor(operation.id) + index * 17) * 0.22)
+    ));
+    const coordinationFactor = Math.max(0.82, 1 - (participants.length - 1) * 0.04);
+    const attackPower = individualPowers.reduce((sum, power) => sum + power, 0) * coordinationFactor;
+    const ratio = attackPower / Math.max(1, defender.power);
+    operation.progress += clamp(Math.round((ratio - 1) * 31 + 18), -28, 48);
 
-  const armourDamage = Math.min(group.functionalArmour, Math.max(2, Math.round(group.functionalArmour * (ratio < 1 ? 0.018 : 0.009))));
-  group.functionalArmour -= armourDamage;
-  group.damagedArmour += armourDamage;
+    let totalKilled = 0;
+    let totalWounded = 0;
+    let remainingPersonnel = 0;
+    let remainingArmour = 0;
+    for (const [index, group] of participants.entries()) {
+      const casualtyRate = clamp(
+        (0.012 / Math.max(0.55, ratio))
+        * (0.82 + randomFor(next.seed, next.turn, saltFor(operation.id) + 101 + index * 23) * 0.38),
+        0.004,
+        0.035
+      );
+      const casualties = Math.min(group.personnel, Math.max(4, Math.round(group.personnel * casualtyRate)));
+      const wounded = Math.round(casualties * 0.61);
+      const killed = casualties - wounded;
+      group.personnel = Math.max(0, group.personnel - casualties);
+      group.morale = clamp(group.morale - (ratio < 0.8 ? 6 : 2), 10, 100);
+      next.woundedPool += wounded;
+      totalKilled += killed;
+      totalWounded += wounded;
 
-  const enemyPersonnelLosses = Math.round(group.personnel * clamp(0.009 * ratio, 0.005, 0.04));
-  const enemyArmourLosses = Math.round(Math.max(1, group.functionalArmour * 0.004 * ratio));
-  distributeEnemyLosses(enemyFormations, battle.enemyFormationIds, enemyPersonnelLosses, enemyArmourLosses);
+      const armourDamage = Math.min(group.functionalArmour, Math.max(2, Math.round(group.functionalArmour * (ratio < 1 ? 0.018 : 0.009))));
+      group.functionalArmour -= armourDamage;
+      group.damagedArmour += armourDamage;
+      remainingPersonnel += group.personnel;
+      remainingArmour += group.functionalArmour;
+      if (group.order) group.order.progress = operation.progress;
+    }
 
-  const remainingDefenders = battle.enemyFormationIds.reduce((sum, id) => sum + (enemyFormations[id]?.personnel ?? 0), 0);
-  if (battle.progress >= 100 || remainingDefenders < 220) {
-    const territory = next.territories[battle.target];
-    territory.controller = 'player';
-    territory.occupation = 'contested';
-    territory.legitimacy = 46;
-    territory.resistance = 42;
-    territory.fortification = 0;
-    territory.capturedTurn = next.turn;
-    group.location = battle.target;
-    group.status = 'ready';
-    group.order = undefined;
-    next.escalation = clamp(next.escalation + 3.2, 0, 100);
-    next.selectedTerritory = battle.target;
-    next.battle = null;
-    next = retreatEnemyFormations(next, battle.target, battle.enemyFormationIds);
-    next = addEvent(next, `${TERRITORIES[battle.target].centre} has fallen to ${group.name}. Remaining defenders withdrew; occupation is unstable.`, 'good');
-  } else if (battle.progress <= -70 || battle.days >= 8 || group.personnel < 420) {
-    group.location = battle.origin;
-    group.status = 'recovering';
-    group.order = undefined;
-    next.battle = null;
-    next = addEvent(next, `${group.name} abandoned the operation towards ${TERRITORIES[battle.target].centre} after ${battle.days} days.`, 'danger');
-  } else {
-    next = addEvent(next, `Day ${battle.days}: ${group.name} is at ${battle.progress}% towards ${TERRITORIES[battle.target].centre}. ${killed} killed, ${wounded} wounded; defenders lost about ${enemyPersonnelLosses}.`, ratio >= 1 ? 'neutral' : 'warning');
+    const enemyPersonnelLosses = Math.round(remainingPersonnel * clamp(0.009 * ratio, 0.005, 0.04));
+    const enemyArmourLosses = Math.round(Math.max(1, remainingArmour * 0.004 * ratio));
+    distributeEnemyLosses(enemyFormations, operation.enemyFormationIds, enemyPersonnelLosses, enemyArmourLosses);
+
+    const remainingDefenders = operation.enemyFormationIds.reduce((sum, id) => sum + (enemyFormations[id]?.personnel ?? 0), 0);
+    if (operation.progress >= 100 || remainingDefenders < 220) {
+      const territory = territories[operation.target];
+      territory.controller = 'player';
+      territory.occupation = 'contested';
+      territory.legitimacy = 46;
+      territory.resistance = 42;
+      territory.fortification = 0;
+      territory.capturedTurn = next.turn;
+      for (const group of participants) {
+        group.location = operation.target;
+        group.status = 'ready';
+        group.order = undefined;
+      }
+      next.escalation = clamp(next.escalation + 3.2, 0, 100);
+      next.selectedTerritory = operation.target;
+      victories.push({ target: operation.target, enemyFormationIds: [...operation.enemyFormationIds] });
+      delete operations[operationId];
+      next = addEvent(
+        next,
+        `${TERRITORIES[operation.target].centre} has fallen to ${participants.map(group => group.name).join(' and ')}. Remaining defenders withdrew; occupation is unstable.`,
+        'good'
+      );
+    } else if (operation.progress <= -70 || operation.days >= 8 || remainingPersonnel < 420) {
+      for (const group of participants) {
+        group.location = operation.origins[group.id] ?? group.location;
+        group.status = 'recovering';
+        group.order = undefined;
+      }
+      delete operations[operationId];
+      next = addEvent(
+        next,
+        `${participants.map(group => group.name).join(' and ')} abandoned the operation towards ${TERRITORIES[operation.target].centre} after ${operation.days} days.`,
+        'danger'
+      );
+    } else {
+      next = addEvent(
+        next,
+        `Operation ${TERRITORIES[operation.target].centre}: ${operation.progress}% progress after ${operation.days} day${operation.days === 1 ? '' : 's'}. ${totalKilled} killed, ${totalWounded} wounded; defenders lost about ${enemyPersonnelLosses}.`,
+        ratio >= 1 ? 'neutral' : 'warning'
+      );
+    }
   }
-  return next;
+
+  for (const victory of victories) next = retreatEnemyFormations(next, victory.target, victory.enemyFormationIds);
+  return syncOperationDefenders(next);
 }
 
 function resolveOccupationAndLogistics(state: GameState): GameState {
@@ -401,8 +533,23 @@ function reinforceEnemy(state: GameState): GameState {
   return next;
 }
 
+function pruneOperations(state: GameState): GameState {
+  const operations = structuredClone(state.operations);
+  for (const [operationId, operation] of Object.entries(operations)) {
+    operation.participantGroupIds = operation.participantGroupIds.filter(groupId => {
+      const group = state.taskGroups[groupId];
+      return Boolean(group && group.status === 'attacking' && group.order?.operationId === operationId);
+    });
+    for (const groupId of Object.keys(operation.origins)) {
+      if (!operation.participantGroupIds.includes(groupId)) delete operation.origins[groupId];
+    }
+    if (!operation.participantGroupIds.length) delete operations[operationId];
+  }
+  return { ...state, operations };
+}
+
 function resolveCounterattack(state: GameState, forced = false): GameState {
-  if (state.turn < 4 || state.battle) return state;
+  if (state.turn < 4) return state;
   const chance = (0.055 + state.escalation / 620) * difficultyRules[state.difficulty].counter;
   if (!forced && randomFor(state.seed, state.turn, 907) >= chance) return state;
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
@@ -472,7 +619,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     }
     next = addEvent(next, `${TERRITORIES[target].centre} repelled an enemy counterattack. The attacking formation lost roughly ${losses} personnel.`, 'good');
   }
-  return refreshSupply(next);
+  return pruneOperations(refreshSupply(next));
 }
 
 export function endTurn(state: GameState): GameState {
@@ -483,13 +630,16 @@ export function endTurn(state: GameState): GameState {
     territories: structuredClone(state.territories),
     taskGroups: structuredClone(state.taskGroups),
     enemyFormations: structuredClone(state.enemyFormations),
+    operations: structuredClone(state.operations),
     events: [...state.events]
   };
   next = resolveMovement(next);
-  next = resolveBattle(next);
+  next = resolveOperations(next);
   next = resolveOccupationAndLogistics(next);
   next = reinforceEnemy(next);
   next = resolveCounterattack(next);
+  next = pruneOperations(next);
+  next = syncOperationDefenders(next);
   next = refreshSupply(next);
   const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
   next.escalation = clamp(Math.max(3 + controlled * 2.35, next.escalation - 0.08), 0, 100);
@@ -499,18 +649,64 @@ export function endTurn(state: GameState): GameState {
   return next;
 }
 
+interface LegacyBattle {
+  id: string;
+  attackerGroupId: string;
+  origin: string;
+  target: string;
+  progress: number;
+  days: number;
+  enemyFormationIds: string[];
+  enemyPower: number;
+}
+
+type LegacyGameState = Omit<GameState, 'version' | 'operations'> & {
+  version: 2;
+  battle: LegacyBattle | null;
+};
+
+function migrateLegacyGame(parsed: LegacyGameState): GameState {
+  const taskGroups = structuredClone(parsed.taskGroups);
+  const operations: Record<string, Operation> = {};
+  if (parsed.battle) {
+    const operationId = `OP-MIGRATED-${parsed.battle.id}`;
+    operations[operationId] = {
+      id: operationId,
+      target: parsed.battle.target,
+      participantGroupIds: [parsed.battle.attackerGroupId],
+      origins: { [parsed.battle.attackerGroupId]: parsed.battle.origin },
+      progress: parsed.battle.progress,
+      days: parsed.battle.days,
+      enemyFormationIds: [...parsed.battle.enemyFormationIds],
+      enemyPower: parsed.battle.enemyPower
+    };
+    const group = taskGroups[parsed.battle.attackerGroupId];
+    if (group?.order?.type === 'attack') group.order.operationId = operationId;
+  }
+  const { battle: _battle, ...withoutBattle } = parsed;
+  return { ...withoutBattle, version: 3, taskGroups, operations };
+}
+
 export function saveGame(state: GameState) {
-  localStorage.setItem('future-conquest-slice-v0.2', JSON.stringify(state));
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
 }
 
 export function loadGame(): GameState | null {
-  const raw = localStorage.getItem('future-conquest-slice-v0.2');
-  if (!raw) return null;
-  const parsed = JSON.parse(raw) as Partial<GameState>;
-  return parsed.version === 2 && parsed.taskGroups && parsed.enemyFormations ? parsed as GameState : null;
+  const current = localStorage.getItem(SAVE_KEY);
+  if (current) {
+    const parsed = JSON.parse(current) as Partial<GameState>;
+    if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return parsed as GameState;
+  }
+  const legacy = localStorage.getItem(LEGACY_SAVE_KEY);
+  if (!legacy) return null;
+  const parsed = JSON.parse(legacy) as Partial<LegacyGameState>;
+  if (parsed.version !== 2 || !parsed.taskGroups || !parsed.enemyFormations) return null;
+  return migrateLegacyGame(parsed as LegacyGameState);
 }
 
 export const __testOnly = {
   refreshSupply,
+  resolveOperations,
+  pruneOperations,
   resolveCounterattack: (state: GameState) => resolveCounterattack(state, true)
 };

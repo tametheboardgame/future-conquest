@@ -26,6 +26,7 @@ export interface TaskGroupOrder {
   target: string;
   progress: number;
   days: number;
+  operationId?: string;
 }
 
 export interface TaskGroup {
@@ -52,11 +53,11 @@ export interface EnemyFormation {
   entrenchment: number;
 }
 
-export interface Battle {
+export interface Operation {
   id: string;
-  attackerGroupId: string;
-  origin: string;
   target: string;
+  participantGroupIds: string[];
+  origins: Record<string, string>;
   progress: number;
   days: number;
   enemyFormationIds: string[];
@@ -71,7 +72,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -85,7 +86,7 @@ export interface GameState {
   escalation: number;
   supply: number;
   woundedPool: number;
-  battle: Battle | null;
+  operations: Record<string, Operation>;
   events: GameEvent[];
   status: 'playing' | 'victory' | 'defeat';
 }
