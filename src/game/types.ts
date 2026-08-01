@@ -13,7 +13,7 @@ export interface TerritoryDefinition {
 
 export interface TerritoryState {
   controller: Controller;
-  occupation: 'enemy' | 'contested' | 'controlled' | 'administered';
+  occupation: 'enemy' | 'unsecured' | 'contested' | 'controlled' | 'administered';
   legitimacy: number;
   resistance: number;
   supplied: boolean;
@@ -72,7 +72,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   seed: number;
   difficulty: Difficulty;
   turn: number;
