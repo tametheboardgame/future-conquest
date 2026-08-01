@@ -26,6 +26,10 @@ function addEvent(state: GameState, text: string, tone: GameEvent['tone']): Game
   return { ...state, events: [next, ...state.events].slice(0, 80) };
 }
 
+export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
+  return Boolean(group && !group.order && (group.status === 'ready' || group.status === 'garrison'));
+}
+
 function suppliedTerritories(state: GameState): Set<string> {
   const supplied = new Set<string>();
   if (state.territories[state.portalTerritory]?.controller !== 'player') return supplied;
@@ -141,7 +145,7 @@ export function selectTerritory(state: GameState, id: string): GameState {
 export function issueMove(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
-  if (!group || !target || state.battle || group.order || state.territories[target].controller !== 'player') return state;
+  if (!target || state.battle || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'player') return state;
   if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   taskGroups[group.id].status = 'moving';
@@ -151,7 +155,7 @@ export function issueMove(state: GameState): GameState {
 
 export function setGarrison(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
-  if (!group || group.order || state.battle?.attackerGroupId === group.id) return state;
+  if (!canIssueOperationalOrder(group) || state.battle?.attackerGroupId === group.id) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const next = taskGroups[group.id];
   next.status = next.status === 'garrison' ? 'ready' : 'garrison';
@@ -172,7 +176,7 @@ export function enemyStrengthAt(state: GameState, territoryId: string): { format
 export function beginOperation(state: GameState): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
-  if (state.battle || !group || !target || group.order || state.territories[target].controller !== 'enemy') return state;
+  if (state.battle || !target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'enemy') return state;
   if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
   const defenders = Object.values(state.enemyFormations).filter(formation => formation.location === target && formation.personnel > 0);
   const strength = enemyStrengthAt(state, target);
@@ -397,10 +401,10 @@ function reinforceEnemy(state: GameState): GameState {
   return next;
 }
 
-function resolveCounterattack(state: GameState): GameState {
+function resolveCounterattack(state: GameState, forced = false): GameState {
   if (state.turn < 4 || state.battle) return state;
   const chance = (0.055 + state.escalation / 620) * difficultyRules[state.difficulty].counter;
-  if (randomFor(state.seed, state.turn, 907) >= chance) return state;
+  if (!forced && randomFor(state.seed, state.turn, 907) >= chance) return state;
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
   if (!frontier.length) return state;
   frontier.sort((a, b) => {
@@ -422,22 +426,41 @@ function resolveCounterattack(state: GameState): GameState {
   const territories = structuredClone(state.territories);
   let next: GameState = { ...state, enemyFormations, taskGroups, territories };
   if (attackerPower * roll > defenderPower) {
-    const retreatOptions = TERRITORIES[target].neighbours.filter(id => territories[id].controller === 'player' && territories[id].supplied);
+    const retreatOptions = TERRITORIES[target].neighbours
+      .filter(id => territories[id].controller === 'player' && territories[id].supplied)
+      .sort((a, b) => TERRITORIES[b].supply - TERRITORIES[a].supply);
+    const destroyed: string[] = [];
     for (const defender of defenders) {
       const group = taskGroups[defender.id];
-      const losses = Math.min(group.personnel, Math.max(20, Math.round(group.personnel * 0.055)));
-      group.personnel -= losses;
-      next.woundedPool += Math.round(losses * 0.55);
-      group.morale = clamp(group.morale - 12, 5, 100);
-      group.status = 'recovering';
-      group.order = undefined;
-      if (retreatOptions.length) group.location = retreatOptions[0];
+      const combatLosses = Math.min(group.personnel, Math.max(20, Math.round(group.personnel * 0.055)));
+      group.personnel -= combatLosses;
+      next.woundedPool += Math.round(combatLosses * 0.55);
+      if (retreatOptions.length) {
+        group.location = retreatOptions[0];
+        group.morale = clamp(group.morale - 12, 5, 100);
+        group.status = 'recovering';
+        group.order = undefined;
+      } else {
+        destroyed.push(group.name);
+        delete taskGroups[group.id];
+      }
     }
     territories[target] = { controller: 'enemy', occupation: 'enemy', legitimacy: 0, resistance: 0, supplied: false, fortification: 8 };
     enemyFormations[attacker.id].location = target;
     enemyFormations[attacker.id].readiness = clamp(enemyFormations[attacker.id].readiness - 8, 15, 100);
+    const survivingIds = Object.keys(taskGroups);
+    if (!taskGroups[next.selectedTaskGroupId]) {
+      next.selectedTaskGroupId = survivingIds[0] ?? '';
+      next.selectedTerritory = survivingIds[0] ? taskGroups[survivingIds[0]].location : target;
+      next.targetTerritory = null;
+    }
     next.escalation = clamp(next.escalation + 1.8, 0, 100);
-    next = addEvent(next, `Enemy forces retook ${TERRITORIES[target].centre}. Local task groups withdrew under pressure.`, 'danger');
+    const retreatText = !defenders.length
+      ? 'The territory had no task group garrison and fell without an organised retreat.'
+      : retreatOptions.length
+        ? 'Local task groups withdrew under pressure.'
+        : `${destroyed.join(', ')} became encircled and ceased to exist as coherent formations.`;
+    next = addEvent(next, `Enemy forces retook ${TERRITORIES[target].centre}. ${retreatText}`, 'danger');
   } else {
     const losses = Math.max(30, Math.round(attacker.personnel * 0.045));
     enemyFormations[attacker.id].personnel = Math.max(0, enemyFormations[attacker.id].personnel - losses);
@@ -486,3 +509,8 @@ export function loadGame(): GameState | null {
   const parsed = JSON.parse(raw) as Partial<GameState>;
   return parsed.version === 2 && parsed.taskGroups && parsed.enemyFormations ? parsed as GameState : null;
 }
+
+export const __testOnly = {
+  refreshSupply,
+  resolveCounterattack: (state: GameState) => resolveCounterattack(state, true)
+};
