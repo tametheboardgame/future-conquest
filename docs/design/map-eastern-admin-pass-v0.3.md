@@ -35,8 +35,8 @@ World State layer. The same separation will apply to every disputed area.
 - All polygon components pass geometry validation. Multipart territories are
   validated component by component because valid island groups can fail a
   whole-MultiPolygon predicate when components touch at a shared boundary.
-- Three strategic centres fall just outside the generalised source geometry:
-  `GB-05`, `HR-02`, and `IT-02`. Their strategic coordinates are preserved,
+- Two strategic centres fall just outside the generalised source geometry:
+  `HR-02` and `IT-02`. Their strategic coordinates are preserved,
   while separate in-territory label anchors are generated for presentation.
 
 ## Next correction pass
