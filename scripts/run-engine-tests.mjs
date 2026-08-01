@@ -6,4 +6,4 @@ const tsc = process.platform === 'win32' ? 'tsc.cmd' : 'tsc';
 rmSync('.test-dist', { recursive: true, force: true });
 execFileSync(tsc, ['-p', 'tsconfig.test.json'], { stdio: 'inherit' });
 writeFileSync('.test-dist/package.json', '{"type":"commonjs"}\n');
-execFileSync(process.execPath, ['--test', 'tests/engine.test.cjs'], { stdio: 'inherit' });
+execFileSync(process.execPath, ['--test', 'tests/*.test.cjs'], { stdio: 'inherit' });
