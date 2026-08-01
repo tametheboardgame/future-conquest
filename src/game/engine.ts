@@ -39,8 +39,10 @@ function addEvent(state: GameState, text: string, tone: GameEvent['tone']): Game
   return { ...state, events: [next, ...state.events].slice(0, 100) };
 }
 
+const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);
+
 export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
-  return Boolean(group && !group.order && (group.status === 'ready' || group.status === 'garrison'));
+  return Boolean(group && group.personnel > 0 && !group.order && (group.status === 'ready' || group.status === 'garrison'));
 }
 
 export function getOperationForGroup(state: GameState, groupId: string): Operation | undefined {
@@ -311,6 +313,7 @@ function operationParticipants(state: GameState, operation: Operation): TaskGrou
     .map(id => state.taskGroups[id])
     .filter((group): group is TaskGroup => Boolean(
       group &&
+      group.personnel > 0 &&
       group.status === 'attacking' &&
       group.order?.type === 'attack' &&
       group.order.operationId === operation.id
@@ -359,7 +362,7 @@ function resolveOperations(state: GameState): GameState {
     const defender = enemyStrengthAt(next, operation.target);
     operation.enemyPower = defender.power;
     const individualPowers = participants.map((group, index) => (
-      (group.personnel / 1000 * 4.1 + group.functionalArmour / 1000 * 1.9)
+      (group.personnel / 1000 * 4.1 + deployableArmour(group) / 1000 * 1.9)
       * (0.58 + group.morale / 150)
       * (0.55 + group.supply / 190)
       * (0.9 + randomFor(next.seed, next.turn, saltFor(operation.id) + index * 17) * 0.22)
@@ -389,11 +392,15 @@ function resolveOperations(state: GameState): GameState {
       totalKilled += killed;
       totalWounded += wounded;
 
-      const armourDamage = Math.min(group.functionalArmour, Math.max(2, Math.round(group.functionalArmour * (ratio < 1 ? 0.018 : 0.009))));
+      const exposedArmour = deployableArmour(group);
+      const armourDamage = Math.min(
+        group.functionalArmour,
+        Math.max(exposedArmour > 0 ? 1 : 0, Math.round(exposedArmour * (ratio < 1 ? 0.018 : 0.009)))
+      );
       group.functionalArmour -= armourDamage;
       group.damagedArmour += armourDamage;
       remainingPersonnel += group.personnel;
-      remainingArmour += group.functionalArmour;
+      remainingArmour += deployableArmour(group);
       if (group.order) group.order.progress = operation.progress;
     }
 
@@ -566,7 +573,7 @@ function pruneOperations(state: GameState): GameState {
   for (const [operationId, operation] of Object.entries(operations)) {
     operation.participantGroupIds = operation.participantGroupIds.filter(groupId => {
       const group = state.taskGroups[groupId];
-      return Boolean(group && group.status === 'attacking' && group.order?.operationId === operationId);
+      return Boolean(group && group.personnel > 0 && group.status === 'attacking' && group.order?.operationId === operationId);
     });
     for (const groupId of Object.keys(operation.origins)) {
       if (!operation.participantGroupIds.includes(groupId)) delete operation.origins[groupId];
@@ -583,7 +590,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
   if (!frontier.length) return state;
   frontier.sort((a, b) => {
-    const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + group.functionalArmour * 0.25, 0) + state.territories[id].fortification * 80;
+    const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + deployableArmour(group) * 0.25, 0) + state.territories[id].fortification * 80;
     return defence(a) - defence(b);
   });
   const target = frontier[0];
@@ -593,7 +600,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   formations.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
   const attacker = formations[0];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
-  const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + group.functionalArmour / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
+  const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' && group.personnel > 0 ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
   const attackerPower = (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150) * difficultyRules[state.difficulty].enemy;
   const roll = 0.84 + randomFor(state.seed, state.turn, 919) * 0.34;
   const enemyFormations = structuredClone(state.enemyFormations);
@@ -745,6 +752,7 @@ export function loadGame(): GameState | null {
 }
 
 export const __testOnly = {
+  deployableArmour,
   refreshSupply,
   resolveOperations,
   pruneOperations,
