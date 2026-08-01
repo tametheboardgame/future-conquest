@@ -1,0 +1,99 @@
+{
+  "schema_version": "0.1",
+  "occupation_policies": {
+    "negotiated_transition": {
+      "initial_legitimacy": 62,
+      "initial_resistance": 18,
+      "administration_delay_days": 10,
+      "local_force_delay_days": 14,
+      "supply_activation_share": 0.1,
+      "daily_legitimacy_change": 0.18,
+      "daily_resistance_change": -0.2,
+      "capture_escalation": 0.18,
+      "civilian_harm": 0.04,
+      "future_garrison_share": 0.35,
+      "modern_loyalty_modifier": 10
+    },
+    "client_government": {
+      "initial_legitimacy": 45,
+      "initial_resistance": 32,
+      "administration_delay_days": 7,
+      "local_force_delay_days": 10,
+      "supply_activation_share": 0.18,
+      "daily_legitimacy_change": 0.06,
+      "daily_resistance_change": -0.08,
+      "capture_escalation": 0.32,
+      "civilian_harm": 0.1,
+      "future_garrison_share": 0.5,
+      "modern_loyalty_modifier": 0
+    },
+    "military_administration": {
+      "initial_legitimacy": 22,
+      "initial_resistance": 55,
+      "administration_delay_days": 3,
+      "local_force_delay_days": 8,
+      "supply_activation_share": 0.3,
+      "daily_legitimacy_change": -0.08,
+      "daily_resistance_change": 0.05,
+      "capture_escalation": 0.65,
+      "civilian_harm": 0.24,
+      "future_garrison_share": 0.8,
+      "modern_loyalty_modifier": -18
+    }
+  },
+  "occupation_states": {
+    "contested": {"minimum_legitimacy": 0, "maximum_resistance": 100},
+    "controlled": {"minimum_legitimacy": 25, "maximum_resistance": 65},
+    "administered": {"minimum_legitimacy": 40, "maximum_resistance": 45},
+    "integrated": {"minimum_legitimacy": 58, "maximum_resistance": 28}
+  },
+  "civilian_needs": {
+    "protected_capacity_share": 0.25,
+    "shortage_legitimacy_loss_per_day": 0.45,
+    "shortage_resistance_gain_per_day": 0.35,
+    "shortage_escalation_per_territory_day": 0.025
+  },
+  "resistance": {
+    "incident_daily_chance_at_100": 0.022,
+    "incident_escalation": 0.22,
+    "incident_supply_damage": 0.018,
+    "uprising_threshold": 72,
+    "uprising_legitimacy_threshold": 24,
+    "uprising_daily_chance": 0.012,
+    "suppression_escalation": 0.7,
+    "negotiation_resistance_reduction": 8,
+    "security_resistance_reduction": 4
+  },
+  "global_escalation": {
+    "daily_decay": 0.055,
+    "territorial_control_floor_scale": 42,
+    "civilian_harm_scale": 1.8,
+    "future_technology_capture": 0.5,
+    "critical_infrastructure_destroyed": 1.8,
+    "thresholds": [
+      {"id":"monitoring","value":15,"enemy_power_multiplier":1.03,"supply_multiplier":1.0},
+      {"id":"sanctions","value":25,"enemy_power_multiplier":1.08,"supply_multiplier":0.94},
+      {"id":"material_support","value":40,"enemy_power_multiplier":1.18,"supply_multiplier":0.88},
+      {"id":"limited_intervention","value":60,"enemy_power_multiplier":1.35,"supply_multiplier":0.8},
+      {"id":"coalition_war","value":75,"enemy_power_multiplier":1.65,"supply_multiplier":0.7},
+      {"id":"strategic_crisis","value":88,"enemy_power_multiplier":1.9,"supply_multiplier":0.62}
+    ],
+    "us_reinforcement_threshold": 60,
+    "us_reinforcement_interval_days": 18,
+    "us_reinforcement_enemy_power": 0.12,
+    "nuclear_risk_threshold": 92,
+    "nuclear_base_daily_risk": 0.0002,
+    "nuclear_max_daily_risk": 0.003
+  },
+  "player_responses": {
+    "humanitarian_relief": {"cost":6,"legitimacy_gain":4,"resistance_reduction":3,"escalation_reduction":0.8},
+    "recognise_local_government": {"cost":4,"legitimacy_gain":6,"resistance_reduction":2,"escalation_reduction":0.45},
+    "security_sweep": {"cost":3,"legitimacy_loss":3,"resistance_reduction":5,"escalation_gain":0.6},
+    "collective_punishment": {"cost":2,"legitimacy_loss":10,"resistance_reduction":8,"escalation_gain":2.5}
+  },
+  "defeat_conditions": {
+    "general_killed_by_strategic_strike": true,
+    "controlled_territory_floor": 1,
+    "future_operational_personnel_floor": 900
+  }
+}

@@ -21,6 +21,7 @@
     "simulate:operational-combat": "node scripts/simulate-operational-combat.mjs",
     "simulate:integrated-campaign": "node scripts/simulate-integrated-campaign.mjs",
     "simulate:modern-formations": "node scripts/simulate-modern-formations.mjs",
+    "simulate:escalation-occupation": "node scripts/simulate-escalation-occupation.mjs",
     "map:validate": "node scripts/maps/validate-map.mjs"
   },
   "dependencies": {

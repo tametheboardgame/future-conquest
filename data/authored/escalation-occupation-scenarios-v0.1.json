@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "simulation_days": 500,
+  "seeds_per_start": 3,
+  "strategies": [
+    {
+      "id":"restrained",
+      "occupation_policy":"negotiated_transition",
+      "humanitarian_priority":0.9,
+      "infrastructure_destruction_chance":0.015,
+      "future_technology_loss_chance":0.008,
+      "operation_intensity":0.82
+    },
+    {
+      "id":"pragmatic",
+      "occupation_policy":"client_government",
+      "humanitarian_priority":0.55,
+      "infrastructure_destruction_chance":0.045,
+      "future_technology_loss_chance":0.014,
+      "operation_intensity":1.0
+    },
+    {
+      "id":"coercive",
+      "occupation_policy":"military_administration",
+      "humanitarian_priority":0.15,
+      "infrastructure_destruction_chance":0.12,
+      "future_technology_loss_chance":0.025,
+      "operation_intensity":1.16
+    }
+  ],
+  "modes": [
+    {"id":"campaign","future_personnel":100000,"command_cycle":{"active_days":4,"cycle_days":5},"base_operations":3},
+    {"id":"standard","future_personnel":50000,"command_cycle":{"active_days":4,"cycle_days":5},"base_operations":2},
+    {"id":"veteran","future_personnel":25000,"command_cycle":{"active_days":1,"cycle_days":1},"base_operations":1},
+    {"id":"desperate","future_personnel":10000,"command_cycle":{"active_days":2,"cycle_days":3},"base_operations":1}
+  ],
+  "base_enemy_power": 4.7,
+  "future_power_per_1000": 4.4,
+  "modern_coalition_power_per_integrated_territory": 0.16,
+  "base_future_loss_per_failed_operation": 0.0016,
+  "base_future_loss_per_successful_operation": 0.00045
+}
