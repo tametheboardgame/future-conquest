@@ -34,6 +34,12 @@ All operations resolve in a deterministic order during the daily sequence. Each 
 
 An operation can independently achieve victory, continue into the next day or withdraw. Movement orders also resolve during that day. Enemy counterattacks can disrupt task groups and remove them from operations where necessary.
 
+## Dynamic defenders
+
+An operation refreshes its defender roster from the actual enemy formations currently present in the target territory. Enemy formations that reinforce or retreat into an active battle therefore become part of that operation before the next combat resolution. This prevents a territory from being captured while an untracked relief formation is still physically present.
+
+The defender roster and estimated enemy power are synchronised again after retreats, reinforcement and counterattack resolution so the interface shows the current battlefield state between campaign days.
+
 ## Interface
 
 The playable slice now includes:
@@ -48,6 +54,19 @@ The playable slice now includes:
 ## Save compatibility
 
 The save format advances to version 3. Version 2 saves remain loadable: an existing single battle is migrated into a one-operation collection and its attacking task group is attached to that operation.
+
+## Release validation
+
+The release suite includes explicit coverage for:
+
+- separate simultaneous operations
+- several task groups joining one operation
+- simultaneous territorial victories
+- movement alongside active combat
+- multi-participant withdrawal
+- counterattack pruning
+- version 2 save migration
+- enemy relief formations arriving after an operation begins
 
 ## Deliberately deferred
 
