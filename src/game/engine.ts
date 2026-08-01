@@ -315,6 +315,17 @@ function operationParticipants(state: GameState, operation: Operation): TaskGrou
     ));
 }
 
+function syncOperationDefenders(state: GameState): GameState {
+  const operations = structuredClone(state.operations);
+  for (const operation of Object.values(operations)) {
+    const defenders = Object.values(state.enemyFormations)
+      .filter(formation => formation.location === operation.target && formation.personnel > 0);
+    operation.enemyFormationIds = defenders.map(formation => formation.id);
+    operation.enemyPower = enemyStrengthAt(state, operation.target).power;
+  }
+  return { ...state, operations };
+}
+
 function resolveOperations(state: GameState): GameState {
   if (!Object.keys(state.operations).length) return state;
   const taskGroups = structuredClone(state.taskGroups);
@@ -326,6 +337,9 @@ function resolveOperations(state: GameState): GameState {
 
   for (const operationId of Object.keys(operations).sort()) {
     const operation = operations[operationId];
+    operation.enemyFormationIds = Object.values(enemyFormations)
+      .filter(formation => formation.location === operation.target && formation.personnel > 0)
+      .map(formation => formation.id);
     const participants = operationParticipants(next, operation);
     if (!participants.length) {
       delete operations[operationId];
@@ -430,7 +444,7 @@ function resolveOperations(state: GameState): GameState {
   }
 
   for (const victory of victories) next = retreatEnemyFormations(next, victory.target, victory.enemyFormationIds);
-  return next;
+  return syncOperationDefenders(next);
 }
 
 function resolveOccupationAndLogistics(state: GameState): GameState {
@@ -625,6 +639,7 @@ export function endTurn(state: GameState): GameState {
   next = reinforceEnemy(next);
   next = resolveCounterattack(next);
   next = pruneOperations(next);
+  next = syncOperationDefenders(next);
   next = refreshSupply(next);
   const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
   next.escalation = clamp(Math.max(3 + controlled * 2.35, next.escalation - 0.08), 0, 100);
