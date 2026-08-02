@@ -1,0 +1,285 @@
+.europe-map-frame {
+  position: relative;
+  height: 700px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 52% 48%, rgba(31, 83, 96, .22), transparent 48%),
+    #081722;
+  isolation: isolate;
+}
+
+.europe-map-frame .map {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.europe-map-frame .map.panning {
+  cursor: grabbing;
+}
+
+.europe-map-frame .map:focus-visible {
+  box-shadow: inset 0 0 0 2px #70d7d0;
+}
+
+.map-graticule {
+  fill: none;
+  stroke: #183340;
+  stroke-width: .7;
+  vector-effect: non-scaling-stroke;
+  opacity: .55;
+  pointer-events: none;
+}
+
+.theatre-country {
+  fill: #0f2833;
+  stroke: #34505d;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.future-theatre-labels {
+  transition: opacity .18s;
+  pointer-events: none;
+}
+
+.future-theatre-labels.faded {
+  opacity: .22;
+}
+
+.future-theatre-labels text {
+  fill: #55727e;
+  stroke: #07131c;
+  stroke-width: 3;
+  paint-order: stroke;
+  text-anchor: middle;
+  font: 600 11px IBM Plex Mono, monospace;
+  letter-spacing: .08em;
+}
+
+.active-campaign-layer {
+  filter: drop-shadow(0 7px 12px rgba(0, 0, 0, .32));
+}
+
+.europe-map .territory {
+  stroke-width: 1.35;
+}
+
+.europe-map .territory.enemy {
+  fill: #334b55;
+}
+
+.europe-map .territory.player {
+  fill: #176c63;
+}
+
+.europe-map .order-label {
+  font: 700 9px IBM Plex Mono, monospace;
+  letter-spacing: 1px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #07131c;
+  stroke-width: 3;
+}
+
+.europe-map .order-label.enemy {
+  fill: #ffb45c;
+}
+
+.europe-map .order-label.player {
+  fill: #8ff9ed;
+}
+
+.map-controls {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 5px;
+  align-items: stretch;
+  padding: 6px;
+  border: 1px solid rgba(80, 126, 141, .74);
+  background: rgba(5, 17, 24, .9);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .32);
+  backdrop-filter: blur(8px);
+}
+
+.map-controls button {
+  border: 1px solid #35515e;
+  background: #102832;
+  color: #bcd0d6;
+  min-height: 30px;
+  padding: 6px 9px;
+  font: 600 10px IBM Plex Mono, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.map-controls button:hover,
+.map-controls button:focus-visible {
+  background: #19504e;
+  border-color: #70d7d0;
+  color: #effffc;
+  outline: none;
+}
+
+.map-controls button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.map-zoom-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 34px);
+  gap: 3px;
+  margin-right: 3px;
+}
+
+.map-zoom-buttons button {
+  padding: 0;
+  font-size: 18px;
+}
+
+.map-viewport-status {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 9px;
+  align-items: baseline;
+  max-width: min(480px, calc(100% - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(70, 108, 120, .68);
+  background: rgba(5, 17, 24, .86);
+  color: #9eb4bc;
+  pointer-events: none;
+  backdrop-filter: blur(7px);
+}
+
+.map-viewport-status strong {
+  color: #8ff9ed;
+  font: 600 13px IBM Plex Mono, monospace;
+}
+
+.map-viewport-status span {
+  font: 600 12px Barlow Condensed, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.map-viewport-status small {
+  grid-column: 1 / -1;
+  color: #627f89;
+  font: 9px IBM Plex Mono, monospace;
+}
+
+@media (max-width: 900px) {
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 68px;
+  }
+
+  .topbar h1 {
+    font-size: 26px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metrics .escalation {
+    grid-column: 1 / -1;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .legend {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .europe-map-frame {
+    height: min(68vh, 680px);
+    min-height: 470px;
+  }
+
+  .command-panel {
+    max-height: none;
+  }
+
+  .map-controls {
+    right: 8px;
+    left: 8px;
+    top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .map-controls > button {
+    flex: 1 1 86px;
+  }
+
+  .map-viewport-status {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    max-width: none;
+  }
+
+  .map-viewport-status small {
+    display: none;
+  }
+
+  .event-log {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 540px) {
+  .metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .metrics > div {
+    padding: 9px 10px;
+  }
+
+  .europe-map-frame {
+    height: 62vh;
+    min-height: 420px;
+  }
+
+  .map-controls {
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .map-controls button {
+    min-height: 34px;
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+}
