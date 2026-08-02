@@ -92,3 +92,21 @@ test('European map styles load after the existing interface and support mobile t
   assert.match(css, /\.workspace\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/s);
   assert.match(css, /\.command-panel\s*\{\s*max-height:\s*none/s);
 });
+
+test('map overlays retain a stable screen size and reveal detail as the player zooms in', () => {
+  const source = read('src/components/MapView.tsx');
+  const css = read('src/europe-map.css');
+
+  assert.match(source, /const overlayScale = view\.width \/ MAP_WIDTH/);
+  assert.match(source, /showTheatreLabels = zoomPercent <= 175/);
+  assert.match(source, /showTerritoryLabels = zoomPercent >= 135/);
+  assert.match(source, /showTerritoryNames = zoomPercent >= 285/);
+  assert.match(source, /scale\(\$\{overlayScale\}\)/);
+  assert.match(source, /24 \* overlayScale/);
+  assert.match(source, /const offset = .* \* 4 \* overlayScale/);
+  assert.match(source, /territory-name-label/);
+  assert.match(source, /territory-hit-target/);
+  assert.match(css, /\.europe-map \.map-label\s*\{\s*pointer-events:\s*none/s);
+  assert.match(css, /\.europe-map \.territory-hit-target/);
+  assert.match(css, /vector-effect:\s*non-scaling-stroke/);
+});

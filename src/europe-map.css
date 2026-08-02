@@ -283,3 +283,52 @@
     font-size: 9px;
   }
 }
+
+/* Zoom-level detail and screen-space overlay sizing. */
+.europe-map .map-label {
+  pointer-events: none;
+}
+
+.europe-map .territory-hit-area {
+  cursor: pointer;
+}
+
+.europe-map .territory-hit-target {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.europe-map .territory-hit-target:hover {
+  fill: rgba(112, 215, 208, .08);
+  stroke: rgba(143, 249, 237, .7);
+}
+
+.europe-map .territory-centre-label {
+  font-size: 12px;
+}
+
+.europe-map .territory-name-label {
+  fill: #91a8b1;
+  font: 500 8px IBM Plex Mono, monospace;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.europe-map .map-label.selected-label .territory-centre-label {
+  fill: #ffffff;
+}
+
+.europe-map .enemy-marker,
+.europe-map .operation-marker,
+.europe-map .portal {
+  pointer-events: none;
+}
+
+.europe-map .operation-route {
+  vector-effect: non-scaling-stroke;
+}
+
