@@ -103,10 +103,10 @@ test('map overlays retain a stable screen size and reveal detail as the player z
   assert.match(source, /showTerritoryNames = zoomPercent >= 285/);
   assert.match(source, /scale\(\$\{overlayScale\}\)/);
   assert.match(source, /24 \* overlayScale/);
+  assert.match(source, /const offset = .* \* 4 \* overlayScale/);
   assert.match(source, /territory-name-label/);
   assert.match(source, /territory-hit-target/);
   assert.match(css, /\.europe-map \.map-label\s*\{\s*pointer-events:\s*none/s);
   assert.match(css, /\.europe-map \.territory-hit-target/);
   assert.match(css, /vector-effect:\s*non-scaling-stroke/);
 });
-
