@@ -1,0 +1,50 @@
+name: Apply map session mobile readability from PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/map-session-mobile-readability'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/map-session-mobile-readability
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply source changes
+        run: python scripts/apply-map-session-mobile-readability.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit finished refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/apply-map-session-mobile-readability.yml
+          rm -f .github/workflows/apply-map-session-mobile-readability-pr.yml
+          rm -f .map-session-builder-trigger
+          rm -f scripts/apply-map-session-mobile-readability.py
+          git config user.name "Future Conquest Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Improve mobile map readability and retain navigation state"
+          git push origin HEAD:agent/map-session-mobile-readability
