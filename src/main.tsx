@@ -8,6 +8,7 @@ import './save-load.css';
 import './europe-map.css';
 import './command-interface.css';
 import './map-interface-refinements.css';
+import './mobile-map-corrections.css';
 import './persistence-feedback';
 
 createRoot(document.getElementById('root')!).render(
