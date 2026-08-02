@@ -8,8 +8,10 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 test('map presses remain clicks until a real drag or pinch begins', () => {
   const source = read('src/components/MapView.tsx');
   const pointerDown = source.slice(source.indexOf('const handlePointerDown'), source.indexOf('const handlePointerMove'));
+  const firstPointerBranch = pointerDown.slice(0, pointerDown.indexOf('} else if'));
   assert.ok(pointerDown.indexOf('pointers.current.set') >= 0);
   assert.ok(pointerDown.indexOf('pointers.current.set') < pointerDown.indexOf('setPointerCapture'));
+  assert.doesNotMatch(firstPointerBranch, /setPointerCapture|setPanning\(true\)/);
   assert.match(source, /const dragDistance = Math\.abs\(deltaX\) \+ Math\.abs\(deltaY\)/);
   assert.match(source, /dragDistance <= 4/);
   assert.match(source, /hasPointerCapture\(event\.pointerId\)/);
