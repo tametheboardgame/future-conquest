@@ -6,6 +6,7 @@ import './command-panel-layout.css';
 import './formation-organisation.css';
 import './save-load.css';
 import './europe-map.css';
+import './command-interface.css';
 import './persistence-feedback';
 
 createRoot(document.getElementById('root')!).render(
