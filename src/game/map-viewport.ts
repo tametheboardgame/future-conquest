@@ -13,7 +13,7 @@ export interface MapPoint {
 export const MAP_WIDTH = 1440;
 export const MAP_HEIGHT = 900;
 export const MAP_ASPECT = MAP_WIDTH / MAP_HEIGHT;
-export const MIN_VIEW_WIDTH = 250;
+export const MIN_VIEW_WIDTH = 144;
 export const FULL_THEATRE_VIEW: MapViewBox = { x: 0, y: 0, width: MAP_WIDTH, height: MAP_HEIGHT };
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));

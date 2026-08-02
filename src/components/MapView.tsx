@@ -173,7 +173,8 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const statusText = useMemo(() => {
     if (zoomPercent <= 110) return 'European theatre overview';
     if (zoomPercent <= 220) return 'Regional command view';
-    return 'Local operations view';
+    if (zoomPercent <= 600) return 'Local operations view';
+    return 'Tactical detail view';
   }, [zoomPercent]);
 
   const selectTerritory = (id: string) => {
@@ -182,7 +183,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
 
   const focusCampaign = () => setView(CAMPAIGN_VIEW);
   const focusSelection = () => {
-    if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 4));
+    if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 7));
     else focusCampaign();
   };
   const zoomAtCentre = (factor: number) => setView(current => zoomMapView(current, factor, {
