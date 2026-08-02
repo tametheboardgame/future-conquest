@@ -35,6 +35,16 @@ jobs:
           Path('/tmp/apply-viii-a.js').write_text(block + '\n')
           PY
           node /tmp/apply-viii-a.js
+          python <<'PY'
+          from pathlib import Path
+          engine = Path('src/game/engine.ts')
+          source = engine.read_text()
+          source = source.replace(
+              'plannedCounterattack && frontier.includes(plannedCounterattack.target)',
+              'plannedCounterattack && frontier.some(id => id === plannedCounterattack.target)'
+          )
+          engine.write_text(source)
+          PY
           rm -f .github/workflows/apply-viii-a-pr.yml
 
       - name: Install dependencies
