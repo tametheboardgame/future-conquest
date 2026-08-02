@@ -111,7 +111,7 @@ function finishLoad(): void {
   if (!pendingLoad) return;
   const loaded = pendingLoad;
   pendingLoad = null;
-  const suffix = loaded.source === 'v4' ? '' : ' · save upgraded';
+  const suffix = loaded.source === 'v5' ? '' : ' · save upgraded';
   showNotice('success', `${formatMessage('Game loaded', loaded.metadata)}${suffix}`);
 }
 
