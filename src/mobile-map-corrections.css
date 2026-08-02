@@ -19,3 +19,44 @@
     overflow-y: auto;
   }
 }
+
+/* Mobile overlays use a larger screen-space scale and text size. */
+@media (max-width: 540px) {
+  .europe-map .territory-centre-label {
+    font-size: 16px;
+    stroke-width: 4px;
+  }
+
+  .europe-map .territory-name-label {
+    font-size: 13px;
+    stroke-width: 3.5px;
+  }
+
+  .europe-map .order-label {
+    font-size: 14px;
+    stroke-width: 4px;
+  }
+
+  .europe-map .map-label .isolated-label {
+    font-size: 11px;
+    stroke-width: 3px;
+  }
+
+  .europe-map .future-theatre-labels .country-name-label {
+    font-size: 12px;
+    stroke-width: 4px;
+  }
+
+  .europe-map .future-theatre-labels .country-name-label.compact {
+    font-size: 10px;
+  }
+
+  .europe-map .task-group-marker text {
+    font-size: 11px;
+  }
+
+  .europe-map .enemy-marker text,
+  .europe-map .operation-marker text {
+    font-size: 10px;
+  }
+}
