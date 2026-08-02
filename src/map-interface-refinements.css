@@ -1,0 +1,226 @@
+.map-layer-control {
+  position: relative;
+  margin-left: 3px;
+}
+
+.map-layer-control summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid #35515e;
+  background: #102832;
+  color: #bcd0d6;
+  font: 600 10px IBM Plex Mono, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.map-layer-control summary::-webkit-details-marker {
+  display: none;
+}
+
+.map-layer-control summary::before {
+  content: '▸';
+  color: #70d7d0;
+  font-size: 10px;
+}
+
+.map-layer-control[open] summary::before {
+  content: '▾';
+}
+
+.map-layer-control summary:hover,
+.map-layer-control summary:focus-visible,
+.map-layer-control[open] summary {
+  border-color: #70d7d0;
+  background: #19504e;
+  color: #effffc;
+  outline: none;
+}
+
+.map-layer-control summary b {
+  color: #8ff9ed;
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.map-layer-options {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 7px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 230px;
+  padding: 10px;
+  border: 1px solid #507584;
+  background: rgba(5, 17, 24, .97);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .48);
+  backdrop-filter: blur(9px);
+}
+
+.map-layer-options p {
+  margin: 0 0 4px;
+  color: #70d7d0;
+  font: 500 9px IBM Plex Mono, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.map-layer-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  color: #bcd0d6;
+  font: 500 10px IBM Plex Mono, monospace;
+  cursor: pointer;
+}
+
+.map-layer-options label:hover {
+  border-color: #35515e;
+  background: #102832;
+  color: #effffc;
+}
+
+.map-layer-options input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #58d2c4;
+}
+
+.future-theatre-labels {
+  pointer-events: none;
+}
+
+.future-theatre-labels .country-name-label {
+  fill: #7896a1;
+  stroke: #07131c;
+  stroke-width: 2.6;
+  paint-order: stroke;
+  text-anchor: middle;
+  font: 600 9px Barlow Condensed, sans-serif;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.future-theatre-labels .country-name-label.compact {
+  fill: #6e8994;
+  font-size: 6.5px;
+  letter-spacing: .015em;
+}
+
+.command-nav-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  min-width: 18px;
+  padding: 2px 4px;
+  border: 1px solid #365864;
+  background: #0a1b23;
+  color: #8ff9ed;
+  font: 500 8px IBM Plex Mono, monospace;
+  text-align: center;
+}
+
+.command-nav-badge.empty {
+  visibility: hidden;
+}
+
+@media (max-width: 900px) {
+  .map-layer-control {
+    margin-left: auto;
+  }
+
+  .map-layer-control summary {
+    min-height: 34px;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+
+  .map-layer-options {
+    right: 0;
+    min-width: min(250px, calc(100vw - 32px));
+  }
+}
+
+@media (max-width: 540px) {
+  .command-app-shell {
+    padding-bottom: 92px;
+  }
+
+  .command-navigation {
+    overflow: visible;
+  }
+
+  .command-nav-items button {
+    grid-template-rows: 17px minmax(24px, auto);
+    align-content: center;
+    justify-items: center;
+    gap: 3px;
+    min-height: 66px;
+    padding: 7px 2px 6px;
+  }
+
+  .command-nav-code {
+    display: none;
+  }
+
+  .command-nav-label {
+    display: block;
+    width: 100%;
+    max-width: none;
+    padding: 0 2px;
+    color: inherit;
+    font: 600 7px IBM Plex Mono, monospace;
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    text-align: center;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .command-nav-badge {
+    position: static;
+    grid-row: 1;
+    min-width: 19px;
+    padding: 2px 4px;
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .command-nav-badge.empty {
+    visibility: hidden;
+  }
+
+  .map-controls {
+    align-items: flex-start;
+  }
+
+  .map-layer-control {
+    flex: 1 1 88px;
+  }
+
+  .map-layer-control summary {
+    width: 100%;
+  }
+
+  .map-layer-options {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: 84px;
+    left: 12px;
+    min-width: 0;
+    max-height: min(54vh, 420px);
+    overflow-y: auto;
+  }
+}
