@@ -1,17 +1,15 @@
 name: Apply desktop trackpad and country labels
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-    types: [opened, reopened, synchronize]
+      - agent/desktop-trackpad-country-labels
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.event.pull_request.head.ref == 'agent/desktop-trackpad-country-labels'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
