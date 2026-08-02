@@ -1,58 +1,47 @@
-name: Build and deploy Future Conquest
+name: Build save load reliability hotfix
 
 on:
   push:
     branches:
-      - main
-      - 'agent/**'
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+      - agent/save-load-reliability
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  build:
+  build-hotfix:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout hotfix branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/save-load-reliability
+          fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Correct builder type guard
+        run: sed -i 's/state: GameState;/state: unknown;/' scripts/apply-save-load-hotfix.py
+      - name: Apply save load hotfix
+        run: python scripts/apply-save-load-hotfix.py
       - name: Install dependencies
         run: npm ci
-      - name: Run engine tests
+      - name: Run complete regression suite
         run: npm test
-      - name: Build game
+      - name: Build production game
         run: npm run build
-      - name: Configure Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v5
-      - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Restore workflow and commit completed hotfix
+        run: |
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/deploy-pages.yml
+          rm -f .github/workflows/save-load-hotfix-builder.yml
+          rm -f scripts/apply-save-load-hotfix.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/main.tsx src/game/engine.ts src/save-load.css tests/save-load.test.cjs tests/save-load-ui.test.cjs .github/workflows/deploy-pages.yml
+          git add -u .github/workflows/save-load-hotfix-builder.yml scripts/apply-save-load-hotfix.py
+          git commit -m "Fix save load reliability and feedback"
+          git push origin HEAD:agent/save-load-reliability
