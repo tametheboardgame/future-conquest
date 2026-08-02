@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('VII-A exposes six persistent command views', () => {
+test('the command shell exposes six persistent command views', () => {
   const navigation = read('src/components/CommandNavigation.tsx');
   const app = read('src/App.tsx');
 
@@ -14,7 +14,7 @@ test('VII-A exposes six persistent command views', () => {
     assert.match(app, new RegExp(`currentView === '${view}'`));
   }
   assert.match(navigation, /aria-label="Primary command views"/);
-  assert.match(app, /PHASE VII-A \/ COMMAND INTERFACE/);
+  assert.match(app, /PHASE VIII-A \/ STRATEGIC RESPONSE/);
 });
 
 test('the map keeps operational controls while specialist tools move into dedicated views', () => {
