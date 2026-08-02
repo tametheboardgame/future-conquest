@@ -7,6 +7,7 @@ import './formation-organisation.css';
 import './save-load.css';
 import './europe-map.css';
 import './command-interface.css';
+import './map-interface-refinements.css';
 import './persistence-feedback';
 
 createRoot(document.getElementById('root')!).render(

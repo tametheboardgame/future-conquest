@@ -22,18 +22,21 @@ export function CommandNavigation({ active, onChange, badges }: Props) {
       <span>VII-A</span>
     </div>
     <div className="command-nav-items">
-      {ITEMS.map(item => <button
-        type="button"
-        key={item.id}
-        className={active === item.id ? 'active' : ''}
-        aria-current={active === item.id ? 'page' : undefined}
-        onClick={() => onChange(item.id)}
-        data-command-view={item.id}
-      >
-        <span className="command-nav-code">{item.code}</span>
-        <span className="command-nav-label">{item.label}</span>
-        {badges[item.id] !== undefined && <b>{badges[item.id]}</b>}
-      </button>)}
+      {ITEMS.map(item => {
+        const badge = badges[item.id];
+        return <button
+          type="button"
+          key={item.id}
+          className={active === item.id ? 'active' : ''}
+          aria-current={active === item.id ? 'page' : undefined}
+          onClick={() => onChange(item.id)}
+          data-command-view={item.id}
+        >
+          <span className={`command-nav-badge ${badge === undefined ? 'empty' : ''}`} aria-hidden={badge === undefined}>{badge ?? '0'}</span>
+          <span className="command-nav-code">{item.code}</span>
+          <span className="command-nav-label">{item.label}</span>
+        </button>;
+      })}
     </div>
     <div className="command-nav-footer"><i /> COMMAND LINK</div>
   </nav>;

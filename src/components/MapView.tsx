@@ -62,7 +62,34 @@ interface PinchGesture {
   view: MapViewBox;
 }
 
-const THEATRE_LABELS: Array<{ code: string; name: string; position: [number, number] }> = [
+interface MapLayers {
+  countries: boolean;
+  territories: boolean;
+  orderPrompts: boolean;
+  friendlyUnits: boolean;
+  enemyUnits: boolean;
+  operations: boolean;
+}
+
+const MAP_LAYER_OPTIONS: Array<{ id: keyof MapLayers; label: string }> = [
+  { id: 'countries', label: 'Country names' },
+  { id: 'territories', label: 'Territory names' },
+  { id: 'orderPrompts', label: 'Order prompts' },
+  { id: 'friendlyUnits', label: 'Friendly formations' },
+  { id: 'enemyUnits', label: 'Enemy formations' },
+  { id: 'operations', label: 'Operations and routes' }
+];
+
+const DEFAULT_MAP_LAYERS: MapLayers = {
+  countries: true,
+  territories: true,
+  orderPrompts: true,
+  friendlyUnits: true,
+  enemyUnits: true,
+  operations: true
+};
+
+const THEATRE_LABELS: Array<{ code: string; name: string; position: [number, number]; compact?: boolean }> = [
   { code: 'IS', name: 'Iceland', position: [-18.6, 64.9] },
   { code: 'IE', name: 'Ireland', position: [-8.1, 53.3] },
   { code: 'UK', name: 'United Kingdom', position: [-3.1, 56.2] },
@@ -70,30 +97,49 @@ const THEATRE_LABELS: Array<{ code: string; name: string; position: [number, num
   { code: 'SE', name: 'Sweden', position: [16.0, 62.0] },
   { code: 'FI', name: 'Finland', position: [26.0, 64.0] },
   { code: 'DK', name: 'Denmark', position: [9.4, 56.0] },
+  { code: 'NL', name: 'Netherlands', position: [5.3, 52.3], compact: true },
+  { code: 'BE', name: 'Belgium', position: [4.7, 50.8], compact: true },
+  { code: 'LU', name: 'Luxembourg', position: [6.1, 49.7], compact: true },
   { code: 'PT', name: 'Portugal', position: [-8.0, 39.6] },
   { code: 'ES', name: 'Spain', position: [-3.4, 40.2] },
+  { code: 'AD', name: 'Andorra', position: [1.6, 42.55], compact: true },
   { code: 'FR', name: 'France', position: [2.1, 46.2] },
+  { code: 'MC', name: 'Monaco', position: [7.42, 43.73], compact: true },
   { code: 'DE', name: 'Germany', position: [10.4, 51.2] },
+  { code: 'CH', name: 'Switzerland', position: [8.2, 46.8], compact: true },
+  { code: 'LI', name: 'Liechtenstein', position: [9.55, 47.16], compact: true },
+  { code: 'AT', name: 'Austria', position: [14.1, 47.6] },
   { code: 'IT', name: 'Italy', position: [12.6, 42.6] },
+  { code: 'SM', name: 'San Marino', position: [12.45, 43.94], compact: true },
+  { code: 'VA', name: 'Vatican City', position: [12.45, 41.9], compact: true },
+  { code: 'MT', name: 'Malta', position: [14.4, 35.9], compact: true },
   { code: 'PL', name: 'Poland', position: [19.1, 52.0] },
-  { code: 'CZ', name: 'Czechia', position: [15.3, 49.8] },
-  { code: 'SK', name: 'Slovakia', position: [19.5, 48.7] },
+  { code: 'CZ', name: 'Czechia', position: [15.3, 49.8], compact: true },
+  { code: 'SK', name: 'Slovakia', position: [19.5, 48.7], compact: true },
   { code: 'HU', name: 'Hungary', position: [19.3, 47.2] },
+  { code: 'SI', name: 'Slovenia', position: [14.9, 46.1], compact: true },
+  { code: 'HR', name: 'Croatia', position: [16.4, 45.2], compact: true },
+  { code: 'BA', name: 'Bosnia & Herz.', position: [17.8, 44.1], compact: true },
+  { code: 'RS', name: 'Serbia', position: [20.8, 44.0] },
+  { code: 'ME', name: 'Montenegro', position: [19.25, 42.8], compact: true },
+  { code: 'XK', name: 'Kosovo', position: [20.9, 42.6], compact: true },
+  { code: 'AL', name: 'Albania', position: [20.0, 41.2], compact: true },
+  { code: 'MK', name: 'North Macedonia', position: [21.7, 41.6], compact: true },
   { code: 'RO', name: 'Romania', position: [25.0, 45.9] },
   { code: 'BG', name: 'Bulgaria', position: [25.2, 42.8] },
   { code: 'GR', name: 'Greece', position: [22.2, 39.1] },
-  { code: 'HR', name: 'Croatia', position: [16.4, 45.2] },
-  { code: 'RS', name: 'Serbia', position: [20.8, 44.0] },
-  { code: 'BA', name: 'Bosnia and Herzegovina', position: [17.8, 44.1] },
-  { code: 'AL', name: 'Albania', position: [20.0, 41.2] },
-  { code: 'LT', name: 'Lithuania', position: [23.9, 55.2] },
-  { code: 'LV', name: 'Latvia', position: [24.6, 57.0] },
-  { code: 'EE', name: 'Estonia', position: [25.5, 58.6] },
+  { code: 'LT', name: 'Lithuania', position: [23.9, 55.2], compact: true },
+  { code: 'LV', name: 'Latvia', position: [24.6, 57.0], compact: true },
+  { code: 'EE', name: 'Estonia', position: [25.5, 58.6], compact: true },
   { code: 'BY', name: 'Belarus', position: [28.0, 53.7] },
   { code: 'UA', name: 'Ukraine', position: [31.3, 49.0] },
-  { code: 'MD', name: 'Moldova', position: [28.6, 47.2] },
+  { code: 'MD', name: 'Moldova', position: [28.6, 47.2], compact: true },
   { code: 'TR', name: 'Türkiye', position: [29.7, 39.1] },
-  { code: 'RU', name: 'Western Russia', position: [39.0, 56.0] }
+  { code: 'CY', name: 'Cyprus', position: [33.2, 35.1], compact: true },
+  { code: 'GE', name: 'Georgia', position: [43.4, 42.1], compact: true },
+  { code: 'AM', name: 'Armenia', position: [44.9, 40.3], compact: true },
+  { code: 'AZ', name: 'Azerbaijan', position: [47.5, 40.4], compact: true },
+  { code: 'RU', name: 'Russia', position: [39.0, 56.0] }
 ];
 
 const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
@@ -146,6 +192,7 @@ const distance = (first: PointerPosition, second: PointerPosition) => Math.hypot
 export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const [view, setView] = useState<MapViewBox>(FULL_THEATRE_VIEW);
   const [panning, setPanning] = useState(false);
+  const [layers, setLayers] = useState<MapLayers>(DEFAULT_MAP_LAYERS);
   const viewRef = useRef(view);
   const pointers = useRef(new Map<number, PointerPosition>());
   const dragGesture = useRef<DragGesture | null>(null);
@@ -165,10 +212,11 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
   const overlayScale = view.width / MAP_WIDTH;
-  const showTheatreLabels = zoomPercent <= 175;
   const showTerritoryLabels = zoomPercent >= 135;
   const showTerritoryNames = zoomPercent >= 285;
+  const showTerritoryOverlay = showTerritoryLabels && (layers.territories || layers.orderPrompts);
   const selectedAnchor = state.selectedTerritory ? anchors[state.selectedTerritory] : undefined;
+  const activeLayerCount = Object.values(layers).filter(Boolean).length;
 
   const statusText = useMemo(() => {
     if (zoomPercent <= 110) return 'European theatre overview';
@@ -179,6 +227,10 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
 
   const selectTerritory = (id: string) => {
     if (!suppressClick.current) onSelect(id);
+  };
+
+  const toggleLayer = (layer: keyof MapLayers) => {
+    setLayers(current => ({ ...current, [layer]: !current[layer] }));
   };
 
   const focusCampaign = () => setView(CAMPAIGN_VIEW);
@@ -293,6 +345,16 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       <button type="button" onClick={() => setView(FULL_THEATRE_VIEW)}>Europe</button>
       <button type="button" onClick={focusCampaign}>Campaign</button>
       <button type="button" onClick={focusSelection} disabled={!state.selectedTerritory}>Selected</button>
+      <details className="map-layer-control">
+        <summary><span>Layers</span><b>{activeLayerCount}/{MAP_LAYER_OPTIONS.length}</b></summary>
+        <div className="map-layer-options">
+          <p>Map labels and markers</p>
+          {MAP_LAYER_OPTIONS.map(option => <label key={option.id}>
+            <input type="checkbox" checked={layers[option.id]} onChange={() => toggleLayer(option.id)} />
+            <span>{option.label}</span>
+          </label>)}
+        </div>
+      </details>
     </div>
 
     <svg
@@ -319,11 +381,6 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       <g className="future-theatre">
         {countryPaths.map(country => <path key={country.id} d={country.path} className="theatre-country"><title>{country.name} · future operational theatre</title></path>)}
       </g>
-      {showTheatreLabels && <g className="future-theatre-labels" aria-hidden="true">
-        {projectedTheatreLabels.map(label => <g key={label.code} transform={`translate(${label.x} ${label.y}) scale(${overlayScale})`}>
-          <text x="0" y="0"><title>{label.name}</title>{label.code}</text>
-        </g>)}
-      </g>}
 
       <g className="active-campaign-layer">
         {activePaths.map(({ id, path }) => {
@@ -340,7 +397,14 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           } : undefined;
           return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
         })}
-        {Object.values(state.operations).flatMap(operation => operation.participantGroupIds.map((groupId, index) => {
+
+        {layers.countries && <g className="future-theatre-labels" aria-hidden="true">
+          {projectedTheatreLabels.map(label => <g key={label.code} transform={`translate(${label.x} ${label.y}) scale(${overlayScale})`}>
+            <text className={`country-name-label ${label.compact ? 'compact' : ''}`} x="0" y="0"><title>{label.name}</title>{label.name}</text>
+          </g>)}
+        </g>}
+
+        {layers.operations && Object.values(state.operations).flatMap(operation => operation.participantGroupIds.map((groupId, index) => {
           const group = state.taskGroups[groupId];
           const originId = operation.origins[groupId] ?? group?.location;
           if (!originId || !anchors[originId] || !anchors[operation.target]) return null;
@@ -349,6 +413,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           const offset = (index - (operation.participantGroupIds.length - 1) / 2) * 4 * overlayScale;
           return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
         }))}
+
         {showTerritoryLabels && activePaths.map(({ id }) => {
           const anchor = anchors[id];
           const territory = state.territories[id];
@@ -358,31 +423,41 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
             <circle className="territory-hit-target" cx="0" cy="0" r="18" onClick={() => selectTerritory(id)} />
           </g>;
         })}
-        {showTerritoryLabels && activePaths.map(({ id }) => {
+
+        {showTerritoryOverlay && activePaths.map(({ id }) => {
           const anchor = anchors[id];
           const territory = state.territories[id];
           if (!anchor || !territory) return null;
           const [x, y] = anchor;
           const reachable = adjacentTargets.has(id);
           const action = territory.controller === 'enemy' ? 'ATTACK' : 'MOVE';
-          const operation = Object.values(state.operations).find(activeOperation => activeOperation.target === id);
           const isolatedOffset = showTerritoryNames ? 34 : 23;
           return <g key={`${id}-label`} className={`map-label ${state.selectedTerritory === id ? 'selected-label' : ''}`} transform={`translate(${x} ${y}) scale(${overlayScale})`}>
-            {reachable && <text x="0" y="-25" className={`order-label ${territory.controller}`}>{action}</text>}
-            {operation && <g className="operation-marker" transform="translate(-25 -31)"><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>}
-            <circle cx="0" cy="-8" r="3" />
-            <text className="territory-centre-label" x="0" y="8">{TERRITORIES[id].centre}</text>
-            {showTerritoryNames && <text className="territory-name-label" x="0" y="21">{TERRITORIES[id].name}</text>}
-            {!territory.supplied && territory.controller === 'player' && <text className="isolated-label" x="0" y={isolatedOffset}>ISOLATED</text>}
+            {layers.orderPrompts && reachable && <text x="0" y="-25" className={`order-label ${territory.controller}`}>{action}</text>}
+            {layers.territories && <>
+              <circle cx="0" cy="-8" r="3" />
+              <text className="territory-centre-label" x="0" y="8">{TERRITORIES[id].centre}</text>
+              {showTerritoryNames && <text className="territory-name-label" x="0" y="21">{TERRITORIES[id].name}</text>}
+              {!territory.supplied && territory.controller === 'player' && <text className="isolated-label" x="0" y={isolatedOffset}>ISOLATED</text>}
+            </>}
           </g>;
         })}
-        {Object.entries(enemyCounts).map(([territoryId, count]) => {
+
+        {layers.operations && Object.values(state.operations).map(operation => {
+          const anchor = anchors[operation.target];
+          if (!anchor) return null;
+          const [x, y] = anchor;
+          return <g key={`${operation.id}-marker`} className="operation-marker" transform={`translate(${x - 25 * overlayScale} ${y - 31 * overlayScale}) scale(${overlayScale})`}><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>;
+        })}
+
+        {layers.enemyUnits && Object.entries(enemyCounts).map(([territoryId, count]) => {
           const anchor = anchors[territoryId];
           if (!anchor) return null;
           const [x, y] = anchor;
           return <g key={`enemy-${territoryId}`} className="enemy-marker" transform={`translate(${x + 24 * overlayScale} ${y - 24 * overlayScale}) scale(${overlayScale})`}><path d="M0 -10 L10 8 L-10 8 Z" /><text x="0" y="4">{count}</text></g>;
         })}
-        {Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {
+
+        {layers.friendlyUnits && Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {
           const anchor = anchors[territoryId];
           if (!anchor) return [];
           const [x, y] = anchor;
@@ -396,6 +471,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
             </g>;
           });
         })}
+
         {state.portalTerritory && anchors[state.portalTerritory] && (() => {
           const [x, y] = anchors[state.portalTerritory];
           return <g className="portal" transform={`translate(${x} ${y}) scale(${overlayScale})`} filter="url(#glow)"><circle cx="0" cy="-8" r="12" /><circle cx="0" cy="-8" r="5" /></g>;
