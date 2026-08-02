@@ -97,7 +97,7 @@ test('map overlays retain a stable screen size and reveal detail as the player z
   const source = read('src/components/MapView.tsx');
   const css = read('src/europe-map.css');
 
-  assert.match(source, /const overlayScale = view\.width \/ MAP_WIDTH/);
+  assert.match(source, /const overlayScale = view\.width \/ MAP_WIDTH \* overlayBoost/);
   assert.match(source, /layers\.countries && <g className="future-theatre-labels"/);
   assert.match(source, /country-name-label/);
   assert.match(source, /showTerritoryLabels = zoomPercent >= 135/);

@@ -29,7 +29,7 @@ export function CommandNavigation({ active, onChange, badges }: Props) {
           key={item.id}
           className={active === item.id ? 'active' : ''}
           aria-current={active === item.id ? 'page' : undefined}
-          onClick={() => onChange(item.id)}
+          onClick={() => onChange(active === item.id && item.id !== 'map' ? 'map' : item.id)}
           data-command-view={item.id}
         >
           <span className={`command-nav-badge ${badge === undefined ? 'empty' : ''}`} aria-hidden={badge === undefined}>{badge ?? '0'}</span>

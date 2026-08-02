@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -87,6 +87,16 @@ const DEFAULT_MAP_LAYERS: MapLayers = {
   friendlyUnits: true,
   enemyUnits: true,
   operations: true
+};
+
+let retainedMapView: MapViewBox = FULL_THEATRE_VIEW;
+let retainedMapLayers: MapLayers = DEFAULT_MAP_LAYERS;
+
+const responsiveOverlayBoost = () => {
+  if (typeof window === 'undefined') return 1;
+  if (window.matchMedia('(max-width: 540px)').matches) return 2.7;
+  if (window.matchMedia('(max-width: 900px)').matches) return 1.5;
+  return 1;
 };
 
 const THEATRE_LABELS: Array<{ code: string; name: string; position: [number, number]; compact?: boolean }> = [
@@ -190,15 +200,30 @@ const midpoint = (first: PointerPosition, second: PointerPosition): PointerPosit
 const distance = (first: PointerPosition, second: PointerPosition) => Math.hypot(second.x - first.x, second.y - first.y);
 
 export function MapView({ state, onSelect, onSelectGroup }: Props) {
-  const [view, setView] = useState<MapViewBox>(FULL_THEATRE_VIEW);
+  const [view, setView] = useState<MapViewBox>(() => retainedMapView);
   const [panning, setPanning] = useState(false);
-  const [layers, setLayers] = useState<MapLayers>(DEFAULT_MAP_LAYERS);
+  const [layers, setLayers] = useState<MapLayers>(() => retainedMapLayers);
+  const [overlayBoost, setOverlayBoost] = useState(responsiveOverlayBoost);
   const viewRef = useRef(view);
   const pointers = useRef(new Map<number, PointerPosition>());
   const dragGesture = useRef<DragGesture | null>(null);
   const pinchGesture = useRef<PinchGesture | null>(null);
   const suppressClick = useRef(false);
   viewRef.current = view;
+
+  useEffect(() => {
+    retainedMapView = view;
+  }, [view]);
+
+  useEffect(() => {
+    retainedMapLayers = layers;
+  }, [layers]);
+
+  useEffect(() => {
+    const refreshOverlayBoost = () => setOverlayBoost(responsiveOverlayBoost());
+    window.addEventListener('resize', refreshOverlayBoost);
+    return () => window.removeEventListener('resize', refreshOverlayBoost);
+  }, []);
 
   const groupsByTerritory = Object.values(state.taskGroups).reduce<Record<string, typeof state.taskGroups[string][]>>((result, group) => {
     (result[group.location] ??= []).push(group);
@@ -211,7 +236,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
-  const overlayScale = view.width / MAP_WIDTH;
+  const overlayScale = view.width / MAP_WIDTH * overlayBoost;
   const showTerritoryLabels = zoomPercent >= 135;
   const showTerritoryNames = zoomPercent >= 285;
   const showTerritoryOverlay = showTerritoryLabels && (layers.territories || layers.orderPrompts);
