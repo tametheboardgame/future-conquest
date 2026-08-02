@@ -1,0 +1,43 @@
+name: Build save load reliability hotfix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-hotfix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hotfix branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/save-load-reliability
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply save load hotfix
+        run: python scripts/apply-save-load-hotfix.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Run complete regression suite
+        run: npm test
+      - name: Build production game
+        run: npm run build
+      - name: Commit completed hotfix
+        run: |
+          rm scripts/apply-save-load-hotfix.py
+          rm .github/workflows/save-load-hotfix-builder.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/main.tsx src/game/engine.ts src/save-load.css tests/save-load.test.cjs tests/save-load-ui.test.cjs
+          git add -u scripts/apply-save-load-hotfix.py .github/workflows/save-load-hotfix-builder.yml
+          git commit -m "Fix save load reliability and feedback"
+          git push origin HEAD:agent/save-load-reliability
