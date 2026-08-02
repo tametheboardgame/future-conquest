@@ -400,7 +400,7 @@ function orderReport(state: GameState, order: EnemyOrder, formation?: EnemyForma
     kind: 'order',
     title: order.summary,
     detail: order.type === 'counterattack'
-      ? `Enemy communications indicate preparations against ${TERRITORIES[order.target].centre}.`
+      ? `Enemy communications indicate preparations against ${TERRITORIES[order.target].centre}. The operation is assessed for day ${order.executeTurn ?? state.turn}.`
       : `Enemy activity suggests a ${order.type} order affecting ${TERRITORIES[order.target].centre}.`,
     confidence,
     estimatedMin: formation ? estimatedMin : undefined,
@@ -412,18 +412,19 @@ function orderReport(state: GameState, order: EnemyOrder, formation?: EnemyForma
 function planEnemyOrders(state: GameState): GameState {
   const enemyFormations = structuredClone(state.enemyFormations);
   const retainedOrders = state.enemyOrders
-    .filter(order => order.status === 'completed' && state.turn - order.turn <= 3)
-    .slice(0, 8);
+    .filter(order => order.status !== 'completed' || state.turn - order.turn <= 3)
+    .slice(0, 12);
   const planned: EnemyOrder[] = [];
   let next: GameState = { ...state, enemyFormations, enemyOrders: retainedOrders };
   const enemyFront = frontlineEnemyTerritories(next);
   const playerFront = frontlinePlayerTerritories(next);
   const orderLimit = next.escalationStage === 1 ? 1 : next.escalationStage <= 3 ? 2 : 3;
+  const availableOrderSlots = Math.max(0, orderLimit - retainedOrders.filter(order => order.status !== 'completed').length);
 
   const weakFormation = Object.values(enemyFormations)
     .filter(formation => enemyFront.includes(formation.location) && formation.personnel > 0 && formation.personnel < 500)
     .sort((first, second) => first.personnel - second.personnel)[0];
-  if (weakFormation && planned.length < orderLimit) {
+  if (weakFormation && planned.length < availableOrderSlots) {
     const retreat = TERRITORIES[weakFormation.location].neighbours
       .filter(id => next.territories[id]?.controller === 'enemy')
       .sort((first, second) => TERRITORIES[second].supply - TERRITORIES[first].supply)[0];
@@ -445,7 +446,8 @@ function planEnemyOrders(state: GameState): GameState {
     }
   }
 
-  if (next.escalationStage >= 2 && playerFront.length && planned.length < orderLimit) {
+  const pendingCounterattack = retainedOrders.some(order => order.type === 'counterattack' && order.status !== 'completed');
+  if (next.escalationStage >= 2 && playerFront.length && !pendingCounterattack && planned.length < availableOrderSlots) {
     const target = [...playerFront].sort((first, second) => playerPowerAt(next, first) - playerPowerAt(next, second))[0];
     const formation = Object.values(enemyFormations)
       .filter(candidate => candidate.personnel > 250 && TERRITORIES[target].neighbours.includes(candidate.location))
@@ -458,14 +460,15 @@ function planEnemyOrders(state: GameState): GameState {
         formationId: formation.id,
         origin: formation.location,
         target,
+        executeTurn: next.turn + 1,
         status: 'planned',
         priority: 100,
-        summary: `Counterattack assessed against ${TERRITORIES[target].centre}`
+        summary: `Counterattack preparations detected against ${TERRITORIES[target].centre}`
       });
     }
   }
 
-  if (enemyFront.length && planned.length < orderLimit) {
+  if (enemyFront.length && planned.length < availableOrderSlots) {
     const target = [...enemyFront].sort((first, second) => enemyPowerAt(next, first) - enemyPowerAt(next, second))[0];
     const formation = Object.values(enemyFormations)
       .filter(candidate => candidate.location === target && candidate.personnel > 0)
@@ -486,7 +489,7 @@ function planEnemyOrders(state: GameState): GameState {
     }
   }
 
-  if (enemyFront.length && planned.length < orderLimit) {
+  if (enemyFront.length && planned.length < availableOrderSlots) {
     const target = [...enemyFront].sort((first, second) => enemyPowerAt(next, first) - enemyPowerAt(next, second))[0];
     const rear = Object.values(enemyFormations)
       .filter(candidate => candidate.personnel > 500 && !enemyFront.includes(candidate.location))
@@ -504,7 +507,7 @@ function planEnemyOrders(state: GameState): GameState {
           formationId: rear.id,
           origin,
           target: step,
-          status: 'executing',
+          status: 'completed',
           priority: 70,
           summary: `${rear.name} repositioning towards ${TERRITORIES[target].centre}`
         });
@@ -550,10 +553,13 @@ export function resolveStrategicResponse(state: GameState): GameState {
 }
 
 export function getPlannedCounterattack(state: GameState): EnemyOrder | undefined {
-  return state.enemyOrders.find(order => (
-    order.type === 'counterattack'
-    && (order.status === 'planned' || order.status === 'executing')
-  ));
+  return [...state.enemyOrders]
+    .sort((first, second) => (first.executeTurn ?? first.turn) - (second.executeTurn ?? second.turn))
+    .find(order => (
+      order.type === 'counterattack'
+      && (order.status === 'planned' || order.status === 'executing')
+      && (order.executeTurn ?? order.turn) <= state.turn
+    ));
 }
 
 export function completeEnemyOrder(state: GameState, orderId: string): GameState {

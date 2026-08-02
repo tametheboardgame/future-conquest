@@ -87,6 +87,7 @@ export interface EnemyOrder {
   formationId?: string;
   origin?: string;
   target: string;
+  executeTurn?: number;
   status: 'planned' | 'executing' | 'completed';
   priority: number;
   summary: string;

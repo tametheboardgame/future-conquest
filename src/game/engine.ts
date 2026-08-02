@@ -543,36 +543,6 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
   return next;
 }
 
-function reinforceEnemy(state: GameState): GameState {
-  const enemyFormations = structuredClone(state.enemyFormations);
-  const reinforcementBase = 4 + state.escalation * 0.18;
-  for (const formation of Object.values(enemyFormations)) {
-    if (state.territories[formation.location]?.controller !== 'enemy') continue;
-    formation.personnel += Math.round(reinforcementBase * difficultyRules[state.difficulty].enemy);
-    formation.readiness = clamp(formation.readiness + 0.4, 15, 100);
-    formation.entrenchment = clamp(formation.entrenchment + 0.25, 0, 65);
-  }
-  let next: GameState = { ...state, enemyFormations };
-  if (state.escalation >= 60 && state.turn % (state.difficulty === 'hard' ? 3 : 5) === 0) {
-    const enemyTerritories = SLICE_IDS.filter(id => state.territories[id].controller === 'enemy').sort((a, b) => TERRITORIES[b].supply - TERRITORIES[a].supply);
-    const location = enemyTerritories[0];
-    if (location) {
-      const id = `EF-I-${state.turn}`;
-      enemyFormations[id] = {
-        id,
-        name: 'Coalition Intervention Brigade',
-        location,
-        personnel: Math.round(1450 * difficultyRules[state.difficulty].enemy),
-        armour: Math.round(190 * difficultyRules[state.difficulty].enemy),
-        readiness: 82,
-        entrenchment: 12
-      };
-      next = addEvent(next, `A coalition intervention brigade deployed to ${TERRITORIES[location].centre}.`, 'danger');
-    }
-  }
-  return next;
-}
-
 function pruneOperations(state: GameState): GameState {
   const operations = structuredClone(state.operations);
   for (const [operationId, operation] of Object.entries(operations)) {
@@ -594,17 +564,20 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   const chance = (0.055 + state.escalation / 620) * difficultyRules[state.difficulty].counter;
   if (!forced && !plannedCounterattack && randomFor(state.seed, state.turn, 907) >= chance) return state;
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
-  if (!frontier.length) return state;
+  if (!frontier.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
   frontier.sort((a, b) => {
     const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + deployableArmour(group) * 0.25, 0) + state.territories[id].fortification * 80;
     return defence(a) - defence(b);
   });
+  if (plannedCounterattack && !frontier.some(id => id === plannedCounterattack.target)) {
+    return completeEnemyOrder(state, plannedCounterattack.id);
+  }
   const target = plannedCounterattack && frontier.some(id => id === plannedCounterattack.target)
     ? plannedCounterattack.target
     : frontier[0];
   const origins = TERRITORIES[target].neighbours.filter(id => state.territories[id].controller === 'enemy');
   const formations = Object.values(state.enemyFormations).filter(formation => origins.includes(formation.location) && formation.personnel > 250);
-  if (!formations.length) return state;
+  if (!formations.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
   formations.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
   const plannedFormation = plannedCounterattack?.formationId ? state.enemyFormations[plannedCounterattack.formationId] : undefined;
   const attacker = plannedFormation && formations.some(formation => formation.id === plannedFormation.id)

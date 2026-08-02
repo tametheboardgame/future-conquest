@@ -359,7 +359,7 @@ export default function App() {
   <div className="view-panel-heading"><p className="panel-label">ASSESSED ENEMY INTENT</p><strong>{activeEnemyOrders.length}</strong></div>
   {activeEnemyOrders.length ? <div className="enemy-plan-list">{activeEnemyOrders.map(order => <article key={order.id} className="enemy-plan-card">
     <header><strong>{order.summary}</strong><b className="order-type">{order.type}</b></header>
-    <p>{order.origin ? `${TERRITORIES[order.origin].centre} → ` : ''}{TERRITORIES[order.target].centre} · {order.status}</p>
+    <p>{order.origin ? `${TERRITORIES[order.origin].centre} → ` : ''}{TERRITORIES[order.target].centre}{order.executeTurn ? ` · expected day ${String(order.executeTurn).padStart(3, '0')}` : ''} · {order.status}</p>
   </article>)}</div> : <p className="empty-state">No coherent enemy operational plan has been identified this day.</p>}
 </section>
 <section className="view-panel intelligence-report-panel">

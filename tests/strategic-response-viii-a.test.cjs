@@ -7,6 +7,7 @@ const { newGame, endTurn } = require('../.test-dist/engine.js');
 const {
   ESCALATION_STAGES,
   getEscalationStage,
+  getPlannedCounterattack,
   resolveStrategicResponse,
   upgradeStrategicState
 } = require('../.test-dist/strategic-response.js');
@@ -56,6 +57,24 @@ test('enemy command creates operational intent and intelligence reports', () => 
   const next = resolveStrategicResponse(state);
   assert.ok(next.enemyOrders.length >= 1);
   assert.ok(next.intelligenceReports.some(report => report.kind === 'order'));
+  const counterattack = next.enemyOrders.find(order => order.type === 'counterattack');
+  assert.ok(counterattack);
+  assert.equal(counterattack.executeTurn, next.turn + 1);
+  assert.equal(getPlannedCounterattack(next), undefined);
+  assert.equal(getPlannedCounterattack({ ...next, turn: counterattack.executeTurn }).id, counterattack.id);
+});
+
+test('counterattack intelligence provides a full-day warning before combat resolves', () => {
+  let state = newGame(73, 'hard');
+  state.escalation = 55;
+  state = endTurn(state);
+  const plan = state.enemyOrders.find(order => order.type === 'counterattack' && order.status === 'planned');
+  assert.ok(plan);
+  assert.equal(plan.executeTurn, state.turn + 1);
+  const next = endTurn(state);
+  const completed = next.enemyOrders.find(order => order.id === plan.id);
+  assert.ok(completed);
+  assert.equal(completed.status, 'completed');
 });
 
 test('version 4 campaigns upgrade to strategic response version 5', () => {
@@ -88,6 +107,7 @@ test('the Intelligence view exposes mobilisation, assessed intent and confidence
   assert.match(app, /ASSESSED ENEMY INTENT/);
   assert.match(app, /INTELLIGENCE REPORTS/);
   assert.match(app, /GLOBAL ESCALATION · STAGE/);
+  assert.match(app, /expected day/);
   assert.match(styles, /mobilisation-card/);
   assert.match(styles, /intelligence-report-card/);
   assert.ok(main.indexOf("./strategic-response.css") > main.indexOf("./map-label-hierarchy.css"));
