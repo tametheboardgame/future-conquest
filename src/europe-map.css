@@ -332,3 +332,10 @@
   vector-effect: non-scaling-stroke;
 }
 
+
+/* Interactive map targets must remain above decorative SVG overlays. */
+.europe-map .territory,
+.europe-map .task-group-marker {
+  pointer-events: all;
+  cursor: pointer;
+}
