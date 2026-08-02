@@ -1,0 +1,185 @@
+name: Verify map overlay release
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify main build, deployment and live map overlays
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = '4cfe7f6a324ad7a0122f69ad5dfe6d9be7eb9ff6';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let mainRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner,
+                  repo,
+                  head_sha: targetSha,
+                  per_page: 50
+                });
+                mainRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (mainRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!mainRun) {
+                failures.push('No main-branch push workflow was found for the map overlay release commit.');
+              } else {
+                core.notice(`MAIN_RUN=${JSON.stringify({
+                  id: mainRun.id,
+                  status: mainRun.status,
+                  conclusion: mainRun.conclusion,
+                  head_branch: mainRun.head_branch,
+                  head_sha: mainRun.head_sha,
+                  html_url: mainRun.html_url
+                })}`);
+                if (mainRun.status !== 'completed' || mainRun.conclusion !== 'success') {
+                  failures.push(`Main workflow did not complete successfully: ${mainRun.status}/${mainRun.conclusion}`);
+                }
+
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: mainRun.id,
+                  filter: 'latest',
+                  per_page: 100
+                });
+                core.notice(`MAIN_JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({
+                  name: job.name,
+                  conclusion: job.conclusion,
+                  steps: job.steps?.map(step => ({ name: step.name, conclusion: step.conclusion }))
+                })))}`);
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                if (build?.conclusion !== 'success') failures.push(`Main build job conclusion was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Pages deploy job conclusion was ${deploy?.conclusion ?? 'missing'}.`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({
+                owner,
+                repo,
+                sha: targetSha,
+                environment: 'github-pages',
+                per_page: 20
+              });
+              core.notice(`DEPLOYMENTS=${JSON.stringify(deployments.data.map(deployment => ({
+                id: deployment.id,
+                ref: deployment.ref,
+                sha: deployment.sha,
+                environment: deployment.environment
+              })))}`);
+              if (!deployments.data.length) {
+                failures.push('No github-pages deployment record exists for the map overlay release commit.');
+              } else {
+                let successfulDeployment = false;
+                for (const deployment of deployments.data) {
+                  const statuses = await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 20
+                  });
+                  core.notice(`DEPLOYMENT_${deployment.id}_STATUSES=${JSON.stringify(statuses.data.map(status => ({
+                    state: status.state,
+                    environment_url: status.environment_url,
+                    log_url: status.log_url
+                  })))}`);
+                  if (statuses.data.some(status => status.state === 'success')) successfulDeployment = true;
+                }
+                if (!successfulDeployment) failures.push('No successful github-pages deployment status exists for the map overlay release commit.');
+              }
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const scriptMatch = index.match(/<script[^>]+src="([^"]+\.js)"/);
+                const styleMatch = index.match(/<link[^>]+href="([^"]+\.css)"/);
+                if (!scriptMatch) failures.push('Could not find the production JavaScript bundle in the live index.');
+                if (!styleMatch) failures.push('Could not find the production stylesheet in the live index.');
+
+                if (scriptMatch) {
+                  const bundleUrl = new URL(scriptMatch[1], siteUrl).toString();
+                  const bundleResponse = await fetch(bundleUrl, { cache: 'no-store' });
+                  if (!bundleResponse.ok) {
+                    failures.push(`Live JavaScript bundle returned HTTP ${bundleResponse.status}.`);
+                  } else {
+                    const bundle = await bundleResponse.text();
+                    const markers = {
+                      territoryHitTarget: bundle.includes('territory-hit-target'),
+                      territoryNameLabel: bundle.includes('territory-name-label'),
+                      territoryCentreLabel: bundle.includes('territory-centre-label'),
+                      selectedLabel: bundle.includes('selected-label')
+                    };
+                    core.notice(`LIVE_JS=${JSON.stringify({ siteUrl, bundleUrl, ...markers })}`);
+                    if (Object.values(markers).some(value => !value)) {
+                      failures.push(`The live JavaScript bundle is missing map overlay markers: ${JSON.stringify(markers)}`);
+                    }
+                  }
+                }
+
+                if (styleMatch) {
+                  const styleUrl = new URL(styleMatch[1], siteUrl).toString();
+                  const styleResponse = await fetch(styleUrl, { cache: 'no-store' });
+                  if (!styleResponse.ok) {
+                    failures.push(`Live stylesheet returned HTTP ${styleResponse.status}.`);
+                  } else {
+                    const stylesheet = await styleResponse.text();
+                    const styleMarkers = {
+                      hitTarget: stylesheet.includes('.territory-hit-target'),
+                      nameLabel: stylesheet.includes('.territory-name-label'),
+                      pointerPassThrough: stylesheet.includes('.map-label{pointer-events:none}'),
+                      nonScalingStroke: stylesheet.includes('vector-effect:non-scaling-stroke')
+                    };
+                    core.notice(`LIVE_CSS=${JSON.stringify({ styleUrl, ...styleMarkers })}`);
+                    if (Object.values(styleMarkers).some(value => !value)) {
+                      failures.push(`The live stylesheet is missing map overlay markers: ${JSON.stringify(styleMarkers)}`);
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: context.payload.pull_request.number,
+                  state: 'closed'
+                });
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: 'heads/agent/verify-map-overlay-release'
+                });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
