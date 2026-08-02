@@ -1,12 +1,14 @@
+import { upgradeStrategicState } from './strategic-response';
 import type { Difficulty, GameState } from './types';
 
-export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.4';
-export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.4-metadata';
+export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.5';
+export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.5-metadata';
+export const LEGACY_V4_SAVE_KEY = 'future-conquest-slice-v0.4';
 export const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
 export const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
 
 export interface SaveMetadata {
-  saveVersion: 4;
+  saveVersion: 5;
   savedAt: string | null;
   campaignDay: number;
   difficulty: Difficulty;
@@ -15,7 +17,7 @@ export interface SaveMetadata {
 }
 
 export type SaveInspection =
-  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v4' | 'v3' | 'v2' }
+  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v5' | 'v4' | 'v3' | 'v2' }
   | { ok: false; code: 'missing' | 'corrupt' | 'unsupported' | 'storage-unavailable'; message: string };
 
 export type MetadataWriteResult =
@@ -25,8 +27,16 @@ export type MetadataWriteResult =
 type StorageReader = Pick<Storage, 'getItem'>;
 type StorageWriter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-type LegacyV3State = Omit<GameState, 'version'> & { version: 3 };
-type LegacyV2State = Omit<GameState, 'version' | 'operations'> & {
+type StrategicField =
+  | 'escalationStage'
+  | 'mobilisationPool'
+  | 'mobilisations'
+  | 'enemyOrders'
+  | 'intelligenceReports';
+
+type LegacyV4State = Omit<GameState, 'version' | StrategicField> & { version: 4 };
+type LegacyV3State = Omit<GameState, 'version' | StrategicField> & { version: 3 };
+type LegacyV2State = Omit<GameState, 'version' | 'operations' | StrategicField> & {
   version: 2;
   battle?: unknown;
 };
@@ -47,7 +57,16 @@ function hasCoreCampaignState(value: unknown): value is Record<string, unknown> 
   );
 }
 
-function isV4State(value: unknown): value is GameState {
+function isV5State(value: unknown): value is GameState {
+  return hasCoreCampaignState(value)
+    && value.version === 5
+    && isRecord(value.operations)
+    && Array.isArray(value.mobilisations)
+    && Array.isArray(value.enemyOrders)
+    && Array.isArray(value.intelligenceReports);
+}
+
+function isV4State(value: unknown): value is LegacyV4State {
   return hasCoreCampaignState(value) && value.version === 4 && isRecord(value.operations);
 }
 
@@ -66,7 +85,7 @@ function stateFromStoredValue(value: unknown): unknown {
 
 export function createSaveMetadata(state: GameState, savedAt: string | null = new Date().toISOString()): SaveMetadata {
   return {
-    saveVersion: 4,
+    saveVersion: 5,
     savedAt,
     campaignDay: state.turn,
     difficulty: state.difficulty,
@@ -78,7 +97,7 @@ export function createSaveMetadata(state: GameState, savedAt: string | null = ne
 function metadataMatchesState(value: unknown, state: GameState): value is SaveMetadata {
   return Boolean(
     isRecord(value)
-    && value.saveVersion === 4
+    && value.saveVersion === 5
     && (typeof value.savedAt === 'string' || value.savedAt === null)
     && value.campaignDay === state.turn
     && value.difficulty === state.difficulty
@@ -110,18 +129,22 @@ function readRaw(storage: StorageReader, key: string): string | null | SaveInspe
   }
 }
 
-function inspectRaw(storage: StorageReader, raw: string, source: 'v4' | 'v3' | 'v2'): SaveInspection {
+function inspectRaw(storage: StorageReader, raw: string, source: 'v5' | 'v4' | 'v3' | 'v2'): SaveInspection {
   try {
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
+    if (source === 'v5' && isV5State(parsed)) {
+      return { ok: true, state: upgradeStrategicState(parsed), metadata: readMetadata(storage, parsed), source };
+    }
     if (source === 'v4' && isV4State(parsed)) {
-      return { ok: true, state: parsed, metadata: readMetadata(storage, parsed), source };
+      const state = upgradeStrategicState(parsed);
+      return { ok: true, state, metadata: createSaveMetadata(state, null), source };
     }
     if (source === 'v3' && isV3State(parsed)) {
-      const state = { ...parsed, version: 4 } as GameState;
+      const state = upgradeStrategicState({ ...parsed, version: 4 } as LegacyV4State);
       return { ok: true, state, metadata: createSaveMetadata(state, null), source };
     }
     if (source === 'v2' && isV2State(parsed)) {
-      const state = { ...parsed, version: 4, operations: {} } as unknown as GameState;
+      const state = upgradeStrategicState({ ...parsed, version: 4, operations: {} } as unknown as LegacyV4State);
       return { ok: true, state, metadata: createSaveMetadata(state, null), source };
     }
     if (isRecord(parsed) && typeof parsed.version === 'number') {
@@ -136,7 +159,11 @@ function inspectRaw(storage: StorageReader, raw: string, source: 'v4' | 'v3' | '
 export function inspectStoredCampaign(storage: StorageReader): SaveInspection {
   const current = readRaw(storage, CURRENT_SAVE_KEY);
   if (typeof current !== 'string' && current !== null) return current;
-  if (current) return inspectRaw(storage, current, 'v4');
+  if (current) return inspectRaw(storage, current, 'v5');
+
+  const v4 = readRaw(storage, LEGACY_V4_SAVE_KEY);
+  if (typeof v4 !== 'string' && v4 !== null) return v4;
+  if (v4) return inspectRaw(storage, v4, 'v4');
 
   const previous = readRaw(storage, LEGACY_V3_SAVE_KEY);
   if (typeof previous !== 'string' && previous !== null) return previous;
@@ -165,7 +192,7 @@ export function writeMetadataForCurrentSave(storage: StorageWriter, savedAt = ne
     const raw = storage.getItem(CURRENT_SAVE_KEY);
     if (!raw) return { ok: false, code: 'missing', message: 'The campaign was not written to browser storage.' };
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
-    if (!isV4State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
+    if (!isV5State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
     const metadata = createSaveMetadata(parsed, savedAt);
     storage.setItem(SAVE_METADATA_KEY, JSON.stringify(metadata));
     return { ok: true, metadata };
