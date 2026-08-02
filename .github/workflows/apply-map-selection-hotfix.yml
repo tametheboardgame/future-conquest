@@ -1,0 +1,90 @@
+name: Apply map selection hotfix
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/hotfix-map-selection'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hotfix branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/hotfix-map-selection
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply map interaction correction
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const replaceOnce = (source, before, after, label) => {
+            if (!source.includes(before)) throw new Error(`Could not locate ${label}`);
+            return source.replace(before, after);
+          };
+
+          let map = fs.readFileSync('src/components/MapView.tsx', 'utf8');
+
+          map = replaceOnce(
+            map,
+            "    event.currentTarget.setPointerCapture(event.pointerId);\n    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });\n    setPanning(true);",
+            "    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });",
+            'unconditional pointer capture'
+          );
+
+          map = replaceOnce(
+            map,
+            "    } else if (pointers.current.size === 2) {\n      const [first, second] = [...pointers.current.values()];",
+            "    } else if (pointers.current.size === 2) {\n      for (const pointerId of pointers.current.keys()) {\n        if (!event.currentTarget.hasPointerCapture(pointerId)) event.currentTarget.setPointerCapture(pointerId);\n      }\n      setPanning(true);\n      const [first, second] = [...pointers.current.values()];",
+            'pinch pointer capture'
+          );
+
+          map = replaceOnce(
+            map,
+            "    if (Math.abs(deltaX) + Math.abs(deltaY) > 4) suppressClick.current = true;\n    setView(panMapView(",
+            "    const dragDistance = Math.abs(deltaX) + Math.abs(deltaY);\n    if (dragDistance <= 4 && !suppressClick.current) return;\n    if (!suppressClick.current) {\n      suppressClick.current = true;\n      if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);\n      setPanning(true);\n    }\n    setView(panMapView(",
+            'drag threshold pointer capture'
+          );
+
+          fs.writeFileSync('src/components/MapView.tsx', map);
+
+          let css = fs.readFileSync('src/europe-map.css', 'utf8');
+          const pointerRules = `\n/* Interactive map targets must remain above decorative SVG overlays. */\n.europe-map .territory,\n.europe-map .task-group-marker {\n  pointer-events: all;\n  cursor: pointer;\n}\n`;
+          if (!css.includes('Interactive map targets must remain above decorative SVG overlays.')) css += pointerRules;
+          fs.writeFileSync('src/europe-map.css', css);
+
+          const test = `const test = require('node:test');\nconst assert = require('node:assert/strict');\nconst fs = require('node:fs');\nconst path = require('node:path');\n\nconst read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');\n\ntest('map presses remain clicks until a real drag or pinch begins', () => {\n  const source = read('src/components/MapView.tsx');\n  const pointerDown = source.slice(source.indexOf('const handlePointerDown'), source.indexOf('const handlePointerMove'));\n  assert.ok(pointerDown.indexOf('pointers.current.set') >= 0);\n  assert.ok(pointerDown.indexOf('pointers.current.set') < pointerDown.indexOf('setPointerCapture'));\n  assert.match(source, /const dragDistance = Math\\.abs\\(deltaX\\) \\+ Math\\.abs\\(deltaY\\)/);\n  assert.match(source, /dragDistance <= 4/);\n  assert.match(source, /hasPointerCapture\\(event\\.pointerId\\)/);\n});\n\ntest('territories and task-group markers retain direct selection handlers', () => {\n  const source = read('src/components/MapView.tsx');\n  const css = read('src/europe-map.css');\n  assert.match(source, /className=\\{\\`territory /);\n  assert.match(source, /onClick=\\{\\(\\) => selectTerritory\\(id\\)\\}/);\n  assert.match(source, /className=\\{\\`task-group-marker/);\n  assert.match(source, /onSelectGroup\\(group\\.id\\)/);\n  assert.match(css, /\\.europe-map \\.territory,[\\s\\S]*\\.europe-map \\.task-group-marker[\\s\\S]*pointer-events: all/);\n});\n`;
+          fs.writeFileSync('tests/map-selection-hotfix.test.cjs', test);
+
+          fs.rmSync('.github/workflows/apply-map-selection-hotfix.yml');
+          NODE
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit validated hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix map territory and formation selection"
+          git push origin HEAD:agent/hotfix-map-selection
