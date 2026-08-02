@@ -83,10 +83,12 @@ test('the normal daily sequence advances strategic response state', () => {
 test('the Intelligence view exposes mobilisation, assessed intent and confidence reports', () => {
   const app = read('src/App.tsx');
   const styles = read('src/strategic-response.css');
+  const main = read('src/main.tsx');
   assert.match(app, /MOBILISATION PIPELINE/);
   assert.match(app, /ASSESSED ENEMY INTENT/);
   assert.match(app, /INTELLIGENCE REPORTS/);
   assert.match(app, /GLOBAL ESCALATION · STAGE/);
   assert.match(styles, /mobilisation-card/);
   assert.match(styles, /intelligence-report-card/);
+  assert.ok(main.indexOf("./strategic-response.css") > main.indexOf("./map-label-hierarchy.css"));
 });
