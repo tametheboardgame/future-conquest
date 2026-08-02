@@ -1,0 +1,65 @@
+name: Apply deeper map zoom
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/deeper-map-zoom'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply zoom changes
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const viewportPath = 'src/game/map-viewport.ts';
+          let viewport = fs.readFileSync(viewportPath, 'utf8');
+          if (!viewport.includes('export const MIN_VIEW_WIDTH = 250;')) {
+            throw new Error('Expected current map zoom limit was not found.');
+          }
+          viewport = viewport.replace(
+            'export const MIN_VIEW_WIDTH = 250;',
+            'export const MIN_VIEW_WIDTH = 144;'
+          );
+          fs.writeFileSync(viewportPath, viewport);
+
+          const mapPath = 'src/components/MapView.tsx';
+          let map = fs.readFileSync(mapPath, 'utf8');
+          const oldStatus = `  const statusText = useMemo(() => {\n    if (zoomPercent <= 110) return 'European theatre overview';\n    if (zoomPercent <= 220) return 'Regional command view';\n    return 'Local operations view';\n  }, [zoomPercent]);`;
+          const newStatus = `  const statusText = useMemo(() => {\n    if (zoomPercent <= 110) return 'European theatre overview';\n    if (zoomPercent <= 220) return 'Regional command view';\n    if (zoomPercent <= 600) return 'Local operations view';\n    return 'Tactical detail view';\n  }, [zoomPercent]);`;
+          if (!map.includes(oldStatus)) throw new Error('Expected zoom status block was not found.');
+          map = map.replace(oldStatus, newStatus);
+          const oldFocus = 'if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 4));';
+          const newFocus = 'if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 7));';
+          if (!map.includes(oldFocus)) throw new Error('Expected Selected focus zoom was not found.');
+          map = map.replace(oldFocus, newFocus);
+          fs.writeFileSync(mapPath, map);
+
+          fs.unlinkSync('.github/workflows/apply-deeper-map-zoom.yml');
+          NODE
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Build game
+        run: npm run build
+      - name: Commit finished hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game/map-viewport.ts src/components/MapView.tsx .github/workflows/apply-deeper-map-zoom.yml
+          git commit -m "Increase maximum map zoom"
+          git push origin HEAD:${{ github.head_ref }}
