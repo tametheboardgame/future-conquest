@@ -1,0 +1,35 @@
+.save-notice {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-left-width: 0.35rem;
+  border-radius: 0.35rem;
+  background: rgba(12, 20, 31, 0.97);
+  box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.38);
+  color: #f4f7fb;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  animation: save-notice-in 160ms ease-out;
+}
+
+.save-notice.success { border-left-color: #68d391; }
+.save-notice.info { border-left-color: #63b3ed; }
+.save-notice.error { border-left-color: #fc8181; }
+
+@keyframes save-notice-in {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 720px) {
+  .save-notice {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+}
