@@ -37,6 +37,7 @@ jobs:
           node /tmp/apply-viii-a.js
           python <<'PY'
           from pathlib import Path
+
           engine = Path('src/game/engine.ts')
           source = engine.read_text()
           source = source.replace(
@@ -44,6 +45,23 @@ jobs:
               'plannedCounterattack && frontier.some(id => id === plannedCounterattack.target)'
           )
           engine.write_text(source)
+
+          app = Path('src/App.tsx')
+          source = app.read_text()
+          source = source.replace(' ŗ expected entry at ', ' · expected entry at ')
+          source = source.replace(' ŗ {order.status}', ' · {order.status}')
+          source = source.replace(
+              '}d{TERRITORIES[report.territoryId].centre}',
+              '}${TERRITORIES[report.territoryId].centre}'
+          )
+          app.write_text(source)
+
+          engine_test = Path('tests/engine.test.cjs')
+          source = engine_test.read_text().replace(
+              'assert.equal(loaded.version, 4);',
+              'assert.equal(loaded.version, 5);'
+          )
+          engine_test.write_text(source)
           PY
           rm -f .github/workflows/apply-viii-a-pr.yml
 
