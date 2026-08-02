@@ -13,13 +13,13 @@ const {
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('the European map can zoom to 1000 percent without losing its anchor', () => {
+test('the European map can zoom to 2000 percent without losing its anchor', () => {
   const anchor = { x: MAP_WIDTH / 2, y: 450 };
   const maximum = zoomMapView(FULL_THEATRE_VIEW, 100, anchor);
 
-  assert.equal(MIN_VIEW_WIDTH, 144);
+  assert.equal(MIN_VIEW_WIDTH, 72);
   assert.equal(maximum.width, MIN_VIEW_WIDTH);
-  assert.equal(mapZoomPercent(maximum), 1000);
+  assert.equal(mapZoomPercent(maximum), 2000);
   assert.equal(maximum.x + maximum.width / 2, anchor.x);
 });
 
