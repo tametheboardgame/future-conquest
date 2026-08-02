@@ -86,7 +86,7 @@ test('the Intelligence view exposes mobilisation, assessed intent and confidence
   assert.match(app, /MOBILISATION PIPELINE/);
   assert.match(app, /ASSESSED ENEMY INTENT/);
   assert.match(app, /INTELLIGENCE REPORTS/);
-  assert.match(app, /Escalation Stage/);
+  assert.match(app, /GLOBAL ESCALATION · STAGE/);
   assert.match(styles, /mobilisation-card/);
   assert.match(styles, /intelligence-report-card/);
 });
