@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Correct builder type guard
+        run: sed -i 's/state: GameState;/state: unknown;/' scripts/apply-save-load-hotfix.py
       - name: Apply save load hotfix
         run: python scripts/apply-save-load-hotfix.py
       - name: Install dependencies
