@@ -40,6 +40,7 @@ test('save metadata records the current campaign summary and timestamp', () => {
 
 test('a current version 4 save is inspected with its matching metadata', () => {
   const state = newGame(2);
+  const serialisedState = JSON.parse(JSON.stringify(state));
   const metadata = createSaveMetadata(state, '2026-08-02T05:16:00.000Z');
   const { storage } = installStorage([
     [CURRENT_SAVE_KEY, JSON.stringify(state)],
@@ -49,7 +50,7 @@ test('a current version 4 save is inspected with its matching metadata', () => {
   const result = inspectStoredCampaign(storage);
   assert.equal(result.ok, true);
   assert.equal(result.source, 'v4');
-  assert.deepEqual(result.state, state);
+  assert.deepEqual(result.state, serialisedState);
   assert.deepEqual(result.metadata, metadata);
 });
 
