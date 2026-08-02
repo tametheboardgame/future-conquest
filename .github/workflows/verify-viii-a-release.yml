@@ -1,0 +1,82 @@
+name: Verify Phase VIII-A live release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.ref == 'agent/verify-viii-a-release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released main commit
+        uses: actions/checkout@v4
+        with:
+          ref: 6d58eda2372009e9fe5d7b9618aaa2bd7584a5b7
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run released regression suite
+        run: npm test
+
+      - name: Build released production bundle
+        run: npm run build
+
+      - name: Verify released source markers
+        run: |
+          grep -q "MOBILISATION PIPELINE" src/App.tsx
+          grep -q "ASSESSED ENEMY INTENT" src/App.tsx
+          grep -q "future-conquest-slice-v0.5" src/game/persistence.ts
+          grep -q "counterattack intelligence provides a full-day warning" tests/strategic-response-viii-a.test.cjs
+          test ! -e .github/workflows/apply-viii-a-strategic-response.yml
+          test ! -e .github/workflows/apply-counterattack-warning.yml
+
+      - name: Verify GitHub Pages bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          site='https://tametheboardgame.github.io/future-conquest/'
+          success=0
+
+          for attempt in $(seq 1 30); do
+            html=$(curl --fail --silent --show-error --location \
+              -H 'Cache-Control: no-cache' \
+              "${site}?verify_viii_a=${GITHUB_RUN_ID}_${attempt}") || true
+
+            js_path=$(printf '%s' "$html" | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -n 1 || true)
+            css_path=$(printf '%s' "$html" | grep -oE 'assets/index-[A-Za-z0-9_-]+\.css' | head -n 1 || true)
+
+            if [[ -n "$js_path" && -n "$css_path" ]]; then
+              js=$(curl --fail --silent --show-error --location -H 'Cache-Control: no-cache' "${site}${js_path}?verify=${GITHUB_RUN_ID}_${attempt}") || true
+              css=$(curl --fail --silent --show-error --location -H 'Cache-Control: no-cache' "${site}${css_path}?verify=${GITHUB_RUN_ID}_${attempt}") || true
+
+              if printf '%s' "$js" | grep -q 'MOBILISATION PIPELINE' \
+                && printf '%s' "$js" | grep -q 'future-conquest-slice-v0.5' \
+                && printf '%s' "$css" | grep -q 'mobilisation-card' \
+                && printf '%s' "$css" | grep -q 'intelligence-report-card'; then
+                echo "Verified live Phase VIII-A bundles: $js_path and $css_path"
+                success=1
+                break
+              fi
+            fi
+
+            echo "Live bundle not updated yet; attempt ${attempt}/30"
+            sleep 10
+          done
+
+          if [[ "$success" -ne 1 ]]; then
+            echo 'Phase VIII-A markers were not found in the live GitHub Pages bundles.' >&2
+            exit 1
+          fi
