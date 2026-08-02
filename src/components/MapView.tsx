@@ -277,13 +277,15 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
 
   const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    setPanning(true);
     if (pointers.current.size === 1) {
       dragGesture.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, view: viewRef.current };
       pinchGesture.current = null;
     } else if (pointers.current.size === 2) {
+      for (const pointerId of pointers.current.keys()) {
+        if (!event.currentTarget.hasPointerCapture(pointerId)) event.currentTarget.setPointerCapture(pointerId);
+      }
+      setPanning(true);
       const [first, second] = [...pointers.current.values()];
       const centre = midpoint(first, second);
       pinchGesture.current = {
@@ -316,7 +318,13 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.x;
     const deltaY = event.clientY - drag.y;
-    if (Math.abs(deltaX) + Math.abs(deltaY) > 4) suppressClick.current = true;
+    const dragDistance = Math.abs(deltaX) + Math.abs(deltaY);
+    if (dragDistance <= 4 && !suppressClick.current) return;
+    if (!suppressClick.current) {
+      suppressClick.current = true;
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
+      setPanning(true);
+    }
     setView(panMapView(
       drag.view,
       -deltaX * drag.view.width / Math.max(1, rect.width),
