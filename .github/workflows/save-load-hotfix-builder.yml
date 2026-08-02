@@ -16,7 +16,7 @@ jobs:
       - name: Checkout hotfix branch
         uses: actions/checkout@v4
         with:
-          ref: agent/save-load-reliability
+          ref: agent/save-load-reliability-v2
           fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -33,13 +33,15 @@ jobs:
         run: npm test
       - name: Build production game
         run: npm run build
-      - name: Commit completed hotfix
+      - name: Restore workflow and commit completed hotfix
         run: |
-          rm scripts/apply-save-load-hotfix.py
-          rm .github/workflows/save-load-hotfix-builder.yml
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/deploy-pages.yml
+          rm -f scripts/apply-save-load-hotfix.py
+          rm -f .github/workflows/save-load-hotfix-builder.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/App.tsx src/main.tsx src/game/engine.ts src/save-load.css tests/save-load.test.cjs tests/save-load-ui.test.cjs
+          git add src/App.tsx src/main.tsx src/game/engine.ts src/save-load.css tests/save-load.test.cjs tests/save-load-ui.test.cjs .github/workflows/deploy-pages.yml
           git add -u scripts/apply-save-load-hotfix.py .github/workflows/save-load-hotfix-builder.yml
           git commit -m "Fix save load reliability and feedback"
-          git push origin HEAD:agent/save-load-reliability
+          git push origin HEAD:agent/save-load-reliability-v2
