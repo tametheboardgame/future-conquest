@@ -1,0 +1,21 @@
+.map-layer-control[open] {
+  z-index: 12;
+}
+
+.map-layer-control[open] .map-layer-options {
+  z-index: 14;
+}
+
+@media (max-width: 540px) {
+  .map-layer-options {
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    width: min(280px, calc(100vw - 44px));
+    min-width: 0;
+    max-height: min(52vh, 360px);
+    overflow-y: auto;
+  }
+}
