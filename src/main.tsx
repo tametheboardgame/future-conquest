@@ -9,7 +9,11 @@ import './europe-map.css';
 import './command-interface.css';
 import './map-interface-refinements.css';
 import './mobile-map-corrections.css';
+import './map-label-hierarchy.css';
 import './persistence-feedback';
+import { installMapTrackpadGuard } from './map-trackpad-guard';
+
+installMapTrackpadGuard();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
