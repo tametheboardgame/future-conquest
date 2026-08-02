@@ -1,0 +1,187 @@
+name: Verify map session mobile release
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: write
+  deployments: read
+  pages: read
+  pull-requests: write
+
+jobs:
+  verify:
+    if: github.head_ref == 'agent/verify-map-session-mobile-release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = 'e6c556ebd90c77f1cde137621c0d881c1d8f44ff';
+            const verificationBranch = 'agent/verify-map-session-mobile-release';
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            const failures = [];
+
+            try {
+              let mainRun;
+              for (let attempt = 0; attempt < 36; attempt += 1) {
+                const runs = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner,
+                  repo,
+                  head_sha: targetSha,
+                  per_page: 50
+                });
+                mainRun = runs.data.workflow_runs.find(run =>
+                  run.name === 'Build and deploy Future Conquest' &&
+                  run.event === 'push' &&
+                  run.head_branch === 'main'
+                );
+                if (mainRun?.status === 'completed') break;
+                await sleep(5000);
+              }
+
+              if (!mainRun) {
+                failures.push('No main-branch deployment workflow was found for the release commit.');
+              } else {
+                core.notice(`MAIN_RUN=${JSON.stringify({
+                  id: mainRun.id,
+                  status: mainRun.status,
+                  conclusion: mainRun.conclusion,
+                  head_sha: mainRun.head_sha,
+                  html_url: mainRun.html_url
+                })}`);
+                if (mainRun.status !== 'completed' || mainRun.conclusion !== 'success') {
+                  failures.push(`Main workflow did not complete successfully: ${mainRun.status}/${mainRun.conclusion}`);
+                }
+
+                const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: mainRun.id,
+                  filter: 'latest',
+                  per_page: 100
+                });
+                const build = jobs.data.jobs.find(job => job.name === 'build');
+                const deploy = jobs.data.jobs.find(job => job.name === 'deploy');
+                core.notice(`MAIN_JOBS=${JSON.stringify(jobs.data.jobs.map(job => ({ name: job.name, conclusion: job.conclusion })))}`);
+                if (build?.conclusion !== 'success') failures.push(`Main build job conclusion was ${build?.conclusion ?? 'missing'}.`);
+                if (deploy?.conclusion !== 'success') failures.push(`Pages deploy job conclusion was ${deploy?.conclusion ?? 'missing'}.`);
+              }
+
+              const getText = async path => {
+                const response = await github.rest.repos.getContent({ owner, repo, path, ref: targetSha });
+                if (Array.isArray(response.data) || !('content' in response.data)) throw new Error(`Could not read ${path}`);
+                return Buffer.from(response.data.content, 'base64').toString('utf8');
+              };
+
+              const map = await getText('src/components/MapView.tsx');
+              const navigation = await getText('src/components/CommandNavigation.tsx');
+              const css = await getText('src/mobile-map-corrections.css');
+              const sourceMarkers = {
+                retainedView: map.includes('let retainedMapView: MapViewBox = FULL_THEATRE_VIEW'),
+                retainedLayers: map.includes('let retainedMapLayers: MapLayers = DEFAULT_MAP_LAYERS'),
+                phoneBoost: map.includes("matchMedia('(max-width: 540px)')") && map.includes('return 2.7'),
+                tabletBoost: map.includes("matchMedia('(max-width: 900px)')") && map.includes('return 1.5'),
+                resizeCleanup: map.includes("removeEventListener('resize', refreshOverlayBoost)"),
+                activeToggle: navigation.includes("active === item.id && item.id !== 'map' ? 'map' : item.id"),
+                mobileText: css.includes('.territory-centre-label') && css.includes('font-size: 16px') && css.includes('.territory-name-label')
+              };
+              core.notice(`SOURCE_MARKERS=${JSON.stringify(sourceMarkers)}`);
+              if (Object.values(sourceMarkers).some(value => !value)) {
+                failures.push(`Release source is missing required markers: ${JSON.stringify(sourceMarkers)}`);
+              }
+
+              const deployments = await github.rest.repos.listDeployments({
+                owner,
+                repo,
+                sha: targetSha,
+                environment: 'github-pages',
+                per_page: 20
+              });
+              core.notice(`DEPLOYMENTS=${JSON.stringify(deployments.data.map(deployment => ({ id: deployment.id, sha: deployment.sha, ref: deployment.ref })))}`);
+              if (!deployments.data.length) {
+                failures.push('No GitHub Pages deployment exists for the release commit.');
+              } else {
+                let successfulDeployment = false;
+                for (const deployment of deployments.data) {
+                  const statuses = await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 20
+                  });
+                  if (statuses.data.some(status => status.state === 'success')) successfulDeployment = true;
+                }
+                if (!successfulDeployment) failures.push('No successful GitHub Pages deployment status exists for the release commit.');
+              }
+
+              const pages = await github.rest.repos.getPages({ owner, repo });
+              const siteUrl = pages.data.html_url || 'https://tametheboardgame.github.io/future-conquest/';
+              const indexResponse = await fetch(siteUrl, { cache: 'no-store' });
+              if (!indexResponse.ok) {
+                failures.push(`Live site returned HTTP ${indexResponse.status}.`);
+              } else {
+                const index = await indexResponse.text();
+                const scriptMatch = index.match(/<script[^>]+src="([^"]+\.js)"/);
+                const styleMatch = index.match(/<link[^>]+href="([^"]+\.css)"/);
+                if (!scriptMatch) failures.push('Could not find the live JavaScript bundle.');
+                if (!styleMatch) failures.push('Could not find the live stylesheet.');
+
+                if (scriptMatch) {
+                  const bundleUrl = new URL(scriptMatch[1], siteUrl).toString();
+                  const response = await fetch(bundleUrl, { cache: 'no-store' });
+                  const bundle = response.ok ? await response.text() : '';
+                  const markers = {
+                    mobileBreakpoint: bundle.includes('(max-width: 540px)'),
+                    tabletBreakpoint: bundle.includes('(max-width: 900px)'),
+                    commandMap: bundle.includes('Command map'),
+                    layers: bundle.includes('Map labels and markers')
+                  };
+                  core.notice(`LIVE_JS=${JSON.stringify({ bundleUrl, ...markers })}`);
+                  if (!response.ok || Object.values(markers).some(value => !value)) {
+                    failures.push(`Live JavaScript is missing release markers: ${JSON.stringify(markers)}`);
+                  }
+                }
+
+                if (styleMatch) {
+                  const styleUrl = new URL(styleMatch[1], siteUrl).toString();
+                  const response = await fetch(styleUrl, { cache: 'no-store' });
+                  const stylesheet = response.ok ? await response.text() : '';
+                  const markers = {
+                    territoryCentre: stylesheet.includes('.territory-centre-label'),
+                    territoryName: stylesheet.includes('.territory-name-label'),
+                    mobileFont: stylesheet.includes('font-size:16px'),
+                    markerText: stylesheet.includes('.task-group-marker text')
+                  };
+                  core.notice(`LIVE_CSS=${JSON.stringify({ styleUrl, ...markers })}`);
+                  if (!response.ok || Object.values(markers).some(value => !value)) {
+                    failures.push(`Live stylesheet is missing release markers: ${JSON.stringify(markers)}`);
+                  }
+                }
+              }
+            } catch (error) {
+              failures.push(`${error.status ?? 'error'}: ${error.message}`);
+            } finally {
+              try {
+                await github.rest.pulls.update({
+                  owner,
+                  repo,
+                  pull_number: context.payload.pull_request.number,
+                  state: 'closed'
+                });
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `heads/${verificationBranch}`
+                });
+              } catch (cleanupError) {
+                core.warning(`Cleanup failed: ${cleanupError.message}`);
+              }
+            }
+
+            if (failures.length) core.setFailed(failures.join('\n'));
