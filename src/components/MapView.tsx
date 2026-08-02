@@ -164,6 +164,10 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
+  const overlayScale = view.width / MAP_WIDTH;
+  const showTheatreLabels = zoomPercent <= 175;
+  const showTerritoryLabels = zoomPercent >= 135;
+  const showTerritoryNames = zoomPercent >= 285;
   const selectedAnchor = state.selectedTerritory ? anchors[state.selectedTerritory] : undefined;
 
   const statusText = useMemo(() => {
@@ -314,9 +318,11 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
       <g className="future-theatre">
         {countryPaths.map(country => <path key={country.id} d={country.path} className="theatre-country"><title>{country.name} · future operational theatre</title></path>)}
       </g>
-      <g className={`future-theatre-labels ${zoomPercent > 230 ? 'faded' : ''}`} aria-hidden="true">
-        {projectedTheatreLabels.map(label => <text key={label.code} x={label.x} y={label.y}><title>{label.name}</title>{label.code}</text>)}
-      </g>
+      {showTheatreLabels && <g className="future-theatre-labels" aria-hidden="true">
+        {projectedTheatreLabels.map(label => <g key={label.code} transform={`translate(${label.x} ${label.y}) scale(${overlayScale})`}>
+          <text x="0" y="0"><title>{label.name}</title>{label.code}</text>
+        </g>)}
+      </g>}
 
       <g className="active-campaign-layer">
         {activePaths.map(({ id, path }) => {
@@ -339,10 +345,19 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           if (!originId || !anchors[originId] || !anchors[operation.target]) return null;
           const [x1, y1] = anchors[originId];
           const [x2, y2] = anchors[operation.target];
-          const offset = (index - (operation.participantGroupIds.length - 1) / 2) * 4;
+          const offset = (index - (operation.participantGroupIds.length - 1) / 2) * 4 * overlayScale;
           return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
         }))}
-        {activePaths.map(({ id }) => {
+        {showTerritoryLabels && activePaths.map(({ id }) => {
+          const anchor = anchors[id];
+          const territory = state.territories[id];
+          if (!anchor || !territory) return null;
+          const [x, y] = anchor;
+          return <g key={`${id}-hit`} className="territory-hit-area" transform={`translate(${x} ${y}) scale(${overlayScale})`}>
+            <circle className="territory-hit-target" cx="0" cy="0" r="18" onClick={() => selectTerritory(id)} />
+          </g>;
+        })}
+        {showTerritoryLabels && activePaths.map(({ id }) => {
           const anchor = anchors[id];
           const territory = state.territories[id];
           if (!anchor || !territory) return null;
@@ -350,29 +365,31 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           const reachable = adjacentTargets.has(id);
           const action = territory.controller === 'enemy' ? 'ATTACK' : 'MOVE';
           const operation = Object.values(state.operations).find(activeOperation => activeOperation.target === id);
-          return <g key={`${id}-label`} className="map-label" onClick={() => selectTerritory(id)}>
-            {reachable && <text x={x} y={y - 25} className={`order-label ${territory.controller}`}>{action}</text>}
-            {operation && <g className="operation-marker" transform={`translate(${x - 25} ${y - 31})`}><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>}
-            <circle cx={x} cy={y - 8} r="3" />
-            <text x={x} y={y + 8}>{TERRITORIES[id].centre}</text>
-            {!territory.supplied && territory.controller === 'player' && <text className="isolated-label" x={x} y={y + 23}>ISOLATED</text>}
+          const isolatedOffset = showTerritoryNames ? 34 : 23;
+          return <g key={`${id}-label`} className={`map-label ${state.selectedTerritory === id ? 'selected-label' : ''}`} transform={`translate(${x} ${y}) scale(${overlayScale})`}>
+            {reachable && <text x="0" y="-25" className={`order-label ${territory.controller}`}>{action}</text>}
+            {operation && <g className="operation-marker" transform="translate(-25 -31)"><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>}
+            <circle cx="0" cy="-8" r="3" />
+            <text className="territory-centre-label" x="0" y="8">{TERRITORIES[id].centre}</text>
+            {showTerritoryNames && <text className="territory-name-label" x="0" y="21">{TERRITORIES[id].name}</text>}
+            {!territory.supplied && territory.controller === 'player' && <text className="isolated-label" x="0" y={isolatedOffset}>ISOLATED</text>}
           </g>;
         })}
         {Object.entries(enemyCounts).map(([territoryId, count]) => {
           const anchor = anchors[territoryId];
           if (!anchor) return null;
           const [x, y] = anchor;
-          return <g key={`enemy-${territoryId}`} className="enemy-marker" transform={`translate(${x + 24} ${y - 24})`}><path d="M0 -10 L10 8 L-10 8 Z" /><text x="0" y="4">{count}</text></g>;
+          return <g key={`enemy-${territoryId}`} className="enemy-marker" transform={`translate(${x + 24 * overlayScale} ${y - 24 * overlayScale}) scale(${overlayScale})`}><path d="M0 -10 L10 8 L-10 8 Z" /><text x="0" y="4">{count}</text></g>;
         })}
         {Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {
           const anchor = anchors[territoryId];
           if (!anchor) return [];
           const [x, y] = anchor;
           return territoryGroups.map((group, index) => {
-            const dx = -28 + (index % 2) * 29;
-            const dy = 23 + Math.floor(index / 2) * 24;
+            const dx = (-28 + (index % 2) * 29) * overlayScale;
+            const dy = (23 + Math.floor(index / 2) * 24) * overlayScale;
             const selected = group.id === state.selectedTaskGroupId;
-            return <g key={group.id} className={`task-group-marker ${selected ? 'selected' : ''} ${group.status}`} transform={`translate(${x + dx} ${y + dy})`} onClick={(event: ReactMouseEvent<SVGGElement>) => { event.stopPropagation(); if (!suppressClick.current) onSelectGroup(group.id); }}>
+            return <g key={group.id} className={`task-group-marker ${selected ? 'selected' : ''} ${group.status}`} transform={`translate(${x + dx} ${y + dy}) scale(${overlayScale})`} onClick={(event: ReactMouseEvent<SVGGElement>) => { event.stopPropagation(); if (!suppressClick.current) onSelectGroup(group.id); }}>
               <rect x="-12" y="-9" width="24" height="18" rx="3" />
               <text x="0" y="4">{group.id.replace('TG-', '')}</text>
             </g>;
@@ -380,7 +397,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
         })}
         {state.portalTerritory && anchors[state.portalTerritory] && (() => {
           const [x, y] = anchors[state.portalTerritory];
-          return <g className="portal" filter="url(#glow)"><circle cx={x} cy={y - 8} r="12" /><circle cx={x} cy={y - 8} r="5" /></g>;
+          return <g className="portal" transform={`translate(${x} ${y}) scale(${overlayScale})`} filter="url(#glow)"><circle cx="0" cy="-8" r="12" /><circle cx="0" cy="-8" r="5" /></g>;
         })()}
       </g>
     </svg>
