@@ -20,6 +20,8 @@ test('mobile map overlays receive a responsive readability boost', () => {
   assert.match(source, /max-width: 540px/);
   assert.match(source, /return 2\.7/);
   assert.match(source, /view\.width \/ MAP_WIDTH \* overlayBoost/);
+  assert.match(source, /window\.addEventListener\('resize', refreshOverlayBoost\)/);
+  assert.match(source, /window\.removeEventListener\('resize', refreshOverlayBoost\)/);
   assert.match(css, /\.territory-centre-label[\s\S]*font-size:\s*16px/);
   assert.match(css, /\.territory-name-label[\s\S]*font-size:\s*13px/);
   assert.match(css, /\.task-group-marker text[\s\S]*font-size:\s*11px/);
