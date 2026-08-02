@@ -11,7 +11,8 @@ const engine = readFileSync('src/game/engine.ts', 'utf8');
 test('the campaign interface exposes force organisation and a scalable roster', () => {
   assert.match(app, /ForceOrganisationPanel/);
   assert.match(app, /FormationRoster/);
-  assert.match(app, /PHASE VI \/ FORCE ORGANISATION/);
+  assert.match(app, /currentView === 'forces'/);
+  assert.match(app, /Formation command/);
   assert.match(roster, /Search formation, province or status/);
 });
 
