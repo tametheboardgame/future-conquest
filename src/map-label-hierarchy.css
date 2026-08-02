@@ -1,0 +1,27 @@
+.future-theatre-labels .country-name-label {
+  fill: #70d7d0;
+  stroke: #061018;
+  stroke-width: 4.5;
+  paint-order: stroke;
+  text-anchor: middle;
+  font: 700 18px Barlow Condensed, sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .92;
+}
+
+.future-theatre-labels .country-name-label.compact {
+  font-size: 14px;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 540px) {
+  .europe-map .future-theatre-labels .country-name-label {
+    font-size: 19px;
+    stroke-width: 5px;
+  }
+
+  .europe-map .future-theatre-labels .country-name-label.compact {
+    font-size: 16px;
+  }
+}
