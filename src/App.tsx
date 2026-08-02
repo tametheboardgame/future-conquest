@@ -20,6 +20,7 @@ import {
   setGarrison
 } from './game/engine';
 import { occupationRequirement } from './game/formation-organisation';
+import { getEscalationStage } from './game/strategic-response';
 import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-targeting';
 import type { Difficulty, GameState, Operation } from './game/types';
 
@@ -58,7 +59,11 @@ export default function App() {
   const enemyPersonnel = enemyFormations.reduce((sum, formation) => sum + formation.personnel, 0);
   const enemyArmour = enemyFormations.reduce((sum, formation) => sum + formation.armour, 0);
   const enemyAtTarget = target && targetState?.controller === 'enemy' ? enemyStrengthAt(state, target.id) : null;
-  const escalationLabel = state.escalation >= 88 ? 'Strategic crisis' : state.escalation >= 75 ? 'Coalition war' : state.escalation >= 60 ? 'Intervention' : state.escalation >= 40 ? 'Material support' : state.escalation >= 25 ? 'Sanctions' : state.escalation >= 15 ? 'Monitoring' : 'Local response';
+  const escalationStage = getEscalationStage(state.escalation);
+  const escalationLabel = escalationStage.label;
+  const pendingMobilisations = [...state.mobilisations].filter(project => project.status === 'preparing').sort((a, b) => a.arrivalTurn - b.arrivalTurn);
+  const activeEnemyOrders = state.enemyOrders.filter(order => order.status !== 'completed').slice(0, 8);
+  const intelligenceReports = state.intelligenceReports.slice(0, 10);
   const canOrderSelected = canIssueOperationalOrder(selectedGroup ?? undefined);
   const canMove = Boolean(selectedGroup && targetInfo?.kind === 'move' && canOrderSelected && state.status === 'playing');
   const canAttack = Boolean(selectedGroup && targetInfo?.kind === 'attack' && canOrderSelected && state.status === 'playing');
@@ -192,7 +197,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VII-A / COMMAND INTERFACE</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-A / STRATEGIC RESPONSE</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -205,7 +210,7 @@ export default function App() {
       <div><span>Network supply</span><strong>{state.supply}%</strong></div>
       <div><span>Active operations</span><strong>{operations.length}</strong></div>
       <div><span>Territories</span><strong>{controlled} / {territoryDefinitions.length}</strong></div>
-      <div className="escalation"><span>Global escalation · {escalationLabel}</span><div className="meter"><i style={{ width: `${state.escalation}%` }} /></div><strong>{Math.round(state.escalation)}</strong></div>
+      <div className="escalation"><span>Global escalation · Stage {escalationStage.id} · {escalationLabel}</span><div className="meter"><i style={{ width: `${state.escalation}%` }} /></div><strong>{Math.round(state.escalation)}</strong></div>
     </section>
 
     {state.status !== 'playing' && <div className={`command-outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong><span>Review the campaign log or begin a new campaign.</span></div>}
@@ -327,14 +332,44 @@ export default function App() {
           <header className="command-view-header"><div><p className="panel-label">INTELLIGENCE</p><h2>Strategic picture</h2></div><p>Consolidated enemy strength, frontline pressure, escalation and supply warnings.</p></header>
           <div className="intelligence-command-grid">
             <section className="view-panel escalation-panel">
-              <p className="panel-label">GLOBAL ESCALATION</p><div className="escalation-readout"><strong>{Math.round(state.escalation)}</strong><span>{escalationLabel}</span></div>
-              <div className="large-meter"><i style={{ width: `${state.escalation}%` }} /></div>
-              <p>Higher escalation increases the likelihood and strength of external intervention.</p>
-            </section>
+  <p className="panel-label">GLOBAL ESCALATION · STAGE {escalationStage.id}</p>
+  <div className="escalation-readout"><strong>{Math.round(state.escalation)}</strong><span>{escalationLabel}</span></div>
+  <div className="large-meter"><i style={{ width: `${state.escalation}%` }} /></div>
+  <p className="escalation-stage-copy">{escalationStage.description}</p>
+  <div className="strategic-response-summary">
+    <div><span>Mobilisation reserve</span><strong>{formatNumber(state.mobilisationPool)}</strong></div>
+    <div><span>Pending formations</span><strong>{pendingMobilisations.length}</strong></div>
+    <div><span>Active enemy plans</span><strong>{activeEnemyOrders.length}</strong></div>
+  </div>
+  <div className="stage-threshold"><span>Next stage</span><strong>{escalationStage.nextThreshold === null ? 'Maximum escalation' : `${escalationStage.nextThreshold}%`}</strong></div>
+</section>
             <section className="view-panel enemy-summary-panel">
               <p className="panel-label">KNOWN ENEMY STRENGTH</p>
               <div className="intelligence-kpis"><div><span>Formations</span><strong>{enemyFormations.length}</strong></div><div><span>Personnel</span><strong>{formatNumber(enemyPersonnel)}</strong></div><div><span>Armour</span><strong>{formatNumber(enemyArmour)}</strong></div></div>
             </section>
+<section className="view-panel mobilisation-panel">
+  <div className="view-panel-heading"><p className="panel-label">MOBILISATION PIPELINE</p><strong>{pendingMobilisations.length}</strong></div>
+  {pendingMobilisations.length ? <div className="mobilisation-list">{pendingMobilisations.map(project => <article key={project.id} className="mobilisation-card">
+    <header><strong>{project.name}</strong><b>DAY {String(project.arrivalTurn).padStart(3, '0')}</b></header>
+    <p>{project.source} · expected entry at {project.entryTerritory ? TERRITORIES[project.entryTerritory].centre : 'an unconfirmed location'}.</p>
+    <dl><div><dt>Personnel</dt><dd>{formatNumber(project.personnel)}</dd></div><div><dt>Armour</dt><dd>{formatNumber(project.armour)}</dd></div><div><dt>Status</dt><dd>{project.status}</dd></div></dl>
+  </article>)}</div> : <p className="empty-state">No additional formations are currently preparing to enter the theatre.</p>}
+</section>
+<section className="view-panel enemy-plan-panel">
+  <div className="view-panel-heading"><p className="panel-label">ASSESSED ENEMY INTENT</p><strong>{activeEnemyOrders.length}</strong></div>
+  {activeEnemyOrders.length ? <div className="enemy-plan-list">{activeEnemyOrders.map(order => <article key={order.id} className="enemy-plan-card">
+    <header><strong>{order.summary}</strong><b className="order-type">{order.type}</b></header>
+    <p>{order.origin ? `${TERRITORIES[order.origin].centre} → ` : ''}{TERRITORIES[order.target].centre}{order.executeTurn ? ` · expected day ${String(order.executeTurn).padStart(3, '0')}` : ''} · {order.status}</p>
+  </article>)}</div> : <p className="empty-state">No coherent enemy operational plan has been identified this day.</p>}
+</section>
+<section className="view-panel intelligence-report-panel">
+  <div className="view-panel-heading"><p className="panel-label">INTELLIGENCE REPORTS</p><strong>{intelligenceReports.length}</strong></div>
+  <div className="intelligence-report-list">{intelligenceReports.map(report => <article key={report.id} className={`intelligence-report-card ${report.confidence}`}>
+    <header><strong>{report.title}</strong><b>{report.confidence} confidence</b></header>
+    <p>{report.detail}</p>
+    {(report.estimatedMin !== undefined || report.territoryId) && <small>{report.estimatedMin !== undefined && report.estimatedMax !== undefined ? `Estimated strength ${formatNumber(report.estimatedMin)}–${formatNumber(report.estimatedMax)}` : ''}{report.territoryId ? `${report.estimatedMin !== undefined ? ' · ' : ''}${TERRITORIES[report.territoryId].centre}` : ''}</small>}
+  </article>)}</div>
+</section>
             <section className="view-panel frontline-panel">
               <div className="view-panel-heading"><p className="panel-label">FRONTLINE THREATS</p><strong>{frontlineTerritories.length}</strong></div>
               {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
@@ -372,7 +407,7 @@ export default function App() {
             <section className="view-panel campaign-overview-panel">
               <p className="panel-label">CAMPAIGN SUMMARY</p>
               <dl>
-                <div><dt>Status</dt><dd>{state.status}</dd></div>
+                <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
                 <div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>

@@ -5,6 +5,7 @@ const {
   CURRENT_SAVE_KEY,
   LEGACY_V2_SAVE_KEY,
   LEGACY_V3_SAVE_KEY,
+  LEGACY_V4_SAVE_KEY,
   SAVE_METADATA_KEY,
   createSaveMetadata,
   inspectStoredCampaign,
@@ -29,7 +30,7 @@ test('save metadata records the current campaign summary and timestamp', () => {
   const metadata = createSaveMetadata(state, '2026-08-02T05:15:00.000Z');
 
   assert.deepEqual(metadata, {
-    saveVersion: 4,
+    saveVersion: 5,
     savedAt: '2026-08-02T05:15:00.000Z',
     campaignDay: state.turn,
     difficulty: 'hard',
@@ -38,7 +39,7 @@ test('save metadata records the current campaign summary and timestamp', () => {
   });
 });
 
-test('a current version 4 save is inspected with its matching metadata', () => {
+test('a current version 5 save is inspected with its matching metadata', () => {
   const state = newGame(2);
   const serialisedState = JSON.parse(JSON.stringify(state));
   const metadata = createSaveMetadata(state, '2026-08-02T05:16:00.000Z');
@@ -49,7 +50,7 @@ test('a current version 4 save is inspected with its matching metadata', () => {
 
   const result = inspectStoredCampaign(storage);
   assert.equal(result.ok, true);
-  assert.equal(result.source, 'v4');
+  assert.equal(result.source, 'v5');
   assert.deepEqual(result.state, serialisedState);
   assert.deepEqual(result.metadata, metadata);
 });
@@ -65,24 +66,35 @@ test('missing, corrupted and unsupported saves produce explicit failures', () =>
   assert.equal(inspectStoredCampaign(setup.storage).code, 'unsupported');
 });
 
-test('version 3 and version 2 saves remain identifiable for the existing migration path', () => {
-  const version3 = newGame(2);
-  version3.version = 3;
-  let setup = installStorage([[LEGACY_V3_SAVE_KEY, JSON.stringify(version3)]]);
+test('version 4, version 3 and version 2 saves migrate into version 5', () => {
+  const version4 = newGame(2);
+  version4.version = 4;
+  delete version4.escalationStage;
+  delete version4.mobilisationPool;
+  delete version4.mobilisations;
+  delete version4.enemyOrders;
+  delete version4.intelligenceReports;
+  let setup = installStorage([[LEGACY_V4_SAVE_KEY, JSON.stringify(version4)]]);
   let result = inspectStoredCampaign(setup.storage);
   assert.equal(result.ok, true);
-  assert.equal(result.source, 'v3');
-  assert.equal(result.state.version, 4);
+  assert.equal(result.source, 'v4');
+  assert.equal(result.state.version, 5);
 
-  const version2 = newGame(2);
-  version2.version = 2;
+  const version3 = { ...version4, version: 3 };
+  setup = installStorage([[LEGACY_V3_SAVE_KEY, JSON.stringify(version3)]]);
+  result = inspectStoredCampaign(setup.storage);
+  assert.equal(result.ok, true);
+  assert.equal(result.source, 'v3');
+  assert.equal(result.state.version, 5);
+
+  const version2 = { ...version4, version: 2 };
   delete version2.operations;
   version2.battle = null;
   setup = installStorage([[LEGACY_V2_SAVE_KEY, JSON.stringify(version2)]]);
   result = inspectStoredCampaign(setup.storage);
   assert.equal(result.ok, true);
   assert.equal(result.source, 'v2');
-  assert.equal(result.state.version, 4);
+  assert.equal(result.state.version, 5);
 });
 
 test('metadata is written only after a valid current save exists', () => {

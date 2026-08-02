@@ -1,6 +1,9 @@
 export type Controller = 'player' | 'enemy';
 export type Terrain = 'open-lowland' | 'mixed-lowland' | 'mixed-upland' | 'mountainous';
 export type Difficulty = 'story' | 'standard' | 'hard';
+export type EscalationStageId = 1 | 2 | 3 | 4 | 5;
+export type EnemyOrderType = 'reinforce' | 'reposition' | 'entrench' | 'counterattack' | 'withdraw';
+export type IntelligenceConfidence = 'low' | 'moderate' | 'high';
 
 export interface TerritoryDefinition {
   id: string;
@@ -64,6 +67,44 @@ export interface Operation {
   enemyPower: number;
 }
 
+export interface MobilisationProject {
+  id: string;
+  name: string;
+  source: string;
+  stage: EscalationStageId;
+  personnel: number;
+  armour: number;
+  readiness: number;
+  arrivalTurn: number;
+  status: 'preparing' | 'deployed';
+  entryTerritory?: string;
+}
+
+export interface EnemyOrder {
+  id: string;
+  turn: number;
+  type: EnemyOrderType;
+  formationId?: string;
+  origin?: string;
+  target: string;
+  executeTurn?: number;
+  status: 'planned' | 'executing' | 'completed';
+  priority: number;
+  summary: string;
+}
+
+export interface IntelligenceReport {
+  id: string;
+  turn: number;
+  kind: 'mobilisation' | 'order' | 'escalation';
+  title: string;
+  detail: string;
+  confidence: IntelligenceConfidence;
+  estimatedMin?: number;
+  estimatedMax?: number;
+  territoryId?: string;
+}
+
 export interface GameEvent {
   id: number;
   turn: number;
@@ -72,7 +113,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 4;
+  version: 5;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -84,6 +125,11 @@ export interface GameState {
   taskGroups: Record<string, TaskGroup>;
   enemyFormations: Record<string, EnemyFormation>;
   escalation: number;
+  escalationStage: EscalationStageId;
+  mobilisationPool: number;
+  mobilisations: MobilisationProject[];
+  enemyOrders: EnemyOrder[];
+  intelligenceReports: IntelligenceReport[];
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;

@@ -1,0 +1,147 @@
+.escalation-stage-copy {
+  margin-top: .8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.stage-threshold {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: .85rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 600 .75rem IBM Plex Mono, monospace;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.mobilisation-list,
+.enemy-plan-list,
+.intelligence-report-list {
+  display: grid;
+  gap: .65rem;
+}
+
+.mobilisation-card,
+.enemy-plan-card,
+.intelligence-report-card {
+  padding: .8rem;
+  border: 1px solid var(--line);
+  background: rgba(7, 24, 34, .72);
+}
+
+.mobilisation-card header,
+.enemy-plan-card header,
+.intelligence-report-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: baseline;
+}
+
+.mobilisation-card strong,
+.enemy-plan-card strong,
+.intelligence-report-card strong {
+  color: var(--text);
+}
+
+.mobilisation-card b,
+.enemy-plan-card b,
+.intelligence-report-card b {
+  color: var(--cyan);
+  font: 700 .72rem IBM Plex Mono, monospace;
+  text-transform: uppercase;
+}
+
+.mobilisation-card p,
+.enemy-plan-card p,
+.intelligence-report-card p {
+  margin: .45rem 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mobilisation-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .45rem;
+  margin: .7rem 0 0;
+}
+
+.mobilisation-card dl div {
+  display: grid;
+  gap: .15rem;
+}
+
+.mobilisation-card dt {
+  color: var(--muted);
+  font-size: .7rem;
+  text-transform: uppercase;
+}
+
+.mobilisation-card dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.enemy-plan-card .order-type {
+  color: #ffb45c;
+}
+
+.intelligence-report-card.high {
+  border-left: 3px solid #70d7d0;
+}
+
+.intelligence-report-card.moderate {
+  border-left: 3px solid #ffcf70;
+}
+
+.intelligence-report-card.low {
+  border-left: 3px solid #ff7c77;
+}
+
+.intelligence-report-card small {
+  display: block;
+  margin-top: .45rem;
+  color: var(--muted);
+  font: 600 .7rem IBM Plex Mono, monospace;
+}
+
+.strategic-response-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+  margin-top: .8rem;
+}
+
+.strategic-response-summary div {
+  padding: .65rem;
+  border: 1px solid var(--line);
+  background: rgba(9, 31, 42, .65);
+}
+
+.strategic-response-summary span,
+.strategic-response-summary strong {
+  display: block;
+}
+
+.strategic-response-summary span {
+  color: var(--muted);
+  font-size: .7rem;
+  text-transform: uppercase;
+}
+
+.strategic-response-summary strong {
+  margin-top: .25rem;
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .mobilisation-card dl,
+  .strategic-response-summary {
+    grid-template-columns: 1fr;
+  }
+}

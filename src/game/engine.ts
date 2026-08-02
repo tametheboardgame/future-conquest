@@ -1,5 +1,6 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
+import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
 import type {
   Difficulty,
   EnemyFormation,
@@ -10,7 +11,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.4';
+const SAVE_KEY = 'future-conquest-slice-v0.5';
+const LEGACY_V4_SAVE_KEY = 'future-conquest-slice-v0.4';
 const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
 const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -130,8 +132,10 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     fortification: id === portalTerritory ? 12 : 0,
     capturedTurn: id === portalTerritory ? 1 : undefined
   }])) as Record<string, TerritoryState>;
+  const initialEscalation = difficulty === 'hard' ? 8 : 3;
+  const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 4,
+    version: 5,
     seed,
     difficulty,
     turn: 1,
@@ -142,7 +146,8 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     territories,
     taskGroups: initialTaskGroups(portalTerritory),
     enemyFormations: initialEnemyFormations(seed, portalTerritory, difficulty),
-    escalation: difficulty === 'hard' ? 8 : 3,
+    escalation: initialEscalation,
+    ...strategicState,
     supply: 100,
     woundedPool: 0,
     operations: {},
@@ -538,36 +543,6 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
   return next;
 }
 
-function reinforceEnemy(state: GameState): GameState {
-  const enemyFormations = structuredClone(state.enemyFormations);
-  const reinforcementBase = 4 + state.escalation * 0.18;
-  for (const formation of Object.values(enemyFormations)) {
-    if (state.territories[formation.location]?.controller !== 'enemy') continue;
-    formation.personnel += Math.round(reinforcementBase * difficultyRules[state.difficulty].enemy);
-    formation.readiness = clamp(formation.readiness + 0.4, 15, 100);
-    formation.entrenchment = clamp(formation.entrenchment + 0.25, 0, 65);
-  }
-  let next: GameState = { ...state, enemyFormations };
-  if (state.escalation >= 60 && state.turn % (state.difficulty === 'hard' ? 3 : 5) === 0) {
-    const enemyTerritories = SLICE_IDS.filter(id => state.territories[id].controller === 'enemy').sort((a, b) => TERRITORIES[b].supply - TERRITORIES[a].supply);
-    const location = enemyTerritories[0];
-    if (location) {
-      const id = `EF-I-${state.turn}`;
-      enemyFormations[id] = {
-        id,
-        name: 'Coalition Intervention Brigade',
-        location,
-        personnel: Math.round(1450 * difficultyRules[state.difficulty].enemy),
-        armour: Math.round(190 * difficultyRules[state.difficulty].enemy),
-        readiness: 82,
-        entrenchment: 12
-      };
-      next = addEvent(next, `A coalition intervention brigade deployed to ${TERRITORIES[location].centre}.`, 'danger');
-    }
-  }
-  return next;
-}
-
 function pruneOperations(state: GameState): GameState {
   const operations = structuredClone(state.operations);
   for (const [operationId, operation] of Object.entries(operations)) {
@@ -584,21 +559,30 @@ function pruneOperations(state: GameState): GameState {
 }
 
 function resolveCounterattack(state: GameState, forced = false): GameState {
-  if (state.turn < 4) return state;
+  const plannedCounterattack = getPlannedCounterattack(state);
+  if (state.turn < 4 && !plannedCounterattack) return state;
   const chance = (0.055 + state.escalation / 620) * difficultyRules[state.difficulty].counter;
-  if (!forced && randomFor(state.seed, state.turn, 907) >= chance) return state;
+  if (!forced && !plannedCounterattack && randomFor(state.seed, state.turn, 907) >= chance) return state;
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
-  if (!frontier.length) return state;
+  if (!frontier.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
   frontier.sort((a, b) => {
     const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + deployableArmour(group) * 0.25, 0) + state.territories[id].fortification * 80;
     return defence(a) - defence(b);
   });
-  const target = frontier[0];
+  if (plannedCounterattack && !frontier.some(id => id === plannedCounterattack.target)) {
+    return completeEnemyOrder(state, plannedCounterattack.id);
+  }
+  const target = plannedCounterattack && frontier.some(id => id === plannedCounterattack.target)
+    ? plannedCounterattack.target
+    : frontier[0];
   const origins = TERRITORIES[target].neighbours.filter(id => state.territories[id].controller === 'enemy');
   const formations = Object.values(state.enemyFormations).filter(formation => origins.includes(formation.location) && formation.personnel > 250);
-  if (!formations.length) return state;
+  if (!formations.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
   formations.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
-  const attacker = formations[0];
+  const plannedFormation = plannedCounterattack?.formationId ? state.enemyFormations[plannedCounterattack.formationId] : undefined;
+  const attacker = plannedFormation && formations.some(formation => formation.id === plannedFormation.id)
+    ? plannedFormation
+    : formations[0];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
   const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' && group.personnel > 0 ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
   const attackerPower = (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150) * difficultyRules[state.difficulty].enemy;
@@ -654,6 +638,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     }
     next = addEvent(next, `${TERRITORIES[target].centre} repelled an enemy counterattack. The attacking formation lost roughly ${losses} personnel.`, 'good');
   }
+  if (plannedCounterattack) next = completeEnemyOrder(next, plannedCounterattack.id);
   return pruneOperations(refreshSupply(next));
 }
 
@@ -671,14 +656,13 @@ export function endTurn(state: GameState): GameState {
   next = resolveMovement(next);
   next = resolveOperations(next);
   next = resolveOccupationAndLogistics(next);
-  next = reinforceEnemy(next);
+  next = resolveStrategicResponse(next);
   next = resolveCounterattack(next);
   next = pruneOperations(next);
   next = syncOperationDefenders(next);
   next = refreshSupply(next);
   const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
   const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
-  next.escalation = clamp(Math.max(3 + controlled * 2.35, next.escalation - 0.08), 0, 100);
   const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
   if (controlled === SLICE_IDS.length && unsecured === 0) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
   else if (personnel < 1200 || next.territories[next.portalTerritory].controller !== 'player') next = addEvent({ ...next, status: 'defeat' }, 'The expedition has lost operational cohesion or access to the portal.', 'danger');
@@ -696,7 +680,16 @@ interface LegacyBattle {
   enemyPower: number;
 }
 
-type LegacyGameState = Omit<GameState, 'version' | 'operations'> & {
+type StrategicField =
+  | 'escalationStage'
+  | 'mobilisationPool'
+  | 'mobilisations'
+  | 'enemyOrders'
+  | 'intelligenceReports';
+
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -720,10 +713,13 @@ function migrateLegacyGame(parsed: LegacyGameState): GameState {
     if (group?.order?.type === 'attack') group.order.operationId = operationId;
   }
   const { battle: _battle, ...withoutBattle } = parsed;
-  return { ...withoutBattle, version: 4, taskGroups, operations };
+  return upgradeStrategicState({
+    ...withoutBattle,
+    version: 4,
+    taskGroups,
+    operations
+  } as LegacyV4GameState);
 }
-
-type LegacyV3GameState = Omit<GameState, 'version'> & { version: 3 };
 
 export function saveGame(state: GameState) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -733,14 +729,30 @@ export function loadGame(): GameState | null {
   const current = localStorage.getItem(SAVE_KEY);
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
-    if (parsed.version === 4 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return parsed as GameState;
+    if (
+      parsed.version === 5
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+    ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v4 = localStorage.getItem(LEGACY_V4_SAVE_KEY);
+  if (v4) {
+    const parsed = JSON.parse(v4) as Partial<LegacyV4GameState>;
+    if (parsed.version === 4 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) {
+      return upgradeStrategicState(parsed as LegacyV4GameState);
+    }
   }
 
   const prior = localStorage.getItem(LEGACY_V3_SAVE_KEY);
   if (prior) {
     const parsed = JSON.parse(prior) as Partial<LegacyV3GameState>;
     if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) {
-      return { ...(parsed as LegacyV3GameState), version: 4 };
+      return upgradeStrategicState({ ...(parsed as LegacyV3GameState), version: 4 } as LegacyV4GameState);
     }
   }
 

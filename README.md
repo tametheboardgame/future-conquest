@@ -30,3 +30,11 @@ Pre-production and game-system design.
 
 The game will use permanent strategic territory geometry combined with dated, versioned World States. Political control, alliances, conflicts and military capability can therefore change without redrawing the campaign map.
 
+
+## Current playable systems
+
+- Phase VIII-A: Escalation, Mobilisation and Enemy Command
+- Five visible escalation stages, reinforcement arrival timelines, assessed enemy intent and confidence-rated intelligence
+- Save version 5 with automatic migration from versions 4, 3 and 2
+
+See [Phase VIII-A design](docs/design/phase-08-a-strategic-response.md).
