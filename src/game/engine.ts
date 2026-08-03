@@ -13,6 +13,7 @@ import {
   routeIsTraversable
 } from './route-movement';
 import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
+import { crisisLimitForDifficulty, resolveEnemyStrategy } from './enemy-strategy';
 import type {
   Difficulty,
   EnemyFormation,
@@ -23,7 +24,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.12';
+const SAVE_KEY = 'future-conquest-slice-v0.13';
+const LEGACY_V12_SAVE_KEY = 'future-conquest-slice-v0.12';
 const LEGACY_V11_SAVE_KEY = 'future-conquest-slice-v0.11';
 const LEGACY_V10_SAVE_KEY = 'future-conquest-slice-v0.10';
 const LEGACY_V9_SAVE_KEY = 'future-conquest-slice-v0.9';
@@ -127,7 +129,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 12,
+    version: 13,
     seed,
     difficulty,
     turn: 1,
@@ -629,16 +631,25 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     ? plannedCounterattack.target
     : frontier[0];
   const origins = TERRITORIES[target].neighbours.filter(id => state.territories[id].controller === 'enemy');
-  const formations = Object.values(state.enemyFormations).filter(formation => origins.includes(formation.location) && formation.personnel > 250);
-  if (!formations.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
-  formations.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
-  const plannedFormation = plannedCounterattack?.formationId ? state.enemyFormations[plannedCounterattack.formationId] : undefined;
-  const attacker = plannedFormation && formations.some(formation => formation.id === plannedFormation.id)
-    ? plannedFormation
-    : formations[0];
+  const available = Object.values(state.enemyFormations).filter(formation => origins.includes(formation.location) && formation.personnel > 250);
+  if (!available.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
+  available.sort((a, b) => (b.personnel + b.armour * 4) - (a.personnel + a.armour * 4));
+
+  const requestedIds = plannedCounterattack
+    ? [plannedCounterattack.formationId, ...(plannedCounterattack.supportFormationIds ?? [])].filter((id): id is string => Boolean(id))
+    : [];
+  const selectedAttackers = requestedIds.length
+    ? requestedIds.flatMap(id => {
+        const formation = state.enemyFormations[id];
+        return formation && available.some(candidate => candidate.id === id) ? [formation] : [];
+      })
+    : [available[0]];
+  const attackers = selectedAttackers.length ? selectedAttackers : [available[0]];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
   const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' && group.personnel > 0 ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
-  const attackerPower = (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150) * difficultyRules[state.difficulty].enemy;
+  const attackerPower = attackers.reduce((sum, attacker) => (
+    sum + (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150)
+  ), 0) * difficultyRules[state.difficulty].enemy * Math.max(0.88, 1 - (attackers.length - 1) * 0.035);
   const roll = 0.84 + randomFor(state.seed, state.turn, 919) * 0.34;
   const enemyFormations = structuredClone(state.enemyFormations);
   const taskGroups = structuredClone(state.taskGroups);
@@ -651,12 +662,12 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     const destroyed: string[] = [];
     for (const defender of defenders) {
       const group = taskGroups[defender.id];
-      const combatLosses = Math.min(group.personnel, Math.max(20, Math.round(group.personnel * 0.055)));
+      const combatLosses = Math.min(group.personnel, Math.max(20, Math.round(group.personnel * (0.05 + attackers.length * 0.008))));
       group.personnel -= combatLosses;
       next.woundedPool += Math.round(combatLosses * 0.55);
       if (retreatOptions.length) {
         group.location = retreatOptions[0];
-        group.morale = clamp(group.morale - 12, 5, 100);
+        group.morale = clamp(group.morale - 12 - attackers.length, 5, 100);
         group.status = 'recovering';
         group.order = undefined;
       } else {
@@ -665,8 +676,10 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
       }
     }
     territories[target] = { controller: 'enemy', occupation: 'enemy', legitimacy: 0, resistance: 0, supplied: false, fortification: 8 };
-    enemyFormations[attacker.id].location = target;
-    enemyFormations[attacker.id].readiness = clamp(enemyFormations[attacker.id].readiness - 8, 15, 100);
+    for (const attacker of attackers) {
+      enemyFormations[attacker.id].location = target;
+      enemyFormations[attacker.id].readiness = clamp(enemyFormations[attacker.id].readiness - 7 - attackers.length, 15, 100);
+    }
     const survivingIds = Object.keys(taskGroups);
     if (!taskGroups[next.selectedTaskGroupId]) {
       next.selectedTaskGroupId = survivingIds[0] ?? '';
@@ -679,17 +692,22 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
       : retreatOptions.length
         ? 'Local task groups withdrew under pressure.'
         : `${destroyed.join(', ')} became encircled and ceased to exist as coherent formations.`;
-    next = addEvent(next, `Enemy forces retook ${TERRITORIES[target].centre}. ${retreatText}`, 'danger');
+    next = addEvent(next, `${attackers.length} enemy formation${attackers.length === 1 ? '' : 's'} retook ${TERRITORIES[target].centre}. ${retreatText}`, 'danger');
   } else {
-    const losses = Math.max(30, Math.round(attacker.personnel * 0.045));
-    enemyFormations[attacker.id].personnel = Math.max(0, enemyFormations[attacker.id].personnel - losses);
+    let totalLosses = 0;
+    for (const attacker of attackers) {
+      const losses = Math.max(25, Math.round(attacker.personnel * (0.034 + attackers.length * 0.004)));
+      enemyFormations[attacker.id].personnel = Math.max(0, enemyFormations[attacker.id].personnel - losses);
+      enemyFormations[attacker.id].readiness = clamp(enemyFormations[attacker.id].readiness - 6, 15, 100);
+      totalLosses += losses;
+    }
     for (const defender of defenders) {
       const group = taskGroups[defender.id];
-      const defenderLosses = Math.max(4, Math.round(group.personnel * 0.009));
+      const defenderLosses = Math.max(4, Math.round(group.personnel * 0.009 * Math.max(1, attackers.length * 0.8)));
       group.personnel -= defenderLosses;
       next.woundedPool += Math.round(defenderLosses * 0.6);
     }
-    next = addEvent(next, `${TERRITORIES[target].centre} repelled an enemy counterattack. The attacking formation lost roughly ${losses} personnel.`, 'good');
+    next = addEvent(next, `${TERRITORIES[target].centre} repelled an enemy counterattack coordinated by ${attackers.length} formation${attackers.length === 1 ? '' : 's'}. The attacking force lost roughly ${totalLosses} personnel.`, 'good');
   }
   if (plannedCounterattack) next = completeEnemyOrder(next, plannedCounterattack.id);
   return pruneOperations(refreshSupply(next));
@@ -707,6 +725,7 @@ export function endTurn(state: GameState): GameState {
     routeStates: structuredClone(state.routeStates),
     logistics: structuredClone(state.logistics),
     logisticsPriorities: structuredClone(state.logisticsPriorities),
+    enemyStrategy: structuredClone(state.enemyStrategy),
     infrastructureIncidents: structuredClone(state.infrastructureIncidents ?? []),
     engineeringProjects: structuredClone(state.engineeringProjects),
     interdictionMissions: structuredClone(state.interdictionMissions),
@@ -719,6 +738,7 @@ export function endTurn(state: GameState): GameState {
   next = resolveMovement(next);
   next = resolveOperations(next);
   next = resolveOccupationAndLogistics(next);
+  next = resolveEnemyStrategy(next);
   next = resolveStrategicResponse(next);
   next = resolveCounterattack(next);
   next = pruneOperations(next);
@@ -728,7 +748,7 @@ export function endTurn(state: GameState): GameState {
   const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
   const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
   if (controlled === SLICE_IDS.length && unsecured === 0) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
-  else if (personnel < 1200 || next.territories[next.portalTerritory].controller !== 'player') next = addEvent({ ...next, status: 'defeat' }, 'The expedition has lost operational cohesion or access to the portal.', 'danger');
+  else if (personnel < 1200 || next.territories[next.portalTerritory].controller !== 'player' || next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)) next = addEvent({ ...next, status: 'defeat' }, next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty) ? 'The expedition has remained in operational crisis too long. Command cohesion and portal access can no longer be sustained.' : 'The expedition has lost operational cohesion or access to the portal.', 'danger');
   return next;
 }
 
@@ -754,17 +774,19 @@ type LogisticsField = 'logistics';
 type EngineeringField = 'engineeringProjects';
 type InterdictionField = 'interdictionMissions';
 type PriorityField = 'logisticsPriorities';
+type StrategyField = 'enemyStrategy';
 
-type LegacyV11GameState = Omit<GameState, 'version' | PriorityField> & { version: 11 };
-type LegacyV10GameState = Omit<GameState, 'version' | InterdictionField | PriorityField> & { version: 10 };
-type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField> & { version: 9 };
-type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField> & { version: 8 };
-type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField> & { version: 7 };
-type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField> & { version: 6 };
-type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField> & { version: 5 };
-type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField> & { version: 4 };
-type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField> & { version: 3 };
-type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField> & {
+type LegacyV12GameState = Omit<GameState, 'version' | StrategyField> & { version: 12 };
+type LegacyV11GameState = Omit<GameState, 'version' | PriorityField | StrategyField> & { version: 11 };
+type LegacyV10GameState = Omit<GameState, 'version' | InterdictionField | PriorityField | StrategyField> & { version: 10 };
+type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 9 };
+type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 8 };
+type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 7 };
+type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 6 };
+type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 5 };
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -805,7 +827,7 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
-      parsed.version === 12
+      parsed.version === 13
       && parsed.taskGroups
       && parsed.enemyFormations
       && parsed.operations
@@ -817,7 +839,28 @@ export function loadGame(): GameState | null {
       && parsed.engineeringProjects
       && parsed.interdictionMissions
       && parsed.logisticsPriorities
+      && parsed.enemyStrategy
     ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v12 = localStorage.getItem(LEGACY_V12_SAVE_KEY);
+  if (v12) {
+    const parsed = JSON.parse(v12) as Partial<LegacyV12GameState>;
+    if (
+      parsed.version === 12
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+      && parsed.logistics
+      && parsed.infrastructureIncidents
+      && parsed.engineeringProjects
+      && parsed.interdictionMissions
+      && parsed.logisticsPriorities
+    ) return upgradeStrategicState(parsed as LegacyV12GameState);
   }
 
   const v11 = localStorage.getItem(LEGACY_V11_SAVE_KEY);

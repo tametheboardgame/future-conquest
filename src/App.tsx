@@ -286,7 +286,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B4D / LOGISTICS PRIORITIES</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-C / ENEMY STRATEGY AND CAMPAIGN BALANCE</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -450,6 +450,18 @@ export default function App() {
   </div>
   <div className="stage-threshold"><span>Next stage</span><strong>{escalationStage.nextThreshold === null ? 'Maximum escalation' : `${escalationStage.nextThreshold}%`}</strong></div>
 </section>
+            <section className={`view-panel enemy-strategy-panel ${state.enemyStrategy.doctrine}`}>
+              <div className="view-panel-heading"><p className="panel-label">ENEMY THEATRE COMMAND</p><strong>{Math.round(state.enemyStrategy.pressure)}%</strong></div>
+              <h3>{state.enemyStrategy.doctrine.replace('-', ' ')}</h3>
+              <div className="enemy-strategy-meter"><i style={{ width: `${state.enemyStrategy.pressure}%` }} /></div>
+              <dl>
+                <div><dt>Operational focus</dt><dd>{state.enemyStrategy.focusTerritory ? TERRITORIES[state.enemyStrategy.focusTerritory].centre : 'No single focus'}</dd></div>
+                <div><dt>Invasion momentum</dt><dd>{Math.round(state.enemyStrategy.momentum)}</dd></div>
+                <div><dt>Threatened corridors</dt><dd>{state.enemyStrategy.threatenedRouteIds.length}</dd></div>
+                <div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns} / {state.difficulty === 'story' ? 5 : state.difficulty === 'hard' ? 3 : 4} days</dd></div>
+              </dl>
+              <p>Doctrine reacts to frontline strength, logistics weakness, portal exposure and campaign momentum. Stabilising those conditions reduces pressure and crisis risk.</p>
+            </section>
             <section className="view-panel enemy-summary-panel">
               <p className="panel-label">KNOWN ENEMY STRENGTH</p>
               <div className="intelligence-kpis"><div><span>Formations</span><strong>{enemyFormations.length}</strong></div><div><span>Personnel</span><strong>{formatNumber(enemyPersonnel)}</strong></div><div><span>Armour</span><strong>{formatNumber(enemyArmour)}</strong></div></div>
@@ -530,7 +542,7 @@ export default function App() {
             <section className="view-panel campaign-overview-panel">
               <p className="panel-label">CAMPAIGN SUMMARY</p>
               <dl>
-                <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
+                <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
                 <div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>
