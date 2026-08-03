@@ -34,8 +34,9 @@ jobs:
           run_line = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == 'run: |')
           end = next(i for i in range(run_line + 1, len(lines)) if lines[i].strip() == '- name: Install dependencies')
           block = lines[run_line + 1:end]
-          indent = min(len(line) - len(line.lstrip()) for line in block if line.strip())
-          Path('/tmp/apply-viii-b4a.sh').write_text('\n'.join(line[indent:] if line.strip() else '' for line in block) + '\n')
+          prefix = '          '
+          script = '\n'.join(line[len(prefix):] if line.startswith(prefix) else line for line in block) + '\n'
+          Path('/tmp/apply-viii-b4a.sh').write_text(script)
           PY
           bash /tmp/apply-viii-b4a.sh
 
