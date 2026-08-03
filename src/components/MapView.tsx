@@ -76,6 +76,7 @@ interface MapLayers {
   enemyUnits: boolean;
   operations: boolean;
   routes: boolean;
+  supply: boolean;
   cities: boolean;
   ports: boolean;
   airports: boolean;
@@ -89,6 +90,7 @@ const MAP_LAYER_OPTIONS: Array<{ id: keyof MapLayers; label: string }> = [
   { id: 'enemyUnits', label: 'Enemy formations' },
   { id: 'operations', label: 'Operations and routes' },
   { id: 'routes', label: 'Strategic routes' },
+  { id: 'supply', label: 'Supply network' },
   { id: 'cities', label: 'Cities and hubs' },
   { id: 'ports', label: 'Ports' },
   { id: 'airports', label: 'Airports' }
@@ -102,6 +104,7 @@ const DEFAULT_MAP_LAYERS: MapLayers = {
   enemyUnits: true,
   operations: true,
   routes: true,
+  supply: true,
   cities: true,
   ports: true,
   airports: true
@@ -286,6 +289,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
   const activeLayerCount = Object.values(layers).filter(Boolean).length;
   const showStrategicNodes = zoomPercent >= 150;
   const showStrategicNodeNames = zoomPercent >= 285;
+  const selectedSupplyRouteIds = new Set(state.logistics.formationAllocations[state.selectedTaskGroupId]?.path.routeIds ?? []);
 
   const statusText = useMemo(() => {
     if (zoomPercent <= 110) return 'European theatre overview';
@@ -486,6 +490,22 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
               x2={route.x2}
               y2={route.y2}
             ><title>{route.name} · {routeState?.status ?? 'open'}</title></line>;
+          })}
+        </g>}
+
+        {layers.supply && zoomPercent >= 120 && <g className="supply-route-layer" aria-hidden="true">
+          {projectedStrategicRoutes.map(route => {
+            const flow = state.logistics.routeFlows[route.id];
+            if (!flow || flow.used <= 0) return null;
+            const selectedPath = selectedSupplyRouteIds.has(route.id);
+            return <line
+              key={`supply-${route.id}`}
+              className={`supply-route-flow ${flow.condition} ${selectedPath ? 'selected-path' : ''}`}
+              x1={route.x1}
+              y1={route.y1}
+              x2={route.x2}
+              y2={route.y2}
+            ><title>{route.name} · {flow.used}/{flow.capacity} supply throughput</title></line>;
           })}
         </g>}
 

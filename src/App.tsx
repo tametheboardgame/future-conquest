@@ -7,6 +7,7 @@ import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
 import { NODE_TYPE_LABELS, ROUTE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
 import { estimateRouteMovementDays } from './game/route-movement';
+import { SUPPLY_CONDITION_LABELS } from './game/supply-network';
 import {
   beginOperation,
   canIssueOperationalOrder,
@@ -43,8 +44,10 @@ export default function App() {
     .sort((a, b) => TERRITORIES[a.location].centre.localeCompare(TERRITORIES[b.location].centre) || a.name.localeCompare(b.name));
   const territoryDefinitions = Object.values(TERRITORIES).sort((a, b) => a.centre.localeCompare(b.centre));
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
+  const selectedGroupSupply = selectedGroup ? state.logistics.formationAllocations[selectedGroup.id] : undefined;
   const selectedOperation = selectedGroup ? getOperationForGroup(state, selectedGroup.id) : undefined;
   const selected = state.selectedTerritory ? TERRITORIES[state.selectedTerritory] : null;
+  const selectedTerritorySupply = selected ? state.logistics.territoryAllocations[selected.id] : undefined;
   const selectedNetworkNodes = selected ? nodesForTerritory(selected.id) : [];
   const selectedNetworkRoutes = selected ? routesForTerritory(selected.id) : [];
   const selectedOpenRouteCount = selectedNetworkRoutes.filter(route => state.routeStates[route.id]?.status === 'open').length;
@@ -93,6 +96,11 @@ export default function App() {
     const territoryState = state.territories[territory.id];
     return territoryState.controller === 'player' && !territoryState.supplied;
   });
+  const stressedFormations = groups.filter(group => {
+    const condition = state.logistics.formationAllocations[group.id]?.condition;
+    return condition === 'undersupplied' || condition === 'critical' || condition === 'cut-off';
+  });
+  const bottleneckRoutes = state.logistics.bottleneckRouteIds.flatMap(id => STRATEGIC_ROUTE_BY_ID[id] ? [STRATEGIC_ROUTE_BY_ID[id]] : []);
   const recentAlerts = state.events.filter(event => event.tone === 'warning' || event.tone === 'danger').slice(0, 8);
   const availableGroups = groups.filter(group => canIssueOperationalOrder(group));
 
@@ -175,7 +183,9 @@ export default function App() {
         <div><dt>Functional armour</dt><dd>{formatNumber(selectedGroup.functionalArmour)}</dd></div>
         <div><dt>Damaged armour</dt><dd>{formatNumber(selectedGroup.damagedArmour)}</dd></div>
         <div><dt>Morale</dt><dd>{Math.round(selectedGroup.morale)}%</dd></div>
-        <div><dt>Local supply</dt><dd>{Math.round(selectedGroup.supply)}%</dd></div>
+        <div><dt>Local supply stock</dt><dd>{Math.round(selectedGroup.supply)}%</dd></div>
+        <div><dt>Delivered throughput</dt><dd>{selectedGroupSupply ? `${selectedGroupSupply.delivered} / ${selectedGroupSupply.demand}` : '—'}</dd></div>
+        <div><dt>Logistics condition</dt><dd><span className={`supply-condition ${selectedGroupSupply?.condition ?? 'cut-off'}`}>{SUPPLY_CONDITION_LABELS[selectedGroupSupply?.condition ?? 'cut-off']}</span></dd></div>
         <div><dt>Status</dt><dd>{selectedGroup.status}</dd></div>
       </dl>
     </> : <><h2>No formation available</h2><p className="centre">The expedition can no longer issue operational orders.</p></>}
@@ -191,6 +201,8 @@ export default function App() {
         <div><dt>Supply value</dt><dd>{selected.supply}</dd></div>
         <div><dt>Control</dt><dd>{state.territories[selected.id].occupation}</dd></div>
         <div><dt>Supply route</dt><dd>{state.territories[selected.id].supplied ? 'connected' : 'isolated'}</dd></div>
+        <div><dt>Delivered throughput</dt><dd>{selectedTerritorySupply ? `${selectedTerritorySupply.delivered} / ${selectedTerritorySupply.demand}` : '—'}</dd></div>
+        <div><dt>Logistics condition</dt><dd>{selectedTerritorySupply ? SUPPLY_CONDITION_LABELS[selectedTerritorySupply.condition] : 'No allocation'}</dd></div>
         <div><dt>Fortification</dt><dd>{Math.round(state.territories[selected.id].fortification)}</dd></div>
         <div><dt>Infrastructure</dt><dd>{selectedNetworkNodes.length} nodes</dd></div>
         <div><dt>Route connections</dt><dd>{selectedOpenRouteCount} / {selectedNetworkRoutes.length} open</dd></div>
@@ -267,7 +279,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B2 / ROUTE MOVEMENT</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B3 / SUPPLY THROUGHPUT</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -277,7 +289,7 @@ export default function App() {
     <section className="metrics command-metrics">
       <div><span>Active personnel</span><strong>{formatNumber(totalPersonnel)}</strong></div>
       <div><span>Functional armour</span><strong>{armourPercent}%</strong></div>
-      <div><span>Network supply</span><strong>{state.supply}%</strong></div>
+      <div className={`network-supply-metric ${state.supply < 55 ? 'critical' : state.supply < 80 ? 'strained' : ''}`} title={`${state.logistics.totalDelivered} of ${state.logistics.totalDemand} supply points delivered`}><span>Network supply</span><strong>{state.logistics.networkEfficiency}%</strong></div>
       <div><span>Active operations</span><strong>{operations.length}</strong></div>
       <div><span>Territories</span><strong>{controlled} / {territoryDefinitions.length}</strong></div>
       <div className="escalation"><span>Global escalation · Stage {escalationStage.id} · {escalationLabel}</span><div className="meter"><i style={{ width: `${state.escalation}%` }} /></div><strong>{Math.round(state.escalation)}</strong></div>
@@ -394,6 +406,7 @@ export default function App() {
                 <div><dt>Terrain</dt><dd>{TERRAIN_LABELS[territory.terrain]}</dd></div>
                 <div><dt>Supply value</dt><dd>{territory.supply}</dd></div>
                 <div><dt>Supply route</dt><dd>{territoryState.supplied ? 'Connected' : 'Isolated'}</dd></div>
+                <div><dt>Throughput</dt><dd>{state.logistics.territoryAllocations[territory.id] ? `${state.logistics.territoryAllocations[territory.id].delivered}/${state.logistics.territoryAllocations[territory.id].demand}` : '0/0'}</dd></div>
                 <div><dt>Fortification</dt><dd>{Math.round(territoryState.fortification)}</dd></div>
                 {territoryState.controller === 'player' ? <>
                   <div><dt>Occupation need</dt><dd>{formatNumber(occupationRequirement(territory.id))}</dd></div>
@@ -464,9 +477,25 @@ export default function App() {
                 <dl><div><dt>Personnel</dt><dd>{formatNumber(formation.personnel)}</dd></div><div><dt>Armour</dt><dd>{formatNumber(formation.armour)}</dd></div><div><dt>Readiness</dt><dd>{Math.round(formation.readiness)}%</dd></div><div><dt>Entrenchment</dt><dd>{Math.round(formation.entrenchment)}%</dd></div></dl>
               </article>)}</div>
             </section>
+            <section className="view-panel logistics-network-panel">
+              <div className="view-panel-heading"><p className="panel-label">LOGISTICS NETWORK</p><strong>{state.logistics.networkEfficiency}%</strong></div>
+              <div className="logistics-summary-grid">
+                <div><span>Source capacity</span><strong>{state.logistics.sourceUsed}/{state.logistics.sourceCapacity}</strong></div>
+                <div><span>Total demand</span><strong>{state.logistics.totalDemand}</strong></div>
+                <div><span>Delivered</span><strong>{state.logistics.totalDelivered}</strong></div>
+                <div><span>Bottlenecks</span><strong>{bottleneckRoutes.length}</strong></div>
+              </div>
+              {bottleneckRoutes.length ? <div className="logistics-list">{bottleneckRoutes.map(route => {
+                const flow = state.logistics.routeFlows[route.id];
+                return <button key={route.id} onClick={() => openTerritoryOnMap(route.toTerritoryId)}><span><strong>{route.name}</strong><small>{flow.used}/{flow.capacity} throughput · {flow.condition}</small></span><b>{Math.round(flow.utilisation)}%</b></button>;
+              })}</div> : <p className="empty-state">The controlled network currently has no saturated strategic corridor.</p>}
+            </section>
             <section className="view-panel warning-panel">
-              <div className="view-panel-heading"><p className="panel-label">SUPPLY WARNINGS</p><strong>{supplyDisruptions.length}</strong></div>
-              {supplyDisruptions.length ? <div className="intelligence-list">{supplyDisruptions.map(territory => <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>Controlled but isolated</small></span><b>RECONNECT</b></button>)}</div> : <p className="empty-state">All controlled territories are connected to the supply network.</p>}
+              <div className="view-panel-heading"><p className="panel-label">SUPPLY WARNINGS</p><strong>{supplyDisruptions.length + stressedFormations.length}</strong></div>
+              {(supplyDisruptions.length || stressedFormations.length) ? <div className="intelligence-list">
+                {stressedFormations.map(group => { const allocation = state.logistics.formationAllocations[group.id]; return <button key={group.id} onClick={() => openGroupOnMap(group.id)}><span><strong>{group.name}</strong><small>{TERRITORIES[group.location].centre} · {allocation ? SUPPLY_CONDITION_LABELS[allocation.condition] : 'Cut off'}</small></span><b>{allocation?.ratio ?? 0}%</b></button>; })}
+                {supplyDisruptions.map(territory => <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>Controlled but isolated</small></span><b>RECONNECT</b></button>)}
+              </div> : <p className="empty-state">All formations and controlled territories are receiving adequate throughput.</p>}
             </section>
             <section className="view-panel alert-panel">
               <div className="view-panel-heading"><p className="panel-label">RECENT ALERTS</p><strong>{recentAlerts.length}</strong></div>
@@ -493,6 +522,8 @@ export default function App() {
                 <div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>
                 <div><dt>Unsecured territories</dt><dd>{unsecured}</dd></div>
                 <div><dt>Supply disruptions</dt><dd>{isolated}</dd></div>
+                <div><dt>Network throughput</dt><dd>{state.logistics.totalDelivered} / {state.logistics.totalDemand}</dd></div>
+                <div><dt>Route bottlenecks</dt><dd>{bottleneckRoutes.length}</dd></div>
               </dl>
             </section>
             <section className="view-panel command-reference-panel">

@@ -14,6 +14,14 @@ import type {
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
+export const SUPPLY_CONDITION_LABELS: Record<SupplyCondition, string> = {
+  sustained: 'Sustained',
+  strained: 'Strained',
+  undersupplied: 'Undersupplied',
+  critical: 'Critical',
+  'cut-off': 'Cut off'
+};
+
 const routeStatusFactor: Record<string, number> = {
   open: 1,
   damaged: 0.62,

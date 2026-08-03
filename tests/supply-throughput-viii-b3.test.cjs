@@ -78,7 +78,7 @@ test('parallel routes share supply demand and preserve throughput when one corri
   state = refreshSupplyNetwork(state);
   assert.equal(state.logistics.routeFlows['R-BRUSSELS-AMSTERDAM'].capacity, 0);
   assert.ok(state.logistics.routeFlows['R-ANTWERP-ROTTERDAM-ROAD'].used > 0);
-  assert.ok(state.logistics.totalDelivered < baseline);
+  assert.equal(state.logistics.totalDelivered, baseline);
 });
 
 test('route damage reduces effective daily supply capacity', () => {

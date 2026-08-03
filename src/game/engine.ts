@@ -2,6 +2,7 @@ import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
 import { STRATEGIC_ROUTE_BY_ID } from './strategic-network-data';
 import { createRouteStates } from './strategic-network';
+import { createEmptyLogisticsState, refreshSupplyNetwork } from './supply-network';
 import {
   chooseOperationalRoute,
   movementProgressForDay,
@@ -19,7 +20,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.7';
+const SAVE_KEY = 'future-conquest-slice-v0.8';
+const LEGACY_V7_SAVE_KEY = 'future-conquest-slice-v0.7';
 const LEGACY_V6_SAVE_KEY = 'future-conquest-slice-v0.6';
 const LEGACY_V5_SAVE_KEY = 'future-conquest-slice-v0.5';
 const LEGACY_V4_SAVE_KEY = 'future-conquest-slice-v0.4';
@@ -66,35 +68,8 @@ export function getOperationAtTarget(state: GameState, territoryId: string): Ope
   return Object.values(state.operations).find(operation => operation.target === territoryId);
 }
 
-function suppliedTerritories(state: GameState): Set<string> {
-  const supplied = new Set<string>();
-  if (state.territories[state.portalTerritory]?.controller !== 'player' || state.territories[state.portalTerritory]?.occupation === 'unsecured') return supplied;
-  const queue = [state.portalTerritory];
-  supplied.add(state.portalTerritory);
-  while (queue.length) {
-    const current = queue.shift()!;
-    for (const neighbour of TERRITORIES[current].neighbours) {
-      if (!supplied.has(neighbour) && state.territories[neighbour]?.controller === 'player' && state.territories[neighbour]?.occupation !== 'unsecured') {
-        supplied.add(neighbour);
-        queue.push(neighbour);
-      }
-    }
-  }
-  return supplied;
-}
-
 function refreshSupply(state: GameState): GameState {
-  const connected = suppliedTerritories(state);
-  const territories = structuredClone(state.territories);
-  for (const [id, territory] of Object.entries(territories)) territory.supplied = connected.has(id);
-  const personnel = Object.values(state.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
-  const capacity = [...connected].reduce((sum, id) => {
-    const territory = territories[id];
-    const occupationFactor = territory.occupation === 'unsecured' ? 0 : territory.occupation === 'administered' ? 1 : territory.occupation === 'controlled' ? 0.72 : 0.42;
-    return sum + TERRITORIES[id].supply * occupationFactor;
-  }, 0);
-  const supply = clamp(Math.round((capacity * 1150) / Math.max(1, personnel) * 100), 12, 100);
-  return { ...state, territories, supply };
+  return refreshSupplyNetwork(state);
 }
 
 function initialTaskGroups(portalTerritory: string): Record<string, TaskGroup> {
@@ -145,7 +120,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 7,
+    version: 8,
     seed,
     difficulty,
     turn: 1,
@@ -159,6 +134,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     escalation: initialEscalation,
     ...strategicState,
     routeStates: createRouteStates(),
+    logistics: createEmptyLogisticsState(1),
     supply: 100,
     woundedPool: 0,
     operations: {},
@@ -542,25 +518,59 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
   }
 
   next = refreshSupply(next);
+  const stressedGroups: string[] = [];
   for (const group of Object.values(next.taskGroups)) {
-    const connected = next.territories[group.location].supplied;
-    group.supply = clamp(group.supply + (connected ? Math.max(3, Math.round(next.supply / 14)) : -16), 0, 100);
-    group.morale = clamp(group.morale + (connected && group.status !== 'attacking' ? 1 : group.supply < 30 ? -4 : 0), 5, 100);
-    if (!connected && group.supply < 20) {
+    const allocation = next.logistics.formationAllocations[group.id];
+    const condition = allocation?.condition ?? 'cut-off';
+    const deliveryRatio = (allocation?.ratio ?? 0) / 100;
+    const stockChange = condition === 'sustained'
+      ? 7
+      : condition === 'strained'
+        ? 1
+        : condition === 'undersupplied'
+          ? -7
+          : condition === 'critical'
+            ? -13
+            : -19;
+    group.supply = clamp(group.supply + stockChange, 0, 100);
+    group.morale = clamp(
+      group.morale + (
+        (condition === 'sustained' || condition === 'strained') && group.status !== 'attacking'
+          ? 1
+          : condition === 'critical'
+            ? -2
+            : condition === 'cut-off'
+              ? -4
+              : 0
+      ),
+      5,
+      100
+    );
+    if (condition === 'undersupplied' || condition === 'critical' || condition === 'cut-off') stressedGroups.push(group.name);
+    if (condition === 'cut-off' && group.supply < 20) {
       const attrition = Math.max(2, Math.round(group.personnel * 0.0025));
       group.personnel = Math.max(0, group.personnel - attrition);
-      next = addEvent(next, `${group.name} is isolated in ${TERRITORIES[group.location].centre}; ${attrition} personnel lost to attrition and desertion.`, 'danger');
+      next = addEvent(next, `${group.name} is cut off in ${TERRITORIES[group.location].centre}; ${attrition} personnel lost to attrition and desertion.`, 'danger');
     }
-    if (group.status === 'recovering' && connected) group.status = 'ready';
-    const repair = connected ? Math.min(group.damagedArmour, Math.max(2, Math.round((next.supply + TERRITORIES[group.location].supply * 8) / 12))) : 0;
+    if (group.status === 'recovering' && deliveryRatio >= 0.65) group.status = 'ready';
+    const repair = deliveryRatio >= 0.4
+      ? Math.min(group.damagedArmour, Math.max(1, Math.round((deliveryRatio * 10 + TERRITORIES[group.location].supply * 2.5) * difficultyRules[next.difficulty].recovery)))
+      : 0;
     group.damagedArmour -= repair;
     group.functionalArmour += repair;
+  }
+
+  if (next.logistics.bottleneckRouteIds.length) {
+    const names = next.logistics.bottleneckRouteIds.slice(0, 3).map(id => STRATEGIC_ROUTE_BY_ID[id]?.name ?? id).join(', ');
+    next = addEvent(next, `Supply throughput is constrained by ${names}. Network delivery is ${next.logistics.networkEfficiency}% of demand.`, next.logistics.networkEfficiency < 55 ? 'danger' : 'warning');
+  } else if (stressedGroups.length) {
+    next = addEvent(next, `${stressedGroups.join(', ')} are isolated from adequate supply and received less than their daily logistics demand.`, 'warning');
   }
 
   const administered = Object.values(next.territories).filter(territory => territory.occupation === 'administered').length;
   const recovery = Math.min(next.woundedPool, Math.round((18 + administered * 7 + next.supply * 0.22) * difficultyRules[next.difficulty].recovery));
   if (recovery > 0) {
-    const candidates = Object.values(next.taskGroups).filter(group => next.territories[group.location].supplied && group.personnel < group.maxPersonnel);
+    const candidates = Object.values(next.taskGroups).filter(group => (next.logistics.formationAllocations[group.id]?.ratio ?? 0) >= 65 && group.personnel < group.maxPersonnel);
     candidates.sort((a, b) => a.personnel / a.maxPersonnel - b.personnel / b.maxPersonnel);
     let remaining = recovery;
     for (const group of candidates) {
@@ -683,6 +693,7 @@ export function endTurn(state: GameState): GameState {
     enemyFormations: structuredClone(state.enemyFormations),
     operations: structuredClone(state.operations),
     routeStates: structuredClone(state.routeStates),
+    logistics: structuredClone(state.logistics),
     events: [...state.events]
   };
   next = resolveMovement(next);
@@ -719,12 +730,14 @@ type StrategicField =
   | 'enemyOrders'
   | 'intelligenceReports';
 type NetworkField = 'routeStates';
+type LogisticsField = 'logistics';
 
-type LegacyV6GameState = Omit<GameState, 'version'> & { version: 6 };
-type LegacyV5GameState = Omit<GameState, 'version' | NetworkField> & { version: 5 };
-type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 4 };
-type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 3 };
-type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField> & {
+type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField> & { version: 7 };
+type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField> & { version: 6 };
+type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField> & { version: 5 };
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -765,7 +778,7 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
-      parsed.version === 7
+      parsed.version === 8
       && parsed.taskGroups
       && parsed.enemyFormations
       && parsed.operations
@@ -774,6 +787,21 @@ export function loadGame(): GameState | null {
       && parsed.intelligenceReports
       && parsed.routeStates
     ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v7 = localStorage.getItem(LEGACY_V7_SAVE_KEY);
+  if (v7) {
+    const parsed = JSON.parse(v7) as Partial<LegacyV7GameState>;
+    if (
+      parsed.version === 7
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+    ) return upgradeStrategicState(parsed as LegacyV7GameState);
   }
 
   const v6 = localStorage.getItem(LEGACY_V6_SAVE_KEY);
@@ -808,17 +836,13 @@ export function loadGame(): GameState | null {
   const v4 = localStorage.getItem(LEGACY_V4_SAVE_KEY);
   if (v4) {
     const parsed = JSON.parse(v4) as Partial<LegacyV4GameState>;
-    if (parsed.version === 4 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) {
-      return upgradeStrategicState(parsed as LegacyV4GameState);
-    }
+    if (parsed.version === 4 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return upgradeStrategicState(parsed as LegacyV4GameState);
   }
 
   const prior = localStorage.getItem(LEGACY_V3_SAVE_KEY);
   if (prior) {
     const parsed = JSON.parse(prior) as Partial<LegacyV3GameState>;
-    if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) {
-      return upgradeStrategicState({ ...(parsed as LegacyV3GameState), version: 4 } as LegacyV4GameState);
-    }
+    if (parsed.version === 3 && parsed.taskGroups && parsed.enemyFormations && parsed.operations) return upgradeStrategicState({ ...(parsed as LegacyV3GameState), version: 4 } as LegacyV4GameState);
   }
 
   const legacy = localStorage.getItem(LEGACY_V2_SAVE_KEY);
@@ -833,6 +857,7 @@ export const __testOnly = {
   refreshSupply,
   resolveMovement,
   resolveOperations,
+  resolveOccupationAndLogistics,
   pruneOperations,
   resolveCounterattack: (state: GameState) => resolveCounterattack(state, true)
 };
