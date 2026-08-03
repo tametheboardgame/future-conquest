@@ -4,6 +4,7 @@ import { normaliseTaskGroupOrderRoutes } from './route-movement';
 import { refreshSupplyNetwork } from './supply-network';
 import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import { normaliseEngineeringState } from './engineering-projects';
+import { normaliseInterdictionState } from './interdiction-missions';
 import type {
   Difficulty,
   EnemyFormation,
@@ -178,7 +179,8 @@ type StrategicField =
   | 'routeStates'
   | 'logistics'
   | 'infrastructureIncidents'
-  | 'engineeringProjects';
+  | 'engineeringProjects'
+  | 'interdictionMissions';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -191,6 +193,7 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   logistics?: GameState['logistics'];
   infrastructureIncidents?: GameState['infrastructureIncidents'];
   engineeringProjects?: GameState['engineeringProjects'];
+  interdictionMissions?: GameState['interdictionMissions'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -199,13 +202,15 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const routeStates = normaliseRouteStates(state.routeStates);
   const routedTaskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
   const engineering = normaliseEngineeringState(state.engineeringProjects, routedTaskGroups, routeStates);
+  const interdiction = normaliseInterdictionState(state.interdictionMissions, engineering.taskGroups, { territories: state.territories, routeStates });
   const upgraded = {
     ...state,
-    version: 10,
-    taskGroups: engineering.taskGroups,
+    version: 11,
+    taskGroups: interdiction.taskGroups,
     routeStates,
     infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
     engineeringProjects: engineering.projects,
+    interdictionMissions: interdiction.missions,
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)

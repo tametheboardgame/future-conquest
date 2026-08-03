@@ -9,9 +9,11 @@ export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountai
 export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
 export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'critical' | 'cut-off';
 export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
-export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'combat';
+export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'player-interdiction' | 'combat';
 export type EngineeringAllocation = 25 | 50 | 75 | 100;
 export type EngineeringProjectStatus = 'active' | 'completed' | 'cancelled';
+export type InterdictionIntensity = 25 | 50 | 75 | 100;
+export type InterdictionMissionStatus = 'active' | 'succeeded' | 'failed' | 'cancelled';
 
 export interface TerritoryDefinition {
   id: string;
@@ -51,7 +53,7 @@ export interface TaskGroup {
   damagedArmour: number;
   morale: number;
   supply: number;
-  status: 'ready' | 'moving' | 'attacking' | 'garrison' | 'recovering' | 'engineering';
+  status: 'ready' | 'moving' | 'attacking' | 'garrison' | 'recovering' | 'engineering' | 'interdicting';
   order?: TaskGroupOrder;
 }
 
@@ -203,6 +205,20 @@ export interface EngineeringProject {
   returnStatus: 'ready' | 'garrison';
 }
 
+export interface InterdictionMission {
+  id: string;
+  routeId: string;
+  assignedTaskGroupId: string;
+  createdTurn: number;
+  progress: number;
+  intensity: InterdictionIntensity;
+  supplySpent: number;
+  casualties: number;
+  damageInflicted: number;
+  status: InterdictionMissionStatus;
+  returnStatus: 'ready' | 'garrison';
+}
+
 export interface InfrastructureIncident {
   id: string;
   turn: number;
@@ -220,7 +236,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 10;
+  version: 11;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -241,6 +257,7 @@ export interface GameState {
   logistics: LogisticsState;
   infrastructureIncidents?: InfrastructureIncident[];
   engineeringProjects: EngineeringProject[];
+  interdictionMissions: InterdictionMission[];
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;
