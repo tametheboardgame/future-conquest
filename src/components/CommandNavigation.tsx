@@ -1,4 +1,4 @@
-export type CommandView = 'map' | 'forces' | 'operations' | 'territories' | 'intelligence' | 'campaign';
+export type CommandView = 'map' | 'forces' | 'operations' | 'territories' | 'engineering' | 'intelligence' | 'campaign';
 
 interface Props {
   active: CommandView;
@@ -11,6 +11,7 @@ const ITEMS: Array<{ id: CommandView; code: string; label: string }> = [
   { id: 'forces', code: 'FRC', label: 'Forces' },
   { id: 'operations', code: 'OPS', label: 'Operations' },
   { id: 'territories', code: 'TER', label: 'Territories' },
+  { id: 'engineering', code: 'ENG', label: 'Engineering' },
   { id: 'intelligence', code: 'INT', label: 'Intelligence' },
   { id: 'campaign', code: 'SYS', label: 'Campaign' }
 ];

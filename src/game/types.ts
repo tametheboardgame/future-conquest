@@ -10,6 +10,8 @@ export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
 export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'critical' | 'cut-off';
 export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
 export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'combat';
+export type EngineeringAllocation = 25 | 50 | 75 | 100;
+export type EngineeringProjectStatus = 'active' | 'completed' | 'cancelled';
 
 export interface TerritoryDefinition {
   id: string;
@@ -49,7 +51,7 @@ export interface TaskGroup {
   damagedArmour: number;
   morale: number;
   supply: number;
-  status: 'ready' | 'moving' | 'attacking' | 'garrison' | 'recovering';
+  status: 'ready' | 'moving' | 'attacking' | 'garrison' | 'recovering' | 'engineering';
   order?: TaskGroupOrder;
 }
 
@@ -187,6 +189,20 @@ export interface LogisticsState {
   bottleneckRouteIds: string[];
 }
 
+export interface EngineeringProject {
+  id: string;
+  routeId: string;
+  assignedTaskGroupId: string;
+  createdTurn: number;
+  startingCondition: number;
+  targetCondition: number;
+  progress: number;
+  allocation: EngineeringAllocation;
+  supplySpent: number;
+  status: EngineeringProjectStatus;
+  returnStatus: 'ready' | 'garrison';
+}
+
 export interface InfrastructureIncident {
   id: string;
   turn: number;
@@ -204,7 +220,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 9;
+  version: 10;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -224,6 +240,7 @@ export interface GameState {
   routeStates: Record<string, StrategicRouteState>;
   logistics: LogisticsState;
   infrastructureIncidents?: InfrastructureIncident[];
+  engineeringProjects: EngineeringProject[];
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;

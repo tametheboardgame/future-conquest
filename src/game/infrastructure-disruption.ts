@@ -27,7 +27,7 @@ export function routeStatusForCondition(condition: number): StrategicRouteState[
   return 'open';
 }
 
-function routeCapacityModifier(condition: number): number {
+export function routeCapacityModifierForCondition(condition: number): number {
   if (condition <= 0) return 0;
   return Math.round(clamp(0.2 + condition / 125, 0.2, 1) * 100) / 100;
 }
@@ -71,7 +71,7 @@ export function applyInfrastructureDamage(
   const condition = clamp(Math.round(routeStates[routeId].condition - severity), 0, 100);
   routeStates[routeId].condition = condition;
   routeStates[routeId].status = routeStatusForCondition(condition);
-  routeStates[routeId].capacityModifier = routeCapacityModifier(condition);
+  routeStates[routeId].capacityModifier = routeCapacityModifierForCondition(condition);
 
   const causeLabel = cause === 'resistance'
     ? 'Resistance sabotage'
@@ -103,28 +103,28 @@ export function resolveInfrastructureRecovery(state: GameState): GameState {
     if (!current || current.condition >= 100) continue;
     const from = state.territories[route.fromTerritoryId];
     const to = state.territories[route.toTerritoryId];
-    if (!from || !to || from.controller !== 'player' || to.controller !== 'player') continue;
-    if (from.occupation === 'unsecured' || to.occupation === 'unsecured') continue;
+    if (
+      !from
+      || !to
+      || from.controller !== 'player'
+      || to.controller !== 'player'
+      || from.occupation !== 'administered'
+      || to.occupation !== 'administered'
+      || !from.supplied
+      || !to.supplied
+    ) continue;
 
-    const securedEndpoints = [from, to].filter(territory => territory.occupation === 'administered').length;
-    const suppliedEndpoints = [from, to].filter(territory => territory.supplied).length;
-    const engineeringPresence = Object.values(state.taskGroups).some(group =>
-      group.personnel > 0
-      && (group.location === route.fromTerritoryId || group.location === route.toTerritoryId)
-      && (group.status === 'ready' || group.status === 'garrison')
-    );
-    const repair = 1 + securedEndpoints + suppliedEndpoints + (engineeringPresence ? 1 : 0);
     const beforeStatus = current.status;
-    current.condition = clamp(current.condition + repair, 0, 100);
+    current.condition = clamp(current.condition + 1, 0, 100);
     current.status = routeStatusForCondition(current.condition);
-    current.capacityModifier = routeCapacityModifier(current.condition);
+    current.capacityModifier = routeCapacityModifierForCondition(current.condition);
     if (beforeStatus !== current.status || current.condition === 100) repaired.push(route.name);
   }
 
   if (!repaired.length) return { ...state, routeStates };
   return appendEvent(
     { ...state, routeStates },
-    `Infrastructure crews restored ${repaired.slice(0, 3).join(', ')}${repaired.length > 3 ? ` and ${repaired.length - 3} other corridor${repaired.length - 3 === 1 ? '' : 's'}` : ''}.`,
+    `Routine maintenance restored ${repaired.slice(0, 3).join(', ')}${repaired.length > 3 ? ` and ${repaired.length - 3} other corridor${repaired.length - 3 === 1 ? '' : 's'}` : ''}.`,
     'good'
   );
 }

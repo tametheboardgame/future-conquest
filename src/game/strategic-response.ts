@@ -3,6 +3,7 @@ import { normaliseRouteStates } from './strategic-network';
 import { normaliseTaskGroupOrderRoutes } from './route-movement';
 import { refreshSupplyNetwork } from './supply-network';
 import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
+import { normaliseEngineeringState } from './engineering-projects';
 import type {
   Difficulty,
   EnemyFormation,
@@ -176,7 +177,8 @@ type StrategicField =
   | 'intelligenceReports'
   | 'routeStates'
   | 'logistics'
-  | 'infrastructureIncidents';
+  | 'infrastructureIncidents'
+  | 'engineeringProjects';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -188,19 +190,22 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   routeStates?: GameState['routeStates'];
   logistics?: GameState['logistics'];
   infrastructureIncidents?: GameState['infrastructureIncidents'];
+  engineeringProjects?: GameState['engineeringProjects'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
   const defaults = createStrategicState(state.seed, state.difficulty, state.escalation);
   const previousVersion = state.version;
   const routeStates = normaliseRouteStates(state.routeStates);
-  const taskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
+  const routedTaskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
+  const engineering = normaliseEngineeringState(state.engineeringProjects, routedTaskGroups, routeStates);
   const upgraded = {
     ...state,
-    version: 9,
-    taskGroups,
+    version: 10,
+    taskGroups: engineering.taskGroups,
     routeStates,
     infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
+    engineeringProjects: engineering.projects,
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)
