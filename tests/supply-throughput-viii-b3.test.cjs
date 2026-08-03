@@ -139,3 +139,10 @@ test('the interface exposes throughput, bottlenecks and the version 8 release ma
   assert.match(persistence, /saveVersion:\s*8/);
   assert.match(css, /\.supply-route-flow\.overloaded/);
 });
+
+test('supply-flow overlays remain non-interactive above the operational map', () => {
+  const map = read('src/components/MapView.tsx');
+  const css = read('src/supply-network.css');
+  assert.match(map, /className="supply-route-layer" aria-hidden="true"/);
+  assert.match(css, /\.supply-route-layer,\s*\n\.supply-route-layer \* \{\s*\n\s*pointer-events:\s*none/);
+});
