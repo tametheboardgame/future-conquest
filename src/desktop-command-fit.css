@@ -22,20 +22,6 @@
   padding: 10px;
 }
 
-.priority-order-action.map {
-  position: absolute;
-  z-index: 8;
-  left: 18px;
-  bottom: 18px;
-  display: grid;
-  grid-template-columns: minmax(210px, 1fr) auto;
-  align-items: stretch;
-  gap: 12px;
-  width: min(430px, calc(100% - 36px));
-  padding: 11px 12px;
-  backdrop-filter: blur(10px);
-}
-
 .priority-order-copy {
   display: grid;
   min-width: 0;
@@ -87,12 +73,6 @@
   color: #dbe8ee;
   padding: 7px 8px;
   font: 500 9px IBM Plex Mono, monospace;
-}
-
-.priority-order-action.map .primary {
-  width: auto;
-  min-width: 142px;
-  padding-inline: 14px;
 }
 
 @media (min-width: 901px) and (min-height: 720px) {
@@ -213,8 +193,39 @@
   }
 }
 
+
+
+.map-operation-confirmation {
+  cursor: pointer;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, .5));
+  outline: none;
+}
+
+.map-operation-confirmation rect {
+  fill: rgba(92, 48, 36, .96);
+  stroke: #ff9c77;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-operation-confirmation text {
+  fill: #fff3ed;
+  font: 700 11px IBM Plex Mono, monospace;
+  letter-spacing: .035em;
+  text-anchor: middle;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.map-operation-confirmation:hover rect,
+.map-operation-confirmation:focus-visible rect {
+  fill: #8a4935;
+  stroke: #ffd0bb;
+  stroke-width: 2;
+}
+
 @media (max-width: 900px) {
-  .priority-order-action.map {
+  .map-operation-confirmation {
     display: none;
   }
 }
