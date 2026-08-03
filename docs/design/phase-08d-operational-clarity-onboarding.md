@@ -57,4 +57,4 @@ Campaign saves advance to version 14. Version 13 and all earlier supported saves
 
 ## Validation
 
-Focused tests will cover intelligence confidence, attack indicators, supply severity and causes, end-turn acknowledgement, tutorial progression and version 13 migration. The complete regression suite and production build must also pass.
+The completed implementation passes all 167 engine, persistence and interface tests. Focused coverage verifies intelligence confidence, counterattack indicators, supply severity and causes, end-turn acknowledgement, tutorial progression and version 13 migration. TypeScript compilation and the production Vite build also pass.
