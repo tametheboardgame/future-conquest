@@ -7,6 +7,7 @@ const { STRATEGIC_ROUTE_BY_ID } = require('../.test-dist/strategic-network-data.
 const {
   availableRoutesBetween,
   estimateRouteMovementDays,
+  movementProgressForDay,
   recommendRoute
 } = require('../.test-dist/route-movement.js');
 const { getAdjacentOrderTargets, getOrderTargetInfo } = require('../.test-dist/order-targeting.js');
@@ -55,6 +56,18 @@ test('the recommended corridor favours travel time then effective capacity', () 
   const recommended = recommendRoute(state.routeStates, 'BE-01', 'NL-01', group);
   assert.equal(recommended.id, 'R-BRUSSELS-AMSTERDAM');
   assert.equal(estimateRouteMovementDays(recommended, state.routeStates[recommended.id], group), 1);
+});
+
+test('route damage and heavy-equipment restrictions reduce daily movement progress', () => {
+  const route = STRATEGIC_ROUTE_BY_ID['R-LYON-GOTTHARD'];
+  assert.equal(route.heavyArmour, false);
+  const open = { status: 'open', condition: 100, capacityModifier: 1 };
+  const damaged = { status: 'damaged', condition: 45, capacityModifier: .65 };
+  const infantryProgress = movementProgressForDay(route, open, { functionalArmour: 0, supply: 100 });
+  const armouredProgress = movementProgressForDay(route, open, { functionalArmour: 1000, supply: 100 });
+  const damagedProgress = movementProgressForDay(route, damaged, { functionalArmour: 1000, supply: 100 });
+  assert.ok(armouredProgress < infantryProgress);
+  assert.ok(damagedProgress < armouredProgress);
 });
 
 test('movement orders persist the selected route and resolve on route timing', () => {
