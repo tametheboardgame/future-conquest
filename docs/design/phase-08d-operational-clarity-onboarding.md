@@ -19,7 +19,7 @@ Enemy map markers use intelligence confidence rather than perfect information:
 - **Activity** — unidentified enemy movement or concentration.
 - **Stale** — a previously observed position that may no longer be accurate.
 
-Planned counterattacks, active combat and likely enemy concentration receive distinct map indicators. Selecting a warning focuses the relevant territory and exposes nearby friendly formations, expected timing and available reinforcement routes.
+Planned counterattacks, recently resolved combat and likely enemy concentration receive distinct map indicators. Selecting a warning focuses the relevant territory and exposes nearby friendly formations, expected timing and available reinforcement routes. Recently completed concentration and reposition orders remain visible for one campaign day so enemy movement does not disappear during resolution.
 
 ## D2 — Supply clarity
 
@@ -57,4 +57,4 @@ Campaign saves advance to version 14. Version 13 and all earlier supported saves
 
 ## Validation
 
-The completed implementation passes all 167 engine, persistence and interface tests. Focused coverage verifies intelligence confidence, counterattack indicators, supply severity and causes, end-turn acknowledgement, tutorial progression and version 13 migration. TypeScript compilation and the production Vite build also pass.
+The completed implementation passes all 168 engine, persistence and interface tests. Focused coverage verifies intelligence confidence, planned and recently resolved counterattack indicators, supply severity and causes, end-turn acknowledgement, achievable tutorial progression and version 13 migration. TypeScript compilation and the production Vite build also pass.
