@@ -41,9 +41,9 @@ The tutorial is an optional campaign layer rather than a separate hard-coded sce
 The guided sequence covers:
 
 1. Selecting and inspecting a formation.
-2. Selecting an adjacent destination and issuing movement.
-3. Beginning or reinforcing an operation.
-4. Securing captured territory with a garrison.
+2. Beginning the first operation against an adjacent enemy territory.
+3. Resolving the offensive and securing captured territory with a garrison.
+4. Reinforcing the captured position with a movement order.
 5. Opening Logistics and identifying a supply route or bottleneck.
 6. Responding to enemy activity or a threatened territory.
 7. Opening Engineering or Infrastructure when a route is damaged.

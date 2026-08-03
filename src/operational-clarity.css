@@ -110,3 +110,20 @@
   .supply-diagnostic-copy { white-space: normal; }
   .tutorial-overlay { right: 10px; bottom: 10px; width: calc(100vw - 20px); }
 }
+
+
+.enemy-threat-list button.recent-combat { border-color: #c95d68; opacity: .9; }
+.territory.recent-combat { stroke: #d84d59 !important; stroke-width: 5px !important; stroke-dasharray: 5 4; }
+.threat-marker.recent-combat circle { fill: rgba(180,44,57,.28); stroke: #e46872; }
+.logistics-command-stack { display: grid; gap: 12px; }
+.supply-diagnostics-panel { border-left: 4px solid rgba(255,255,255,.18); }
+.supply-diagnostics-panel.warning { border-left-color: #e8bd5a; }
+.supply-diagnostics-panel.danger { border-left-color: #ee7e52; }
+.supply-diagnostics-panel.critical { border-left-color: #ff4f59; }
+.supply-diagnostic-list { display: grid; gap: 8px; margin-top: 10px; }
+.supply-diagnostic-list article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.supply-diagnostic-list article.warning { border-left: 3px solid #e8bd5a; }
+.supply-diagnostic-list article.danger { border-left: 3px solid #ee7e52; }
+.supply-diagnostic-list article.critical { border-left: 3px solid #ff4f59; }
+.supply-diagnostic-list p { margin: 3px 0 0; color: #b9c8d8; }
+@media (max-width: 700px) { .supply-diagnostic-list article { grid-template-columns: 1fr; } }

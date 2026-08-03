@@ -57,7 +57,7 @@ test('dedicated views expose the current strategic data without changing game st
 
   assert.match(app, /frontlineTerritories/);
   assert.match(app, /supplyDisruptions/);
-  assert.match(app, /enemyFormations/);
+  assert.match(app, /enemyContacts/);
   assert.match(app, /occupationRequirement\(territory\.id\)/);
   assert.match(app, /openTerritoryOnMap/);
   assert.doesNotMatch(app, /version:\s*5/);

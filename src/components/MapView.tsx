@@ -277,7 +277,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
   const enemyContacts = getEnemyContacts(state);
   const threatenedTerritories = getThreatenedTerritories(state);
   const threatByTerritory = new Map(threatenedTerritories.map(threat => [threat.territoryId, threat]));
-  const enemyMovementOrders = state.enemyOrders.filter(order => order.status !== 'completed' && order.origin && anchors[order.origin] && anchors[order.target] && (order.type === 'counterattack' || order.type === 'concentrate' || order.type === 'reposition'));
+  const enemyMovementOrders = state.enemyOrders.filter(order => (order.status !== 'completed' || state.turn - order.turn <= 1) && order.origin && anchors[order.origin] && anchors[order.target] && (order.type === 'counterattack' || order.type === 'concentrate' || order.type === 'reposition'));
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
@@ -478,7 +478,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
             strokeWidth: 3,
             strokeDasharray: '8 5'
           } : undefined;
-          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''} ${threat ? 'threatened' : ''} ${threat?.stage === 'under-attack' ? 'under-attack' : ''}`} />;
+          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''} ${threat ? 'threatened' : ''} ${threat?.stage === 'under-attack' ? 'under-attack' : ''} ${threat?.stage === 'recent-combat' ? 'recent-combat' : ''}`} />;
         })}
 
         {layers.routes && zoomPercent >= 120 && <g className="strategic-route-layer" aria-hidden="true">

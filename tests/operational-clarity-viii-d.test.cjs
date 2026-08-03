@@ -45,6 +45,15 @@ test('planned counterattacks create visible threatened-territory warnings', () =
   assert.equal(threats[0].stage, 'imminent');
 });
 
+
+test('resolved counterattacks remain visible as recent combat for after-action response', () => {
+  const state = newGame(407, 'standard', false);
+  const target = state.portalTerritory;
+  state.enemyOrders = [{ id: 'EO-RECENT', turn: state.turn, type: 'counterattack', origin: require('../.test-dist/data.js').TERRITORIES[target].neighbours[0], target, executeTurn: state.turn, status: 'completed', priority: 100, summary: 'Counterattack resolved' }];
+  const threats = getThreatenedTerritories(state);
+  assert.equal(threats[0].stage, 'recent-combat');
+});
+
 test('critical logistics state produces actionable diagnostics and end-turn acknowledgement', () => {
   const state = newGame(404, 'standard', false);
   const groupId = Object.keys(state.taskGroups)[0];
@@ -61,7 +70,8 @@ test('tutorial advances only when the requested real action is completed', () =>
   let state = newGame(405, 'standard', true);
   state = progressTutorial(state, 'open-logistics');
   assert.equal(state.tutorial.step, 0);
-  for (const trigger of ['select-formation', 'issue-move', 'begin-operation', 'set-garrison', 'open-logistics', 'review-intelligence', 'open-engineering']) state = progressTutorial(state, trigger);
+  assert.deepEqual(TUTORIAL_STEPS.slice(1, 4).map(step => step.id), ['operation', 'occupation', 'movement']);
+  for (const trigger of ['select-formation', 'begin-operation', 'set-garrison', 'issue-move', 'open-logistics', 'review-intelligence', 'open-engineering']) state = progressTutorial(state, trigger);
   assert.equal(state.tutorial.completed, true);
   assert.equal(state.tutorial.enabled, false);
 });
@@ -82,6 +92,8 @@ test('the interface exposes attack visibility, supply acknowledgement and tutori
   assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
   assert.match(app, /ENEMY ACTION DETECTED/);
   assert.match(app, /Correctable logistics failures remain/);
+  assert.match(app, /supply-diagnostics-panel/);
+  assert.match(app, /ASSESSED ENEMY STRENGTH/);
   assert.match(app, /TutorialOverlay/);
   assert.match(map, /enemy-contact-marker/);
   assert.match(map, /enemy-concentration-route/);

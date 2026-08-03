@@ -25,7 +25,7 @@ export interface EnemyContact {
 
 export interface ThreatenedTerritory {
   territoryId: string;
-  stage: 'preparing' | 'imminent' | 'under-attack';
+  stage: 'preparing' | 'imminent' | 'under-attack' | 'recent-combat';
   executeTurn: number;
   formationCount: number;
   summary: string;
@@ -66,25 +66,25 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     trigger: 'select-formation'
   },
   {
-    id: 'movement',
-    title: 'Issue a movement order',
-    instruction: 'On the map, select a controlled adjacent territory marked MOVE and issue a movement order. Resolve the day when ready.',
-    target: 'map',
-    trigger: 'issue-move'
-  },
-  {
     id: 'operation',
-    title: 'Begin an offensive',
-    instruction: 'Select an adjacent enemy territory marked ATTACK, review the corridor and begin or reinforce an operation.',
-    target: 'operations',
+    title: 'Begin the first offensive',
+    instruction: 'On the map, select an adjacent enemy territory marked ATTACK, review the corridor and begin an operation.',
+    target: 'map',
     trigger: 'begin-operation'
   },
   {
     id: 'occupation',
     title: 'Secure captured ground',
-    instruction: 'After capturing territory, select a formation there and assign it to garrison duty.',
+    instruction: 'Resolve campaign days until the territory is captured, then select a formation there and assign it to garrison duty.',
     target: 'map',
     trigger: 'set-garrison'
+  },
+  {
+    id: 'movement',
+    title: 'Reinforce the new position',
+    instruction: 'Select another ready formation, choose the captured controlled territory marked MOVE and issue a movement order.',
+    target: 'map',
+    trigger: 'issue-move'
   },
   {
     id: 'logistics',
@@ -258,24 +258,39 @@ export function getEnemyContacts(state: GameState): EnemyContact[] {
 }
 
 export function getThreatenedTerritories(state: GameState): ThreatenedTerritory[] {
-  return state.enemyOrders
-    .filter(order => order.type === 'counterattack' && order.status !== 'completed' && state.territories[order.target]?.controller === 'player')
-    .map(order => {
-      const executeTurn = order.executeTurn ?? state.turn;
-      const stage: ThreatenedTerritory['stage'] = executeTurn <= state.turn
-        ? 'under-attack'
-        : executeTurn <= state.turn + 1
-          ? 'imminent'
-          : 'preparing';
-      return {
+  const stageRank: Record<ThreatenedTerritory['stage'], number> = {
+    'under-attack': 0,
+    imminent: 1,
+    preparing: 2,
+    'recent-combat': 3
+  };
+  const candidates = state.enemyOrders
+    .filter(order => order.type === 'counterattack')
+    .flatMap(order => {
+      const executeTurn = order.executeTurn ?? order.turn;
+      const active = order.status !== 'completed' && state.territories[order.target]?.controller === 'player';
+      const recent = order.status === 'completed' && state.turn - executeTurn >= 0 && state.turn - executeTurn <= 1;
+      if (!active && !recent) return [];
+      const stage: ThreatenedTerritory['stage'] = recent
+        ? 'recent-combat'
+        : executeTurn <= state.turn
+          ? 'under-attack'
+          : executeTurn <= state.turn + 1
+            ? 'imminent'
+            : 'preparing';
+      return [{
         territoryId: order.target,
         stage,
         executeTurn,
         formationCount: 1 + (order.supportFormationIds?.length ?? 0),
-        summary: order.summary
-      };
+        summary: recent ? `Enemy counterattack resolved at ${TERRITORIES[order.target].centre}` : order.summary
+      }];
     })
-    .sort((first, second) => first.executeTurn - second.executeTurn);
+    .sort((first, second) => stageRank[first.stage] - stageRank[second.stage] || first.executeTurn - second.executeTurn);
+
+  return candidates.filter((candidate, index) => (
+    candidates.findIndex(other => other.territoryId === candidate.territoryId) === index
+  ));
 }
 
 export function getSupplyClarity(state: GameState): SupplyClarity {
