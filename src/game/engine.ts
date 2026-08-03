@@ -1,5 +1,6 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
+import { createRouteStates } from './strategic-network';
 import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
 import type {
   Difficulty,
@@ -11,7 +12,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.5';
+const SAVE_KEY = 'future-conquest-slice-v0.6';
+const LEGACY_V5_SAVE_KEY = 'future-conquest-slice-v0.5';
 const LEGACY_V4_SAVE_KEY = 'future-conquest-slice-v0.4';
 const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
 const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
@@ -135,7 +137,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 5,
+    version: 6,
     seed,
     difficulty,
     turn: 1,
@@ -148,6 +150,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     enemyFormations: initialEnemyFormations(seed, portalTerritory, difficulty),
     escalation: initialEscalation,
     ...strategicState,
+    routeStates: createRouteStates(),
     supply: 100,
     woundedPool: 0,
     operations: {},
@@ -651,6 +654,7 @@ export function endTurn(state: GameState): GameState {
     taskGroups: structuredClone(state.taskGroups),
     enemyFormations: structuredClone(state.enemyFormations),
     operations: structuredClone(state.operations),
+    routeStates: structuredClone(state.routeStates),
     events: [...state.events]
   };
   next = resolveMovement(next);
@@ -686,10 +690,12 @@ type StrategicField =
   | 'mobilisations'
   | 'enemyOrders'
   | 'intelligenceReports';
+type NetworkField = 'routeStates';
 
-type LegacyV4GameState = Omit<GameState, 'version' | StrategicField> & { version: 4 };
-type LegacyV3GameState = Omit<GameState, 'version' | StrategicField> & { version: 3 };
-type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField> & {
+type LegacyV5GameState = Omit<GameState, 'version' | NetworkField> & { version: 5 };
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -730,6 +736,21 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
+      parsed.version === 6
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+    ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v5 = localStorage.getItem(LEGACY_V5_SAVE_KEY);
+  if (v5) {
+    const parsed = JSON.parse(v5) as Partial<LegacyV5GameState>;
+    if (
       parsed.version === 5
       && parsed.taskGroups
       && parsed.enemyFormations
@@ -737,7 +758,7 @@ export function loadGame(): GameState | null {
       && parsed.mobilisations
       && parsed.enemyOrders
       && parsed.intelligenceReports
-    ) return upgradeStrategicState(parsed as GameState);
+    ) return upgradeStrategicState(parsed as LegacyV5GameState);
   }
 
   const v4 = localStorage.getItem(LEGACY_V4_SAVE_KEY);

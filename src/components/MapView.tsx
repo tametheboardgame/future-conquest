@@ -10,6 +10,7 @@ import { feature as topojsonFeature } from 'topojson-client';
 import worldAtlas from 'world-atlas/countries-110m.json';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import { SLICE_IDS, TERRITORIES } from '../game/data';
+import { STRATEGIC_NODE_BY_ID, STRATEGIC_NODES, STRATEGIC_ROUTES } from '../game/strategic-network-data';
 import {
   FULL_THEATRE_VIEW,
   MAP_HEIGHT,
@@ -24,7 +25,7 @@ import {
   type MapViewBox
 } from '../game/map-viewport';
 import { getAdjacentOrderTargets } from '../game/order-targeting';
-import type { GameState } from '../game/types';
+import type { GameState, StrategicNodeType } from '../game/types';
 
 interface Props {
   state: GameState;
@@ -69,6 +70,10 @@ interface MapLayers {
   friendlyUnits: boolean;
   enemyUnits: boolean;
   operations: boolean;
+  routes: boolean;
+  cities: boolean;
+  ports: boolean;
+  airports: boolean;
 }
 
 const MAP_LAYER_OPTIONS: Array<{ id: keyof MapLayers; label: string }> = [
@@ -77,7 +82,11 @@ const MAP_LAYER_OPTIONS: Array<{ id: keyof MapLayers; label: string }> = [
   { id: 'orderPrompts', label: 'Order prompts' },
   { id: 'friendlyUnits', label: 'Friendly formations' },
   { id: 'enemyUnits', label: 'Enemy formations' },
-  { id: 'operations', label: 'Operations and routes' }
+  { id: 'operations', label: 'Operations and routes' },
+  { id: 'routes', label: 'Strategic routes' },
+  { id: 'cities', label: 'Cities and hubs' },
+  { id: 'ports', label: 'Ports' },
+  { id: 'airports', label: 'Airports' }
 ];
 
 const DEFAULT_MAP_LAYERS: MapLayers = {
@@ -86,7 +95,11 @@ const DEFAULT_MAP_LAYERS: MapLayers = {
   orderPrompts: true,
   friendlyUnits: true,
   enemyUnits: true,
-  operations: true
+  operations: true,
+  routes: true,
+  cities: true,
+  ports: true,
+  airports: true
 };
 
 let retainedMapView: MapViewBox = FULL_THEATRE_VIEW;
@@ -193,6 +206,29 @@ const projectedTheatreLabels = THEATRE_LABELS.flatMap(label => {
   return projected ? [{ ...label, x: projected[0], y: projected[1] }] : [];
 });
 
+const projectedStrategicNodes = STRATEGIC_NODES.flatMap(node => {
+  const projected = projection(node.position);
+  return projected ? [{ ...node, x: projected[0], y: projected[1] }] : [];
+});
+const projectedStrategicNodeById = Object.fromEntries(
+  projectedStrategicNodes.map(node => [node.id, node])
+) as Record<string, typeof projectedStrategicNodes[number]>;
+const projectedStrategicRoutes = STRATEGIC_ROUTES.flatMap(route => {
+  const from = projectedStrategicNodeById[route.fromNodeId];
+  const to = projectedStrategicNodeById[route.toNodeId];
+  return from && to ? [{ ...route, x1: from.x, y1: from.y, x2: to.x, y2: to.y }] : [];
+});
+
+const STRATEGIC_NODE_SYMBOLS: Record<StrategicNodeType, string> = {
+  capital: 'C',
+  city: '•',
+  port: 'P',
+  airport: 'A',
+  'rail-hub': 'R',
+  crossing: 'X',
+  logistics: 'L'
+};
+
 const midpoint = (first: PointerPosition, second: PointerPosition): PointerPosition => ({
   x: (first.x + second.x) / 2,
   y: (first.y + second.y) / 2
@@ -242,6 +278,8 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const showTerritoryOverlay = showTerritoryLabels && (layers.territories || layers.orderPrompts);
   const selectedAnchor = state.selectedTerritory ? anchors[state.selectedTerritory] : undefined;
   const activeLayerCount = Object.values(layers).filter(Boolean).length;
+  const showStrategicNodes = zoomPercent >= 150;
+  const showStrategicNodeNames = zoomPercent >= 285;
 
   const statusText = useMemo(() => {
     if (zoomPercent <= 110) return 'European theatre overview';
@@ -430,6 +468,36 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           } : undefined;
           return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
         })}
+
+        {layers.routes && zoomPercent >= 120 && <g className="strategic-route-layer" aria-hidden="true">
+          {projectedStrategicRoutes.map(route => {
+            const routeState = state.routeStates[route.id];
+            return <line
+              key={route.id}
+              className={`strategic-route ${route.type} ${routeState?.status ?? 'open'}`}
+              x1={route.x1}
+              y1={route.y1}
+              x2={route.x2}
+              y2={route.y2}
+            ><title>{route.name} · {routeState?.status ?? 'open'}</title></line>;
+          })}
+        </g>}
+
+        {showStrategicNodes && <g className="strategic-node-layer" aria-hidden="true">
+          {projectedStrategicNodes.filter(node => (
+            node.type === 'port' ? layers.ports :
+            node.type === 'airport' ? layers.airports :
+            layers.cities
+          )).map(node => {
+            const radius = node.type === 'capital' ? 6 : node.importance === 3 ? 5 : 4;
+            return <g key={node.id} className={`strategic-node ${node.type}`} transform={`translate(${node.x} ${node.y}) scale(${overlayScale})`}>
+              <circle className="node-marker" cx="0" cy="0" r={radius} />
+              <text className="node-symbol" x="0" y="2">{STRATEGIC_NODE_SYMBOLS[node.type]}</text>
+              {showStrategicNodeNames && <text className="node-name" x="0" y={radius + 11}>{node.name}</text>}
+              <title>{node.name} · {node.type} · {TERRITORIES[node.territoryId].name}</title>
+            </g>;
+          })}
+        </g>}
 
         {layers.countries && <g className="future-theatre-labels" aria-hidden="true">
           {projectedTheatreLabels.map(label => <g key={label.code} transform={`translate(${label.x} ${label.y}) scale(${overlayScale})`}>

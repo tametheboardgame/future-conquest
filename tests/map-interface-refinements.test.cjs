@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('the map exposes an expandable six-layer control', () => {
+test('the map exposes an expandable ten-layer control', () => {
   const map = read('src/components/MapView.tsx');
 
   assert.match(map, /className="map-layer-control"/);

@@ -4,6 +4,7 @@ import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
+import { NODE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
 import {
   beginOperation,
   canIssueOperationalOrder,
@@ -41,6 +42,9 @@ export default function App() {
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
   const selectedOperation = selectedGroup ? getOperationForGroup(state, selectedGroup.id) : undefined;
   const selected = state.selectedTerritory ? TERRITORIES[state.selectedTerritory] : null;
+  const selectedNetworkNodes = selected ? nodesForTerritory(selected.id) : [];
+  const selectedNetworkRoutes = selected ? routesForTerritory(selected.id) : [];
+  const selectedOpenRouteCount = selectedNetworkRoutes.filter(route => state.routeStates[route.id]?.status === 'open').length;
   const target = state.targetTerritory ? TERRITORIES[state.targetTerritory] : null;
   const targetState = target ? state.territories[target.id] : null;
   const targetOperation = target ? getOperationAtTarget(state, target.id) : undefined;
@@ -143,11 +147,17 @@ export default function App() {
         <div><dt>Control</dt><dd>{state.territories[selected.id].occupation}</dd></div>
         <div><dt>Supply route</dt><dd>{state.territories[selected.id].supplied ? 'connected' : 'isolated'}</dd></div>
         <div><dt>Fortification</dt><dd>{Math.round(state.territories[selected.id].fortification)}</dd></div>
+        <div><dt>Infrastructure</dt><dd>{selectedNetworkNodes.length} nodes</dd></div>
+        <div><dt>Route connections</dt><dd>{selectedOpenRouteCount} / {selectedNetworkRoutes.length} open</dd></div>
         {state.territories[selected.id].controller === 'player' && <>
           <div><dt>Legitimacy</dt><dd>{Math.round(state.territories[selected.id].legitimacy)}</dd></div>
           <div><dt>Resistance</dt><dd>{Math.round(state.territories[selected.id].resistance)}</dd></div>
         </>}
       </dl>
+      <p className="network-section-heading">STRATEGIC INFRASTRUCTURE</p>
+      <div className="network-node-list">{selectedNetworkNodes.map(node => <article key={node.id}><strong>{node.name}</strong><span>{NODE_TYPE_LABELS[node.type]}</span></article>)}</div>
+      <p className="network-section-heading">ROUTE CONNECTIONS</p>
+      <div className="network-route-list">{selectedNetworkRoutes.map(route => <article key={route.id}><strong>{route.name}</strong><span>{routeStatusLabel(state.routeStates[route.id])}</span></article>)}</div>
     </>}
   </section>;
 
@@ -197,7 +207,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-A / STRATEGIC RESPONSE</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B1 / STRATEGIC NETWORK</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>

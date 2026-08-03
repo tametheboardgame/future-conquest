@@ -4,6 +4,9 @@ export type Difficulty = 'story' | 'standard' | 'hard';
 export type EscalationStageId = 1 | 2 | 3 | 4 | 5;
 export type EnemyOrderType = 'reinforce' | 'reposition' | 'entrench' | 'counterattack' | 'withdraw';
 export type IntelligenceConfidence = 'low' | 'moderate' | 'high';
+export type StrategicNodeType = 'capital' | 'city' | 'port' | 'airport' | 'rail-hub' | 'crossing' | 'logistics';
+export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountain-pass' | 'river-crossing';
+export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
 
 export interface TerritoryDefinition {
   id: string;
@@ -105,6 +108,36 @@ export interface IntelligenceReport {
   territoryId?: string;
 }
 
+export interface StrategicNodeDefinition {
+  id: string;
+  name: string;
+  territoryId: string;
+  type: StrategicNodeType;
+  position: [number, number];
+  importance: 1 | 2 | 3;
+  supplyCapacity: number;
+}
+
+export interface StrategicRouteDefinition {
+  id: string;
+  name: string;
+  fromNodeId: string;
+  toNodeId: string;
+  fromTerritoryId: string;
+  toTerritoryId: string;
+  type: StrategicRouteType;
+  movementDays: number;
+  capacity: number;
+  supplyCapacity: number;
+  heavyArmour: boolean;
+}
+
+export interface StrategicRouteState {
+  status: StrategicRouteStatus;
+  condition: number;
+  capacityModifier: number;
+}
+
 export interface GameEvent {
   id: number;
   turn: number;
@@ -113,7 +146,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 5;
+  version: 6;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -130,6 +163,7 @@ export interface GameState {
   mobilisations: MobilisationProject[];
   enemyOrders: EnemyOrder[];
   intelligenceReports: IntelligenceReport[];
+  routeStates: Record<string, StrategicRouteState>;
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;
