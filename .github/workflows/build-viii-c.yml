@@ -34,7 +34,13 @@ jobs:
         run: npx tsc -p tsconfig.test.json --pretty false
 
       - name: Run regression suite
-        run: npm test
+        run: |
+          set +e
+          npm test > /tmp/test.log 2>&1
+          status=$?
+          grep -n -A45 -B12 "not ok" /tmp/test.log || true
+          tail -n 35 /tmp/test.log
+          exit $status
 
       - name: Build production bundle
         run: npm run build
