@@ -29,7 +29,7 @@ function controlledCorridorState(portal, controlled) {
 
 test('new campaigns calculate a finite version 8 logistics network', () => {
   const state = newGame(711, 'standard');
-  assert.equal(state.version, 8);
+  assert.equal(state.version, 9);
   assert.equal(state.logistics.turn, 1);
   assert.ok(state.logistics.sourceCapacity > 0);
   assert.ok(state.logistics.totalDemand > 0);
@@ -114,12 +114,12 @@ test('daily logistics consequences use delivered demand rather than connectivity
   assert.ok(state.events.some(event => /bottleneck|throughput|supply/i.test(event.text)));
 });
 
-test('version 7 campaigns migrate to version 8 with recalculated logistics', () => {
+test('version 7 campaigns migrate through version 8 to version 9 with recalculated logistics', () => {
   const legacy = structuredClone(newGame(711, 'standard'));
   legacy.version = 7;
   delete legacy.logistics;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 8);
+  assert.equal(upgraded.version, 9);
   assert.ok(upgraded.logistics.totalDemand > 0);
   assert.equal(upgraded.supply, upgraded.logistics.networkEfficiency);
 });
@@ -130,13 +130,13 @@ test('the interface exposes throughput, bottlenecks and the version 8 release ma
   const engine = read('src/game/engine.ts');
   const persistence = read('src/game/persistence.ts');
   const css = read('src/supply-network.css');
-  assert.match(app, /PHASE VIII-B3 \/ SUPPLY THROUGHPUT/);
+  assert.match(app, /PHASE VIII-B4A \/ INFRASTRUCTURE DISRUPTION/);
   assert.match(app, /Delivered throughput/);
   assert.match(app, /LOGISTICS NETWORK/);
   assert.match(map, /Supply network/);
   assert.match(map, /supply-route-flow/);
-  assert.match(engine, /future-conquest-slice-v0\.8/);
-  assert.match(persistence, /saveVersion:\s*8/);
+  assert.match(engine, /future-conquest-slice-v0\.9/);
+  assert.match(persistence, /saveVersion:\s*9/);
   assert.match(css, /\.supply-route-flow\.overloaded/);
 });
 

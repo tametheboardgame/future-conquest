@@ -279,7 +279,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B3 / SUPPLY THROUGHPUT</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B4A / INFRASTRUCTURE DISRUPTION</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>

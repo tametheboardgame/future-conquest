@@ -1,8 +1,9 @@
 import { upgradeStrategicState } from './strategic-response';
 import type { Difficulty, GameState } from './types';
 
-export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.8';
-export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.8-metadata';
+export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.9';
+export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.9-metadata';
+export const LEGACY_V8_SAVE_KEY = 'future-conquest-slice-v0.8';
 export const LEGACY_V7_SAVE_KEY = 'future-conquest-slice-v0.7';
 export const LEGACY_V6_SAVE_KEY = 'future-conquest-slice-v0.6';
 export const LEGACY_V5_SAVE_KEY = 'future-conquest-slice-v0.5';
@@ -11,7 +12,7 @@ export const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
 export const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
 
 export interface SaveMetadata {
-  saveVersion: 8;
+  saveVersion: 9;
   savedAt: string | null;
   campaignDay: number;
   difficulty: Difficulty;
@@ -20,7 +21,7 @@ export interface SaveMetadata {
 }
 
 export type SaveInspection =
-  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2' }
+  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2' }
   | { ok: false; code: 'missing' | 'corrupt' | 'unsupported' | 'storage-unavailable'; message: string };
 
 export type MetadataWriteResult =
@@ -39,7 +40,8 @@ type StrategicField =
 type NetworkField = 'routeStates';
 type LogisticsField = 'logistics';
 
-type LegacyV7State = Omit<GameState, 'version' | LogisticsField> & { version: 7 };
+type LegacyV8State = Omit<GameState, 'version' | 'infrastructureIncidents'> & { version: 8 };
+type LegacyV7State = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents'> & { version: 7 };
 type LegacyV6State = Omit<GameState, 'version' | LogisticsField> & { version: 6 };
 type LegacyV5State = Omit<GameState, 'version' | NetworkField | LogisticsField> & { version: 5 };
 type LegacyV4State = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField> & { version: 4 };
@@ -72,7 +74,16 @@ function hasStrategicCollections(value: Record<string, unknown>): boolean {
     && Array.isArray(value.intelligenceReports);
 }
 
-function isV8State(value: unknown): value is GameState {
+function isV9State(value: unknown): value is GameState {
+  return hasCoreCampaignState(value)
+    && value.version === 9
+    && hasStrategicCollections(value)
+    && isRecord(value.routeStates)
+    && isRecord(value.logistics)
+    && Array.isArray(value.infrastructureIncidents);
+}
+
+function isV8State(value: unknown): value is LegacyV8State {
   return hasCoreCampaignState(value)
     && value.version === 8
     && hasStrategicCollections(value)
@@ -119,7 +130,7 @@ function stateFromStoredValue(value: unknown): unknown {
 
 export function createSaveMetadata(state: GameState, savedAt: string | null = new Date().toISOString()): SaveMetadata {
   return {
-    saveVersion: 8,
+    saveVersion: 9,
     savedAt,
     campaignDay: state.turn,
     difficulty: state.difficulty,
@@ -131,7 +142,7 @@ export function createSaveMetadata(state: GameState, savedAt: string | null = ne
 function metadataMatchesState(value: unknown, state: GameState): value is SaveMetadata {
   return Boolean(
     isRecord(value)
-    && value.saveVersion === 8
+    && value.saveVersion === 9
     && (typeof value.savedAt === 'string' || value.savedAt === null)
     && value.campaignDay === state.turn
     && value.difficulty === state.difficulty
@@ -163,11 +174,15 @@ function readRaw(storage: StorageReader, key: string): string | null | SaveInspe
   }
 }
 
-function inspectRaw(storage: StorageReader, raw: string, source: 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2'): SaveInspection {
+function inspectRaw(storage: StorageReader, raw: string, source: 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2'): SaveInspection {
   try {
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
-    if (source === 'v8' && isV8State(parsed)) {
+    if (source === 'v9' && isV9State(parsed)) {
       return { ok: true, state: upgradeStrategicState(parsed), metadata: readMetadata(storage, parsed), source };
+    }
+    if (source === 'v8' && isV8State(parsed)) {
+      const state = upgradeStrategicState(parsed);
+      return { ok: true, state, metadata: createSaveMetadata(state, null), source };
     }
     if (source === 'v7' && isV7State(parsed)) {
       const state = upgradeStrategicState(parsed);
@@ -205,7 +220,11 @@ function inspectRaw(storage: StorageReader, raw: string, source: 'v8' | 'v7' | '
 export function inspectStoredCampaign(storage: StorageReader): SaveInspection {
   const current = readRaw(storage, CURRENT_SAVE_KEY);
   if (typeof current !== 'string' && current !== null) return current;
-  if (current) return inspectRaw(storage, current, 'v8');
+  if (current) return inspectRaw(storage, current, 'v9');
+
+  const v8 = readRaw(storage, LEGACY_V8_SAVE_KEY);
+  if (typeof v8 !== 'string' && v8 !== null) return v8;
+  if (v8) return inspectRaw(storage, v8, 'v8');
 
   const v7 = readRaw(storage, LEGACY_V7_SAVE_KEY);
   if (typeof v7 !== 'string' && v7 !== null) return v7;
@@ -250,7 +269,7 @@ export function writeMetadataForCurrentSave(storage: StorageWriter, savedAt = ne
     const raw = storage.getItem(CURRENT_SAVE_KEY);
     if (!raw) return { ok: false, code: 'missing', message: 'The campaign was not written to browser storage.' };
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
-    if (!isV8State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
+    if (!isV9State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
     const metadata = createSaveMetadata(parsed, savedAt);
     storage.setItem(SAVE_METADATA_KEY, JSON.stringify(metadata));
     return { ok: true, metadata };

@@ -2,6 +2,7 @@ import { SLICE_IDS, TERRITORIES } from './data';
 import { normaliseRouteStates } from './strategic-network';
 import { normaliseTaskGroupOrderRoutes } from './route-movement';
 import { refreshSupplyNetwork } from './supply-network';
+import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import type {
   Difficulty,
   EnemyFormation,
@@ -174,7 +175,8 @@ type StrategicField =
   | 'enemyOrders'
   | 'intelligenceReports'
   | 'routeStates'
-  | 'logistics';
+  | 'logistics'
+  | 'infrastructureIncidents';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -185,6 +187,7 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   intelligenceReports?: IntelligenceReport[];
   routeStates?: GameState['routeStates'];
   logistics?: GameState['logistics'];
+  infrastructureIncidents?: GameState['infrastructureIncidents'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -194,9 +197,10 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const taskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
   const upgraded = {
     ...state,
-    version: 8,
+    version: 9,
     taskGroups,
     routeStates,
+    infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)
