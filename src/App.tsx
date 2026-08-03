@@ -4,7 +4,9 @@ import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
-import { NODE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
+import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
+import { NODE_TYPE_LABELS, ROUTE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
+import { estimateRouteMovementDays } from './game/route-movement';
 import {
   beginOperation,
   canIssueOperationalOrder,
@@ -32,6 +34,7 @@ export default function App() {
   const [state, setState] = useState<GameState>(() => newGame());
   const [newDifficulty, setNewDifficulty] = useState<Difficulty>('standard');
   const [currentView, setCurrentView] = useState<CommandView>('map');
+  const [selectedRouteId, setSelectedRouteId] = useState('');
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
@@ -49,6 +52,16 @@ export default function App() {
   const targetState = target ? state.territories[target.id] : null;
   const targetOperation = target ? getOperationAtTarget(state, target.id) : undefined;
   const targetInfo = selectedGroup && target ? getOrderTargetInfo(state, target.id, selectedGroup.id) : null;
+  const routeOptions = targetInfo?.availableRouteIds.flatMap(id => {
+    const route = STRATEGIC_ROUTE_BY_ID[id];
+    return route ? [route] : [];
+  }) ?? [];
+  const recommendedRouteId = targetInfo?.recommendedRouteId ?? '';
+  const chosenRouteId = routeOptions.some(route => route.id === selectedRouteId) ? selectedRouteId : recommendedRouteId;
+  const chosenRoute = chosenRouteId ? STRATEGIC_ROUTE_BY_ID[chosenRouteId] : undefined;
+  const chosenRouteDays = selectedGroup && chosenRoute
+    ? estimateRouteMovementDays(chosenRoute, state.routeStates[chosenRoute.id], selectedGroup)
+    : null;
   const adjacentTargetNames = selectedGroup
     ? getAdjacentOrderTargets(state, selectedGroup.id).map(id => TERRITORIES[id].centre).join(', ')
     : '';
@@ -90,12 +103,13 @@ export default function App() {
     }
     if (selectedGroup.order?.type === 'move') return `${selectedGroup.name} is moving towards ${TERRITORIES[selectedGroup.order.target].centre}. Other formations may still receive orders before the day resolves.`;
     if (selectedGroup.status === 'recovering') return `${selectedGroup.name} is recovering and cannot receive orders until the next supplied day resolves.`;
-    if (targetInfo?.kind === 'out-of-range' && target) return `${target.centre} is outside ${selectedGroup.name}'s operational reach from ${TERRITORIES[selectedGroup.location].centre}. Available adjacent targets are marked ATTACK or MOVE.`;
-    if (targetInfo?.kind === 'move' && target) return `Movement route selected: ${TERRITORIES[selectedGroup.location].centre} → ${target.centre}.`;
-    if (targetInfo?.kind === 'attack' && targetOperation && target) return `${target.centre} already has an active operation. Review it and select Join operation to reinforce it.`;
-    if (targetInfo?.kind === 'attack' && target) return `Attack target selected: ${target.centre}. Review the defenders and select Begin operation.`;
+    if (targetInfo?.kind === 'route-blocked' && target) return `${target.centre} is adjacent, but every strategic corridor from ${TERRITORIES[selectedGroup.location].centre} is blocked or destroyed.`;
+    if (targetInfo?.kind === 'out-of-range' && target) return `${target.centre} is outside ${selectedGroup.name}'s operational reach from ${TERRITORIES[selectedGroup.location].centre}. Available route-connected targets are marked ATTACK or MOVE.`;
+    if (targetInfo?.kind === 'move' && target) return `Movement corridor selected: ${chosenRoute?.name ?? `${TERRITORIES[selectedGroup.location].centre} → ${target.centre}`}.`;
+    if (targetInfo?.kind === 'attack' && targetOperation && target) return `${target.centre} already has an active operation. Review it and select Join operation to reinforce it via ${chosenRoute?.name ?? 'an available corridor'}.`;
+    if (targetInfo?.kind === 'attack' && target) return `Attack target selected via ${chosenRoute?.name ?? 'an available corridor'}. Review the defenders and select Begin operation.`;
     return 'Issue independent orders to each task group, then resolve the day. Several movements and operations can run simultaneously.';
-  }, [selectedGroup, selectedOperation, target, targetInfo, targetOperation]);
+  }, [chosenRoute, selectedGroup, selectedOperation, target, targetInfo, targetOperation]);
 
   const load = () => {
     const saved = loadGame();
@@ -171,22 +185,32 @@ export default function App() {
       <div className="forecast"><span>Enemy formations</span><strong>{selectedOperation.enemyFormationIds.length}</strong></div>
     </> : selectedGroup.order?.type === 'move' ? <>
       <h3>Movement underway</h3>
-      <p>{selectedGroup.name} is moving to {TERRITORIES[selectedGroup.order.target].centre}. Other task groups remain available for separate orders.</p>
+      <p>{selectedGroup.name} is moving to {TERRITORIES[selectedGroup.order.target].centre}{selectedGroup.order.routeId ? ` via ${STRATEGIC_ROUTE_BY_ID[selectedGroup.order.routeId]?.name ?? 'the assigned corridor'}` : ''}. Other task groups remain available for separate orders.</p>
       <div className="forecast"><span>Progress</span><strong>{selectedGroup.order.progress}%</strong></div>
+      <div className="forecast"><span>Days travelling</span><strong>{selectedGroup.order.days}</strong></div>
     </> : selectedGroup.status === 'recovering' ? <>
       <h3>Formation recovering</h3>
       <p>{selectedGroup.name} cannot move, attack or enter garrison duty until a supplied recovery day resolves.</p>
     </> : target && targetState?.controller === 'player' ? <>
       <h3>Move to {target.centre}</h3>
-      {targetInfo?.kind === 'out-of-range' ? <>
-        <p>This province is not adjacent to {TERRITORIES[selectedGroup.location].centre}. Move the task group through controlled territory first.</p>
+      {targetInfo?.kind === 'route-blocked' ? <p>All strategic corridors into this province are blocked or destroyed. The formation cannot enter until a route is restored.</p> : targetInfo?.kind === 'out-of-range' ? <>
+        <p>This province has no direct strategic route from {TERRITORIES[selectedGroup.location].centre}. Move the task group through controlled territory first.</p>
         <div className="forecast"><span>Available now</span><strong>{adjacentTargetNames}</strong></div>
       </> : <p>Movement occupies only this formation. Other task groups can move or attack during the same day.</p>}
-      <button className="primary" disabled={!canMove} onClick={() => setState(issueMove)}>{canMove ? 'Issue movement order' : 'Out of operational range'}</button>
+      {routeOptions.length > 0 && <label>Operational corridor
+        <select value={chosenRouteId} onChange={event => setSelectedRouteId(event.target.value)}>
+          {routeOptions.map(route => {
+            const days = estimateRouteMovementDays(route, state.routeStates[route.id], selectedGroup);
+            return <option key={route.id} value={route.id}>{route.name} · {ROUTE_TYPE_LABELS[route.type]} · ~{days} day{days === 1 ? '' : 's'}</option>;
+          })}
+        </select>
+      </label>}
+      {chosenRoute && <div className="forecast"><span>Estimated travel</span><strong>{chosenRouteDays} day{chosenRouteDays === 1 ? '' : 's'}</strong></div>}
+      <button className="primary" disabled={!canMove} onClick={() => setState(current => issueMove(current, chosenRouteId || undefined))}>{canMove ? 'Issue movement order' : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
     </> : target && enemyAtTarget ? <>
       <h3>{TERRITORIES[selectedGroup.location].centre} → {target.centre}</h3>
-      {targetInfo?.kind === 'out-of-range' ? <>
-        <p>This enemy province is not adjacent to the selected task group. Select a province marked ATTACK or move closer through controlled territory.</p>
+      {targetInfo?.kind === 'route-blocked' ? <p>Every strategic corridor into this enemy province is blocked or destroyed. No operation can be launched from the current position.</p> : targetInfo?.kind === 'out-of-range' ? <>
+        <p>This enemy province has no direct strategic route from the selected task group. Select a province marked ATTACK or move closer through controlled territory.</p>
         <div className="forecast"><span>Available now</span><strong>{adjacentTargetNames}</strong></div>
       </> : targetOperation ? <>
         <p>An operation is already underway. Joining commits {selectedGroup.name} as an additional attacking formation.</p>
@@ -196,7 +220,12 @@ export default function App() {
       <div className="forecast"><span>Enemy formations</span><strong>{enemyAtTarget.formations}</strong></div>
       <div className="forecast"><span>Estimated personnel</span><strong>{formatNumber(enemyAtTarget.personnel)}</strong></div>
       <div className="forecast"><span>Enemy armour</span><strong>{formatNumber(enemyAtTarget.armour)}</strong></div>
-      <button className="primary danger-action" disabled={!canAttack} onClick={() => setState(beginOperation)}>{canAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : 'Out of operational range'}</button>
+      {routeOptions.length > 0 && <label>Operational corridor
+        <select value={chosenRouteId} onChange={event => setSelectedRouteId(event.target.value)}>
+          {routeOptions.map(route => <option key={route.id} value={route.id}>{route.name} · {ROUTE_TYPE_LABELS[route.type]}</option>)}
+        </select>
+      </label>}
+      <button className="primary danger-action" disabled={!canAttack} onClick={() => setState(current => beginOperation(current, chosenRouteId || undefined))}>{canAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
     </> : <>
       <p>Select one of the provinces marked ATTACK or MOVE on the map. Available from {TERRITORIES[selectedGroup.location].centre}: {adjacentTargetNames}.</p>
       <button className="secondary" disabled={!canOrderSelected || state.status !== 'playing'} onClick={() => setState(setGarrison)}>{selectedGroup.status === 'garrison' ? 'Release from garrison' : 'Assign as garrison'}</button>
@@ -207,7 +236,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B1 / STRATEGIC NETWORK</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B2 / ROUTE MOVEMENT</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>

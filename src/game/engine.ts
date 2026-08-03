@@ -1,6 +1,13 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
+import { STRATEGIC_ROUTE_BY_ID } from './strategic-network-data';
 import { createRouteStates } from './strategic-network';
+import {
+  chooseOperationalRoute,
+  movementProgressForDay,
+  routeConnectsTerritories,
+  routeIsTraversable
+} from './route-movement';
 import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
 import type {
   Difficulty,
@@ -12,7 +19,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.6';
+const SAVE_KEY = 'future-conquest-slice-v0.7';
+const LEGACY_V6_SAVE_KEY = 'future-conquest-slice-v0.6';
 const LEGACY_V5_SAVE_KEY = 'future-conquest-slice-v0.5';
 const LEGACY_V4_SAVE_KEY = 'future-conquest-slice-v0.4';
 const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
@@ -137,7 +145,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 6,
+    version: 7,
     seed,
     difficulty,
     turn: 1,
@@ -176,15 +184,20 @@ export function selectTerritory(state: GameState, id: string): GameState {
   };
 }
 
-export function issueMove(state: GameState): GameState {
+export function issueMove(state: GameState, requestedRouteId?: string): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
   if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'player') return state;
-  if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
+  const route = chooseOperationalRoute(state.routeStates, group.location, target, group, requestedRouteId);
+  if (!route) return state;
   const taskGroups = structuredClone(state.taskGroups);
   taskGroups[group.id].status = 'moving';
-  taskGroups[group.id].order = { type: 'move', target, progress: 0, days: 0 };
-  return addEvent({ ...state, taskGroups, targetTerritory: null }, `${group.name} ordered to move from ${TERRITORIES[group.location].centre} to ${TERRITORIES[target].centre}.`, 'neutral');
+  taskGroups[group.id].order = { type: 'move', target, progress: 0, days: 0, routeId: route.id };
+  return addEvent(
+    { ...state, taskGroups, targetTerritory: null },
+    `${group.name} ordered to move from ${TERRITORIES[group.location].centre} to ${TERRITORIES[target].centre} via ${route.name}.`,
+    'neutral'
+  );
 }
 
 export function setGarrison(state: GameState): GameState {
@@ -217,11 +230,12 @@ function nextOperationId(state: GameState, target: string): string {
   return id;
 }
 
-export function beginOperation(state: GameState): GameState {
+export function beginOperation(state: GameState, requestedRouteId?: string): GameState {
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
   if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'enemy') return state;
-  if (!TERRITORIES[group.location].neighbours.includes(target)) return state;
+  const route = chooseOperationalRoute(state.routeStates, group.location, target, group, requestedRouteId);
+  if (!route) return state;
 
   const taskGroups = structuredClone(state.taskGroups);
   const operations = structuredClone(state.operations);
@@ -251,13 +265,14 @@ export function beginOperation(state: GameState): GameState {
     target,
     progress: operation.progress,
     days: 0,
+    routeId: route.id,
     operationId
   };
 
   const verb = existing ? 'joined the operation' : 'launched an operation';
   return addEvent(
     { ...state, taskGroups, operations, targetTerritory: null },
-    `${group.name} ${verb} from ${TERRITORIES[group.location].centre} towards ${TERRITORIES[target].centre}.`,
+    `${group.name} ${verb} from ${TERRITORIES[group.location].centre} towards ${TERRITORIES[target].centre} via ${route.name}.`,
     'warning'
   );
 }
@@ -267,15 +282,28 @@ function resolveMovement(state: GameState): GameState {
   let next = { ...state, taskGroups };
   for (const group of Object.values(taskGroups)) {
     if (group.status !== 'moving' || group.order?.type !== 'move') continue;
-    group.order.days += 1;
-    const targetTerrain = TERRITORIES[group.order.target].terrain;
-    const pace = targetTerrain === 'mountainous' ? 58 : targetTerrain === 'mixed-upland' ? 75 : 100;
-    group.order.progress += group.supply < 40 ? Math.round(pace * 0.65) : pace;
-    if (group.order.progress >= 100) {
-      group.location = group.order.target;
+    const order = group.order;
+    const selectedRoute = order.routeId ? STRATEGIC_ROUTE_BY_ID[order.routeId] : undefined;
+    const route = selectedRoute && routeConnectsTerritories(selectedRoute, group.location, order.target)
+      ? selectedRoute
+      : chooseOperationalRoute(state.routeStates, group.location, order.target, group);
+
+    if (!route || !routeIsTraversable(route, state.routeStates[route.id])) {
+      const routeName = route?.name ?? 'the assigned strategic corridor';
       group.status = 'ready';
       group.order = undefined;
-      next = addEvent(next, `${group.name} arrived in ${TERRITORIES[group.location].centre}.`, 'good');
+      next = addEvent(next, `${group.name} movement halted at ${TERRITORIES[group.location].centre}: ${routeName} is unavailable.`, 'warning');
+      continue;
+    }
+
+    order.routeId = route.id;
+    order.days += 1;
+    order.progress += movementProgressForDay(route, state.routeStates[route.id], group);
+    if (order.progress >= 100) {
+      group.location = order.target;
+      group.status = 'ready';
+      group.order = undefined;
+      next = addEvent(next, `${group.name} arrived in ${TERRITORIES[group.location].centre} via ${route.name}.`, 'good');
     }
   }
   return next;
@@ -692,6 +720,7 @@ type StrategicField =
   | 'intelligenceReports';
 type NetworkField = 'routeStates';
 
+type LegacyV6GameState = Omit<GameState, 'version'> & { version: 6 };
 type LegacyV5GameState = Omit<GameState, 'version' | NetworkField> & { version: 5 };
 type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 4 };
 type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField> & { version: 3 };
@@ -736,7 +765,7 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
-      parsed.version === 6
+      parsed.version === 7
       && parsed.taskGroups
       && parsed.enemyFormations
       && parsed.operations
@@ -745,6 +774,21 @@ export function loadGame(): GameState | null {
       && parsed.intelligenceReports
       && parsed.routeStates
     ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v6 = localStorage.getItem(LEGACY_V6_SAVE_KEY);
+  if (v6) {
+    const parsed = JSON.parse(v6) as Partial<LegacyV6GameState>;
+    if (
+      parsed.version === 6
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+    ) return upgradeStrategicState(parsed as LegacyV6GameState);
   }
 
   const v5 = localStorage.getItem(LEGACY_V5_SAVE_KEY);
@@ -787,6 +831,7 @@ export function loadGame(): GameState | null {
 export const __testOnly = {
   deployableArmour,
   refreshSupply,
+  resolveMovement,
   resolveOperations,
   pruneOperations,
   resolveCounterattack: (state: GameState) => resolveCounterattack(state, true)
