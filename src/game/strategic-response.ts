@@ -1,4 +1,5 @@
 import { SLICE_IDS, TERRITORIES } from './data';
+import { normaliseRouteStates } from './strategic-network';
 import type {
   Difficulty,
   EnemyFormation,
@@ -169,7 +170,8 @@ type StrategicField =
   | 'mobilisationPool'
   | 'mobilisations'
   | 'enemyOrders'
-  | 'intelligenceReports';
+  | 'intelligenceReports'
+  | 'routeStates';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -178,13 +180,15 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   mobilisations?: MobilisationProject[];
   enemyOrders?: EnemyOrder[];
   intelligenceReports?: IntelligenceReport[];
+  routeStates?: GameState['routeStates'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
   const defaults = createStrategicState(state.seed, state.difficulty, state.escalation);
   return {
     ...state,
-    version: 5,
+    version: 6,
+    routeStates: normaliseRouteStates(state.routeStates),
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)
