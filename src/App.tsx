@@ -134,7 +134,7 @@ export default function App() {
     setCurrentView('map');
   };
 
-  const renderPriorityOrderAction = (placement: 'panel' | 'map') => {
+  const renderPriorityOrderAction = () => {
     if (!selectedGroup || !target || !targetInfo || selectedOperation || selectedGroup.order || selectedGroup.status === 'recovering') return null;
     const isAttack = targetInfo.kind === 'attack';
     const isMove = targetInfo.kind === 'move';
@@ -147,13 +147,13 @@ export default function App() {
       ? beginOperation(current, chosenRouteId || undefined)
       : issueMove(current, chosenRouteId || undefined));
 
-    return <div className={`priority-order-action ${placement} ${isAttack ? 'attack' : 'move'}`} aria-label="Priority order action">
+    return <div className={`priority-order-action panel ${isAttack ? 'attack' : 'move'}`} aria-label="Priority order action">
       <div className="priority-order-copy">
         <p>{orderLabel}</p>
         <strong>{selectedGroup.name} → {target.centre}</strong>
         <span>{chosenRoute?.name ?? 'No operational corridor'}{chosenRouteDays ? ` · ~${chosenRouteDays} day${chosenRouteDays === 1 ? '' : 's'}` : ''}</span>
       </div>
-      {placement === 'panel' && routeOptions.length > 1 && <label className="priority-route-select"><span>Corridor</span>
+      {routeOptions.length > 1 && <label className="priority-route-select"><span>Corridor</span>
         <select aria-label="Priority operational corridor" value={chosenRouteId} onChange={event => setSelectedRouteId(event.target.value)}>
           {routeOptions.map(route => {
             const days = estimateRouteMovementDays(route, state.routeStates[route.id], selectedGroup);
@@ -299,8 +299,16 @@ export default function App() {
               <p>{instruction}</p>
               <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Enemy formation · Dashed routes show active operations</div>
             </div>
-            <MapView state={state} onSelect={id => setState(current => selectTerritory(current, id))} onSelectGroup={id => setState(current => selectTaskGroup(current, id))} />
-            {renderPriorityOrderAction('map')}
+            <MapView
+              state={state}
+              onSelect={id => setState(current => selectTerritory(current, id))}
+              onSelectGroup={id => setState(current => selectTaskGroup(current, id))}
+              operationConfirmation={canAttack && target ? {
+                territoryId: target.id,
+                label: targetOperation ? 'Join operation?' : 'Confirm operation?',
+                onConfirm: () => setState(current => beginOperation(current, chosenRouteId || undefined))
+              } : undefined}
+            />
           </div>
 
           <aside className="command-panel map-context-panel">
@@ -311,7 +319,7 @@ export default function App() {
                   {groups.map(group => <option key={group.id} value={group.id}>{group.name} · {TERRITORIES[group.location].centre}</option>)}
                 </select>
               </label>
-              {renderPriorityOrderAction('panel')}
+              {renderPriorityOrderAction()}
               <div className="quick-links"><button onClick={() => setCurrentView('forces')}>Manage forces</button><button onClick={() => setCurrentView('operations')}>Review operations</button></div>
             </section>
             {renderSelectedGroupPanel()}

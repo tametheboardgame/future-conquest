@@ -31,6 +31,11 @@ interface Props {
   state: GameState;
   onSelect: (id: string) => void;
   onSelectGroup: (id: string) => void;
+  operationConfirmation?: {
+    territoryId: string;
+    label: string;
+    onConfirm: () => void;
+  };
 }
 
 interface GeoFeature {
@@ -235,7 +240,7 @@ const midpoint = (first: PointerPosition, second: PointerPosition): PointerPosit
 });
 const distance = (first: PointerPosition, second: PointerPosition) => Math.hypot(second.x - first.x, second.y - first.y);
 
-export function MapView({ state, onSelect, onSelectGroup }: Props) {
+export function MapView({ state, onSelect, onSelectGroup, operationConfirmation }: Props) {
   const [view, setView] = useState<MapViewBox>(() => retainedMapView);
   const [panning, setPanning] = useState(false);
   const [layers, setLayers] = useState<MapLayers>(() => retainedMapLayers);
@@ -277,6 +282,7 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
   const showTerritoryNames = zoomPercent >= 285;
   const showTerritoryOverlay = showTerritoryLabels && (layers.territories || layers.orderPrompts);
   const selectedAnchor = state.selectedTerritory ? anchors[state.selectedTerritory] : undefined;
+  const operationConfirmationAnchor = operationConfirmation ? anchors[operationConfirmation.territoryId] : undefined;
   const activeLayerCount = Object.values(layers).filter(Boolean).length;
   const showStrategicNodes = zoomPercent >= 150;
   const showStrategicNodeNames = zoomPercent >= 285;
@@ -577,6 +583,29 @@ export function MapView({ state, onSelect, onSelectGroup }: Props) {
           const [x, y] = anchors[state.portalTerritory];
           return <g className="portal" transform={`translate(${x} ${y}) scale(${overlayScale})`} filter="url(#glow)"><circle cx="0" cy="-8" r="12" /><circle cx="0" cy="-8" r="5" /></g>;
         })()}
+
+        {operationConfirmation && operationConfirmationAnchor && <g
+          className="map-operation-confirmation"
+          transform={`translate(${operationConfirmationAnchor[0]} ${operationConfirmationAnchor[1]}) scale(${overlayScale})`}
+          role="button"
+          tabIndex={0}
+          aria-label={operationConfirmation.label}
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.stopPropagation();
+            operationConfirmation.onConfirm();
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+              operationConfirmation.onConfirm();
+            }
+          }}
+        >
+          <rect x="-67" y="-52" width="134" height="32" rx="4" />
+          <text x="0" y="-32">{operationConfirmation.label}</text>
+        </g>}
       </g>
     </svg>
 
