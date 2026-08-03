@@ -49,6 +49,7 @@ jobs:
           disruption = Path('src/game/infrastructure-disruption.ts')
           text = disruption.read_text()
           text = text.replace("import { TERRITORIES } from './data';\n", '')
+          text = text.replace('if (resistance < 18) return [];', 'if (resistance < 35) return [];')
           text = text.replace(
               "    } else {\n      cause = 'enemy-interdiction';\n      risk = 0.025 + state.escalation / 950;\n    }\n",
               "    } else {\n      if (state.escalation < 20) return [];\n      cause = 'enemy-interdiction';\n      risk = (state.escalation - 15) / 700;\n    }\n"
@@ -72,6 +73,7 @@ jobs:
               test = test.replace('assert.equal(upgraded.version, 8);', 'assert.equal(upgraded.version, 9);')
               test = test.replace('assert.equal(result.state.version, 8);', 'assert.equal(result.state.version, 9);')
               test = test.replace('saveVersion: 8,', 'saveVersion: 9,')
+              test = test.replace('saveVersion:\\s*8', 'saveVersion:\\s*9')
               test_path.write_text(test)
 
           persistence_test = Path('tests/persistence.test.cjs')
