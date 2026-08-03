@@ -51,7 +51,36 @@ jobs:
         run: npx tsc -p tsconfig.test.json --pretty false
 
       - name: Run regression suite
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > b4c-test-output.txt 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            python - <<'PY'
+          from pathlib import Path
+          lines = Path('b4c-test-output.txt').read_text(errors='replace').splitlines()
+          output = []
+          for index, line in enumerate(lines):
+              if line.startswith('not ok '):
+                  output.append(line)
+                  for detail in lines[index + 1:index + 22]:
+                      if detail.startswith('ok ') or detail.startswith('not ok ') or detail.startswith('# Subtest:'):
+                          break
+                      if any(key in detail for key in ('location:', 'error:', 'The input did not match', 'Expected values', 'actual:', 'expected:', 'operator:', 'TypeError', 'ReferenceError')):
+                          output.append(detail)
+          output.extend(line for line in lines if line.startswith('# fail ') or line.startswith('# pass ') or line.startswith('# tests '))
+          Path('b4c-failures.txt').write_text('\n'.join(output) + '\n')
+          PY
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add b4c-failures.txt
+            git commit -m "Capture remaining B4C failures"
+            git push origin HEAD:agent/interdiction-combat-damage-viii-b4c
+            exit "$code"
+          fi
+          rm b4c-test-output.txt
 
       - name: Build production bundle
         run: npm run build
@@ -59,7 +88,7 @@ jobs:
       - name: Commit implementation
         run: |
           rm scripts/apply-viii-b4c.py .github/workflows/build-viii-b4c.yml
-          rm -f b4c-test-summary.txt b4c-test-output.txt b4c-diagnostics.txt
+          rm -f b4c-test-summary.txt b4c-test-output.txt b4c-diagnostics.txt b4c-failures.txt
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
