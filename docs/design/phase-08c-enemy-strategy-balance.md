@@ -52,4 +52,7 @@ Campaign saves advance to version 13. Version 12 and all earlier supported campa
 
 ## Validation
 
-Focused tests will cover doctrine assessment, route targeting, coordinated attacks, crisis escalation and version 12 migration. The complete regression suite and production build must also pass.
+- Full engine and interface regression suite: 160 tests passed.
+- Production TypeScript and Vite build: passed.
+- Focused coverage confirms doctrine assessment, logistics-war escalation, coordinated counterattack planning and resolution, reversible operational crisis and version 12 migration.
+- Temporary implementation builders and diagnostic workflows were removed before final review.
