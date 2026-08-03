@@ -1,5 +1,6 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { normaliseRouteStates } from './strategic-network';
+import { normaliseTaskGroupOrderRoutes } from './route-movement';
 import type {
   Difficulty,
   EnemyFormation,
@@ -185,10 +186,14 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
   const defaults = createStrategicState(state.seed, state.difficulty, state.escalation);
+  const previousVersion = state.version;
+  const routeStates = normaliseRouteStates(state.routeStates);
+  const taskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
   return {
     ...state,
-    version: 6,
-    routeStates: normaliseRouteStates(state.routeStates),
+    version: 7,
+    taskGroups,
+    routeStates,
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)

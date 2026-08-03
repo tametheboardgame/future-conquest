@@ -132,14 +132,15 @@ test('lowland movement completes in one resolved day', () => {
   assert.equal(state.taskGroups['TG-1'].order, undefined);
 });
 
-test('mountain movement requires more than one resolved day', () => {
+test('the selected Alpine route requires more than one resolved day', () => {
   let state = makePlayerTerritory(newGame(12), 'CH-02');
   state = targetState(state, 'TG-1', 'CH-02');
   state = issueMove(state);
+  assert.ok(state.taskGroups['TG-1'].order.routeId);
   state = endTurn(state);
   assert.equal(state.taskGroups['TG-1'].location, 'CH-01');
   assert.equal(state.taskGroups['TG-1'].status, 'moving');
-  assert.equal(state.taskGroups['TG-1'].order.progress, 58);
+  assert.equal(state.taskGroups['TG-1'].order.progress, 50);
   state = endTurn(state);
   assert.equal(state.taskGroups['TG-1'].location, 'CH-02');
   assert.equal(state.taskGroups['TG-1'].status, 'ready');
@@ -339,7 +340,7 @@ test('v0.2 saves migrate a single battle into an operation', () => {
 
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.version, 6);
+  assert.equal(loaded.version, 7);
   assert.equal(Object.keys(loaded.operations).length, 1);
   assert.ok(loaded.taskGroups['TG-1'].order.operationId);
 });

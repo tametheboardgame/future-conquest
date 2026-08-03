@@ -32,6 +32,7 @@ export interface TaskGroupOrder {
   target: string;
   progress: number;
   days: number;
+  routeId?: string;
   operationId?: string;
 }
 
@@ -146,7 +147,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 6;
+  version: 7;
   seed: number;
   difficulty: Difficulty;
   turn: number;
