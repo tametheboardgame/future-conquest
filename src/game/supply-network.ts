@@ -42,7 +42,8 @@ const formationStatusDemand: Record<TaskGroup['status'], number> = {
   moving: 1.18,
   attacking: 1.55,
   garrison: 0.78,
-  recovering: 1.2
+  recovering: 1.2,
+  engineering: 1.08
 };
 
 const formationPriority: Record<TaskGroup['status'], number> = {
@@ -50,7 +51,8 @@ const formationPriority: Record<TaskGroup['status'], number> = {
   moving: 1.12,
   attacking: 1.28,
   garrison: 0.86,
-  recovering: 1.04
+  recovering: 1.04,
+  engineering: 1.16
 };
 
 interface SupplyRequest {
@@ -214,12 +216,14 @@ function createRequests(state: GameState): SupplyRequest[] {
   }
   for (const group of Object.values(state.taskGroups).sort((a, b) => a.id.localeCompare(b.id))) {
     if (group.personnel <= 0) continue;
+    const engineeringProject = state.engineeringProjects.find(project => project.status === 'active' && project.assignedTaskGroupId === group.id);
+    const engineeringDemand = engineeringProject ? Math.max(3, Math.ceil(engineeringProject.allocation / 8)) : 0;
     requests.push({
       id: `GROUP:${group.id}`,
       kind: 'formation',
       targetTerritoryId: group.location,
-      demand: formationSupplyDemand(group),
-      priority: formationPriority[group.status],
+      demand: formationSupplyDemand(group) + engineeringDemand,
+      priority: engineeringProject ? Math.max(1.16, formationPriority[group.status]) : formationPriority[group.status],
       delivered: 0,
       pathCounts: new Map()
     });

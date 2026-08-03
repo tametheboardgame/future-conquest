@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
+import { EngineeringCommand } from './components/EngineeringCommand';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
@@ -46,6 +47,7 @@ export default function App() {
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
   const selectedGroupSupply = selectedGroup ? state.logistics.formationAllocations[selectedGroup.id] : undefined;
   const selectedOperation = selectedGroup ? getOperationForGroup(state, selectedGroup.id) : undefined;
+  const selectedEngineeringProject = selectedGroup ? state.engineeringProjects.find(project => project.status === 'active' && project.assignedTaskGroupId === selectedGroup.id) : undefined;
   const selected = state.selectedTerritory ? TERRITORIES[state.selectedTerritory] : null;
   const selectedTerritorySupply = selected ? state.logistics.territoryAllocations[selected.id] : undefined;
   const selectedNetworkNodes = selected ? nodesForTerritory(selected.id) : [];
@@ -109,6 +111,7 @@ export default function App() {
     if (selectedOperation) {
       return `${selectedGroup.name} is committed to ${operationTitle(selectedOperation)}: ${selectedOperation.progress}% progress with ${selectedOperation.participantGroupIds.length} participating task group${selectedOperation.participantGroupIds.length === 1 ? '' : 's'}.`;
     }
+    if (selectedEngineeringProject) return `${selectedGroup.name} is repairing ${STRATEGIC_ROUTE_BY_ID[selectedEngineeringProject.routeId]?.name ?? selectedEngineeringProject.routeId} at ${selectedEngineeringProject.allocation}% allocation.`;
     if (selectedGroup.order?.type === 'move') return `${selectedGroup.name} is moving towards ${TERRITORIES[selectedGroup.order.target].centre}. Other formations may still receive orders before the day resolves.`;
     if (selectedGroup.status === 'recovering') return `${selectedGroup.name} is recovering and cannot receive orders until the next supplied day resolves.`;
     if (targetInfo?.kind === 'route-blocked' && target) return `${target.centre} is adjacent, but every strategic corridor from ${TERRITORIES[selectedGroup.location].centre} is blocked or destroyed.`;
@@ -117,7 +120,7 @@ export default function App() {
     if (targetInfo?.kind === 'attack' && targetOperation && target) return `${target.centre} already has an active operation. Review it and select Join operation to reinforce it via ${chosenRoute?.name ?? 'an available corridor'}.`;
     if (targetInfo?.kind === 'attack' && target) return `Attack target selected via ${chosenRoute?.name ?? 'an available corridor'}. Review the defenders and select Begin operation.`;
     return 'Issue independent orders to each task group, then resolve the day. Several movements and operations can run simultaneously.';
-  }, [chosenRoute, selectedGroup, selectedOperation, target, targetInfo, targetOperation]);
+  }, [chosenRoute, selectedEngineeringProject, selectedGroup, selectedOperation, target, targetInfo, targetOperation]);
 
   const load = () => {
     const saved = loadGame();
@@ -279,7 +282,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B4A / INFRASTRUCTURE DISRUPTION</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B4B / ENGINEERING PROJECTS</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -301,7 +304,7 @@ export default function App() {
       <CommandNavigation
         active={currentView}
         onChange={setCurrentView}
-        badges={{ forces: groups.length, operations: operations.length, territories: `${controlled}/${territoryDefinitions.length}`, intelligence: frontlineTerritories.length }}
+        badges={{ forces: groups.length, operations: operations.length, territories: `${controlled}/${territoryDefinitions.length}`, engineering: state.engineeringProjects.filter(project => project.status === 'active').length, intelligence: frontlineTerritories.length }}
       />
 
       <div className={`command-stage command-stage-${currentView}`}>
@@ -421,6 +424,8 @@ export default function App() {
           })}</div>
         </section>}
 
+        {currentView === 'engineering' && <EngineeringCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />}
+
         {currentView === 'intelligence' && <section className="command-view intelligence-view">
           <header className="command-view-header"><div><p className="panel-label">INTELLIGENCE</p><h2>Strategic picture</h2></div><p>Consolidated enemy strength, frontline pressure, escalation and supply warnings.</p></header>
           <div className="intelligence-command-grid">
@@ -524,6 +529,7 @@ export default function App() {
                 <div><dt>Supply disruptions</dt><dd>{isolated}</dd></div>
                 <div><dt>Network throughput</dt><dd>{state.logistics.totalDelivered} / {state.logistics.totalDemand}</dd></div>
                 <div><dt>Route bottlenecks</dt><dd>{bottleneckRoutes.length}</dd></div>
+                <div><dt>Engineering projects</dt><dd>{state.engineeringProjects.filter(project => project.status === 'active').length}</dd></div>
               </dl>
             </section>
             <section className="view-panel command-reference-panel">
