@@ -49,15 +49,6 @@ test.write_text(content)
 
 engine_test = Path('tests/engine.test.cjs')
 content = engine_test.read_text()
-anchor = """test('ready formations can toggle garrison duty', () => {
-  const state = newGame(19);
-  const group = state.taskGroups[state.selectedTaskGroupId];
-  const garrisoned = setGarrison(state);
-  assert.equal(garrisoned.taskGroups[group.id].status, 'garrison');
-  const released = setGarrison(garrisoned);
-  assert.equal(released.taskGroups[group.id].status, 'ready');
-});
-"""
 addition = """
 
 test('the occupation tutorial cannot be completed by garrisoning the portal', () => {
@@ -68,6 +59,5 @@ test('the occupation tutorial cannot be completed by garrisoning the portal', ()
   assert.equal(garrisoned.tutorial.step, 2);
 });
 """
-if anchor not in content:
-    raise RuntimeError('garrison test anchor was not found')
-engine_test.write_text(content.replace(anchor, anchor + addition, 1))
+if "the occupation tutorial cannot be completed by garrisoning the portal" not in content:
+    engine_test.write_text(content.rstrip() + addition)
