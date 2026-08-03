@@ -1,6 +1,7 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { normaliseRouteStates } from './strategic-network';
 import { normaliseTaskGroupOrderRoutes } from './route-movement';
+import { refreshSupplyNetwork } from './supply-network';
 import type {
   Difficulty,
   EnemyFormation,
@@ -172,7 +173,8 @@ type StrategicField =
   | 'mobilisations'
   | 'enemyOrders'
   | 'intelligenceReports'
-  | 'routeStates';
+  | 'routeStates'
+  | 'logistics';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -182,6 +184,7 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   enemyOrders?: EnemyOrder[];
   intelligenceReports?: IntelligenceReport[];
   routeStates?: GameState['routeStates'];
+  logistics?: GameState['logistics'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -189,9 +192,9 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const previousVersion = state.version;
   const routeStates = normaliseRouteStates(state.routeStates);
   const taskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
-  return {
+  const upgraded = {
     ...state,
-    version: 7,
+    version: 8,
     taskGroups,
     routeStates,
     escalationStage: state.escalationStage ?? defaults.escalationStage,
@@ -204,6 +207,7 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
       ? state.intelligenceReports
       : defaults.intelligenceReports
   } as GameState;
+  return refreshSupplyNetwork(upgraded);
 }
 
 function appendEvent(state: GameState, text: string, tone: GameEvent['tone']): GameState {

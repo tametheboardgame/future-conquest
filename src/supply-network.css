@@ -1,0 +1,115 @@
+/* Phase VIII-B3 supply throughput presentation. */
+
+.supply-route-layer,
+.supply-route-layer * {
+  pointer-events: none;
+}
+
+.supply-route-flow {
+  fill: none;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: .9;
+}
+
+.supply-route-flow.active {
+  stroke: #6fe3cf;
+  stroke-width: 2.2;
+}
+
+.supply-route-flow.strained {
+  stroke: #f0c66f;
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+}
+
+.supply-route-flow.overloaded {
+  stroke: #ff765f;
+  stroke-width: 4;
+  stroke-dasharray: 5 4;
+  filter: drop-shadow(0 0 4px rgba(255, 118, 95, .55));
+}
+
+.supply-route-flow.selected-path {
+  stroke: #d5fff7;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 5px rgba(143, 249, 237, .8));
+}
+
+.supply-condition {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  border: 1px solid #45636d;
+  padding: 3px 6px;
+  font: 600 9px IBM Plex Mono, monospace;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.supply-condition.sustained { border-color: #3e9e90; color: #8ff9ed; }
+.supply-condition.strained { border-color: #ae9451; color: #f0d37f; }
+.supply-condition.undersupplied { border-color: #bc744f; color: #ffaf79; }
+.supply-condition.critical,
+.supply-condition.cut-off { border-color: #b94f49; color: #ff8078; }
+
+.logistics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 12px;
+  background: #29434c;
+}
+
+.logistics-summary-grid > div {
+  display: grid;
+  gap: 4px;
+  background: #0a222b;
+  padding: 11px;
+}
+
+.logistics-summary-grid span {
+  color: #78919c;
+  font: 500 9px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+}
+
+.logistics-summary-grid strong {
+  color: #eafffb;
+  font: 600 22px Barlow Condensed, sans-serif;
+}
+
+.logistics-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.logistics-list article,
+.logistics-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid #2c4d57;
+  background: #0b2630;
+  color: #c8d8de;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.logistics-list strong { display: block; color: #f0fffc; }
+.logistics-list small { color: #78919c; }
+.logistics-list b { color: #8ff9ed; font: 600 10px IBM Plex Mono, monospace; }
+
+.network-supply-metric.strained strong { color: #f0d37f; }
+.network-supply-metric.critical strong { color: #ff8078; }
+
+@media (max-width: 900px) {
+  .logistics-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .supply-route-flow { stroke-width: 3; }
+  .supply-route-flow.overloaded,
+  .supply-route-flow.selected-path { stroke-width: 5; }
+}

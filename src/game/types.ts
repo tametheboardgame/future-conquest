@@ -7,6 +7,8 @@ export type IntelligenceConfidence = 'low' | 'moderate' | 'high';
 export type StrategicNodeType = 'capital' | 'city' | 'port' | 'airport' | 'rail-hub' | 'crossing' | 'logistics';
 export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountain-pass' | 'river-crossing';
 export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
+export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'critical' | 'cut-off';
+export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
 
 export interface TerritoryDefinition {
   id: string;
@@ -139,6 +141,51 @@ export interface StrategicRouteState {
   capacityModifier: number;
 }
 
+export interface SupplyPath {
+  sourceTerritoryId: string;
+  targetTerritoryId: string;
+  routeIds: string[];
+}
+
+export interface FormationSupplyAllocation {
+  groupId: string;
+  demand: number;
+  delivered: number;
+  ratio: number;
+  condition: SupplyCondition;
+  path: SupplyPath;
+}
+
+export interface TerritorySupplyAllocation {
+  territoryId: string;
+  demand: number;
+  delivered: number;
+  ratio: number;
+  condition: SupplyCondition;
+  routeIds: string[];
+}
+
+export interface RouteSupplyFlow {
+  routeId: string;
+  capacity: number;
+  used: number;
+  utilisation: number;
+  condition: RouteSupplyCondition;
+}
+
+export interface LogisticsState {
+  turn: number;
+  sourceCapacity: number;
+  sourceUsed: number;
+  totalDemand: number;
+  totalDelivered: number;
+  networkEfficiency: number;
+  routeFlows: Record<string, RouteSupplyFlow>;
+  territoryAllocations: Record<string, TerritorySupplyAllocation>;
+  formationAllocations: Record<string, FormationSupplyAllocation>;
+  bottleneckRouteIds: string[];
+}
+
 export interface GameEvent {
   id: number;
   turn: number;
@@ -147,7 +194,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 7;
+  version: 8;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -165,6 +212,7 @@ export interface GameState {
   enemyOrders: EnemyOrder[];
   intelligenceReports: IntelligenceReport[];
   routeStates: Record<string, StrategicRouteState>;
+  logistics: LogisticsState;
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;
