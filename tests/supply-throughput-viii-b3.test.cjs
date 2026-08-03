@@ -29,7 +29,7 @@ function controlledCorridorState(portal, controlled) {
 
 test('new campaigns calculate a finite version 8 logistics network', () => {
   const state = newGame(711, 'standard');
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.equal(state.logistics.turn, 1);
   assert.ok(state.logistics.sourceCapacity > 0);
   assert.ok(state.logistics.totalDemand > 0);
@@ -119,7 +119,7 @@ test('version 7 campaigns migrate through version 8 to version 9 with recalculat
   legacy.version = 7;
   delete legacy.logistics;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 13);
+  assert.equal(upgraded.version, 14);
   assert.ok(upgraded.logistics.totalDemand > 0);
   assert.equal(upgraded.supply, upgraded.logistics.networkEfficiency);
 });
@@ -130,13 +130,13 @@ test('the interface exposes throughput, bottlenecks and the version 8 release ma
   const engine = read('src/game/engine.ts');
   const persistence = read('src/game/persistence.ts');
   const css = read('src/supply-network.css');
-  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
+  assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
   assert.match(app, /Delivered throughput/);
   assert.match(app, /LOGISTICS NETWORK/);
   assert.match(map, /Supply network/);
   assert.match(map, /supply-route-flow/);
   assert.match(engine, /future-conquest-slice-v0\.10/);
-  assert.match(persistence, /saveVersion:\s*13/);
+  assert.match(persistence, /saveVersion:\s*14/);
   assert.match(css, /\.supply-route-flow\.overloaded/);
 });
 

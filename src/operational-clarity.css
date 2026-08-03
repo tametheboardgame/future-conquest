@@ -1,0 +1,129 @@
+.operational-alert-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(260px, 2fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: 0 18px 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-left-width: 5px;
+  background: rgba(10,18,28,.94);
+}
+.operational-alert-strip strong { display: block; font-size: .92rem; }
+.operational-alert-strip span, .operational-alert-strip small { color: #b9c8d8; }
+.operational-alert-strip.warning { border-left-color: #e8bd5a; }
+.operational-alert-strip.danger { border-left-color: #ee7e52; }
+.operational-alert-strip.critical { border-left-color: #ff4f59; box-shadow: 0 0 22px rgba(255,79,89,.16); }
+.operational-alert-strip button { white-space: nowrap; }
+.supply-diagnostic-copy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.enemy-threat-strip {
+  margin: 0 18px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,102,85,.35);
+  background: linear-gradient(90deg, rgba(105,24,28,.82), rgba(24,18,24,.92));
+}
+.enemy-threat-strip > strong { display: block; margin-bottom: 8px; letter-spacing: .08em; font-size: .75rem; }
+.enemy-threat-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.enemy-threat-list button { display: flex; gap: 10px; align-items: center; text-align: left; }
+.enemy-threat-list button.imminent, .enemy-threat-list button.under-attack { border-color: #ff735e; }
+.enemy-threat-list button.under-attack { animation: threatPulse 1.2s infinite; }
+@keyframes threatPulse { 50% { box-shadow: 0 0 0 4px rgba(255,78,78,.2); } }
+
+.network-supply-metric { text-align: left; color: inherit; background: transparent; border: 0; padding: inherit; cursor: pointer; }
+.network-supply-metric.warning strong { color: #e8bd5a; }
+.network-supply-metric.danger strong { color: #ee7e52; }
+.network-supply-metric.critical strong { color: #ff5e68; }
+.network-supply-metric:hover { background: rgba(255,255,255,.04); }
+
+.supply-warning-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2,7,12,.82);
+  backdrop-filter: blur(5px);
+}
+.supply-warning-dialog {
+  width: min(620px, 100%);
+  padding: 22px;
+  border: 1px solid rgba(255,93,93,.55);
+  background: #101923;
+  box-shadow: 0 24px 80px rgba(0,0,0,.55);
+}
+.supply-warning-dialog h2 { margin: 4px 0 10px; }
+.supply-warning-dialog ul { margin: 14px 0; padding-left: 20px; color: #c5d0db; }
+.supply-warning-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+.tutorial-overlay {
+  position: fixed;
+  z-index: 220;
+  right: 20px;
+  bottom: 20px;
+  width: min(420px, calc(100vw - 40px));
+  padding: 18px;
+  border: 1px solid rgba(113,214,255,.55);
+  background: rgba(9,20,31,.97);
+  box-shadow: 0 18px 60px rgba(0,0,0,.48), 0 0 24px rgba(74,185,255,.12);
+}
+.tutorial-progress { display: flex; justify-content: space-between; color: #7ed9ff; font-size: .72rem; letter-spacing: .1em; }
+.tutorial-overlay h2 { margin: 8px 0; }
+.tutorial-overlay p { color: #c3d0dc; line-height: 1.45; }
+.tutorial-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.tutorial-step-forces .forces-view,
+.tutorial-step-map .command-map-workspace,
+.tutorial-step-operations .operations-view,
+.tutorial-step-logistics .logistics-command,
+.tutorial-step-intelligence .intelligence-view,
+.tutorial-step-engineering .infrastructure-command-stack {
+  outline: 2px solid rgba(91,204,255,.7);
+  outline-offset: -2px;
+}
+
+.territory.threatened { stroke: #ff9861 !important; stroke-width: 4px !important; stroke-dasharray: 10 5; }
+.territory.under-attack { stroke: #ff414d !important; stroke-width: 6px !important; animation: territoryAttackPulse 1s infinite; }
+@keyframes territoryAttackPulse { 50% { filter: brightness(1.45); } }
+.enemy-contact-marker { cursor: pointer; }
+.enemy-contact-marker .contact-body { fill: #7b2430; stroke: #ffd0c7; stroke-width: 1.5; }
+.enemy-contact-marker.estimated .contact-body { fill: #6e4b20; stroke-dasharray: 3 2; }
+.enemy-contact-marker.activity .contact-body { fill: #513b61; }
+.enemy-contact-marker.stale { opacity: .48; }
+.enemy-contact-marker text { fill: #fff; font-size: 10px; font-weight: 800; text-anchor: middle; pointer-events: none; }
+.enemy-contact-marker .contact-confidence { font-size: 7px; }
+.enemy-concentration-route { stroke: #ff7566; stroke-width: 3; stroke-dasharray: 7 5; opacity: .78; marker-end: url(#enemyMovementArrow); }
+.threat-marker circle { fill: rgba(255,53,65,.2); stroke: #ff5260; stroke-width: 2; }
+.threat-marker text { fill: #fff; font-size: 8px; font-weight: 900; text-anchor: middle; }
+.supply-route-flow.bottleneck { stroke: #ffb34d !important; stroke-width: 5px; }
+.supply-route-flow.broken { stroke: #ff4e59 !important; stroke-dasharray: 3 3; }
+.strategic-route.supply-critical { stroke: #ff5360; opacity: .9; }
+.enemy-contact-table article { border-left: 3px solid rgba(255,255,255,.18); }
+.enemy-contact-table article.confirmed { border-left-color: #ff6d61; }
+.enemy-contact-table article.estimated { border-left-color: #e8bd5a; }
+.enemy-contact-table article.activity { border-left-color: #a879d4; }
+.enemy-contact-table article.stale { opacity: .62; }
+
+@media (max-width: 760px) {
+  .operational-alert-strip { grid-template-columns: 1fr; margin-inline: 8px; }
+  .enemy-threat-strip { margin-inline: 8px; }
+  .supply-diagnostic-copy { white-space: normal; }
+  .tutorial-overlay { right: 10px; bottom: 10px; width: calc(100vw - 20px); }
+}
+
+
+.enemy-threat-list button.recent-combat { border-color: #c95d68; opacity: .9; }
+.territory.recent-combat { stroke: #d84d59 !important; stroke-width: 5px !important; stroke-dasharray: 5 4; }
+.threat-marker.recent-combat circle { fill: rgba(180,44,57,.28); stroke: #e46872; }
+.logistics-command-stack { display: grid; gap: 12px; }
+.supply-diagnostics-panel { border-left: 4px solid rgba(255,255,255,.18); }
+.supply-diagnostics-panel.warning { border-left-color: #e8bd5a; }
+.supply-diagnostics-panel.danger { border-left-color: #ee7e52; }
+.supply-diagnostics-panel.critical { border-left-color: #ff4f59; }
+.supply-diagnostic-list { display: grid; gap: 8px; margin-top: 10px; }
+.supply-diagnostic-list article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.supply-diagnostic-list article.warning { border-left: 3px solid #e8bd5a; }
+.supply-diagnostic-list article.danger { border-left: 3px solid #ee7e52; }
+.supply-diagnostic-list article.critical { border-left: 3px solid #ff4f59; }
+.supply-diagnostic-list p { margin: 3px 0 0; color: #b9c8d8; }
+@media (max-width: 700px) { .supply-diagnostic-list article { grid-template-columns: 1fr; } }

@@ -25,6 +25,7 @@ import {
   type MapViewBox
 } from '../game/map-viewport';
 import { getAdjacentOrderTargets } from '../game/order-targeting';
+import { getEnemyContacts, getThreatenedTerritories } from '../game/operational-clarity';
 import type { GameState, StrategicNodeType } from '../game/types';
 
 interface Props {
@@ -273,10 +274,10 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
     (result[group.location] ??= []).push(group);
     return result;
   }, {});
-  const enemyCounts = Object.values(state.enemyFormations).reduce<Record<string, number>>((result, formation) => {
-    if (formation.personnel > 0) result[formation.location] = (result[formation.location] ?? 0) + 1;
-    return result;
-  }, {});
+  const enemyContacts = getEnemyContacts(state);
+  const threatenedTerritories = getThreatenedTerritories(state);
+  const threatByTerritory = new Map(threatenedTerritories.map(threat => [threat.territoryId, threat]));
+  const enemyMovementOrders = state.enemyOrders.filter(order => (order.status !== 'completed' || state.turn - order.turn <= 1) && order.origin && anchors[order.origin] && anchors[order.target] && (order.type === 'counterattack' || order.type === 'concentrate' || order.type === 'reposition'));
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
@@ -455,7 +456,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
       <defs>
         <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker>
+        <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker><marker id="enemyMovementArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
       </defs>
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="sea" />
       <path d={graticulePath} className="map-graticule" />
@@ -470,13 +471,14 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           const selected = state.selectedTerritory === id;
           const targeted = state.targetTerritory === id;
           const active = activeTargets.has(id);
+          const threat = threatByTerritory.get(id);
           const reachable = adjacentTargets.has(id) && !selected && !targeted && !active;
           const reachStyle = reachable ? {
             stroke: territory.controller === 'enemy' ? '#ffb45c' : '#8ff9ed',
             strokeWidth: 3,
             strokeDasharray: '8 5'
           } : undefined;
-          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''}`} />;
+          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''} ${threat ? 'threatened' : ''} ${threat?.stage === 'under-attack' ? 'under-attack' : ''} ${threat?.stage === 'recent-combat' ? 'recent-combat' : ''}`} />;
         })}
 
         {layers.routes && zoomPercent >= 120 && <g className="strategic-route-layer" aria-hidden="true">
@@ -484,7 +486,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
             const routeState = state.routeStates[route.id];
             return <line
               key={route.id}
-              className={`strategic-route ${route.type} ${routeState?.status ?? 'open'}`}
+              className={`strategic-route ${route.type} ${routeState?.status ?? 'open'} ${state.logistics.bottleneckRouteIds.includes(route.id) || routeState?.status === 'blocked' || routeState?.status === 'destroyed' ? 'supply-critical' : ''}`}
               x1={route.x1}
               y1={route.y1}
               x2={route.x2}
@@ -500,7 +502,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
             const selectedPath = selectedSupplyRouteIds.has(route.id);
             return <line
               key={`supply-${route.id}`}
-              className={`supply-route-flow ${flow.condition} ${selectedPath ? 'selected-path' : ''}`}
+              className={`supply-route-flow ${flow.condition} ${selectedPath ? 'selected-path' : ''} ${state.logistics.bottleneckRouteIds.includes(route.id) ? 'bottleneck' : ''} ${state.routeStates[route.id]?.status === 'blocked' || state.routeStates[route.id]?.status === 'destroyed' ? 'broken' : ''}`}
               x1={route.x1}
               y1={route.y1}
               x2={route.x2}
@@ -541,6 +543,13 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
         }))}
 
+        {layers.enemyUnits && enemyMovementOrders.map(order => {
+          const origin = order.origin ? anchors[order.origin] : undefined;
+          const target = anchors[order.target];
+          if (!origin || !target) return null;
+          return <line key={`enemy-move-${order.id}`} className="enemy-concentration-route" x1={origin[0]} y1={origin[1]} x2={target[0]} y2={target[1]}><title>{order.summary}</title></line>;
+        })}
+
         {showTerritoryLabels && activePaths.map(({ id }) => {
           const anchor = anchors[id];
           const territory = state.territories[id];
@@ -577,11 +586,22 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           return <g key={`${operation.id}-marker`} className="operation-marker" transform={`translate(${x - 25 * overlayScale} ${y - 31 * overlayScale}) scale(${overlayScale})`}><rect x="-15" y="-8" width="30" height="16" rx="3" /><text x="0" y="4">{operation.participantGroupIds.length}×</text></g>;
         })}
 
-        {layers.enemyUnits && Object.entries(enemyCounts).map(([territoryId, count]) => {
-          const anchor = anchors[territoryId];
+        {layers.enemyUnits && enemyContacts.map(contact => {
+          const anchor = anchors[contact.territoryId];
           if (!anchor) return null;
           const [x, y] = anchor;
-          return <g key={`enemy-${territoryId}`} className="enemy-marker" transform={`translate(${x + 24 * overlayScale} ${y - 24 * overlayScale}) scale(${overlayScale})`}><path d="M0 -10 L10 8 L-10 8 Z" /><text x="0" y="4">{count}</text></g>;
+          const symbol = contact.confidence === 'confirmed' ? String(contact.formationCount ?? 1) : contact.confidence === 'estimated' ? '~' : contact.confidence === 'stale' ? 'S' : '?';
+          return <g key={`enemy-${contact.territoryId}`} className={`enemy-contact-marker ${contact.confidence}`} transform={`translate(${x + 24 * overlayScale} ${y - 24 * overlayScale}) scale(${overlayScale})`} onClick={(event: ReactMouseEvent<SVGGElement>) => { event.stopPropagation(); selectTerritory(contact.territoryId); }}>
+            <path className="contact-body" d="M0 -12 L12 9 L-12 9 Z" /><text x="0" y="4">{symbol}</text><text className="contact-confidence" x="0" y="18">{contact.confidence.slice(0, 3).toUpperCase()}</text>
+            <title>{contact.label} · {TERRITORIES[contact.territoryId].centre} · estimated {contact.estimatedMin}–{contact.estimatedMax} personnel</title>
+          </g>;
+        })}
+
+        {layers.enemyUnits && threatenedTerritories.map(threat => {
+          const anchor = anchors[threat.territoryId];
+          if (!anchor) return null;
+          const [x, y] = anchor;
+          return <g key={`threat-${threat.territoryId}`} className={`threat-marker ${threat.stage}`} transform={`translate(${x} ${y - 42 * overlayScale}) scale(${overlayScale})`} onClick={(event: ReactMouseEvent<SVGGElement>) => { event.stopPropagation(); selectTerritory(threat.territoryId); }}><circle cx="0" cy="0" r="13" /><text x="0" y="3">!</text><title>{threat.summary} · expected day {threat.executeTurn}</title></g>;
         })}
 
         {layers.friendlyUnits && Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {

@@ -6,6 +6,7 @@ import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import { normaliseEngineeringState } from './engineering-projects';
 import { normaliseInterdictionState } from './interdiction-missions';
 import { createEnemyStrategyState, normaliseEnemyStrategyState } from './enemy-strategy';
+import { normaliseOperationalAwarenessState, normaliseTutorialState } from './operational-clarity';
 import type {
   Difficulty,
   EnemyFormation,
@@ -184,7 +185,9 @@ type StrategicField =
   | 'engineeringProjects'
   | 'interdictionMissions'
   | 'logisticsPriorities'
-  | 'enemyStrategy';
+  | 'enemyStrategy'
+  | 'operationalAwareness'
+  | 'tutorial';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -200,6 +203,8 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   interdictionMissions?: GameState['interdictionMissions'];
   logisticsPriorities?: GameState['logisticsPriorities'];
   enemyStrategy?: GameState['enemyStrategy'];
+  operationalAwareness?: GameState['operationalAwareness'];
+  tutorial?: GameState['tutorial'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -212,7 +217,7 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const logisticsPriorities = normaliseLogisticsPriorities(state.logisticsPriorities, interdiction.taskGroups, state.territories);
   const upgraded = {
     ...state,
-    version: 13,
+    version: 14,
     taskGroups: interdiction.taskGroups,
     routeStates,
     infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
@@ -220,6 +225,8 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
     interdictionMissions: interdiction.missions,
     logisticsPriorities,
     enemyStrategy: normaliseEnemyStrategyState(state.enemyStrategy, state.difficulty),
+    operationalAwareness: normaliseOperationalAwarenessState(state.operationalAwareness, state.logistics?.networkEfficiency ?? 100),
+    tutorial: normaliseTutorialState(state.tutorial, state.turn),
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)

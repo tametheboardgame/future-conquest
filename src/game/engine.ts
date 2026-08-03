@@ -14,6 +14,7 @@ import {
 } from './route-movement';
 import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
 import { crisisLimitForDifficulty, resolveEnemyStrategy } from './enemy-strategy';
+import { createOperationalAwarenessState, createTutorialState, progressTutorial } from './operational-clarity';
 import type {
   Difficulty,
   EnemyFormation,
@@ -24,7 +25,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.13';
+const SAVE_KEY = 'future-conquest-slice-v0.14';
+const LEGACY_V13_SAVE_KEY = 'future-conquest-slice-v0.13';
 const LEGACY_V12_SAVE_KEY = 'future-conquest-slice-v0.12';
 const LEGACY_V11_SAVE_KEY = 'future-conquest-slice-v0.11';
 const LEGACY_V10_SAVE_KEY = 'future-conquest-slice-v0.10';
@@ -115,7 +117,7 @@ function initialEnemyFormations(seed: number, portalTerritory: string, difficult
   return Object.fromEntries(formations.map(formation => [formation.id, formation]));
 }
 
-export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: Difficulty = 'standard'): GameState {
+export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: Difficulty = 'standard', tutorialEnabled = true): GameState {
   const portalTerritory = SLICE_IDS[seed % SLICE_IDS.length];
   const territories = Object.fromEntries(SLICE_IDS.map(id => [id, {
     controller: id === portalTerritory ? 'player' : 'enemy',
@@ -129,7 +131,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 13,
+    version: 14,
     seed,
     difficulty,
     turn: 1,
@@ -142,6 +144,8 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     enemyFormations: initialEnemyFormations(seed, portalTerritory, difficulty),
     escalation: initialEscalation,
     ...strategicState,
+    operationalAwareness: createOperationalAwarenessState(100),
+    tutorial: createTutorialState(tutorialEnabled, 1),
     routeStates: createRouteStates(),
     logistics: createEmptyLogisticsState(1),
     logisticsPriorities: createEmptyLogisticsPriorities(),
@@ -159,7 +163,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
 
 export function selectTaskGroup(state: GameState, id: string): GameState {
   if (!state.taskGroups[id]) return state;
-  return { ...state, selectedTaskGroupId: id, selectedTerritory: state.taskGroups[id].location, targetTerritory: null };
+  return progressTutorial({ ...state, selectedTaskGroupId: id, selectedTerritory: state.taskGroups[id].location, targetTerritory: null }, 'select-formation');
 }
 
 export function selectTerritory(state: GameState, id: string): GameState {
@@ -182,11 +186,11 @@ export function issueMove(state: GameState, requestedRouteId?: string): GameStat
   const taskGroups = structuredClone(state.taskGroups);
   taskGroups[group.id].status = 'moving';
   taskGroups[group.id].order = { type: 'move', target, progress: 0, days: 0, routeId: route.id };
-  return addEvent(
+  return progressTutorial(addEvent(
     { ...state, taskGroups, targetTerritory: null },
     `${group.name} ordered to move from ${TERRITORIES[group.location].centre} to ${TERRITORIES[target].centre} via ${route.name}.`,
     'neutral'
-  );
+  ), 'issue-move');
 }
 
 export function setGarrison(state: GameState): GameState {
@@ -195,7 +199,10 @@ export function setGarrison(state: GameState): GameState {
   const taskGroups = structuredClone(state.taskGroups);
   const next = taskGroups[group.id];
   next.status = next.status === 'garrison' ? 'ready' : 'garrison';
-  return addEvent({ ...state, taskGroups }, `${group.name} ${next.status === 'garrison' ? 'assigned to occupation and defensive duties' : 'released from garrison duty'} in ${TERRITORIES[group.location].centre}.`, 'neutral');
+  const updated = addEvent({ ...state, taskGroups }, `${group.name} ${next.status === 'garrison' ? 'assigned to occupation and defensive duties' : 'released from garrison duty'} in ${TERRITORIES[group.location].centre}.`, 'neutral');
+  return next.status === 'garrison' && group.location !== state.portalTerritory
+    ? progressTutorial(updated, 'set-garrison')
+    : updated;
 }
 
 export function enemyStrengthAt(state: GameState, territoryId: string): { formations: number; personnel: number; armour: number; power: number } {
@@ -259,11 +266,11 @@ export function beginOperation(state: GameState, requestedRouteId?: string): Gam
   };
 
   const verb = existing ? 'joined the operation' : 'launched an operation';
-  return addEvent(
+  return progressTutorial(addEvent(
     { ...state, taskGroups, operations, targetTerritory: null },
     `${group.name} ${verb} from ${TERRITORIES[group.location].centre} towards ${TERRITORIES[target].centre} via ${route.name}.`,
     'warning'
-  );
+  ), 'begin-operation');
 }
 
 function resolveMovement(state: GameState): GameState {
@@ -715,6 +722,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
 
 export function endTurn(state: GameState): GameState {
   if (state.status !== 'playing') return state;
+  const previousNetworkEfficiency = state.logistics.networkEfficiency;
   let next: GameState = {
     ...state,
     turn: state.turn + 1,
@@ -726,6 +734,8 @@ export function endTurn(state: GameState): GameState {
     logistics: structuredClone(state.logistics),
     logisticsPriorities: structuredClone(state.logisticsPriorities),
     enemyStrategy: structuredClone(state.enemyStrategy),
+    operationalAwareness: structuredClone(state.operationalAwareness),
+    tutorial: structuredClone(state.tutorial),
     infrastructureIncidents: structuredClone(state.infrastructureIncidents ?? []),
     engineeringProjects: structuredClone(state.engineeringProjects),
     interdictionMissions: structuredClone(state.interdictionMissions),
@@ -744,6 +754,7 @@ export function endTurn(state: GameState): GameState {
   next = pruneOperations(next);
   next = syncOperationDefenders(next);
   next = refreshSupply(next);
+  next = { ...next, operationalAwareness: { ...next.operationalAwareness, previousNetworkEfficiency } };
   const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
   const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
   const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
@@ -775,18 +786,21 @@ type EngineeringField = 'engineeringProjects';
 type InterdictionField = 'interdictionMissions';
 type PriorityField = 'logisticsPriorities';
 type StrategyField = 'enemyStrategy';
+type AwarenessField = 'operationalAwareness';
+type TutorialField = 'tutorial';
 
-type LegacyV12GameState = Omit<GameState, 'version' | StrategyField> & { version: 12 };
-type LegacyV11GameState = Omit<GameState, 'version' | PriorityField | StrategyField> & { version: 11 };
-type LegacyV10GameState = Omit<GameState, 'version' | InterdictionField | PriorityField | StrategyField> & { version: 10 };
-type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 9 };
-type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 8 };
-type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 7 };
-type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 6 };
-type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 5 };
-type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 4 };
-type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 3 };
-type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & {
+type LegacyV13GameState = Omit<GameState, 'version' | AwarenessField | TutorialField> & { version: 13 };
+type LegacyV12GameState = Omit<GameState, 'version' | StrategyField | AwarenessField | TutorialField> & { version: 12 };
+type LegacyV11GameState = Omit<GameState, 'version' | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 11 };
+type LegacyV10GameState = Omit<GameState, 'version' | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 10 };
+type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 9 };
+type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 8 };
+type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 7 };
+type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 6 };
+type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 5 };
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -827,7 +841,7 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
-      parsed.version === 13
+      parsed.version === 14
       && parsed.taskGroups
       && parsed.enemyFormations
       && parsed.operations
@@ -840,7 +854,30 @@ export function loadGame(): GameState | null {
       && parsed.interdictionMissions
       && parsed.logisticsPriorities
       && parsed.enemyStrategy
+      && parsed.operationalAwareness
+      && parsed.tutorial
     ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v13 = localStorage.getItem(LEGACY_V13_SAVE_KEY);
+  if (v13) {
+    const parsed = JSON.parse(v13) as Partial<LegacyV13GameState>;
+    if (
+      parsed.version === 13
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+      && parsed.logistics
+      && parsed.infrastructureIncidents
+      && parsed.engineeringProjects
+      && parsed.interdictionMissions
+      && parsed.logisticsPriorities
+      && parsed.enemyStrategy
+    ) return upgradeStrategicState(parsed as LegacyV13GameState);
   }
 
   const v12 = localStorage.getItem(LEGACY_V12_SAVE_KEY);

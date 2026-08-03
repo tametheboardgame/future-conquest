@@ -5,6 +5,7 @@ import { FormationRoster } from './components/FormationRoster';
 import { EngineeringCommand } from './components/EngineeringCommand';
 import { InterdictionCommand } from './components/InterdictionCommand';
 import { LogisticsCommand } from './components/LogisticsCommand';
+import { TutorialOverlay } from './components/TutorialOverlay';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
@@ -12,10 +13,21 @@ import { NODE_TYPE_LABELS, ROUTE_TYPE_LABELS, nodesForTerritory, routeStatusLabe
 import { estimateRouteMovementDays } from './game/route-movement';
 import { SUPPLY_CONDITION_LABELS } from './game/supply-network';
 import {
+  getEnemyContacts,
+  getSupplyClarity,
+  getThreatenedTerritories,
+  getTutorialStep,
+  markSupplyWarningAcknowledged,
+  progressTutorial,
+  requiresSupplyAcknowledgement,
+  restartTutorial,
+  skipTutorial,
+  TUTORIAL_STEPS
+} from './game/operational-clarity';
+import {
   beginOperation,
   canIssueOperationalOrder,
   endTurn,
-  enemyStrengthAt,
   getOperationAtTarget,
   getOperationForGroup,
   issueMove,
@@ -39,13 +51,17 @@ export default function App() {
   const [newDifficulty, setNewDifficulty] = useState<Difficulty>('standard');
   const [currentView, setCurrentView] = useState<CommandView>('map');
   const [selectedRouteId, setSelectedRouteId] = useState('');
+  const [showSupplyWarning, setShowSupplyWarning] = useState(false);
+  const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
-  const enemyFormations = Object.values(state.enemyFormations)
-    .filter(formation => formation.personnel > 0)
-    .sort((a, b) => TERRITORIES[a.location].centre.localeCompare(TERRITORIES[b.location].centre) || a.name.localeCompare(b.name));
   const territoryDefinitions = Object.values(TERRITORIES).sort((a, b) => a.centre.localeCompare(b.centre));
+  const enemyContacts = getEnemyContacts(state);
+  const confirmedEnemyContacts = enemyContacts.filter(contact => contact.confidence === 'confirmed').length;
+  const threatenedTerritories = getThreatenedTerritories(state);
+  const supplyClarity = getSupplyClarity(state);
+  const tutorialStep = getTutorialStep(state.tutorial);
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
   const selectedGroupSupply = selectedGroup ? state.logistics.formationAllocations[selectedGroup.id] : undefined;
   const selectedOperation = selectedGroup ? getOperationForGroup(state, selectedGroup.id) : undefined;
@@ -81,9 +97,8 @@ export default function App() {
   const functionalArmour = groups.reduce((sum, group) => sum + group.functionalArmour, 0);
   const totalArmour = groups.reduce((sum, group) => sum + group.functionalArmour + group.damagedArmour, 0);
   const armourPercent = Math.round(functionalArmour / Math.max(1, totalArmour) * 100);
-  const enemyPersonnel = enemyFormations.reduce((sum, formation) => sum + formation.personnel, 0);
-  const enemyArmour = enemyFormations.reduce((sum, formation) => sum + formation.armour, 0);
-  const enemyAtTarget = target && targetState?.controller === 'enemy' ? enemyStrengthAt(state, target.id) : null;
+  const enemyPersonnel = enemyContacts.reduce((sum, contact) => sum + Math.round((contact.estimatedMin + contact.estimatedMax) / 2), 0);
+  const targetContact = target ? enemyContacts.find(contact => contact.territoryId === target.id) : undefined;
   const escalationStage = getEscalationStage(state.escalation);
   const escalationLabel = escalationStage.label;
   const pendingMobilisations = [...state.mobilisations].filter(project => project.status === 'preparing').sort((a, b) => a.arrivalTurn - b.arrivalTurn);
@@ -144,9 +159,35 @@ export default function App() {
     setCurrentView('map');
   };
 
+  const changeView = (view: CommandView) => {
+    setCurrentView(view);
+    if (view === 'logistics') setState(current => progressTutorial(current, 'open-logistics'));
+    if (view === 'intelligence') setState(current => progressTutorial(current, 'review-intelligence'));
+    if (view === 'engineering') setState(current => progressTutorial(current, 'open-engineering'));
+  };
+
   const startCampaign = () => {
-    setState(newGame(undefined, newDifficulty));
+    setState(newGame(undefined, newDifficulty, newTutorialEnabled));
     setCurrentView('map');
+    setShowSupplyWarning(false);
+  };
+
+  const openThreatOnMap = (territoryId: string) => {
+    setState(current => selectTerritory(progressTutorial(current, 'review-intelligence'), territoryId));
+    setCurrentView('map');
+  };
+
+  const resolveDay = () => {
+    if (requiresSupplyAcknowledgement(state)) {
+      setShowSupplyWarning(true);
+      return;
+    }
+    setState(endTurn);
+  };
+
+  const resolveDayAnyway = () => {
+    setShowSupplyWarning(false);
+    setState(current => endTurn(markSupplyWarningAcknowledged(current)));
   };
 
   const renderPriorityOrderAction = () => {
@@ -257,7 +298,7 @@ export default function App() {
       </label>}
       {chosenRoute && <div className="forecast"><span>Estimated travel</span><strong>{chosenRouteDays} day{chosenRouteDays === 1 ? '' : 's'}</strong></div>}
       <button className="primary" disabled={!canMove} onClick={() => setState(current => issueMove(current, chosenRouteId || undefined))}>{canMove ? 'Issue movement order' : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
-    </> : target && enemyAtTarget ? <>
+    </> : target && targetContact ? <>
       <h3>{TERRITORIES[selectedGroup.location].centre} → {target.centre}</h3>
       {targetInfo?.kind === 'route-blocked' ? <p>Every strategic corridor into this enemy province is blocked or destroyed. No operation can be launched from the current position.</p> : targetInfo?.kind === 'out-of-range' ? <>
         <p>This enemy province has no direct strategic route from the selected task group. Select a province marked ATTACK or move closer through controlled territory.</p>
@@ -267,9 +308,9 @@ export default function App() {
         <div className="forecast"><span>Current participants</span><strong>{targetOperation.participantGroupIds.length}</strong></div>
         <div className="forecast"><span>Current progress</span><strong>{targetOperation.progress}%</strong></div>
       </> : <p>{target.terrain === 'mountainous' ? 'Severe terrain and entrenched defenders favour the enemy.' : 'A persistent enemy command is defending this territory. Losses will carry into later battles.'}</p>}
-      <div className="forecast"><span>Enemy formations</span><strong>{enemyAtTarget.formations}</strong></div>
-      <div className="forecast"><span>Estimated personnel</span><strong>{formatNumber(enemyAtTarget.personnel)}</strong></div>
-      <div className="forecast"><span>Enemy armour</span><strong>{formatNumber(enemyAtTarget.armour)}</strong></div>
+      <div className="forecast"><span>Recon confidence</span><strong>{targetContact.confidence}</strong></div>
+      <div className="forecast"><span>Assessed personnel</span><strong>{formatNumber(targetContact.estimatedMin)}–{formatNumber(targetContact.estimatedMax)}</strong></div>
+      <div className="forecast"><span>Formation identity</span><strong>{targetContact.formationCount ? `${targetContact.formationCount} confirmed` : 'Unconfirmed'}</strong></div>
       {routeOptions.length > 0 && <label>Operational corridor
         <select value={chosenRouteId} onChange={event => setSelectedRouteId(event.target.value)}>
           {routeOptions.map(route => <option key={route.id} value={route.id}>{route.name} · {ROUTE_TYPE_LABELS[route.type]}</option>)}
@@ -282,13 +323,13 @@ export default function App() {
     </>}
   </section>;
 
-  return <main className="app-shell command-app-shell">
+  return <main className={`app-shell command-app-shell ${tutorialStep ? `tutorial-step-${tutorialStep.target}` : ''}`}>
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-C / ENEMY STRATEGY AND CAMPAIGN BALANCE</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
-        <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
+        <button className="global-resolve" onClick={resolveDay} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
       </div>
     </header>
@@ -296,18 +337,32 @@ export default function App() {
     <section className="metrics command-metrics">
       <div><span>Active personnel</span><strong>{formatNumber(totalPersonnel)}</strong></div>
       <div><span>Functional armour</span><strong>{armourPercent}%</strong></div>
-      <div className={`network-supply-metric ${state.supply < 55 ? 'critical' : state.supply < 80 ? 'strained' : ''}`} title={`${state.logistics.totalDelivered} of ${state.logistics.totalDemand} supply points delivered`}><span>Network supply</span><strong>{state.logistics.networkEfficiency}%</strong></div>
+      <button type="button" className={`network-supply-metric ${supplyClarity.severity}`} title={`${state.logistics.totalDelivered} of ${state.logistics.totalDemand} supply points delivered. Open logistics diagnostics.`} onClick={() => changeView('logistics')}><span>Network supply · {supplyClarity.trend}</span><strong>{state.logistics.networkEfficiency}%</strong></button>
       <div><span>Active operations</span><strong>{operations.length}</strong></div>
       <div><span>Territories</span><strong>{controlled} / {territoryDefinitions.length}</strong></div>
       <div className="escalation"><span>Global escalation · Stage {escalationStage.id} · {escalationLabel}</span><div className="meter"><i style={{ width: `${state.escalation}%` }} /></div><strong>{Math.round(state.escalation)}</strong></div>
     </section>
+
+    {supplyClarity.severity !== 'normal' && <section className={`operational-alert-strip ${supplyClarity.severity}`} aria-live="polite">
+      <div><small>LOGISTICS {supplyClarity.severity.toUpperCase()}</small><strong>{state.logistics.networkEfficiency}% network efficiency</strong></div>
+      <div className="supply-diagnostic-copy"><strong>{supplyClarity.diagnostics[0]?.title ?? 'Supply network is degraded'}</strong><span>{supplyClarity.diagnostics[0]?.detail}</span></div>
+      <button type="button" onClick={() => changeView('logistics')}>Open diagnostics</button>
+    </section>}
+
+    {threatenedTerritories.length > 0 && <section className="enemy-threat-strip" aria-live="assertive">
+      <strong>ENEMY ACTION DETECTED · REVIEW THREATENED AND RECENTLY CONTESTED TERRITORIES</strong>
+      <div className="enemy-threat-list">{threatenedTerritories.map(threat => <button type="button" key={threat.territoryId} className={threat.stage} onClick={() => openThreatOnMap(threat.territoryId)}>
+        <span><b>{TERRITORIES[threat.territoryId].centre}</b><small>{threat.formationCount} formation{threat.formationCount === 1 ? '' : 's'} · {threat.stage.replace('-', ' ')}</small></span>
+        <strong>{threat.stage === 'recent-combat' ? 'AFTER ACTION' : threat.stage === 'under-attack' ? 'NOW' : `DAY ${threat.executeTurn}`}</strong>
+      </button>)}</div>
+    </section>}
 
     {state.status !== 'playing' && <div className={`command-outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong><span>Review the campaign log or begin a new campaign.</span></div>}
 
     <section className="command-workspace">
       <CommandNavigation
         active={currentView}
-        onChange={setCurrentView}
+        onChange={changeView}
         badges={{ forces: groups.length, operations: operations.length, territories: `${controlled}/${territoryDefinitions.length}`, engineering: state.engineeringProjects.filter(project => project.status === 'active').length + state.interdictionMissions.filter(mission => mission.status === 'active').length, logistics: state.logistics.starvedFormationIds.length + state.logistics.starvedTerritoryIds.length, intelligence: frontlineTerritories.length }}
       />
 
@@ -316,7 +371,7 @@ export default function App() {
           <div className="map-panel">
             <div className="map-heading">
               <p>{instruction}</p>
-              <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Enemy formation · Dashed routes show active operations</div>
+              <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Recon contact · Orange/red borders indicate threatened territory</div>
             </div>
             <MapView
               state={state}
@@ -366,14 +421,14 @@ export default function App() {
               <div className="view-panel-heading"><p className="panel-label">ACTIVE OPERATIONS</p><strong>{operations.length}</strong></div>
               {operations.length ? <div className="operation-command-list">{operations.map(operation => {
                 const participantNames = operation.participantGroupIds.map(id => state.taskGroups[id]?.name).filter(Boolean).join(', ');
-                const defenders = enemyStrengthAt(state, operation.target);
+                const contact = enemyContacts.find(item => item.territoryId === operation.target);
                 return <article key={operation.id} className="operation-command-card">
                   <div className="operation-card-heading"><div><small>DAY {operation.days}</small><h3>{operationTitle(operation)}</h3></div><strong>{operation.progress}%</strong></div>
                   <div className="operation-progress"><i style={{ width: `${Math.max(0, Math.min(100, operation.progress))}%` }} /></div>
                   <dl>
                     <div><dt>Participants</dt><dd>{operation.participantGroupIds.length}</dd></div>
-                    <div><dt>Enemy formations</dt><dd>{defenders.formations}</dd></div>
-                    <div><dt>Enemy personnel</dt><dd>{formatNumber(defenders.personnel)}</dd></div>
+                    <div><dt>Recon confidence</dt><dd>{contact?.confidence ?? 'contact lost'}</dd></div>
+                    <div><dt>Assessed personnel</dt><dd>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'Unknown'}</dd></div>
                   </dl>
                   <p>{participantNames || 'No active formations'}</p>
                   <button onClick={() => openTerritoryOnMap(operation.target)}>Open operation on map</button>
@@ -406,7 +461,7 @@ export default function App() {
           </div>
           <div className="territory-command-grid">{territoryDefinitions.map(territory => {
             const territoryState = state.territories[territory.id];
-            const defenders = territoryState.controller === 'enemy' ? enemyStrengthAt(state, territory.id) : null;
+            const contact = territoryState.controller === 'enemy' ? enemyContacts.find(item => item.territoryId === territory.id) : undefined;
             return <article key={territory.id} className={`territory-command-card ${territoryState.controller} ${territoryState.supplied ? 'supplied' : 'isolated'}`}>
               <div className="territory-command-heading"><div><small>{territory.id}</small><h3>{territory.name}</h3><span>{territory.centre}</span></div><b>{territoryState.occupation}</b></div>
               <dl>
@@ -419,8 +474,8 @@ export default function App() {
                   <div><dt>Occupation need</dt><dd>{formatNumber(occupationRequirement(territory.id))}</dd></div>
                   <div><dt>Resistance</dt><dd>{Math.round(territoryState.resistance)}</dd></div>
                 </> : <>
-                  <div><dt>Enemy formations</dt><dd>{defenders?.formations ?? 0}</dd></div>
-                  <div><dt>Enemy personnel</dt><dd>{formatNumber(defenders?.personnel ?? 0)}</dd></div>
+                  <div><dt>Enemy contact</dt><dd>{contact?.confidence ?? 'No current contact'}</dd></div>
+                  <div><dt>Assessed personnel</dt><dd>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'Unknown'}</dd></div>
                 </>}
               </dl>
               <button onClick={() => openTerritoryOnMap(territory.id)}>Select on map</button>
@@ -433,7 +488,16 @@ export default function App() {
           <InterdictionCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
         </div>}
 
-        {currentView === 'logistics' && <LogisticsCommand state={state} onChange={setState} onOpenGroup={openGroupOnMap} onOpenTerritory={openTerritoryOnMap} />}
+        {currentView === 'logistics' && <div className="logistics-command-stack">
+          <section className={`view-panel supply-diagnostics-panel ${supplyClarity.severity}`}>
+            <div className="view-panel-heading"><p className="panel-label">NETWORK DIAGNOSTICS · {supplyClarity.trend.toUpperCase()}</p><strong>{state.logistics.networkEfficiency}%</strong></div>
+            {supplyClarity.diagnostics.length ? <div className="supply-diagnostic-list">{supplyClarity.diagnostics.map(item => <article key={item.id} className={item.severity}>
+              <div><strong>{item.title}</strong><p>{item.detail}</p></div>
+              {item.groupId ? <button type="button" onClick={() => openGroupOnMap(item.groupId!)}>Open formation</button> : item.territoryId ? <button type="button" onClick={() => openTerritoryOnMap(item.territoryId!)}>Open territory</button> : null}
+            </article>)}</div> : <p className="empty-state">No active supply faults. The network is meeting current formation and administration demand.</p>}
+          </section>
+          <LogisticsCommand state={state} onChange={setState} onOpenGroup={openGroupOnMap} onOpenTerritory={openTerritoryOnMap} />
+        </div>}
 
         {currentView === 'intelligence' && <section className="command-view intelligence-view">
           <header className="command-view-header"><div><p className="panel-label">INTELLIGENCE</p><h2>Strategic picture</h2></div><p>Consolidated enemy strength, frontline pressure, escalation and supply warnings.</p></header>
@@ -463,8 +527,8 @@ export default function App() {
               <p>Doctrine reacts to frontline strength, logistics weakness, portal exposure and campaign momentum. Stabilising those conditions reduces pressure and crisis risk.</p>
             </section>
             <section className="view-panel enemy-summary-panel">
-              <p className="panel-label">KNOWN ENEMY STRENGTH</p>
-              <div className="intelligence-kpis"><div><span>Formations</span><strong>{enemyFormations.length}</strong></div><div><span>Personnel</span><strong>{formatNumber(enemyPersonnel)}</strong></div><div><span>Armour</span><strong>{formatNumber(enemyArmour)}</strong></div></div>
+              <p className="panel-label">ASSESSED ENEMY STRENGTH</p>
+              <div className="intelligence-kpis"><div><span>Territory contacts</span><strong>{enemyContacts.length}</strong></div><div><span>Assessed personnel</span><strong>~{formatNumber(enemyPersonnel)}</strong></div><div><span>Confirmed contacts</span><strong>{confirmedEnemyContacts}</strong></div></div>
             </section>
 <section className="view-panel mobilisation-panel">
   <div className="view-panel-heading"><p className="panel-label">MOBILISATION PIPELINE</p><strong>{pendingMobilisations.length}</strong></div>
@@ -492,15 +556,19 @@ export default function App() {
             <section className="view-panel frontline-panel">
               <div className="view-panel-heading"><p className="panel-label">FRONTLINE THREATS</p><strong>{frontlineTerritories.length}</strong></div>
               {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
-                const strength = enemyStrengthAt(state, territory.id);
-                return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]}</small></span><b>{strength.formations} / {formatNumber(strength.personnel)}</b></button>;
+
+                const contact = enemyContacts.find(item => item.territoryId === territory.id);
+
+                return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]} · {contact?.confidence ?? 'contact uncertain'}</small></span><b>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'UNKNOWN'}</b></button>;
+
               })}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}
             </section>
             <section className="view-panel enemy-order-panel">
-              <div className="view-panel-heading"><p className="panel-label">ENEMY ORDER OF BATTLE</p><strong>{enemyFormations.length}</strong></div>
-              <div className="enemy-formation-table">{enemyFormations.map(formation => <article key={formation.id}>
-                <div><strong>{formation.name}</strong><span>{TERRITORIES[formation.location].centre}</span></div>
-                <dl><div><dt>Personnel</dt><dd>{formatNumber(formation.personnel)}</dd></div><div><dt>Armour</dt><dd>{formatNumber(formation.armour)}</dd></div><div><dt>Readiness</dt><dd>{Math.round(formation.readiness)}%</dd></div><div><dt>Entrenchment</dt><dd>{Math.round(formation.entrenchment)}%</dd></div></dl>
+              <div className="view-panel-heading"><p className="panel-label">RECONNAISSANCE CONTACTS</p><strong>{enemyContacts.length}</strong></div>
+              <div className="enemy-formation-table enemy-contact-table">{enemyContacts.map(contact => <article key={contact.territoryId} className={contact.confidence}>
+                <div><strong>{contact.label}</strong><span>{TERRITORIES[contact.territoryId].centre}{contact.lastObservedTurn ? ` · observed day ${contact.lastObservedTurn}` : ''}</span></div>
+                <dl><div><dt>Confidence</dt><dd>{contact.confidence}</dd></div><div><dt>Estimated personnel</dt><dd>{formatNumber(contact.estimatedMin)}–{formatNumber(contact.estimatedMax)}</dd></div><div><dt>Identity</dt><dd>{contact.formationCount ? `${contact.formationCount} confirmed` : 'Unconfirmed'}</dd></div></dl>
+                <button type="button" onClick={() => openThreatOnMap(contact.territoryId)}>Open on map</button>
               </article>)}</div>
             </section>
             <section className="view-panel logistics-network-panel">
@@ -537,7 +605,7 @@ export default function App() {
               <p className="panel-label">CAMPAIGN FILE</p>
               <div className="campaign-status-card"><span>Current campaign</span><strong>Day {String(state.turn).padStart(3, '0')}</strong><small>Seed {state.seed} · {state.difficulty} · {controlled}/{territoryDefinitions.length} territories</small></div>
               <div className="campaign-file-actions"><button onClick={() => saveGame(state)}>Save</button><button onClick={load}>Load</button></div>
-              <div className="new-campaign-controls"><label>New campaign difficulty<select value={newDifficulty} onChange={event => setNewDifficulty(event.target.value as Difficulty)}><option value="story">Story</option><option value="standard">Standard</option><option value="hard">Hard</option></select></label><button className="danger-action" onClick={startCampaign}>New campaign</button></div>
+              <div className="new-campaign-controls"><label>New campaign difficulty<select value={newDifficulty} onChange={event => setNewDifficulty(event.target.value as Difficulty)}><option value="story">Story</option><option value="standard">Standard</option><option value="hard">Hard</option></select></label><label className="tutorial-toggle"><input type="checkbox" checked={newTutorialEnabled} onChange={event => setNewTutorialEnabled(event.target.checked)} /> Guided tutorial</label><button className="danger-action" onClick={startCampaign}>New campaign</button></div><div className="campaign-file-actions"><button onClick={() => setState(restartTutorial)}>Restart tutorial</button><button onClick={() => setState(skipTutorial)} disabled={!state.tutorial.enabled}>Skip tutorial</button></div>
             </section>
             <section className="view-panel campaign-overview-panel">
               <p className="panel-label">CAMPAIGN SUMMARY</p>
@@ -545,7 +613,7 @@ export default function App() {
                 <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
-                <div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>
+                <div><dt>Assessed enemy personnel</dt><dd>~{formatNumber(enemyPersonnel)}</dd></div>
                 <div><dt>Unsecured territories</dt><dd>{unsecured}</dd></div>
                 <div><dt>Supply disruptions</dt><dd>{isolated}</dd></div>
                 <div><dt>Network throughput</dt><dd>{state.logistics.totalDelivered} / {state.logistics.totalDemand}</dd></div>
@@ -566,5 +634,17 @@ export default function App() {
         </section>}
       </div>
     </section>
+
+    <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} onSkip={() => setState(skipTutorial)} onOpenView={changeView} />
+
+    {showSupplyWarning && <div className="supply-warning-backdrop" role="presentation">
+      <section className="supply-warning-dialog" role="dialog" aria-modal="true" aria-label="Critical supply warning">
+        <p className="panel-label">END TURN WARNING</p>
+        <h2>Correctable logistics failures remain</h2>
+        <p>Resolving the day may cause avoidable attrition, retreat pressure or operational crisis. Review the network or explicitly accept the risk.</p>
+        <ul>{supplyClarity.diagnostics.slice(0, 5).map(item => <li key={item.id}><strong>{item.title}:</strong> {item.detail}</li>)}</ul>
+        <div className="supply-warning-actions"><button type="button" onClick={() => setShowSupplyWarning(false)}>Return to command</button><button type="button" onClick={() => { setShowSupplyWarning(false); changeView('logistics'); }}>Open logistics</button><button type="button" className="danger-action" onClick={resolveDayAnyway}>Resolve anyway</button></div>
+      </section>
+    </div>}
   </main>;
 }

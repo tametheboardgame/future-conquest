@@ -14,7 +14,7 @@ test('the command shell exposes eight persistent command views', () => {
     assert.match(app, new RegExp(`currentView === '${view}'`));
   }
   assert.match(navigation, /aria-label="Primary command views"/);
-  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
+  assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
 });
 
 test('the map keeps operational controls while specialist tools move into dedicated views', () => {
@@ -57,7 +57,7 @@ test('dedicated views expose the current strategic data without changing game st
 
   assert.match(app, /frontlineTerritories/);
   assert.match(app, /supplyDisruptions/);
-  assert.match(app, /enemyFormations/);
+  assert.match(app, /enemyContacts/);
   assert.match(app, /occupationRequirement\(territory\.id\)/);
   assert.match(app, /openTerritoryOnMap/);
   assert.doesNotMatch(app, /version:\s*5/);
