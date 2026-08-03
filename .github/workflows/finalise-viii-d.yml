@@ -1,0 +1,49 @@
+name: Finalise Phase VIII-D
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.head_ref == 'agent/operational-clarity-tutorial-viii-d' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/operational-clarity-tutorial-viii-d
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply final Phase VIII-D safeguards
+        run: python scripts/finalise-viii-d.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check test build
+        run: npx tsc -p tsconfig.test.json --pretty false
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit final safeguards
+        run: |
+          rm scripts/finalise-viii-d.py .github/workflows/finalise-viii-d.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Tighten reconnaissance and tutorial completion"
+          git push origin HEAD:agent/operational-clarity-tutorial-viii-d
