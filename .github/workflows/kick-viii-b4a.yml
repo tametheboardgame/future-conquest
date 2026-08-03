@@ -57,8 +57,8 @@ jobs:
 
           engine = Path('src/game/engine.ts')
           text = engine.read_text()
-          old = "  next = resolveMovement(next);\n  next = resolveOperations(next);\n  next = pruneOperations(next);\n  next = resolveOccupationAndLogistics(next);\n  next = resolveInfrastructureRecovery(next);\n  next = resolveStrategicResponse(next);\n  next = resolveCounterattack(next);\n  next = resolveInfrastructureDisruption(next);\n"
-          new = "  next = resolveInfrastructureRecovery(next);\n  next = resolveInfrastructureDisruption(next);\n  next = resolveMovement(next);\n  next = resolveOperations(next);\n  next = pruneOperations(next);\n  next = resolveOccupationAndLogistics(next);\n  next = resolveStrategicResponse(next);\n  next = resolveCounterattack(next);\n"
+          old = "  next = resolveMovement(next);\n  next = resolveOperations(next);\n  next = resolveOccupationAndLogistics(next);\n  next = resolveInfrastructureRecovery(next);\n  next = resolveStrategicResponse(next);\n  next = resolveCounterattack(next);\n  next = resolveInfrastructureDisruption(next);\n"
+          new = "  next = resolveInfrastructureRecovery(next);\n  next = resolveInfrastructureDisruption(next);\n  next = resolveMovement(next);\n  next = resolveOperations(next);\n  next = resolveOccupationAndLogistics(next);\n  next = resolveStrategicResponse(next);\n  next = resolveCounterattack(next);\n"
           if old not in text:
               raise SystemExit('Could not locate Phase VIII-B4A turn sequence')
           engine.write_text(text.replace(old, new, 1))
