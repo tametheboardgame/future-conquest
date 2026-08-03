@@ -1,17 +1,33 @@
 import { TERRITORIES } from './data';
+import { routesBetween } from './strategic-network';
+import { availableRoutesBetween, recommendRoute } from './route-movement';
 import type { GameState } from './types';
 
-export type OrderTargetKind = 'current' | 'move' | 'attack' | 'out-of-range' | 'unavailable';
+export type OrderTargetKind = 'current' | 'move' | 'attack' | 'route-blocked' | 'out-of-range' | 'unavailable';
 
 export interface OrderTargetInfo {
   kind: OrderTargetKind;
   adjacent: boolean;
   territoryId: string;
+  routeIds: string[];
+  availableRouteIds: string[];
+  recommendedRouteId?: string;
 }
+
+const unavailableTarget = (territoryId: string): OrderTargetInfo => ({
+  kind: 'unavailable',
+  adjacent: false,
+  territoryId,
+  routeIds: [],
+  availableRouteIds: []
+});
 
 export function getAdjacentOrderTargets(state: GameState, groupId = state.selectedTaskGroupId): string[] {
   const group = state.taskGroups[groupId];
-  return group ? [...TERRITORIES[group.location].neighbours] : [];
+  if (!group) return [];
+  return TERRITORIES[group.location].neighbours.filter(territoryId => (
+    availableRoutesBetween(state.routeStates, group.location, territoryId).length > 0
+  ));
 }
 
 export function getOrderTargetInfo(
@@ -20,19 +36,46 @@ export function getOrderTargetInfo(
   groupId = state.selectedTaskGroupId
 ): OrderTargetInfo {
   const group = state.taskGroups[groupId];
-  if (!group || !state.territories[territoryId]) {
-    return { kind: 'unavailable', adjacent: false, territoryId };
-  }
+  if (!group || !state.territories[territoryId]) return unavailableTarget(territoryId);
   if (territoryId === group.location) {
-    return { kind: 'current', adjacent: false, territoryId };
+    return {
+      kind: 'current',
+      adjacent: false,
+      territoryId,
+      routeIds: [],
+      availableRouteIds: []
+    };
   }
-  const adjacent = TERRITORIES[group.location].neighbours.includes(territoryId);
-  if (!adjacent) {
-    return { kind: 'out-of-range', adjacent: false, territoryId };
+
+  const routes = routesBetween(group.location, territoryId);
+  if (!routes.length) {
+    return {
+      kind: 'out-of-range',
+      adjacent: false,
+      territoryId,
+      routeIds: [],
+      availableRouteIds: []
+    };
   }
+
+  const available = availableRoutesBetween(state.routeStates, group.location, territoryId);
+  const recommended = recommendRoute(state.routeStates, group.location, territoryId, group);
+  if (!available.length) {
+    return {
+      kind: 'route-blocked',
+      adjacent: true,
+      territoryId,
+      routeIds: routes.map(route => route.id),
+      availableRouteIds: []
+    };
+  }
+
   return {
     kind: state.territories[territoryId].controller === 'enemy' ? 'attack' : 'move',
     adjacent: true,
-    territoryId
+    territoryId,
+    routeIds: routes.map(route => route.id),
+    availableRouteIds: available.map(route => route.id),
+    recommendedRouteId: recommended?.id
   };
 }
