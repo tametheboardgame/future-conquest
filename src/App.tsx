@@ -134,6 +134,37 @@ export default function App() {
     setCurrentView('map');
   };
 
+  const renderPriorityOrderAction = (placement: 'panel' | 'map') => {
+    if (!selectedGroup || !target || !targetInfo || selectedOperation || selectedGroup.order || selectedGroup.status === 'recovering') return null;
+    const isAttack = targetInfo.kind === 'attack';
+    const isMove = targetInfo.kind === 'move';
+    if (!isAttack && !isMove) return null;
+
+    const canExecute = isAttack ? canAttack : canMove;
+    const actionLabel = isAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : 'Issue movement order';
+    const orderLabel = isAttack ? (targetOperation ? 'REINFORCE OPERATION' : 'ATTACK ORDER READY') : 'MOVEMENT ORDER READY';
+    const execute = () => setState(current => isAttack
+      ? beginOperation(current, chosenRouteId || undefined)
+      : issueMove(current, chosenRouteId || undefined));
+
+    return <div className={`priority-order-action ${placement} ${isAttack ? 'attack' : 'move'}`} aria-label="Priority order action">
+      <div className="priority-order-copy">
+        <p>{orderLabel}</p>
+        <strong>{selectedGroup.name} → {target.centre}</strong>
+        <span>{chosenRoute?.name ?? 'No operational corridor'}{chosenRouteDays ? ` · ~${chosenRouteDays} day${chosenRouteDays === 1 ? '' : 's'}` : ''}</span>
+      </div>
+      {placement === 'panel' && routeOptions.length > 1 && <label className="priority-route-select"><span>Corridor</span>
+        <select aria-label="Priority operational corridor" value={chosenRouteId} onChange={event => setSelectedRouteId(event.target.value)}>
+          {routeOptions.map(route => {
+            const days = estimateRouteMovementDays(route, state.routeStates[route.id], selectedGroup);
+            return <option key={route.id} value={route.id}>{route.name} · ~{days} day{days === 1 ? '' : 's'}</option>;
+          })}
+        </select>
+      </label>}
+      <button type="button" className={isAttack ? 'primary danger-action' : 'primary'} disabled={!canExecute} onClick={execute}>{actionLabel}</button>
+    </div>;
+  };
+
   const renderSelectedGroupPanel = () => <section className="selected-group selected-formation-card">
     <p className="panel-label">SELECTED FORMATION</p>
     {selectedGroup ? <>
@@ -269,6 +300,7 @@ export default function App() {
               <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Enemy formation · Dashed routes show active operations</div>
             </div>
             <MapView state={state} onSelect={id => setState(current => selectTerritory(current, id))} onSelectGroup={id => setState(current => selectTaskGroup(current, id))} />
+            {renderPriorityOrderAction('map')}
           </div>
 
           <aside className="command-panel map-context-panel">
@@ -279,6 +311,7 @@ export default function App() {
                   {groups.map(group => <option key={group.id} value={group.id}>{group.name} · {TERRITORIES[group.location].centre}</option>)}
                 </select>
               </label>
+              {renderPriorityOrderAction('panel')}
               <div className="quick-links"><button onClick={() => setCurrentView('forces')}>Manage forces</button><button onClick={() => setCurrentView('operations')}>Review operations</button></div>
             </section>
             {renderSelectedGroupPanel()}
