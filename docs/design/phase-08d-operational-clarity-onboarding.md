@@ -21,6 +21,8 @@ Enemy map markers use intelligence confidence rather than perfect information:
 
 Planned counterattacks, recently resolved combat and likely enemy concentration receive distinct map indicators. Selecting a warning focuses the relevant territory and exposes nearby friendly formations, expected timing and available reinforcement routes. Recently completed concentration and reposition orders remain visible for one campaign day so enemy movement does not disappear during resolution.
 
+All player-facing frontline and operation displays follow the same reconnaissance model. Exact simulation strength is not exposed where intelligence confidence or an estimated range should be used.
+
 ## D2 — Supply clarity
 
 The top-level logistics indicators use normal, warning, danger and critical states with trend information. A diagnostics panel explains the immediate causes of network degradation, including:
@@ -49,7 +51,7 @@ The guided sequence covers:
 7. Opening Engineering or Infrastructure when a route is damaged.
 8. Continuing independently.
 
-Tutorial prompts are short, context-sensitive and highlight the relevant interface region. Progress is saved with the campaign.
+Tutorial prompts are short, context-sensitive and highlight the relevant interface region. Progress is saved with the campaign. The occupation lesson only advances when the player garrisons captured ground outside the original portal territory.
 
 ## Persistence
 
@@ -57,4 +59,4 @@ Campaign saves advance to version 14. Version 13 and all earlier supported saves
 
 ## Validation
 
-The completed implementation passes all 168 engine, persistence and interface tests. Focused coverage verifies intelligence confidence, planned and recently resolved counterattack indicators, supply severity and causes, end-turn acknowledgement, achievable tutorial progression and version 13 migration. TypeScript compilation and the production Vite build also pass.
+The completed implementation passes all 169 engine, persistence and interface tests. Focused coverage verifies intelligence confidence, planned and recently resolved counterattack indicators, supply severity and causes, end-turn acknowledgement, achievable tutorial progression, portal-garrison safeguards and version 13 migration. TypeScript compilation and the production Vite build also pass.
