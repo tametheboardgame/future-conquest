@@ -29,13 +29,34 @@ jobs:
       - name: Apply strategic network foundation
         shell: bash
         run: |
-          sha256sum scripts/apply-viii-b1.part-*.b64
           cat scripts/apply-viii-b1.part-*.b64 > /tmp/apply-viii-b1.cjs.gz.b64
           test "$(wc -c < /tmp/apply-viii-b1.cjs.gz.b64)" -eq 17032
           echo "4b786d103bf0d433ace0a03a0eedc3e2ef5c6d51999e5ae0957d0ab2a8bdbb89  /tmp/apply-viii-b1.cjs.gz.b64" | sha256sum -c -
           base64 -d /tmp/apply-viii-b1.cjs.gz.b64 | gzip -d > /tmp/apply-viii-b1.cjs
           node --check /tmp/apply-viii-b1.cjs
           node /tmp/apply-viii-b1.cjs
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          persistence = Path('src/game/persistence.ts')
+          source = persistence.read_text()
+          source = source.replace('value.saveVersion === 5', 'value.saveVersion === 6')
+          persistence.write_text(source)
+
+          replacements = {
+              'PHASE VIII-A \\/ STRATEGIC RESPONSE': 'PHASE VIII-B1 \\/ STRATEGIC NETWORK',
+              'loaded.version, 5': 'loaded.version, 6',
+              'migrate to version 5': 'migrate to version 6',
+              'migrate into version 5': 'migrate into version 6',
+          }
+          for test_file in Path('tests').glob('*.test.cjs'):
+              test_source = test_file.read_text()
+              for before, after in replacements.items():
+                  test_source = test_source.replace(before, after)
+              test_file.write_text(test_source)
+          PY
+
           rm -f scripts/apply-viii-b1.part-*.b64
 
       - name: Install dependencies
