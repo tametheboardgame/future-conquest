@@ -26,7 +26,15 @@ jobs:
 
       - name: Apply Phase VIII-B4C implementation
         run: |
-          sed -i "s/engineering: 1.32\\n};/engineering: 1.08\\n};/" scripts/apply-viii-b4c.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-viii-b4c.py')
+          text = path.read_text()
+          old = "engineering: 1.32\\n};\\n"
+          if old not in text:
+              raise SystemExit('Expected builder multiplier marker was not found')
+          path.write_text(text.replace(old, "engineering: 1.08\\n};\\n", 1))
+          PY
           python scripts/apply-viii-b4c.py
 
       - name: Install dependencies
