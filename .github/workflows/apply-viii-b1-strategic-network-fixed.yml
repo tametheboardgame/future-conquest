@@ -1,0 +1,50 @@
+name: Apply Phase VIII-B1 strategic network
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/strategic-network-viii-b1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Phase VIII-B1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/strategic-network-viii-b1
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply strategic network foundation
+        shell: bash
+        run: |
+          base64 -d scripts/apply-viii-b1.cjs.gz.b64 | gzip -d > /tmp/apply-viii-b1.cjs
+          node /tmp/apply-viii-b1.cjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Commit validated Phase VIII-B1 implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Build Phase VIII-B1 strategic network foundation"
+          git push origin HEAD:agent/strategic-network-viii-b1
