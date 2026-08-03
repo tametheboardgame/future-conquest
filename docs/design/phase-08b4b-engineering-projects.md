@@ -39,6 +39,12 @@ A dedicated Engineering command view provides:
 - live project progress, route condition, supply delivery and resources spent;
 - cancellation and project history.
 
+## Validation
+
+- Full engine and interface regression suite: 140 tests passed.
+- Production TypeScript and Vite build: passed.
+- Version 9 migration, project allocation, repair completion, project cancellation and logistics-demand effects are covered by focused tests.
+
 ## Scope boundary
 
 Deliberate player interdiction missions, combat-generated route damage and logistics-priority controls remain for later Phase VIII-B4 increments.
