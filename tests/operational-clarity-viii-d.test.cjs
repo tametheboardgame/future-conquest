@@ -94,6 +94,8 @@ test('the interface exposes attack visibility, supply acknowledgement and tutori
   assert.match(app, /Correctable logistics failures remain/);
   assert.match(app, /supply-diagnostics-panel/);
   assert.match(app, /ASSESSED ENEMY STRENGTH/);
+  assert.doesNotMatch(app, /const strength = enemyStrengthAt/);
+  assert.match(app, /contact\?\.confidence/);
   assert.match(app, /TutorialOverlay/);
   assert.match(map, /enemy-contact-marker/);
   assert.match(map, /enemy-concentration-route/);

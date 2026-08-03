@@ -199,7 +199,10 @@ export function setGarrison(state: GameState): GameState {
   const taskGroups = structuredClone(state.taskGroups);
   const next = taskGroups[group.id];
   next.status = next.status === 'garrison' ? 'ready' : 'garrison';
-  return progressTutorial(addEvent({ ...state, taskGroups }, `${group.name} ${next.status === 'garrison' ? 'assigned to occupation and defensive duties' : 'released from garrison duty'} in ${TERRITORIES[group.location].centre}.`, 'neutral'), 'set-garrison');
+  const updated = addEvent({ ...state, taskGroups }, `${group.name} ${next.status === 'garrison' ? 'assigned to occupation and defensive duties' : 'released from garrison duty'} in ${TERRITORIES[group.location].centre}.`, 'neutral');
+  return next.status === 'garrison' && group.location !== state.portalTerritory
+    ? progressTutorial(updated, 'set-garrison')
+    : updated;
 }
 
 export function enemyStrengthAt(state: GameState, territoryId: string): { formations: number; personnel: number; armour: number; power: number } {

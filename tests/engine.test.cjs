@@ -344,3 +344,11 @@ test('v0.2 saves migrate a single battle into an operation', () => {
   assert.equal(Object.keys(loaded.operations).length, 1);
   assert.ok(loaded.taskGroups['TG-1'].order.operationId);
 });
+
+test('the occupation tutorial cannot be completed by garrisoning the portal', () => {
+  const state = newGame(119, 'standard', true);
+  state.tutorial.step = 2;
+  const garrisoned = setGarrison(state);
+  assert.equal(garrisoned.taskGroups[garrisoned.selectedTaskGroupId].status, 'garrison');
+  assert.equal(garrisoned.tutorial.step, 2);
+});

@@ -28,7 +28,6 @@ import {
   beginOperation,
   canIssueOperationalOrder,
   endTurn,
-  enemyStrengthAt,
   getOperationAtTarget,
   getOperationForGroup,
   issueMove,
@@ -557,8 +556,11 @@ export default function App() {
             <section className="view-panel frontline-panel">
               <div className="view-panel-heading"><p className="panel-label">FRONTLINE THREATS</p><strong>{frontlineTerritories.length}</strong></div>
               {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
-                const strength = enemyStrengthAt(state, territory.id);
-                return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]}</small></span><b>{strength.formations} / {formatNumber(strength.personnel)}</b></button>;
+
+                const contact = enemyContacts.find(item => item.territoryId === territory.id);
+
+                return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]} · {contact?.confidence ?? 'contact uncertain'}</small></span><b>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'UNKNOWN'}</b></button>;
+
               })}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}
             </section>
             <section className="view-panel enemy-order-panel">
@@ -611,7 +613,7 @@ export default function App() {
                 <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
-                <div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>
+                <div><dt>Assessed enemy personnel</dt><dd>~{formatNumber(enemyPersonnel)}</dd></div>
                 <div><dt>Unsecured territories</dt><dd>{unsecured}</dd></div>
                 <div><dt>Supply disruptions</dt><dd>{isolated}</dd></div>
                 <div><dt>Network throughput</dt><dd>{state.logistics.totalDelivered} / {state.logistics.totalDemand}</dd></div>
