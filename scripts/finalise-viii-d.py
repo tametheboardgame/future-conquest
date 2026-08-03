@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 def replace(path: str, old: str, new: str, count: int = 1):
@@ -20,21 +21,20 @@ replace(
 # Frontline intelligence follows the same confidence model as the map and other
 # enemy-strength screens rather than leaking the simulation's exact state.
 app = Path('src/App.tsx')
-content = app.read_text()
-content = content.replace('  enemyStrengthAt,\n', '')
-old_frontline = """                  {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
-                    const strength = enemyStrengthAt(state, territory.id);
-                    return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]}</small></span><b>{strength.formations} / {formatNumber(strength.personnel)}</b></button>;
-                  })}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}
-"""
-new_frontline = """                  {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
-                    const contact = enemyContacts.find(item => item.territoryId === territory.id);
-                    return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]} · {contact?.confidence ?? 'contact uncertain'}</small></span><b>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'UNKNOWN'}</b></button>;
-                  })}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}
-"""
-if old_frontline not in content:
+content = app.read_text().replace('  enemyStrengthAt,\n', '')
+frontline_pattern = re.compile(
+    r'''(?P<indent>\s*)\{frontlineTerritories\.length \? <div className="intelligence-list">\{frontlineTerritories\.map\(territory => \{\s*const strength = enemyStrengthAt\(state, territory\.id\);\s*return <button key=\{territory\.id\} onClick=\{\(\) => openTerritoryOnMap\(territory\.id\)\}><span><strong>\{territory\.name\}</strong><small>\{territory\.centre\} · \{TERRAIN_LABELS\[territory\.terrain\]\}</small></span><b>\{strength\.formations\} / \{formatNumber\(strength\.personnel\)\}</b></button>;\s*\}\)\}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory\.</p>\}''',
+    re.S
+)
+match = frontline_pattern.search(content)
+if not match:
     raise RuntimeError('exact frontline strength block was not found')
-content = content.replace(old_frontline, new_frontline, 1)
+indent = match.group('indent')
+new_frontline = f'''{indent}{{frontlineTerritories.length ? <div className="intelligence-list">{{frontlineTerritories.map(territory => {{
+{indent}  const contact = enemyContacts.find(item => item.territoryId === territory.id);
+{indent}  return <button key={{territory.id}} onClick={{() => openTerritoryOnMap(territory.id)}}><span><strong>{{territory.name}}</strong><small>{{territory.centre}} · {{TERRAIN_LABELS[territory.terrain]}} · {{contact?.confidence ?? 'contact uncertain'}}</small></span><b>{{contact ? `${{formatNumber(contact.estimatedMin)}}–${{formatNumber(contact.estimatedMax)}}` : 'UNKNOWN'}}</b></button>;
+{indent}}})}}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}}'''
+content = frontline_pattern.sub(new_frontline, content, count=1)
 content = content.replace('<div><dt>Enemy personnel known</dt><dd>{formatNumber(enemyPersonnel)}</dd></div>', '<div><dt>Assessed enemy personnel</dt><dd>~{formatNumber(enemyPersonnel)}</dd></div>')
 app.write_text(content)
 
