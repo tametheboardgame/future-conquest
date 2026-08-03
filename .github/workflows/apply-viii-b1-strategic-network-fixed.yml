@@ -29,8 +29,10 @@ jobs:
       - name: Apply strategic network foundation
         shell: bash
         run: |
-          base64 -d scripts/apply-viii-b1.cjs.gz.b64 | gzip -d > /tmp/apply-viii-b1.cjs
+          cat scripts/apply-viii-b1.part-*.b64 | base64 -d | gzip -d > /tmp/apply-viii-b1.cjs
+          node --check /tmp/apply-viii-b1.cjs
           node /tmp/apply-viii-b1.cjs
+          rm -f scripts/apply-viii-b1.part-*.b64
 
       - name: Install dependencies
         run: npm ci
