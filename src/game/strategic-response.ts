@@ -5,6 +5,7 @@ import { normaliseLogisticsPriorities, refreshSupplyNetwork } from './supply-net
 import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import { normaliseEngineeringState } from './engineering-projects';
 import { normaliseInterdictionState } from './interdiction-missions';
+import { createEnemyStrategyState, normaliseEnemyStrategyState } from './enemy-strategy';
 import type {
   Difficulty,
   EnemyFormation,
@@ -159,6 +160,7 @@ export function createStrategicState(seed: number, difficulty: Difficulty, escal
     mobilisationPool: initialPool[difficulty],
     mobilisations: [] as MobilisationProject[],
     enemyOrders: [] as EnemyOrder[],
+    enemyStrategy: createEnemyStrategyState(difficulty),
     intelligenceReports: [{
       id: `INT-1-${seed}-INITIAL`,
       turn: 1,
@@ -181,7 +183,8 @@ type StrategicField =
   | 'infrastructureIncidents'
   | 'engineeringProjects'
   | 'interdictionMissions'
-  | 'logisticsPriorities';
+  | 'logisticsPriorities'
+  | 'enemyStrategy';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -196,6 +199,7 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   engineeringProjects?: GameState['engineeringProjects'];
   interdictionMissions?: GameState['interdictionMissions'];
   logisticsPriorities?: GameState['logisticsPriorities'];
+  enemyStrategy?: GameState['enemyStrategy'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -208,13 +212,14 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const logisticsPriorities = normaliseLogisticsPriorities(state.logisticsPriorities, interdiction.taskGroups, state.territories);
   const upgraded = {
     ...state,
-    version: 12,
+    version: 13,
     taskGroups: interdiction.taskGroups,
     routeStates,
     infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
     engineeringProjects: engineering.projects,
     interdictionMissions: interdiction.missions,
     logisticsPriorities,
+    enemyStrategy: normaliseEnemyStrategyState(state.enemyStrategy, state.difficulty),
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)

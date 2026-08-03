@@ -15,7 +15,7 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
 test('new campaigns initialise the version 9 infrastructure incident ledger', () => {
   const state = newGame(711, 'standard');
-  assert.equal(state.version, 12);
+  assert.equal(state.version, 13);
   assert.deepEqual(state.infrastructureIncidents, []);
 });
 
@@ -57,7 +57,7 @@ test('version 8 campaigns migrate to version 9 with an empty incident ledger', (
   legacy.version = 8;
   delete legacy.infrastructureIncidents;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 12);
+  assert.equal(upgraded.version, 13);
   assert.deepEqual(upgraded.infrastructureIncidents, []);
 });
 
@@ -66,10 +66,10 @@ test('the source exposes the Phase VIII-B4A release and disruption engine', () =
   const engine = read('src/game/engine.ts');
   const persistence = read('src/game/persistence.ts');
   const disruption = read('src/game/infrastructure-disruption.ts');
-  assert.match(app, /PHASE VIII-B4D \/ LOGISTICS PRIORITIES/);
+  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
   assert.match(engine, /resolveInfrastructureDisruption/);
   assert.match(engine, /future-conquest-slice-v0\.10/);
-  assert.match(persistence, /saveVersion:\s*12/);
+  assert.match(persistence, /saveVersion:\s*13/);
   assert.match(disruption, /Resistance sabotage/);
   assert.match(disruption, /Enemy interdiction/);
 });

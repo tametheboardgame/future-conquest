@@ -14,7 +14,7 @@ test('the command shell exposes eight persistent command views', () => {
     assert.match(app, new RegExp(`currentView === '${view}'`));
   }
   assert.match(navigation, /aria-label="Primary command views"/);
-  assert.match(app, /PHASE VIII-B4D \/ LOGISTICS PRIORITIES/);
+  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
 });
 
 test('the map keeps operational controls while specialist tools move into dedicated views', () => {

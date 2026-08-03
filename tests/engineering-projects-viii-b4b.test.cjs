@@ -46,7 +46,7 @@ function installStorage(entries = []) {
 
 test('new campaigns initialise version 10 engineering state', () => {
   const state = newGame(711, 'standard');
-  assert.equal(state.version, 12);
+  assert.equal(state.version, 13);
   assert.deepEqual(state.engineeringProjects, []);
 });
 
@@ -96,13 +96,13 @@ test('version 9 campaigns migrate to version 10 with an empty project ledger', (
   legacy.version = 9;
   delete legacy.engineeringProjects;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 12);
+  assert.equal(upgraded.version, 13);
   assert.deepEqual(upgraded.engineeringProjects, []);
 
   const result = inspectStoredCampaign(installStorage([[LEGACY_V9_SAVE_KEY, JSON.stringify(legacy)]]));
   assert.equal(result.ok, true);
   assert.equal(result.source, 'v9');
-  assert.equal(result.state.version, 12);
+  assert.equal(result.state.version, 13);
 });
 
 test('the interface exposes engineering command and the Phase VIII-B4B release marker', () => {
@@ -110,10 +110,10 @@ test('the interface exposes engineering command and the Phase VIII-B4B release m
   const nav = read('src/components/CommandNavigation.tsx');
   const engineering = read('src/components/EngineeringCommand.tsx');
   const persistence = read('src/game/persistence.ts');
-  assert.match(app, /PHASE VIII-B4D \/ LOGISTICS PRIORITIES/);
+  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
   assert.match(app, /currentView === 'engineering'/);
   assert.match(nav, /id: 'engineering'/);
   assert.match(engineering, /Higher allocation repairs faster but consumes more network throughput/);
   assert.match(persistence, /future-conquest-slice-v0\.10/);
-  assert.match(persistence, /saveVersion:\s*12/);
+  assert.match(persistence, /saveVersion:\s*13/);
 });

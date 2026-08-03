@@ -24,7 +24,7 @@ function availableMission(seed = 11) {
 
 test('new campaigns initialise version 11 interdiction state', () => {
   const state = newGame(21);
-  assert.equal(state.version, 12);
+  assert.equal(state.version, 13);
   assert.deepEqual(state.interdictionMissions, []);
 });
 
@@ -84,7 +84,7 @@ test('version 10 campaigns migrate to version 11 with an empty interdiction ledg
   const current = newGame(51);
   const { interdictionMissions, ...legacy } = current;
   const migrated = upgradeStrategicState({ ...legacy, version: 10 });
-  assert.equal(migrated.version, 12);
+  assert.equal(migrated.version, 13);
   assert.deepEqual(migrated.interdictionMissions, []);
 });
 
@@ -92,7 +92,7 @@ test('the interface exposes the Phase VIII-B4C infrastructure warfare controls',
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const component = fs.readFileSync('src/components/InterdictionCommand.tsx', 'utf8');
   const main = fs.readFileSync('src/main.tsx', 'utf8');
-  assert.match(app, /PHASE VIII-B4D \/ LOGISTICS PRIORITIES/);
+  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
   assert.match(app, /<InterdictionCommand/);
   assert.match(component, /Launch interdiction mission/);
   assert.match(component, /Mission intensity/);

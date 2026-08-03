@@ -2,7 +2,8 @@ export type Controller = 'player' | 'enemy';
 export type Terrain = 'open-lowland' | 'mixed-lowland' | 'mixed-upland' | 'mountainous';
 export type Difficulty = 'story' | 'standard' | 'hard';
 export type EscalationStageId = 1 | 2 | 3 | 4 | 5;
-export type EnemyOrderType = 'reinforce' | 'reposition' | 'entrench' | 'counterattack' | 'withdraw';
+export type EnemyOrderType = 'reinforce' | 'reposition' | 'entrench' | 'counterattack' | 'withdraw' | 'concentrate' | 'interdict';
+export type EnemyDoctrine = 'containment' | 'counteroffensive' | 'logistics-war' | 'strategic-emergency';
 export type IntelligenceConfidence = 'low' | 'moderate' | 'high';
 export type StrategicNodeType = 'capital' | 'city' | 'port' | 'airport' | 'rail-hub' | 'crossing' | 'logistics';
 export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountain-pass' | 'river-crossing';
@@ -102,6 +103,7 @@ export interface EnemyOrder {
   turn: number;
   type: EnemyOrderType;
   formationId?: string;
+  supportFormationIds?: string[];
   origin?: string;
   target: string;
   executeTurn?: number;
@@ -113,7 +115,7 @@ export interface EnemyOrder {
 export interface IntelligenceReport {
   id: string;
   turn: number;
-  kind: 'mobilisation' | 'order' | 'escalation';
+  kind: 'mobilisation' | 'order' | 'escalation' | 'strategy';
   title: string;
   detail: string;
   confidence: IntelligenceConfidence;
@@ -249,8 +251,18 @@ export interface GameEvent {
   tone: 'neutral' | 'good' | 'warning' | 'danger';
 }
 
+export interface EnemyStrategyState {
+  doctrine: EnemyDoctrine;
+  pressure: number;
+  momentum: number;
+  focusTerritory?: string;
+  threatenedRouteIds: string[];
+  operationalCrisisTurns: number;
+  lastDoctrineChangeTurn: number;
+}
+
 export interface GameState {
-  version: 12;
+  version: 13;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -267,6 +279,7 @@ export interface GameState {
   mobilisations: MobilisationProject[];
   enemyOrders: EnemyOrder[];
   intelligenceReports: IntelligenceReport[];
+  enemyStrategy: EnemyStrategyState;
   routeStates: Record<string, StrategicRouteState>;
   logistics: LogisticsState;
   logisticsPriorities: LogisticsPriorityState;
