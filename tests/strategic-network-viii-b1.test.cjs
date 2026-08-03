@@ -64,7 +64,7 @@ test('new campaigns persist route condition state at save version 6', () => {
 
 test('version 5 campaigns gain a complete strategic route state during migration', () => {
   const current = newGame(122, 'standard');
-  const legacy = { ...current, version: 6 };
+  const legacy = { ...current, version: 5 };
   delete legacy.routeStates;
   const upgraded = upgradeStrategicState(legacy);
   assert.equal(upgraded.version, 6);
@@ -99,4 +99,10 @@ test('the map and territory panel expose independently controlled network layers
   assert.match(styles, /\.strategic-route/);
   assert.match(styles, /\.strategic-node/);
   assert.ok(main.indexOf("./strategic-network.css") > main.indexOf("./map-label-hierarchy.css"));
+});
+
+test('strategic network overlays cannot intercept territory or formation selection', () => {
+  const styles = read('src/strategic-network.css');
+  assert.match(styles, /\.europe-map \.strategic-route\s*\{[\s\S]*pointer-events:\s*none/);
+  assert.match(styles, /\.europe-map \.strategic-node\s*\{[\s\S]*pointer-events:\s*none/);
 });
