@@ -57,7 +57,7 @@ test('route endpoints reference valid nodes inside their declared territories', 
 
 test('new campaigns retain the B1 route condition state at save version 8', () => {
   const state = newGame(121, 'standard');
-  assert.equal(state.version, 11);
+  assert.equal(state.version, 12);
   assert.equal(Object.keys(state.routeStates).length, STRATEGIC_ROUTES.length);
   assert.ok(Object.values(state.routeStates).every(route => route.status === 'open'));
 });
@@ -67,7 +67,7 @@ test('version 5 campaigns gain a complete strategic route state during migration
   const legacy = { ...current, version: 5 };
   delete legacy.routeStates;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 11);
+  assert.equal(upgraded.version, 12);
   assert.deepEqual(upgraded.routeStates, createRouteStates());
 });
 

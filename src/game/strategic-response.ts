@@ -1,7 +1,7 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { normaliseRouteStates } from './strategic-network';
 import { normaliseTaskGroupOrderRoutes } from './route-movement';
-import { refreshSupplyNetwork } from './supply-network';
+import { normaliseLogisticsPriorities, refreshSupplyNetwork } from './supply-network';
 import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import { normaliseEngineeringState } from './engineering-projects';
 import { normaliseInterdictionState } from './interdiction-missions';
@@ -180,7 +180,8 @@ type StrategicField =
   | 'logistics'
   | 'infrastructureIncidents'
   | 'engineeringProjects'
-  | 'interdictionMissions';
+  | 'interdictionMissions'
+  | 'logisticsPriorities';
 
 type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   version: number;
@@ -194,6 +195,7 @@ type LegacyStrategicState = Omit<GameState, 'version' | StrategicField> & {
   infrastructureIncidents?: GameState['infrastructureIncidents'];
   engineeringProjects?: GameState['engineeringProjects'];
   interdictionMissions?: GameState['interdictionMissions'];
+  logisticsPriorities?: GameState['logisticsPriorities'];
 };
 
 export function upgradeStrategicState(state: LegacyStrategicState | GameState): GameState {
@@ -203,14 +205,16 @@ export function upgradeStrategicState(state: LegacyStrategicState | GameState): 
   const routedTaskGroups = normaliseTaskGroupOrderRoutes(state.taskGroups, routeStates, previousVersion >= 7);
   const engineering = normaliseEngineeringState(state.engineeringProjects, routedTaskGroups, routeStates);
   const interdiction = normaliseInterdictionState(state.interdictionMissions, engineering.taskGroups, { territories: state.territories, routeStates });
+  const logisticsPriorities = normaliseLogisticsPriorities(state.logisticsPriorities, interdiction.taskGroups, state.territories);
   const upgraded = {
     ...state,
-    version: 11,
+    version: 12,
     taskGroups: interdiction.taskGroups,
     routeStates,
     infrastructureIncidents: normaliseInfrastructureIncidents(state.infrastructureIncidents),
     engineeringProjects: engineering.projects,
     interdictionMissions: interdiction.missions,
+    logisticsPriorities,
     escalationStage: state.escalationStage ?? defaults.escalationStage,
     mobilisationPool: typeof state.mobilisationPool === 'number' && Number.isFinite(state.mobilisationPool)
       ? Math.max(0, state.mobilisationPool)

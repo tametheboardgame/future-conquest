@@ -4,6 +4,7 @@ import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
 import { EngineeringCommand } from './components/EngineeringCommand';
 import { InterdictionCommand } from './components/InterdictionCommand';
+import { LogisticsCommand } from './components/LogisticsCommand';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
@@ -285,7 +286,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-B4C / INTERDICTION AND COMBAT DAMAGE</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-B4D / LOGISTICS PRIORITIES</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" onClick={() => setState(endTurn)} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -307,7 +308,7 @@ export default function App() {
       <CommandNavigation
         active={currentView}
         onChange={setCurrentView}
-        badges={{ forces: groups.length, operations: operations.length, territories: `${controlled}/${territoryDefinitions.length}`, engineering: state.engineeringProjects.filter(project => project.status === 'active').length + state.interdictionMissions.filter(mission => mission.status === 'active').length, intelligence: frontlineTerritories.length }}
+        badges={{ forces: groups.length, operations: operations.length, territories: `${controlled}/${territoryDefinitions.length}`, engineering: state.engineeringProjects.filter(project => project.status === 'active').length + state.interdictionMissions.filter(mission => mission.status === 'active').length, logistics: state.logistics.starvedFormationIds.length + state.logistics.starvedTerritoryIds.length, intelligence: frontlineTerritories.length }}
       />
 
       <div className={`command-stage command-stage-${currentView}`}>
@@ -431,6 +432,8 @@ export default function App() {
           <EngineeringCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
           <InterdictionCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
         </div>}
+
+        {currentView === 'logistics' && <LogisticsCommand state={state} onChange={setState} onOpenGroup={openGroupOnMap} onOpenTerritory={openTerritoryOnMap} />}
 
         {currentView === 'intelligence' && <section className="command-view intelligence-view">
           <header className="command-view-header"><div><p className="panel-label">INTELLIGENCE</p><h2>Strategic picture</h2></div><p>Consolidated enemy strength, frontline pressure, escalation and supply warnings.</p></header>
