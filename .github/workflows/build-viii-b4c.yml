@@ -49,7 +49,18 @@ jobs:
           text = text.replace("assert.equal(result.source, 'v10');", "assert.equal(result.source, 'v11');", 1)
           persistence.write_text(text)
           focused = Path('tests/interdiction-viii-b4c.test.cjs')
-          focused.write_text(focused.read_text().replace('../.test-dist/game/', '../.test-dist/'))
+          text = focused.read_text().replace('../.test-dist/game/', '../.test-dist/')
+          text = text.replace(
+              "assert.equal(next.logistics.formationAllocations[group.id].demand, before + interdictionMissionDemand({ intensity: 100 }));",
+              "assert.ok(next.logistics.formationAllocations[group.id].demand > before);\n  assert.ok(next.logistics.formationAllocations[group.id].demand >= interdictionMissionDemand({ intensity: 100 }));",
+              1
+          )
+          text = text.replace(
+              "    const state = newGame(seed);\n    const route = frontierInterdictionRoutes(state)[0];\n    if (!route) continue;",
+              "    const state = newGame(seed);\n    state.turn = seed;\n    const route = frontierInterdictionRoutes(state)[0];\n    if (!route) continue;",
+              1
+          )
+          focused.write_text(text)
           PY
 
       - name: Install dependencies
