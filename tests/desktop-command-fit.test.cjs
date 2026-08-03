@@ -24,6 +24,7 @@ test('desktop map uses a compact confirmation anchored to the selected attack te
   assert.match(map, /operationConfirmationAnchor/);
   assert.match(map, /className="map-operation-confirmation"/);
   assert.match(map, /translate\(\$\{operationConfirmationAnchor\[0\]\}/);
+  assert.ok(map.indexOf('className="map-operation-confirmation"') > map.indexOf('task-group-marker'), 'confirmation must render above all map selection layers');
   assert.match(css, /\.map-operation-confirmation\s*\{/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*\.map-operation-confirmation\s*\{[\s\S]*display:\s*none/);
   assert.doesNotMatch(css, /\.priority-order-action\.map/);

@@ -521,29 +521,6 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
         }))}
 
-        {operationConfirmation && operationConfirmationAnchor && <g
-          className="map-operation-confirmation"
-          transform={`translate(${operationConfirmationAnchor[0]} ${operationConfirmationAnchor[1]}) scale(${overlayScale})`}
-          role="button"
-          tabIndex={0}
-          aria-label={operationConfirmation.label}
-          onPointerDown={event => event.stopPropagation()}
-          onClick={event => {
-            event.stopPropagation();
-            operationConfirmation.onConfirm();
-          }}
-          onKeyDown={event => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              event.stopPropagation();
-              operationConfirmation.onConfirm();
-            }
-          }}
-        >
-          <rect x="-67" y="-52" width="134" height="32" rx="4" />
-          <text x="0" y="-32">{operationConfirmation.label}</text>
-        </g>}
-
         {showTerritoryLabels && activePaths.map(({ id }) => {
           const anchor = anchors[id];
           const territory = state.territories[id];
@@ -606,6 +583,29 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           const [x, y] = anchors[state.portalTerritory];
           return <g className="portal" transform={`translate(${x} ${y}) scale(${overlayScale})`} filter="url(#glow)"><circle cx="0" cy="-8" r="12" /><circle cx="0" cy="-8" r="5" /></g>;
         })()}
+
+        {operationConfirmation && operationConfirmationAnchor && <g
+          className="map-operation-confirmation"
+          transform={`translate(${operationConfirmationAnchor[0]} ${operationConfirmationAnchor[1]}) scale(${overlayScale})`}
+          role="button"
+          tabIndex={0}
+          aria-label={operationConfirmation.label}
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.stopPropagation();
+            operationConfirmation.onConfirm();
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+              operationConfirmation.onConfirm();
+            }
+          }}
+        >
+          <rect x="-67" y="-52" width="134" height="32" rx="4" />
+          <text x="0" y="-32">{operationConfirmation.label}</text>
+        </g>}
       </g>
     </svg>
 
