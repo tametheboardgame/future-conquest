@@ -9,6 +9,7 @@ export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountai
 export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
 export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'critical' | 'cut-off';
 export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
+export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'combat';
 
 export interface TerritoryDefinition {
   id: string;
@@ -186,6 +187,15 @@ export interface LogisticsState {
   bottleneckRouteIds: string[];
 }
 
+export interface InfrastructureIncident {
+  id: string;
+  turn: number;
+  routeId: string;
+  cause: InfrastructureIncidentCause;
+  severity: number;
+  description: string;
+}
+
 export interface GameEvent {
   id: number;
   turn: number;
@@ -194,7 +204,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 8;
+  version: 9;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -213,6 +223,7 @@ export interface GameState {
   intelligenceReports: IntelligenceReport[];
   routeStates: Record<string, StrategicRouteState>;
   logistics: LogisticsState;
+  infrastructureIncidents?: InfrastructureIncident[];
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;

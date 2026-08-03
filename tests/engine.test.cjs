@@ -340,7 +340,7 @@ test('v0.2 saves migrate a single battle into an operation', () => {
 
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.version, 8);
+  assert.equal(loaded.version, 9);
   assert.equal(Object.keys(loaded.operations).length, 1);
   assert.ok(loaded.taskGroups['TG-1'].order.operationId);
 });

@@ -171,7 +171,7 @@ test('an undersized victorious formation captures but does not secure a province
   assert.equal(state.territories[target].capturedTurn, state.turn);
 });
 
-test('version 3 concurrent-operation saves migrate to version 8', () => {
+test('version 3 concurrent-operation saves migrate to version 9', () => {
   const storage = new Map();
   global.localStorage = {
     setItem: (key, value) => storage.set(key, value),
@@ -184,7 +184,7 @@ test('version 3 concurrent-operation saves migrate to version 8', () => {
   storage.set('future-conquest-slice-v0.3', JSON.stringify(prior));
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.version, 8);
+  assert.equal(loaded.version, 9);
   assert.equal(Object.keys(loaded.taskGroups).length, 4);
   assert.ok(Array.isArray(loaded.mobilisations));
 });
