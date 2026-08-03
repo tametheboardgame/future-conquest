@@ -25,7 +25,18 @@ jobs:
           cache: npm
 
       - name: Apply Phase VIII-B4D implementation
-        run: python scripts/apply-viii-b4d.py
+        run: |
+          python scripts/apply-viii-b4d.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tests/command-interface-vii-a.test.cjs')
+          text = path.read_text()
+          old = "  assert.match(app, /Supply priority command/);"
+          new = "  assert.match(read('src/components/LogisticsCommand.tsx'), /Supply priority command/);"
+          if old not in text:
+              raise SystemExit('Expected logistics heading assertion was not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
 
       - name: Install dependencies
         run: npm ci
