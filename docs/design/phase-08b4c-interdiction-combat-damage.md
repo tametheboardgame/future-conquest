@@ -41,6 +41,12 @@ The existing Engineering command area now becomes a combined infrastructure work
 - live mission preparation and supply delivery;
 - mission outcomes, route damage and casualty history.
 
+## Validation
+
+- Full engine and interface regression suite: 146 tests passed.
+- Production TypeScript and Vite build: passed.
+- Interdiction logistics demand, mission outcomes, player route damage, combat damage and version 10 migration have focused regression coverage.
+
 ## Scope boundary
 
 Manual supply and logistics priorities remain for Phase VIII-B4D.
