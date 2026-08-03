@@ -17,6 +17,7 @@ import './supply-network.css';
 import './persistence-feedback';
 import './engineering.css';
 import './interdiction.css';
+import './logistics-priorities.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 
 installMapTrackpadGuard();

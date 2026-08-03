@@ -8,12 +8,18 @@ export type StrategicNodeType = 'capital' | 'city' | 'port' | 'airport' | 'rail-
 export type StrategicRouteType = 'road' | 'rail' | 'ferry' | 'tunnel' | 'mountain-pass' | 'river-crossing';
 export type StrategicRouteStatus = 'open' | 'damaged' | 'blocked' | 'destroyed';
 export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'critical' | 'cut-off';
+export type LogisticsPriority = 'critical' | 'high' | 'standard' | 'restricted';
 export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
 export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'player-interdiction' | 'combat';
 export type EngineeringAllocation = 25 | 50 | 75 | 100;
 export type EngineeringProjectStatus = 'active' | 'completed' | 'cancelled';
 export type InterdictionIntensity = 25 | 50 | 75 | 100;
 export type InterdictionMissionStatus = 'active' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface LogisticsPriorityState {
+  formationOverrides: Record<string, LogisticsPriority>;
+  territoryOverrides: Record<string, LogisticsPriority>;
+}
 
 export interface TerritoryDefinition {
   id: string;
@@ -158,6 +164,8 @@ export interface FormationSupplyAllocation {
   delivered: number;
   ratio: number;
   condition: SupplyCondition;
+  priority: LogisticsPriority;
+  automaticPriority: boolean;
   path: SupplyPath;
 }
 
@@ -167,6 +175,10 @@ export interface TerritorySupplyAllocation {
   delivered: number;
   ratio: number;
   condition: SupplyCondition;
+  administrationDemand: number;
+  administrationDelivered: number;
+  priority: LogisticsPriority;
+  automaticPriority: boolean;
   routeIds: string[];
 }
 
@@ -189,6 +201,8 @@ export interface LogisticsState {
   territoryAllocations: Record<string, TerritorySupplyAllocation>;
   formationAllocations: Record<string, FormationSupplyAllocation>;
   bottleneckRouteIds: string[];
+  starvedFormationIds: string[];
+  starvedTerritoryIds: string[];
 }
 
 export interface EngineeringProject {
@@ -236,7 +250,7 @@ export interface GameEvent {
 }
 
 export interface GameState {
-  version: 11;
+  version: 12;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -255,6 +269,7 @@ export interface GameState {
   intelligenceReports: IntelligenceReport[];
   routeStates: Record<string, StrategicRouteState>;
   logistics: LogisticsState;
+  logisticsPriorities: LogisticsPriorityState;
   infrastructureIncidents?: InfrastructureIncident[];
   engineeringProjects: EngineeringProject[];
   interdictionMissions: InterdictionMission[];

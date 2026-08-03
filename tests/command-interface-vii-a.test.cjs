@@ -5,16 +5,16 @@ const path = require('node:path');
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('the command shell exposes six persistent command views', () => {
+test('the command shell exposes eight persistent command views', () => {
   const navigation = read('src/components/CommandNavigation.tsx');
   const app = read('src/App.tsx');
 
-  for (const view of ['map', 'forces', 'operations', 'territories', 'intelligence', 'campaign']) {
+  for (const view of ['map', 'forces', 'operations', 'territories', 'engineering', 'logistics', 'intelligence', 'campaign']) {
     assert.match(navigation, new RegExp(`id: '${view}'`));
     assert.match(app, new RegExp(`currentView === '${view}'`));
   }
   assert.match(navigation, /aria-label="Primary command views"/);
-  assert.match(app, /PHASE VIII-B4C \/ INTERDICTION AND COMBAT DAMAGE/);
+  assert.match(app, /PHASE VIII-B4D \/ LOGISTICS PRIORITIES/);
 });
 
 test('the map keeps operational controls while specialist tools move into dedicated views', () => {
@@ -26,6 +26,7 @@ test('the map keeps operational controls while specialist tools move into dedica
   assert.match(app, /Begin operation/);
   assert.match(app, /<ForceOrganisationPanel[^>]+onChange=\{setState\}/s);
   assert.match(app, /Territorial administration/);
+  assert.match(read('src/components/LogisticsCommand.tsx'), /Supply priority command/);
   assert.match(app, /Strategic picture/);
   assert.match(app, /Campaign control/);
 });
@@ -48,7 +49,7 @@ test('command interface styles load last and switch from left navigation to mobi
   assert.match(css, /\.command-workspace\s*\{[\s\S]*grid-template-columns:\s*96px minmax\(0, 1fr\)/);
   assert.match(css, /\.command-navigation\s*\{[\s\S]*position:\s*sticky/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*\.command-navigation\s*\{[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
-  assert.match(css, /\.command-nav-items\s*\{[\s\S]*grid-template-columns:\s*repeat\(6/);
+  assert.match(css, /\.command-nav-items\s*\{[\s\S]*grid-template-columns:\s*repeat\(8/);
 });
 
 test('dedicated views expose the current strategic data without changing game state', () => {

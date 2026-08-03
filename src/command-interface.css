@@ -794,7 +794,8 @@
   }
 
   .command-nav-items {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(70px, 1fr));
+    overflow-x: auto;
   }
 
   .command-nav-items button {

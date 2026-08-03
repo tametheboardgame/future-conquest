@@ -3,6 +3,8 @@ import { STRATEGIC_NODES, STRATEGIC_ROUTES } from './strategic-network-data';
 import type {
   FormationSupplyAllocation,
   GameState,
+  LogisticsPriority,
+  LogisticsPriorityState,
   LogisticsState,
   RouteSupplyFlow,
   SupplyCondition,
@@ -47,22 +49,84 @@ const formationStatusDemand: Record<TaskGroup['status'], number> = {
   interdicting: 1.38
 };
 
-const formationPriority: Record<TaskGroup['status'], number> = {
-  ready: 1,
-  moving: 1.12,
-  attacking: 1.28,
-  garrison: 0.86,
-  recovering: 1.04,
-  engineering: 1.16,
-  interdicting: 1.22
+export const LOGISTICS_PRIORITY_LABELS: Record<LogisticsPriority, string> = {
+  critical: 'Critical',
+  high: 'High',
+  standard: 'Standard',
+  restricted: 'Restricted'
 };
+
+export const LOGISTICS_PRIORITY_OPTIONS: LogisticsPriority[] = ['critical', 'high', 'standard', 'restricted'];
+
+const logisticsPriorityRank: Record<LogisticsPriority, number> = {
+  critical: 4,
+  high: 3,
+  standard: 2,
+  restricted: 1
+};
+
+const automaticFormationPriority: Record<TaskGroup['status'], LogisticsPriority> = {
+  ready: 'standard',
+  moving: 'high',
+  attacking: 'critical',
+  garrison: 'standard',
+  recovering: 'high',
+  engineering: 'high',
+  interdicting: 'high'
+};
+
+const automaticTerritoryPriority: Record<string, LogisticsPriority> = {
+  enemy: 'restricted',
+  unsecured: 'restricted',
+  contested: 'high',
+  controlled: 'standard',
+  administered: 'restricted'
+};
+
+const isLogisticsPriority = (value: unknown): value is LogisticsPriority => LOGISTICS_PRIORITY_OPTIONS.includes(value as LogisticsPriority);
+
+export function createEmptyLogisticsPriorities(): LogisticsPriorityState {
+  return { formationOverrides: {}, territoryOverrides: {} };
+}
+
+export function normaliseLogisticsPriorities(
+  value: unknown,
+  taskGroups: GameState['taskGroups'],
+  territories: GameState['territories']
+): LogisticsPriorityState {
+  const raw = value && typeof value === 'object' ? value as Partial<LogisticsPriorityState> : {};
+  const formationOverrides: Record<string, LogisticsPriority> = {};
+  const territoryOverrides: Record<string, LogisticsPriority> = {};
+  if (raw.formationOverrides && typeof raw.formationOverrides === 'object') {
+    for (const [id, priority] of Object.entries(raw.formationOverrides)) {
+      if (taskGroups[id] && isLogisticsPriority(priority)) formationOverrides[id] = priority;
+    }
+  }
+  if (raw.territoryOverrides && typeof raw.territoryOverrides === 'object') {
+    for (const [id, priority] of Object.entries(raw.territoryOverrides)) {
+      if (territories[id] && isLogisticsPriority(priority)) territoryOverrides[id] = priority;
+    }
+  }
+  return { formationOverrides, territoryOverrides };
+}
+
+export function effectiveFormationLogisticsPriority(state: GameState, groupId: string): LogisticsPriority {
+  const group = state.taskGroups[groupId];
+  return state.logisticsPriorities?.formationOverrides?.[groupId] ?? automaticFormationPriority[group?.status ?? 'ready'];
+}
+
+export function effectiveTerritoryLogisticsPriority(state: GameState, territoryId: string): LogisticsPriority {
+  const territory = state.territories[territoryId];
+  return state.logisticsPriorities?.territoryOverrides?.[territoryId] ?? automaticTerritoryPriority[territory?.occupation ?? 'enemy'];
+}
 
 interface SupplyRequest {
   id: string;
   kind: 'formation' | 'administration';
   targetTerritoryId: string;
   demand: number;
-  priority: number;
+  priority: LogisticsPriority;
+  automaticPriority: boolean;
   delivered: number;
   pathCounts: Map<string, number>;
 }
@@ -206,15 +270,19 @@ function createRequests(state: GameState): SupplyRequest[] {
   const requests: SupplyRequest[] = [];
   for (const territoryId of Object.keys(state.territories).sort()) {
     const demand = administrationSupplyDemand(state, territoryId);
-    if (demand > 0) requests.push({
-      id: `ADMIN:${territoryId}`,
-      kind: 'administration',
-      targetTerritoryId: territoryId,
-      demand,
-      priority: 0.92,
-      delivered: 0,
-      pathCounts: new Map()
-    });
+    if (demand > 0) {
+      const priority = effectiveTerritoryLogisticsPriority(state, territoryId);
+      requests.push({
+        id: `ADMIN:${territoryId}`,
+        kind: 'administration',
+        targetTerritoryId: territoryId,
+        demand,
+        priority,
+        automaticPriority: !state.logisticsPriorities?.territoryOverrides?.[territoryId],
+        delivered: 0,
+        pathCounts: new Map()
+      });
+    }
   }
   for (const group of Object.values(state.taskGroups).sort((a, b) => a.id.localeCompare(b.id))) {
     if (group.personnel <= 0) continue;
@@ -222,12 +290,14 @@ function createRequests(state: GameState): SupplyRequest[] {
     const engineeringDemand = engineeringProject ? Math.max(3, Math.ceil(engineeringProject.allocation / 8)) : 0;
     const interdictionMission = state.interdictionMissions.find(mission => mission.status === 'active' && mission.assignedTaskGroupId === group.id);
     const interdictionDemand = interdictionMission ? Math.max(5, Math.ceil(interdictionMission.intensity / 8)) : 0;
+    const priority = effectiveFormationLogisticsPriority(state, group.id);
     requests.push({
       id: `GROUP:${group.id}`,
       kind: 'formation',
       targetTerritoryId: group.location,
       demand: formationSupplyDemand(group) + engineeringDemand + interdictionDemand,
-      priority: engineeringProject ? Math.max(1.16, formationPriority[group.status]) : formationPriority[group.status],
+      priority,
+      automaticPriority: !state.logisticsPriorities?.formationOverrides?.[group.id],
       delivered: 0,
       pathCounts: new Map()
     });
@@ -268,9 +338,11 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     const candidates = requests
       .filter(request => request.delivered < request.demand && !unavailable.has(request.id))
       .sort((a, b) => {
-        const aScore = a.delivered / Math.max(1, a.demand * a.priority);
-        const bScore = b.delivered / Math.max(1, b.demand * b.priority);
-        return aScore - bScore || b.priority - a.priority || a.id.localeCompare(b.id);
+        const priorityDifference = logisticsPriorityRank[b.priority] - logisticsPriorityRank[a.priority];
+        if (priorityDifference) return priorityDifference;
+        const aScore = a.delivered / Math.max(1, a.demand);
+        const bScore = b.delivered / Math.max(1, b.demand);
+        return aScore - bScore || a.id.localeCompare(b.id);
       });
     if (!candidates.length) break;
 
@@ -316,6 +388,7 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     const demand = territoryRequests.reduce((sum, request) => sum + request.demand, 0);
     const delivered = territoryRequests.reduce((sum, request) => sum + request.delivered, 0);
     const ratio = demand > 0 ? delivered / demand : accessibleTerritory(state, territoryId) ? 1 : 0;
+    const administrationRequest = territoryRequests.find(request => request.id === `ADMIN:${territoryId}`);
     const routeIds = [...new Set(territoryRequests.flatMap(primaryPath))];
     territoryAllocations[territoryId] = {
       territoryId,
@@ -323,6 +396,10 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
       delivered,
       ratio: round1(ratio * 100),
       condition: supplyConditionForRatio(ratio),
+      administrationDemand: administrationRequest?.demand ?? 0,
+      administrationDelivered: administrationRequest?.delivered ?? 0,
+      priority: administrationRequest?.priority ?? effectiveTerritoryLogisticsPriority(state, territoryId),
+      automaticPriority: administrationRequest?.automaticPriority ?? !state.logisticsPriorities?.territoryOverrides?.[territoryId],
       routeIds
     };
   }
@@ -345,6 +422,8 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
       delivered,
       ratio: round1(ratio * 100),
       condition: supplyConditionForRatio(ratio),
+      priority: request?.priority ?? effectiveFormationLogisticsPriority(state, group.id),
+      automaticPriority: request?.automaticPriority ?? !state.logisticsPriorities?.formationOverrides?.[group.id],
       path
     };
   }
@@ -355,6 +434,12 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     .filter(flow => flow.used > 0 && flow.utilisation >= 85)
     .sort((a, b) => b.utilisation - a.utilisation || a.routeId.localeCompare(b.routeId))
     .map(flow => flow.routeId);
+  const starvedFormationIds = Object.values(formationAllocations)
+    .filter(allocation => allocation.demand > 0 && allocation.ratio < 40)
+    .map(allocation => allocation.groupId);
+  const starvedTerritoryIds = Object.values(territoryAllocations)
+    .filter(allocation => allocation.administrationDemand > 0 && allocation.administrationDelivered / allocation.administrationDemand < 0.4)
+    .map(allocation => allocation.territoryId);
 
   return {
     turn: state.turn,
@@ -366,7 +451,9 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     routeFlows,
     territoryAllocations,
     formationAllocations,
-    bottleneckRouteIds
+    bottleneckRouteIds,
+    starvedFormationIds,
+    starvedTerritoryIds
   };
 }
 
@@ -396,6 +483,73 @@ export function createEmptyLogisticsState(turn = 1): LogisticsState {
     routeFlows: {},
     territoryAllocations: {},
     formationAllocations: {},
-    bottleneckRouteIds: []
+    bottleneckRouteIds: [],
+    starvedFormationIds: [],
+    starvedTerritoryIds: []
   };
+}
+
+
+export type LogisticsPrioritySelection = LogisticsPriority | 'automatic';
+
+function appendPriorityEvent(state: GameState, text: string, tone: 'neutral' | 'warning'): GameState {
+  const event = { id: (state.events[0]?.id ?? 0) + 1, turn: state.turn, text, tone } as const;
+  return { ...state, events: [event, ...state.events].slice(0, 100) };
+}
+
+function starvationDescription(before: GameState, after: GameState): string {
+  const priorGroups = new Set(before.logistics.starvedFormationIds ?? []);
+  const priorTerritories = new Set(before.logistics.starvedTerritoryIds ?? []);
+  const groups = (after.logistics.starvedFormationIds ?? [])
+    .filter(id => !priorGroups.has(id))
+    .map(id => after.taskGroups[id]?.name ?? id);
+  const territories = (after.logistics.starvedTerritoryIds ?? [])
+    .filter(id => !priorTerritories.has(id))
+    .map(id => TERRITORIES[id]?.centre ?? id);
+  return [...groups, ...territories].join(', ');
+}
+
+function applyPriorityChange(state: GameState, priorities: LogisticsPriorityState, description: string): GameState {
+  const refreshed = refreshSupplyNetwork({ ...state, logisticsPriorities: priorities });
+  const starved = starvationDescription(state, refreshed);
+  return appendPriorityEvent(
+    refreshed,
+    starved ? `${description} The change leaves ${starved} below 40% of daily logistics demand.` : description,
+    starved ? 'warning' : 'neutral'
+  );
+}
+
+export function setFormationLogisticsPriority(
+  state: GameState,
+  groupId: string,
+  selection: LogisticsPrioritySelection
+): GameState {
+  if (!state.taskGroups[groupId] || (selection !== 'automatic' && !isLogisticsPriority(selection))) return state;
+  const priorities = normaliseLogisticsPriorities(state.logisticsPriorities, state.taskGroups, state.territories);
+  const existing = priorities.formationOverrides[groupId];
+  if ((selection === 'automatic' && existing === undefined) || existing === selection) return state;
+  if (selection === 'automatic') delete priorities.formationOverrides[groupId];
+  else priorities.formationOverrides[groupId] = selection;
+  const label = selection === 'automatic'
+    ? `automatic ${LOGISTICS_PRIORITY_LABELS[automaticFormationPriority[state.taskGroups[groupId].status]].toLowerCase()}`
+    : LOGISTICS_PRIORITY_LABELS[selection].toLowerCase();
+  return applyPriorityChange(state, priorities, `${state.taskGroups[groupId].name} logistics priority set to ${label}.`);
+}
+
+export function setTerritoryLogisticsPriority(
+  state: GameState,
+  territoryId: string,
+  selection: LogisticsPrioritySelection
+): GameState {
+  const territory = state.territories[territoryId];
+  if (!territory || territory.controller !== 'player' || (selection !== 'automatic' && !isLogisticsPriority(selection))) return state;
+  const priorities = normaliseLogisticsPriorities(state.logisticsPriorities, state.taskGroups, state.territories);
+  const existing = priorities.territoryOverrides[territoryId];
+  if ((selection === 'automatic' && existing === undefined) || existing === selection) return state;
+  if (selection === 'automatic') delete priorities.territoryOverrides[territoryId];
+  else priorities.territoryOverrides[territoryId] = selection;
+  const label = selection === 'automatic'
+    ? `automatic ${LOGISTICS_PRIORITY_LABELS[automaticTerritoryPriority[territory.occupation]].toLowerCase()}`
+    : LOGISTICS_PRIORITY_LABELS[selection].toLowerCase();
+  return applyPriorityChange(state, priorities, `${TERRITORIES[territoryId].centre} administration logistics priority set to ${label}.`);
 }
