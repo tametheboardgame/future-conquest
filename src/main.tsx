@@ -16,6 +16,7 @@ import './desktop-command-fit.css';
 import './supply-network.css';
 import './persistence-feedback';
 import './engineering.css';
+import './interdiction.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 
 installMapTrackpadGuard();

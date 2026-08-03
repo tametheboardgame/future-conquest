@@ -5,6 +5,7 @@ import { createRouteStates } from './strategic-network';
 import { createEmptyLogisticsState, refreshSupplyNetwork } from './supply-network';
 import { resolveInfrastructureDisruption, resolveInfrastructureRecovery } from './infrastructure-disruption';
 import { resolveEngineeringProjects } from './engineering-projects';
+import { resolveInterdictionMissions, resolveOperationCombatDamage } from './interdiction-missions';
 import {
   chooseOperationalRoute,
   movementProgressForDay,
@@ -22,7 +23,8 @@ import type {
   TerritoryState
 } from './types';
 
-const SAVE_KEY = 'future-conquest-slice-v0.10';
+const SAVE_KEY = 'future-conquest-slice-v0.11';
+const LEGACY_V10_SAVE_KEY = 'future-conquest-slice-v0.10';
 const LEGACY_V9_SAVE_KEY = 'future-conquest-slice-v0.9';
 const LEGACY_V8_SAVE_KEY = 'future-conquest-slice-v0.8';
 const LEGACY_V7_SAVE_KEY = 'future-conquest-slice-v0.7';
@@ -124,7 +126,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
   const initialEscalation = difficulty === 'hard' ? 8 : 3;
   const strategicState = createStrategicState(seed, difficulty, initialEscalation);
   const state: GameState = {
-    version: 10,
+    version: 11,
     seed,
     difficulty,
     turn: 1,
@@ -141,6 +143,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     logistics: createEmptyLogisticsState(1),
     infrastructureIncidents: [],
     engineeringProjects: [],
+    interdictionMissions: [],
     supply: 100,
     woundedPool: 0,
     operations: {},
@@ -426,6 +429,7 @@ function resolveOperations(state: GameState): GameState {
     const enemyArmourLosses = Math.round(Math.max(1, remainingArmour * 0.004 * ratio));
     distributeEnemyLosses(enemyFormations, operation.enemyFormationIds, enemyPersonnelLosses, enemyArmourLosses);
 
+    next = resolveOperationCombatDamage(next, operation, participants, defender.personnel);
     const remainingDefenders = operation.enemyFormationIds.reduce((sum, id) => sum + (enemyFormations[id]?.personnel ?? 0), 0);
     if (operation.progress >= 100 || remainingDefenders < 220) {
       const territory = territories[operation.target];
@@ -702,11 +706,13 @@ export function endTurn(state: GameState): GameState {
     logistics: structuredClone(state.logistics),
     infrastructureIncidents: structuredClone(state.infrastructureIncidents ?? []),
     engineeringProjects: structuredClone(state.engineeringProjects),
+    interdictionMissions: structuredClone(state.interdictionMissions),
     events: [...state.events]
   };
   next = resolveInfrastructureDisruption(next);
   next = resolveInfrastructureRecovery(next);
   next = resolveEngineeringProjects(next);
+  next = resolveInterdictionMissions(next);
   next = resolveMovement(next);
   next = resolveOperations(next);
   next = resolveOccupationAndLogistics(next);
@@ -743,15 +749,17 @@ type StrategicField =
 type NetworkField = 'routeStates';
 type LogisticsField = 'logistics';
 type EngineeringField = 'engineeringProjects';
+type InterdictionField = 'interdictionMissions';
 
-type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField> & { version: 9 };
-type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField> & { version: 8 };
-type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField> & { version: 7 };
-type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField> & { version: 6 };
-type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField> & { version: 5 };
-type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField> & { version: 4 };
-type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField> & { version: 3 };
-type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField> & {
+type LegacyV10GameState = Omit<GameState, 'version' | InterdictionField> & { version: 10 };
+type LegacyV9GameState = Omit<GameState, 'version' | EngineeringField | InterdictionField> & { version: 9 };
+type LegacyV8GameState = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField> & { version: 8 };
+type LegacyV7GameState = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField> & { version: 7 };
+type LegacyV6GameState = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField> & { version: 6 };
+type LegacyV5GameState = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField> & { version: 5 };
+type LegacyV4GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField> & { version: 4 };
+type LegacyV3GameState = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField> & { version: 3 };
+type LegacyGameState = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField> & {
   version: 2;
   battle: LegacyBattle | null;
 };
@@ -792,7 +800,7 @@ export function loadGame(): GameState | null {
   if (current) {
     const parsed = JSON.parse(current) as Partial<GameState>;
     if (
-      parsed.version === 10
+      parsed.version === 11
       && parsed.taskGroups
       && parsed.enemyFormations
       && parsed.operations
@@ -802,7 +810,26 @@ export function loadGame(): GameState | null {
       && parsed.routeStates
       && parsed.infrastructureIncidents
       && parsed.engineeringProjects
+      && parsed.interdictionMissions
     ) return upgradeStrategicState(parsed as GameState);
+  }
+
+  const v10 = localStorage.getItem(LEGACY_V10_SAVE_KEY);
+  if (v10) {
+    const parsed = JSON.parse(v10) as Partial<LegacyV10GameState>;
+    if (
+      parsed.version === 10
+      && parsed.taskGroups
+      && parsed.enemyFormations
+      && parsed.operations
+      && parsed.mobilisations
+      && parsed.enemyOrders
+      && parsed.intelligenceReports
+      && parsed.routeStates
+      && parsed.logistics
+      && parsed.infrastructureIncidents
+      && parsed.engineeringProjects
+    ) return upgradeStrategicState(parsed as LegacyV10GameState);
   }
 
   const v9 = localStorage.getItem(LEGACY_V9_SAVE_KEY);

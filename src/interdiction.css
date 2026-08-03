@@ -1,0 +1,146 @@
+.infrastructure-command-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.interdiction-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.interdiction-summary-strip > div {
+  background: rgba(7, 16, 27, 0.78);
+  border: 1px solid rgba(142, 160, 181, 0.22);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.interdiction-summary-strip span,
+.interdiction-mission-card dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.interdiction-summary-strip strong {
+  font-size: 1.45rem;
+}
+
+.interdiction-command-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(340px, 1.35fr);
+  gap: 14px;
+}
+
+.interdiction-history-panel {
+  grid-column: 1 / -1;
+}
+
+.interdiction-create-panel,
+.interdiction-mission-card {
+  display: grid;
+  gap: 12px;
+}
+
+.interdiction-create-panel label,
+.interdiction-mission-card label {
+  display: grid;
+  gap: 6px;
+}
+
+.interdiction-route-preview {
+  border-left: 3px solid #d38a47;
+  background: rgba(211, 138, 71, 0.08);
+  padding: 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.interdiction-route-preview span,
+.interdiction-route-preview small,
+.interdiction-history-list small {
+  color: var(--muted);
+}
+
+.interdiction-mission-list {
+  display: grid;
+  gap: 12px;
+}
+
+.interdiction-mission-card {
+  border: 1px solid rgba(211, 138, 71, 0.32);
+  background: rgba(10, 20, 33, 0.72);
+  padding: 13px;
+}
+
+.interdiction-mission-card header,
+.interdiction-actions,
+.interdiction-history-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.interdiction-mission-card header small {
+  color: var(--muted);
+}
+
+.interdiction-mission-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.interdiction-mission-card dl div {
+  background: rgba(255, 255, 255, 0.035);
+  padding: 8px;
+}
+
+.interdiction-mission-card dd {
+  margin: 3px 0 0;
+}
+
+.interdiction-progress {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.interdiction-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #b75f38, #e1a259);
+}
+
+.interdiction-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.interdiction-history-list article {
+  padding: 10px 12px;
+  border-left: 3px solid #758292;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.interdiction-history-list article.succeeded { border-left-color: #5eab78; }
+.interdiction-history-list article.failed { border-left-color: #c95f5f; }
+.interdiction-history-list article.cancelled { border-left-color: #8b929d; }
+.interdiction-history-list span { display: grid; gap: 3px; }
+.interdiction-history-list b { text-transform: uppercase; font-size: 0.76rem; }
+
+@media (max-width: 1050px) {
+  .interdiction-command-grid { grid-template-columns: 1fr; }
+  .interdiction-history-panel { grid-column: auto; }
+}
+
+@media (max-width: 700px) {
+  .interdiction-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .interdiction-mission-card dl { grid-template-columns: 1fr; }
+  .interdiction-actions { align-items: stretch; flex-direction: column; }
+}

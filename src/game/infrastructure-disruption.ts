@@ -40,7 +40,7 @@ export function normaliseInfrastructureIncidents(value: unknown): Infrastructure
     && typeof incident.id === 'string'
     && typeof incident.turn === 'number'
     && typeof incident.routeId === 'string'
-    && (incident.cause === 'resistance' || incident.cause === 'enemy-interdiction' || incident.cause === 'combat')
+    && (incident.cause === 'resistance' || incident.cause === 'enemy-interdiction' || incident.cause === 'player-interdiction' || incident.cause === 'combat')
     && typeof incident.severity === 'number'
     && typeof incident.description === 'string'
   )).slice(0, 80);
@@ -77,7 +77,9 @@ export function applyInfrastructureDamage(
     ? 'Resistance sabotage'
     : cause === 'enemy-interdiction'
       ? 'Enemy interdiction'
-      : 'Combat damage';
+      : cause === 'player-interdiction'
+        ? 'Player interdiction'
+        : 'Combat damage';
   const description = `${causeLabel} damaged ${route.name}, reducing corridor condition to ${condition}%.`;
   const incident: InfrastructureIncident = {
     id: `INF-${state.turn}-${routeId}-${(state.infrastructureIncidents?.length ?? 0) + 1}`,

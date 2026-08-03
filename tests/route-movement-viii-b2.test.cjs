@@ -117,7 +117,7 @@ test('version 6 active orders migrate to version 8 with a valid route assignment
   delete legacy.taskGroups['TG-1'].order.routeId;
 
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 10);
+  assert.equal(upgraded.version, 11);
   assert.equal(upgraded.taskGroups['TG-1'].order.routeId, 'R-RENNES-LYON');
 });
 
@@ -125,11 +125,11 @@ test('the command interface exposes route selection and the version 8 release ma
   const app = read('src/App.tsx');
   const engine = read('src/game/engine.ts');
   const persistence = read('src/game/persistence.ts');
-  assert.match(app, /PHASE VIII-B4B \/ ENGINEERING PROJECTS/);
+  assert.match(app, /PHASE VIII-B4C \/ INTERDICTION AND COMBAT DAMAGE/);
   assert.match(app, /Operational corridor/);
   assert.match(app, /issueMove\(current, chosenRouteId/);
   assert.match(app, /beginOperation\(current, chosenRouteId/);
   assert.match(engine, /future-conquest-slice-v0\.7/);
-  assert.match(persistence, /saveVersion:\s*10/);
+  assert.match(persistence, /saveVersion:\s*11/);
   assert.equal(STRATEGIC_ROUTE_BY_ID['R-RENNES-LYON'].movementDays, 2);
 });
