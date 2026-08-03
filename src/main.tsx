@@ -13,6 +13,7 @@ import './map-label-hierarchy.css';
 import './strategic-network.css';
 import './strategic-response.css';
 import './enemy-strategy.css';
+import './operational-clarity.css';
 import './desktop-command-fit.css';
 import './supply-network.css';
 import './persistence-feedback';

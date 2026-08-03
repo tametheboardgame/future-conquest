@@ -17,6 +17,18 @@ export type EngineeringProjectStatus = 'active' | 'completed' | 'cancelled';
 export type InterdictionIntensity = 25 | 50 | 75 | 100;
 export type InterdictionMissionStatus = 'active' | 'succeeded' | 'failed' | 'cancelled';
 
+export interface OperationalAwarenessState {
+  previousNetworkEfficiency: number;
+  lastAcknowledgedSupplyTurn: number;
+}
+
+export interface TutorialState {
+  enabled: boolean;
+  step: number;
+  completed: boolean;
+  startedTurn: number;
+}
+
 export interface LogisticsPriorityState {
   formationOverrides: Record<string, LogisticsPriority>;
   territoryOverrides: Record<string, LogisticsPriority>;
@@ -262,7 +274,7 @@ export interface EnemyStrategyState {
 }
 
 export interface GameState {
-  version: 13;
+  version: 14;
   seed: number;
   difficulty: Difficulty;
   turn: number;
@@ -280,6 +292,8 @@ export interface GameState {
   enemyOrders: EnemyOrder[];
   intelligenceReports: IntelligenceReport[];
   enemyStrategy: EnemyStrategyState;
+  operationalAwareness: OperationalAwarenessState;
+  tutorial: TutorialState;
   routeStates: Record<string, StrategicRouteState>;
   logistics: LogisticsState;
   logisticsPriorities: LogisticsPriorityState;

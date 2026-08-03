@@ -1,8 +1,9 @@
 import { upgradeStrategicState } from './strategic-response';
 import type { Difficulty, GameState } from './types';
 
-export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.13';
-export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.13-metadata';
+export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.14';
+export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.14-metadata';
+export const LEGACY_V13_SAVE_KEY = 'future-conquest-slice-v0.13';
 export const LEGACY_V12_SAVE_KEY = 'future-conquest-slice-v0.12';
 export const LEGACY_V11_SAVE_KEY = 'future-conquest-slice-v0.11';
 export const LEGACY_V10_SAVE_KEY = 'future-conquest-slice-v0.10';
@@ -16,7 +17,7 @@ export const LEGACY_V3_SAVE_KEY = 'future-conquest-slice-v0.3';
 export const LEGACY_V2_SAVE_KEY = 'future-conquest-slice-v0.2';
 
 export interface SaveMetadata {
-  saveVersion: 13;
+  saveVersion: 14;
   savedAt: string | null;
   campaignDay: number;
   difficulty: Difficulty;
@@ -25,7 +26,7 @@ export interface SaveMetadata {
 }
 
 export type SaveInspection =
-  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v13' | 'v12' | 'v11' | 'v10' | 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2' }
+  | { ok: true; state: GameState; metadata: SaveMetadata; source: 'v14' | 'v13' | 'v12' | 'v11' | 'v10' | 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2' }
   | { ok: false; code: 'missing' | 'corrupt' | 'unsupported' | 'storage-unavailable'; message: string };
 
 export type MetadataWriteResult =
@@ -47,18 +48,21 @@ type EngineeringField = 'engineeringProjects';
 type InterdictionField = 'interdictionMissions';
 type PriorityField = 'logisticsPriorities';
 type StrategyField = 'enemyStrategy';
+type AwarenessField = 'operationalAwareness';
+type TutorialField = 'tutorial';
 
-type LegacyV12State = Omit<GameState, 'version' | StrategyField> & { version: 12 };
-type LegacyV11State = Omit<GameState, 'version' | PriorityField | StrategyField> & { version: 11 };
-type LegacyV10State = Omit<GameState, 'version' | InterdictionField | PriorityField | StrategyField> & { version: 10 };
-type LegacyV9State = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 9 };
-type LegacyV8State = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 8 };
-type LegacyV7State = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 7 };
-type LegacyV6State = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 6 };
-type LegacyV5State = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 5 };
-type LegacyV4State = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 4 };
-type LegacyV3State = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & { version: 3 };
-type LegacyV2State = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField> & {
+type LegacyV13State = Omit<GameState, 'version' | AwarenessField | TutorialField> & { version: 13 };
+type LegacyV12State = Omit<GameState, 'version' | StrategyField | AwarenessField | TutorialField> & { version: 12 };
+type LegacyV11State = Omit<GameState, 'version' | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 11 };
+type LegacyV10State = Omit<GameState, 'version' | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 10 };
+type LegacyV9State = Omit<GameState, 'version' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 9 };
+type LegacyV8State = Omit<GameState, 'version' | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 8 };
+type LegacyV7State = Omit<GameState, 'version' | LogisticsField | 'infrastructureIncidents' | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 7 };
+type LegacyV6State = Omit<GameState, 'version' | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 6 };
+type LegacyV5State = Omit<GameState, 'version' | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 5 };
+type LegacyV4State = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 4 };
+type LegacyV3State = Omit<GameState, 'version' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & { version: 3 };
+type LegacyV2State = Omit<GameState, 'version' | 'operations' | StrategicField | NetworkField | LogisticsField | EngineeringField | InterdictionField | PriorityField | StrategyField | AwarenessField | TutorialField> & {
   version: 2;
   battle?: unknown;
 };
@@ -86,7 +90,22 @@ function hasStrategicCollections(value: Record<string, unknown>): boolean {
     && Array.isArray(value.intelligenceReports);
 }
 
-function isV13State(value: unknown): value is GameState {
+function isV14State(value: unknown): value is GameState {
+  return hasCoreCampaignState(value)
+    && value.version === 14
+    && hasStrategicCollections(value)
+    && isRecord(value.routeStates)
+    && isRecord(value.logistics)
+    && isRecord(value.logisticsPriorities)
+    && isRecord(value.enemyStrategy)
+    && isRecord(value.operationalAwareness)
+    && isRecord(value.tutorial)
+    && Array.isArray(value.infrastructureIncidents)
+    && Array.isArray(value.engineeringProjects)
+    && Array.isArray(value.interdictionMissions);
+}
+
+function isV13State(value: unknown): value is LegacyV13State {
   return hasCoreCampaignState(value)
     && value.version === 13
     && hasStrategicCollections(value)
@@ -188,7 +207,7 @@ function stateFromStoredValue(value: unknown): unknown {
 
 export function createSaveMetadata(state: GameState, savedAt: string | null = new Date().toISOString()): SaveMetadata {
   return {
-    saveVersion: 13,
+    saveVersion: 14,
     savedAt,
     campaignDay: state.turn,
     difficulty: state.difficulty,
@@ -200,7 +219,7 @@ export function createSaveMetadata(state: GameState, savedAt: string | null = ne
 function metadataMatchesState(value: unknown, state: GameState): value is SaveMetadata {
   return Boolean(
     isRecord(value)
-    && value.saveVersion === 13
+    && value.saveVersion === 14
     && (typeof value.savedAt === 'string' || value.savedAt === null)
     && value.campaignDay === state.turn
     && value.difficulty === state.difficulty
@@ -232,11 +251,15 @@ function readRaw(storage: StorageReader, key: string): string | null | SaveInspe
   }
 }
 
-function inspectRaw(storage: StorageReader, raw: string, source: 'v13' | 'v12' | 'v11' | 'v10' | 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2'): SaveInspection {
+function inspectRaw(storage: StorageReader, raw: string, source: 'v14' | 'v13' | 'v12' | 'v11' | 'v10' | 'v9' | 'v8' | 'v7' | 'v6' | 'v5' | 'v4' | 'v3' | 'v2'): SaveInspection {
   try {
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
-    if (source === 'v13' && isV13State(parsed)) {
+    if (source === 'v14' && isV14State(parsed)) {
       return { ok: true, state: upgradeStrategicState(parsed), metadata: readMetadata(storage, parsed), source };
+    }
+    if (source === 'v13' && isV13State(parsed)) {
+      const state = upgradeStrategicState(parsed);
+      return { ok: true, state, metadata: createSaveMetadata(state, null), source };
     }
     if (source === 'v12' && isV12State(parsed)) {
       const state = upgradeStrategicState(parsed);
@@ -294,7 +317,11 @@ function inspectRaw(storage: StorageReader, raw: string, source: 'v13' | 'v12' |
 export function inspectStoredCampaign(storage: StorageReader): SaveInspection {
   const current = readRaw(storage, CURRENT_SAVE_KEY);
   if (typeof current !== 'string' && current !== null) return current;
-  if (current) return inspectRaw(storage, current, 'v13');
+  if (current) return inspectRaw(storage, current, 'v14');
+
+  const v13 = readRaw(storage, LEGACY_V13_SAVE_KEY);
+  if (typeof v13 !== 'string' && v13 !== null) return v13;
+  if (v13) return inspectRaw(storage, v13, 'v13');
 
   const v12 = readRaw(storage, LEGACY_V12_SAVE_KEY);
   if (typeof v12 !== 'string' && v12 !== null) return v12;
@@ -359,7 +386,7 @@ export function writeMetadataForCurrentSave(storage: StorageWriter, savedAt = ne
     const raw = storage.getItem(CURRENT_SAVE_KEY);
     if (!raw) return { ok: false, code: 'missing', message: 'The campaign was not written to browser storage.' };
     const parsed = stateFromStoredValue(JSON.parse(raw) as unknown);
-    if (!isV13State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
+    if (!isV14State(parsed)) return { ok: false, code: 'corrupt', message: 'The campaign save could not be verified.' };
     const metadata = createSaveMetadata(parsed, savedAt);
     storage.setItem(SAVE_METADATA_KEY, JSON.stringify(metadata));
     return { ok: true, metadata };

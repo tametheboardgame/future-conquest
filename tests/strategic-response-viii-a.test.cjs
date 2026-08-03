@@ -23,7 +23,7 @@ test('Phase VIII-A defines five visible escalation stages', () => {
 
 test('new campaigns carry mobilisation, enemy planning and intelligence state', () => {
   const state = newGame(41, 'standard');
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.equal(state.escalationStage, 1);
   assert.ok(state.mobilisationPool > 0);
   assert.deepEqual(state.mobilisations, []);
@@ -86,7 +86,7 @@ test('version 4 campaigns upgrade through the strategic network to version 8', (
   delete legacy.enemyOrders;
   delete legacy.intelligenceReports;
   const upgraded = upgradeStrategicState(legacy);
-  assert.equal(upgraded.version, 13);
+  assert.equal(upgraded.version, 14);
   assert.equal(upgraded.escalationStage, getEscalationStage(upgraded.escalation).id);
   assert.ok(Array.isArray(upgraded.mobilisations));
 });

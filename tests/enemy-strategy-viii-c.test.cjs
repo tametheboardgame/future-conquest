@@ -25,7 +25,7 @@ function exposeFront(state) {
 
 test('new campaigns initialise version 13 enemy strategy state', () => {
   const state = newGame(301, 'standard');
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.deepEqual(state.enemyStrategy, createEnemyStrategyState('standard'));
   assert.equal(crisisLimitForDifficulty('story'), 5);
   assert.equal(crisisLimitForDifficulty('standard'), 4);
@@ -120,7 +120,7 @@ test('version 12 campaigns migrate to version 13 with normalised strategy state'
   const current = newGame(306, 'standard');
   const { enemyStrategy, ...legacy } = current;
   const migrated = upgradeStrategicState({ ...legacy, version: 12 });
-  assert.equal(migrated.version, 13);
+  assert.equal(migrated.version, 14);
   assert.equal(migrated.enemyStrategy.doctrine, 'containment');
 });
 
@@ -128,7 +128,7 @@ test('the interface exposes Phase VIII-C enemy strategy and crisis information',
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const main = fs.readFileSync('src/main.tsx', 'utf8');
   const module = fs.readFileSync('src/game/enemy-strategy.ts', 'utf8');
-  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
+  assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
   assert.match(app, /ENEMY THEATRE COMMAND/);
   assert.match(app, /Operational crisis/);
   assert.match(module, /Coordinated counterattack forming/);

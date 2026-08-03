@@ -50,7 +50,7 @@ test('map marker classes are independently gated without removing territory sele
   const map = read('src/components/MapView.tsx');
 
   assert.match(map, /layers\.operations && Object\.values\(state\.operations\)/);
-  assert.match(map, /layers\.enemyUnits && Object\.entries\(enemyCounts\)/);
+  assert.match(map, /layers\.enemyUnits && enemyContacts\.map/);
   assert.match(map, /layers\.friendlyUnits && Object\.entries\(groupsByTerritory\)/);
   assert.match(map, /layers\.orderPrompts && reachable/);
   assert.match(map, /layers\.territories && <>/);

@@ -184,7 +184,7 @@ test('version 3 concurrent-operation saves migrate to version 9', () => {
   storage.set('future-conquest-slice-v0.3', JSON.stringify(prior));
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.version, 13);
+  assert.equal(loaded.version, 14);
   assert.equal(Object.keys(loaded.taskGroups).length, 4);
   assert.ok(Array.isArray(loaded.mobilisations));
 });

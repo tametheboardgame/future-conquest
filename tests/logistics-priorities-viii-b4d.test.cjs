@@ -33,7 +33,7 @@ function overloadedState(seed = 91) {
 
 test('new campaigns initialise version 13 priority state and automatic defaults', () => {
   const state = newGame(44);
-  assert.equal(state.version, 13);
+  assert.equal(state.version, 14);
   assert.deepEqual(state.logisticsPriorities, { formationOverrides: {}, territoryOverrides: {} });
   assert.equal(effectiveFormationLogisticsPriority(state, 'TG-1'), 'standard');
   assert.equal(effectiveTerritoryLogisticsPriority(state, state.portalTerritory), 'standard');
@@ -103,7 +103,7 @@ test('version 11 campaigns migrate to version 12 with automatic priority maps', 
   const current = newGame(47);
   const { logisticsPriorities, ...legacy } = current;
   const migrated = upgradeStrategicState({ ...legacy, version: 11 });
-  assert.equal(migrated.version, 13);
+  assert.equal(migrated.version, 14);
   assert.deepEqual(migrated.logisticsPriorities, { formationOverrides: {}, territoryOverrides: {} });
   assert.ok(migrated.logistics.totalDemand > 0);
 });
@@ -113,7 +113,7 @@ test('the command interface exposes Phase VIII-B4D logistics controls', () => {
   const navigation = fs.readFileSync('src/components/CommandNavigation.tsx', 'utf8');
   const component = fs.readFileSync('src/components/LogisticsCommand.tsx', 'utf8');
   const main = fs.readFileSync('src/main.tsx', 'utf8');
-  assert.match(app, /PHASE VIII-C \/ ENEMY STRATEGY AND CAMPAIGN BALANCE/);
+  assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
   assert.match(app, /<LogisticsCommand/);
   assert.match(navigation, /id: 'logistics'/);
   assert.match(component, /Critical → High → Standard → Restricted/);
