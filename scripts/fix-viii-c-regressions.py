@@ -19,6 +19,7 @@ for path in Path('tests').glob('*.test.cjs'):
         content
     )
     content = content.replace('saveVersion: 12,', 'saveVersion: 13,')
+    content = content.replace(r'saveVersion:\s*12', r'saveVersion:\s*13')
     content = content.replace('a current version 12 save', 'a current version 13 save')
     path.write_text(content)
 
@@ -52,3 +53,20 @@ new = "`${TERRITORIES[target].centre} repelled an enemy counterattack coordinate
 if old not in content:
     raise RuntimeError('coordinated counterattack event wording was not found')
 engine.write_text(content.replace(old, new, 1))
+
+# Optional fields should remain absent, rather than being reintroduced as explicit
+# undefined values after JSON round-tripping.
+strategy = Path('src/game/enemy-strategy.ts')
+content = strategy.read_text()
+content = content.replace('    focusTerritory: undefined,\n', '', 1)
+content = content.replace(
+    "    focusTerritory: typeof candidate.focusTerritory === 'string' ? candidate.focusTerritory : undefined,",
+    "    ...(typeof candidate.focusTerritory === 'string' ? { focusTerritory: candidate.focusTerritory } : {}),",
+    1
+)
+content = content.replace(
+    '    focusTerritory,\n    threatenedRouteIds:',
+    '    ...(focusTerritory ? { focusTerritory } : {}),\n    threatenedRouteIds:',
+    1
+)
+strategy.write_text(content)
