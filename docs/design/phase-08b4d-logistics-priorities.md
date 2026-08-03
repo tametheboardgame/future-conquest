@@ -40,6 +40,12 @@ A dedicated Logistics command view provides:
 
 Campaign saves advance to version 12. Version 11 and all earlier supported campaigns migrate with empty override maps, preserving the automatic behaviour.
 
+## Validation
+
+- Full engine and interface regression suite: 153 tests passed.
+- Production TypeScript and Vite build: passed.
+- Focused coverage confirms automatic defaults, tiered shortage allocation, manual overrides, starvation warnings and version 11 migration.
+
 ## Scope boundary
 
 Enemy logistics strategy and campaign balance remain for Phase VIII-C.
