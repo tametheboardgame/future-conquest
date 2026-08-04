@@ -123,6 +123,38 @@ export default function App() {
   const bottleneckRoutes = state.logistics.bottleneckRouteIds.flatMap(id => STRATEGIC_ROUTE_BY_ID[id] ? [STRATEGIC_ROUTE_BY_ID[id]] : []);
   const recentAlerts = state.events.filter(event => event.tone === 'warning' || event.tone === 'danger').slice(0, 8);
   const availableGroups = groups.filter(group => canIssueOperationalOrder(group));
+  const tutorialAnchorSelector = (() => {
+    if (!tutorialStep) return undefined;
+    if (tutorialStep.id === 'formation') {
+      return currentView === 'forces' ? '[data-tutorial="formation-roster"]' : '[data-command-view="forces"]';
+    }
+    if (tutorialStep.id === 'operation') {
+      if (currentView !== 'map') return '[data-command-view="map"]';
+      return canAttack && target ? '[data-tutorial="attack-action"]' : '[data-tutorial="command-map"]';
+    }
+    if (tutorialStep.id === 'occupation') {
+      if (currentView !== 'map') return '[data-command-view="map"]';
+      const capturedGroundReady = Boolean(
+        selectedGroup
+        && !selectedOperation
+        && !target
+        && selectedGroup.location !== state.portalTerritory
+        && state.territories[selectedGroup.location]?.controller === 'player'
+        && selectedGroup.status !== 'garrison'
+        && canOrderSelected
+      );
+      if (capturedGroundReady) return '[data-tutorial="garrison-action"]';
+      if (operations.length > 0) return '[data-tutorial="resolve-day"]';
+      return '[data-tutorial="command-map"]';
+    }
+    if (tutorialStep.id === 'movement') {
+      if (currentView !== 'map') return '[data-command-view="map"]';
+      return canMove && target ? '[data-tutorial="move-action"]' : '[data-tutorial="command-map"]';
+    }
+    if (tutorialStep.id === 'logistics') return '[data-command-view="logistics"]';
+    if (tutorialStep.id === 'intelligence') return '[data-command-view="intelligence"]';
+    return '[data-command-view="engineering"]';
+  })();
 
   const instruction = useMemo(() => {
     if (!selectedGroup) return 'No operational task groups remain. The expedition has lost combat cohesion.';
@@ -217,7 +249,7 @@ export default function App() {
           })}
         </select>
       </label>}
-      <button type="button" className={isAttack ? 'primary danger-action' : 'primary'} disabled={!canExecute} onClick={execute}>{actionLabel}</button>
+      <button type="button" data-tutorial={isAttack ? 'attack-action' : 'move-action'} className={isAttack ? 'primary danger-action' : 'primary'} disabled={!canExecute} onClick={execute}>{actionLabel}</button>
     </div>;
   };
 
@@ -297,7 +329,7 @@ export default function App() {
         </select>
       </label>}
       {chosenRoute && <div className="forecast"><span>Estimated travel</span><strong>{chosenRouteDays} day{chosenRouteDays === 1 ? '' : 's'}</strong></div>}
-      <button className="primary" disabled={!canMove} onClick={() => setState(current => issueMove(current, chosenRouteId || undefined))}>{canMove ? 'Issue movement order' : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
+      <button className="primary" data-tutorial="move-action" disabled={!canMove} onClick={() => setState(current => issueMove(current, chosenRouteId || undefined))}>{canMove ? 'Issue movement order' : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
     </> : target && targetContact ? <>
       <h3>{TERRITORIES[selectedGroup.location].centre} → {target.centre}</h3>
       {targetInfo?.kind === 'route-blocked' ? <p>Every strategic corridor into this enemy province is blocked or destroyed. No operation can be launched from the current position.</p> : targetInfo?.kind === 'out-of-range' ? <>
@@ -316,10 +348,10 @@ export default function App() {
           {routeOptions.map(route => <option key={route.id} value={route.id}>{route.name} · {ROUTE_TYPE_LABELS[route.type]}</option>)}
         </select>
       </label>}
-      <button className="primary danger-action" disabled={!canAttack} onClick={() => setState(current => beginOperation(current, chosenRouteId || undefined))}>{canAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
+      <button className="primary danger-action" data-tutorial="attack-action" disabled={!canAttack} onClick={() => setState(current => beginOperation(current, chosenRouteId || undefined))}>{canAttack ? (targetOperation ? 'Join operation' : 'Begin operation') : targetInfo?.kind === 'route-blocked' ? 'Corridor blocked' : 'Out of operational range'}</button>
     </> : <>
       <p>Select one of the provinces marked ATTACK or MOVE on the map. Available from {TERRITORIES[selectedGroup.location].centre}: {adjacentTargetNames}.</p>
-      <button className="secondary" disabled={!canOrderSelected || state.status !== 'playing'} onClick={() => setState(setGarrison)}>{selectedGroup.status === 'garrison' ? 'Release from garrison' : 'Assign as garrison'}</button>
+      <button className="secondary" data-tutorial="garrison-action" disabled={!canOrderSelected || state.status !== 'playing'} onClick={() => setState(setGarrison)}>{selectedGroup.status === 'garrison' ? 'Release from garrison' : 'Assign as garrison'}</button>
     </>}
   </section>;
 
@@ -329,7 +361,7 @@ export default function App() {
     <header className="topbar command-topbar">
       <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
-        <button className="global-resolve" onClick={resolveDay} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
+        <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
       </div>
     </header>
@@ -368,7 +400,7 @@ export default function App() {
 
       <div className={`command-stage command-stage-${currentView}`}>
         {currentView === 'map' && <section className="workspace command-map-workspace">
-          <div className="map-panel">
+          <div className="map-panel" data-tutorial="command-map">
             <div className="map-heading">
               <p>{instruction}</p>
               <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Recon contact · Orange/red borders indicate threatened territory</div>
@@ -635,7 +667,7 @@ export default function App() {
       </div>
     </section>
 
-    <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} onSkip={() => setState(skipTutorial)} onOpenView={changeView} />
+    <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} anchorSelector={tutorialAnchorSelector} onSkip={() => setState(skipTutorial)} />
 
     {showSupplyWarning && <div className="supply-warning-backdrop" role="presentation">
       <section className="supply-warning-dialog" role="dialog" aria-modal="true" aria-label="Critical supply warning">
