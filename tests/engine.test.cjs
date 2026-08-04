@@ -213,6 +213,7 @@ test('a defeated enemy formation yields the territory', () => {
   state = endTurn(state);
   assert.equal(state.territories[target].controller, 'player');
   assert.equal(state.taskGroups['TG-1'].location, target);
+  assert.equal(state.targetTerritory, null);
   assert.equal(Object.keys(state.operations).length, 0);
 });
 
