@@ -33,7 +33,7 @@ export function FormationRoster({ state, selectedGroup, onSelect }: Props) {
 
   const visible = Object.values(grouped).reduce((sum, groups) => sum + groups.length, 0);
 
-  return <section className="task-groups formation-roster">
+  return <section className="task-groups formation-roster" data-tutorial="formation-roster">
     <div className="roster-heading">
       <p className="panel-label">FORMATIONS</p>
       <span>{Object.keys(state.taskGroups).length}</span>

@@ -460,6 +460,7 @@ function resolveOperations(state: GameState): GameState {
       }
       next.escalation = clamp(next.escalation + 3.2, 0, 100);
       next.selectedTerritory = operation.target;
+      next.targetTerritory = null;
       victories.push({ target: operation.target, enemyFormationIds: [...operation.enemyFormationIds] });
       delete operations[operationId];
       next = addEvent(
