@@ -24,7 +24,9 @@ test('guided tutorial anchors to the actionable control instead of a fixed mobil
 
 test('occupation guidance resolves combat before spotlighting the garrison action', () => {
   const app = fs.readFileSync('src/App.tsx', 'utf8');
+  const engine = fs.readFileSync('src/game/engine.ts', 'utf8');
   assert.match(app, /if \(capturedGroundReady\) return '\[data-tutorial=\"garrison-action\"\]'/);
   assert.match(app, /if \(operations\.length > 0\) return '\[data-tutorial=\"resolve-day\"\]'/);
   assert.match(app, /selectedGroup\.location !== state\.portalTerritory/);
+  assert.match(engine, /next\.selectedTerritory = operation\.target;\s+next\.targetTerritory = null;/);
 });
