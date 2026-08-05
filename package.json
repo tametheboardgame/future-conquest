@@ -5,6 +5,7 @@
   "description": "Design data and tooling for the Future Conquest strategy game.",
   "type": "module",
   "scripts": {
+    "predev": "npm run build:motion-comic",
     "dev": "vite",
     "test": "node scripts/run-engine-tests.mjs",
     "build:slice-map": "node scripts/build-vertical-slice-map.mjs",
