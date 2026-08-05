@@ -1,59 +1,44 @@
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const EXPECTED_BYTES = 12_874;
+const EXPECTED_SHA256 = 'b74f4e4719de712afcc8f30db043fbd21d9e156cc8a3217db5748ce5ff6cc492';
+
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const partsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v2', 'sprite-parts');
+const sourceFile = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v2', 'sprite-production.b64');
 const outputDirectory = path.join(repositoryRoot, 'public', 'generated');
 const outputFile = path.join(outputDirectory, 'motion-comic-v2-sprite.webp');
 
-const partNames = (await readdir(partsDirectory))
-  .filter(name => /^part-\d+\.txt$/u.test(name))
-  .sort((left, right) => left.localeCompare(right, 'en', { numeric: true }));
-
-if (partNames.length === 0) {
-  throw new Error(`No motion-comic sprite parts were found in ${partsDirectory}`);
+const encodedSprite = (await readFile(sourceFile, 'utf8')).replace(/\s+/gu, '');
+if (!/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedSprite) || encodedSprite.length % 4 !== 0) {
+  throw new Error('Motion-comic production sprite is not valid padded base64.');
 }
 
-const encodedParts = await Promise.all(
-  partNames.map(async name => (await readFile(path.join(partsDirectory, name), 'utf8')).replace(/\s+/gu, ''))
-);
+const sprite = Buffer.from(encodedSprite, 'base64');
+if (sprite.toString('base64') !== encodedSprite) {
+  throw new Error('Motion-comic production sprite did not decode cleanly.');
+}
 
-const decodedParts = encodedParts.map((encodedPart, index) => {
-  const invalidIndex = encodedPart.search(/[^A-Za-z0-9+/=]/u);
-  if (invalidIndex >= 0 || !/^[A-Za-z0-9+/]*={0,2}$/u.test(encodedPart)) {
-    const detail = invalidIndex >= 0
-      ? `invalid character ${JSON.stringify(encodedPart[invalidIndex])} at position ${invalidIndex}`
-      : 'padding appears inside the encoded data';
-    throw new Error(`Motion-comic sprite part ${partNames[index]} is not valid base64: ${detail}.`);
-  }
-
-  const unpaddedPart = encodedPart.replace(/=+$/u, '');
-  const canonicalPart = `${unpaddedPart}${'='.repeat((4 - (unpaddedPart.length % 4)) % 4)}`;
-  const decodedPart = Buffer.from(canonicalPart, 'base64');
-  if (decodedPart.toString('base64') !== canonicalPart) {
-    throw new Error(`Motion-comic sprite part ${partNames[index]} did not decode cleanly.`);
-  }
-  return decodedPart;
-});
-
-const sprite = Buffer.concat(decodedParts);
 const riffTag = sprite.subarray(0, 4).toString('ascii');
 const webpTag = sprite.subarray(8, 12).toString('ascii');
 const declaredSize = sprite.length >= 8 ? sprite.readUInt32LE(4) + 8 : 0;
+const sha256 = createHash('sha256').update(sprite).digest('hex');
 
 if (riffTag !== 'RIFF' || webpTag !== 'WEBP') {
-  throw new Error('Reconstructed motion-comic sprite is not a WebP file.');
+  throw new Error('Motion-comic production sprite is not a WebP file.');
 }
-
 if (declaredSize !== sprite.length) {
-  throw new Error(`Motion-comic sprite is incomplete: WebP declares ${declaredSize} bytes but reconstructed ${sprite.length}.`);
+  throw new Error(`Motion-comic sprite declares ${declaredSize} bytes but contains ${sprite.length}.`);
 }
-
-if (sprite.length < 100_000) {
-  throw new Error(`Motion-comic sprite is unexpectedly small (${sprite.length} bytes).`);
+if (sprite.length !== EXPECTED_BYTES) {
+  throw new Error(`Motion-comic sprite contains ${sprite.length} bytes; expected ${EXPECTED_BYTES}.`);
+}
+if (sha256 !== EXPECTED_SHA256) {
+  throw new Error(`Motion-comic sprite checksum ${sha256} does not match ${EXPECTED_SHA256}.`);
 }
 
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputFile, sprite);
-console.log(`Built ${path.relative(repositoryRoot, outputFile)} from ${partNames.length} validated parts (${sprite.length} bytes).`);
+console.log(`Built ${path.relative(repositoryRoot, outputFile)} (${sprite.length} bytes, SHA-256 ${sha256}).`);
