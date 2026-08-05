@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "status": "approved-canon",
+  "style": {
+    "medium": "painted military graphic novel",
+    "realism": "grounded military science fiction",
+    "tone": ["dark", "serious", "oppressive", "disciplined", "exhausted-but-capable"]
+  },
+  "palette": {
+    "void": "#03070B",
+    "commandBlack": "#071018",
+    "armourCharcoal": "#151D23",
+    "steelBlueGrey": "#26333D",
+    "wornMetal": "#58636A",
+    "dirtyLight": "#D7E2E7",
+    "sensorCyan": "#74DCEA",
+    "portalPale": "#D8FAFF",
+    "portalViolet": "#7964D8",
+    "presentSodium": "#B69A72"
+  },
+  "colourRoles": {
+    "cyan": ["future sensors", "active exposed systems", "selection", "focus"],
+    "violetWhite": ["temporal portal", "temporal instability"],
+    "warmLight": ["present-day civilian contrast"]
+  },
+  "armour": {
+    "operator": "unenhanced human",
+    "construction": "standardised field-replaceable modules",
+    "surface": "matte adaptive multispectral smart-skin",
+    "optics": "segmented low-emission sensor array",
+    "repairLanguage": ["mismatched plates", "replacement fasteners", "serials", "repainted surfaces", "cannibalised components"],
+    "forbidden": ["giant shoulders", "ceremonial decoration", "constant glow", "superhero silhouette"]
+  },
+  "general": {
+    "alwaysArmoured": true,
+    "variants": ["male-presenting", "female-presenting"],
+    "playerNamed": true,
+    "overlayer": "functional command and environmental equipment only",
+    "forbidden": ["ceremonial uniform", "cape", "medals", "gold trim", "aristocratic tailoring"]
+  },
+  "portal": {
+    "centre": "dark or visually impossible",
+    "boundary": "pale cyan spatial distortion",
+    "instability": "restricted violet-white energy",
+    "forbidden": ["clean doorway", "magic circle", "simple lightning ring"]
+  },
+  "referenceAssets": [
+    "reference/canon-armour-and-male-general.webp",
+    "reference/canon-female-general.webp",
+    "reference/canon-environments-and-portal.webp"
+  ]
+}
