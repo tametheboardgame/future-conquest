@@ -1,0 +1,27 @@
+.motion-comic-build-stamp {
+  position: fixed;
+  z-index: 3050;
+  top: 12px;
+  right: 14px;
+  padding: 7px 10px;
+  border: 1px solid rgba(141, 221, 234, .55);
+  border-radius: 4px;
+  color: #dff8fb;
+  background: rgba(2, 10, 14, .9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+@media (max-width: 680px) {
+  .motion-comic-build-stamp {
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+  }
+}
