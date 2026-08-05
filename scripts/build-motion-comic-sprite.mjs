@@ -21,15 +21,17 @@ const encodedParts = await Promise.all(
 
 const decodedParts = encodedParts.map((encodedPart, index) => {
   const invalidIndex = encodedPart.search(/[^A-Za-z0-9+/=]/u);
-  if (encodedPart.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedPart)) {
+  if (invalidIndex >= 0 || !/^[A-Za-z0-9+/]*={0,2}$/u.test(encodedPart)) {
     const detail = invalidIndex >= 0
       ? `invalid character ${JSON.stringify(encodedPart[invalidIndex])} at position ${invalidIndex}`
-      : `length ${encodedPart.length} is not valid padded base64`;
+      : 'padding appears inside the encoded data';
     throw new Error(`Motion-comic sprite part ${partNames[index]} is not valid base64: ${detail}.`);
   }
 
-  const decodedPart = Buffer.from(encodedPart, 'base64');
-  if (decodedPart.toString('base64') !== encodedPart) {
+  const unpaddedPart = encodedPart.replace(/=+$/u, '');
+  const canonicalPart = `${unpaddedPart}${'='.repeat((4 - (unpaddedPart.length % 4)) % 4)}`;
+  const decodedPart = Buffer.from(canonicalPart, 'base64');
+  if (decodedPart.toString('base64') !== canonicalPart) {
     throw new Error(`Motion-comic sprite part ${partNames[index]} did not decode cleanly.`);
   }
   return decodedPart;
