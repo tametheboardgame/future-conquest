@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { StartupExperience } from './components/StartupExperience';
 import './styles.css';
 import './command-panel-layout.css';
 import './formation-organisation.css';
@@ -26,6 +27,8 @@ installMapTrackpadGuard();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <StartupExperience>
+      <App />
+    </StartupExperience>
   </StrictMode>
 );
