@@ -21,9 +21,16 @@ const PAGE_1_ASSETS = [
 ];
 const PAGE_1_BUNDLE_LENGTH = 86432;
 
-function partNumber(fileName) {
-  const match = fileName.match(/^part-(\d+)\.txt$/);
-  return match ? Number.parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
+function partOrder(fileName) {
+  const match = fileName.match(/^part-(\d+)(?:-(\d+))?\.txt$/);
+  if (!match) return [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER];
+  return [Number.parseInt(match[1], 10), Number.parseInt(match[2] ?? '0', 10)];
+}
+
+function compareParts(left, right) {
+  const [leftMajor, leftMinor] = partOrder(left);
+  const [rightMajor, rightMinor] = partOrder(right);
+  return leftMajor - rightMajor || leftMinor - rightMinor;
 }
 
 function isWebP(bytes) {
@@ -33,8 +40,8 @@ function isWebP(bytes) {
 
 async function decodeParts(partsDirectory, label) {
   const partFiles = (await readdir(partsDirectory))
-    .filter(fileName => /^part-\d+\.txt$/.test(fileName))
-    .sort((left, right) => partNumber(left) - partNumber(right));
+    .filter(fileName => /^part-\d+(?:-\d+)?\.txt$/.test(fileName))
+    .sort(compareParts);
 
   if (partFiles.length === 0) {
     throw new Error(`No ${label} parts found in ${partsDirectory}`);
