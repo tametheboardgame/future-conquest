@@ -5,10 +5,12 @@
   "description": "Design data and tooling for the Future Conquest strategy game.",
   "type": "module",
   "scripts": {
+    "predev": "npm run build:motion-comic",
     "dev": "vite",
     "test": "node scripts/run-engine-tests.mjs",
     "build:slice-map": "node scripts/build-vertical-slice-map.mjs",
-    "prebuild": "npm run build:slice-map",
+    "build:motion-comic": "node scripts/build-motion-comic-sprite.mjs",
+    "prebuild": "npm run build:slice-map && npm run build:motion-comic",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "map:fetch-nuts": "node scripts/maps/fetch-nuts.mjs",
