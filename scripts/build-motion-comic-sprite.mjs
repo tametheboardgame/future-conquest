@@ -18,13 +18,20 @@ if (partNames.length === 0) {
 const encodedParts = await Promise.all(
   partNames.map(async name => (await readFile(path.join(partsDirectory, name), 'utf8')).trim())
 );
-const encodedSprite = encodedParts.join('');
 
-if (encodedSprite.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedSprite)) {
-  throw new Error('Motion-comic sprite parts do not form valid base64 data.');
-}
+const decodedParts = encodedParts.map((encodedPart, index) => {
+  if (encodedPart.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedPart)) {
+    throw new Error(`Motion-comic sprite part ${partNames[index]} is not valid base64.`);
+  }
 
-const sprite = Buffer.from(encodedSprite, 'base64');
+  const decodedPart = Buffer.from(encodedPart, 'base64');
+  if (decodedPart.toString('base64') !== encodedPart) {
+    throw new Error(`Motion-comic sprite part ${partNames[index]} did not decode cleanly.`);
+  }
+  return decodedPart;
+});
+
+const sprite = Buffer.concat(decodedParts);
 const riffTag = sprite.subarray(0, 4).toString('ascii');
 const webpTag = sprite.subarray(8, 12).toString('ascii');
 const declaredSize = sprite.length >= 8 ? sprite.readUInt32LE(4) + 8 : 0;
