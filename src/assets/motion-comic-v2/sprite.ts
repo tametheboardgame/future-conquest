@@ -14,22 +14,6 @@ const encodedSprite = Object.entries(spriteParts)
   .map(([, content]) => content.trim())
   .join('');
 
-function createSpriteUrl(encoded: string): string {
-  if (!encoded) return '';
-
-  try {
-    const binary = window.atob(encoded);
-    const bytes = new Uint8Array(binary.length);
-
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-
-    return window.URL.createObjectURL(new Blob([bytes], { type: 'image/webp' }));
-  } catch (error) {
-    console.error('Unable to reconstruct the Motion Comic V2 artwork sprite.', error);
-    return '';
-  }
-}
-
-export const MOTION_COMIC_SPRITE = createSpriteUrl(encodedSprite);
+export const MOTION_COMIC_SPRITE = encodedSprite
+  ? `data:image/webp;base64,${encodedSprite}`
+  : '';
