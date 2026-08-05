@@ -9,21 +9,36 @@ interface Props {
   autoplay?: boolean;
 }
 
-const assets = import.meta.glob('../assets/motion-comic/*.webp', {
+const binaryAssets = import.meta.glob('../assets/motion-comic/*.webp', {
   eager: true,
   query: '?url',
   import: 'default'
 }) as Record<string, string>;
 
+const encodedAssets = import.meta.glob('../assets/motion-comic/*.webp.b64', {
+  eager: true,
+  query: '?raw',
+  import: 'default'
+}) as Record<string, string>;
+
 const clampPanel = (index: number) => Math.max(0, Math.min(INTRO_PANELS.length - 1, index));
-const assetKey = (file: string) => `../assets/motion-comic/${file}`;
+const binaryKey = (file: string) => `../assets/motion-comic/${file}`;
+const encodedKey = (file: string) => `../assets/motion-comic/${file}.b64`;
+
+function resolveFile(file: string): string {
+  const binary = binaryAssets[binaryKey(file)];
+  if (binary) return binary;
+
+  const encoded = encodedAssets[encodedKey(file)]?.trim();
+  return encoded ? `data:image/webp;base64,${encoded}` : '';
+}
 
 function resolveAsset(file: string, portalTerritory?: string): string {
   if (file === 'panel-07-arrival-default.webp' && portalTerritory) {
-    const territoryVariant = assets[assetKey(`panel-07-arrival-${portalTerritory}.webp`)];
+    const territoryVariant = resolveFile(`panel-07-arrival-${portalTerritory}.webp`);
     if (territoryVariant) return territoryVariant;
   }
-  return assets[assetKey(file)];
+  return resolveFile(file);
 }
 
 export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0, autoplay = true }: Props) {
