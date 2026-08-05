@@ -8,6 +8,7 @@ import {
   type CSSProperties
 } from 'react';
 import { MOTION_COMIC_SPRITE } from '../assets/motion-comic-v2/sprite';
+import { BUILD_SHA } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import {
   INTRO_PAGE_OVERVIEW_MS,
@@ -18,12 +19,16 @@ import {
   type IntroBeat
 } from '../game/intro-story';
 import './motion-comic-intro.css';
+import './motion-comic-image-element.css';
+
+export type ArtworkStatus = 'loading' | 'loaded' | 'error';
 
 interface Props {
   onComplete: () => void;
   portalTerritory?: string;
   initialPanel?: number;
   autoplay?: boolean;
+  onArtworkStatusChange?: (status: ArtworkStatus) => void;
 }
 
 const clampStep = (index: number) => Math.max(0, Math.min(INTRO_TOTAL_STEPS - 1, index));
@@ -49,14 +54,27 @@ function Beat({ beat }: { beat: IntroBeat }) {
   );
 }
 
-export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0, autoplay = true }: Props) {
+export function MotionComicIntro({
+  onComplete,
+  portalTerritory,
+  initialPanel = 0,
+  autoplay = true,
+  onArtworkStatusChange
+}: Props) {
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialPanel));
   const [isPlaying, setIsPlaying] = useState(autoplay);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [cameraStyle, setCameraStyle] = useState<CSSProperties>({});
+  const [artworkStatus, setArtworkStatus] = useState<ArtworkStatus>('loading');
   const stageRef = useRef<HTMLDivElement>(null);
+
+  const artworkUrl = useMemo(() => {
+    const url = new URL(MOTION_COMIC_SPRITE, document.baseURI);
+    url.searchParams.set('build', BUILD_SHA);
+    return url.href;
+  }, []);
 
   const isTitleCard = stepIndex === INTRO_PANELS.length;
   const activePanel = isTitleCard ? undefined : INTRO_PANELS[stepIndex];
@@ -70,6 +88,30 @@ export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0
     ? INTRO_TITLE_CARD.durationMs
     : (activePanel?.durationMs ?? 0) + overviewMs;
   const arrivalLocation = portalTerritory ? TERRITORIES[portalTerritory]?.centre : undefined;
+
+  useEffect(() => {
+    onArtworkStatusChange?.(artworkStatus);
+  }, [artworkStatus, onArtworkStatusChange]);
+
+  useEffect(() => {
+    let active = true;
+    const image = new Image();
+
+    setArtworkStatus('loading');
+    image.onload = () => {
+      if (active) setArtworkStatus('loaded');
+    };
+    image.onerror = () => {
+      if (active) setArtworkStatus('error');
+    };
+    image.src = artworkUrl;
+
+    return () => {
+      active = false;
+      image.onload = null;
+      image.onerror = null;
+    };
+  }, [artworkUrl]);
 
   const finishIntro = useCallback(() => {
     window.localStorage.setItem(INTRO_STORAGE_KEY, 'true');
@@ -187,18 +229,24 @@ export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0
     [currentBeats, sceneElapsedMs]
   );
   const progress = ((stepIndex + Math.min(1, elapsedMs / Math.max(stepDurationMs, 1))) / INTRO_TOTAL_STEPS) * 100;
-  const spriteStyle = { '--motion-comic-sprite': `url("${MOTION_COMIC_SPRITE}")` } as CSSProperties;
 
   return (
     <section
       className={`motion-comic-v2 ${reducedMotion ? 'reduced-motion' : ''}`}
-      style={spriteStyle}
       aria-label="Future Conquest story introduction"
     >
       <div className="motion-comic-stage" ref={stageRef}>
         {isTitleCard ? (
           <div className="motion-comic-title-card" role="img" aria-label={INTRO_TITLE_CARD.alt}>
-            <div className="motion-comic-title-art" />
+            <div className="motion-comic-title-art">
+              <img
+                className="motion-comic-sprite-image motion-comic-title-sprite"
+                src={artworkUrl}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
+            </div>
             <div className="title-card-atmosphere" aria-hidden="true" />
             {visibleBeats.map(beat => <Beat key={beat.id} beat={beat} />)}
             <button type="button" className="motion-comic-begin" onClick={finishIntro}>Begin campaign</button>
@@ -208,7 +256,15 @@ export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0
             className={`motion-comic-page page-${activePage} ${isPageOverview ? 'is-overview' : 'is-focused'}`}
             style={cameraStyle}
           >
-            <div className="motion-comic-page-art" role="img" aria-label={activePanel?.alt} />
+            <div className="motion-comic-page-art" role="img" aria-label={activePanel?.alt}>
+              <img
+                className={`motion-comic-sprite-image motion-comic-page-sprite sprite-page-${activePage}`}
+                src={artworkUrl}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
+            </div>
             {INTRO_PANELS.filter(panel => panel.page === activePage).map(panel => {
               const active = panel.id === activePanel?.id;
               const panelStyle = {
@@ -239,6 +295,12 @@ export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0
           </div>
         )}
       </div>
+
+      {artworkStatus === 'error' && (
+        <div className="motion-comic-artwork-error" role="alert">
+          Prologue artwork failed to load. Asset: {artworkUrl}
+        </div>
+      )}
 
       {showSubtitles && subtitleBeat && !isPageOverview && (
         <div className="motion-comic-subtitle" aria-live="polite">
