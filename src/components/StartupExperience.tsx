@@ -3,6 +3,7 @@ import { BUILD_LABEL, BUILD_TIME } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import { INTRO_STORAGE_KEY } from '../game/intro-story';
 import { MotionComicIntro } from './MotionComicIntro';
+import './prologue-build-stamp.css';
 
 interface Props {
   children: ReactNode;
