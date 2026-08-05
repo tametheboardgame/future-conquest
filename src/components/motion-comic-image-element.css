@@ -1,0 +1,55 @@
+.motion-comic-page-art,
+.motion-comic-title-art {
+  overflow: hidden;
+  background-image: none !important;
+}
+
+.motion-comic-sprite-image {
+  position: absolute;
+  display: block;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.motion-comic-page-sprite {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+}
+
+.motion-comic-page-sprite.sprite-page-1 {
+  transform: translateY(0);
+}
+
+.motion-comic-page-sprite.sprite-page-2 {
+  transform: translateY(-33.333333%);
+}
+
+.motion-comic-title-sprite {
+  top: 50%;
+  left: 50%;
+  width: max(100%, 177.777778vh);
+  height: auto;
+  transform: translate(-50%, -83.333333%);
+}
+
+.motion-comic-artwork-error {
+  position: absolute;
+  z-index: 3020;
+  top: 58px;
+  left: 50%;
+  width: min(900px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 118, 118, .72);
+  border-radius: 4px;
+  color: #ffecec;
+  background: rgba(71, 6, 11, .94);
+  font-size: .78rem;
+  font-weight: 750;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
