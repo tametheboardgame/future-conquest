@@ -12,6 +12,7 @@
     "build:motion-comic": "node scripts/build-motion-comic-assets.mjs",
     "prebuild": "npm run build:slice-map && npm run build:motion-comic",
     "build": "tsc -b && vite build",
+    "postbuild": "node scripts/verify-motion-comic-build.mjs",
     "preview": "vite preview",
     "map:fetch-nuts": "node scripts/maps/fetch-nuts.mjs",
     "map:build": "node scripts/maps/build-map.mjs",
