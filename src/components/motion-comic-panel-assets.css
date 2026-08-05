@@ -1,0 +1,86 @@
+.motion-comic-page.page-1 {
+  background: #070b0e;
+}
+
+.motion-comic-page.page-1 .comic-page-panel {
+  overflow: hidden;
+  background: #080d11;
+}
+
+.motion-comic-panel-art {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  filter: saturate(.94) contrast(1.035) brightness(.93);
+  transform: scale(1.006);
+  transition: filter 520ms ease, transform 9s ease-out;
+  pointer-events: none;
+  user-select: none;
+}
+
+.motion-comic-page.page-1 .comic-page-panel.is-active .motion-comic-panel-art {
+  filter: saturate(1) contrast(1.06) brightness(1);
+  transform: scale(1.025);
+}
+
+.motion-comic-page.page-1 .panel-world-that-remains .motion-comic-panel-art {
+  object-position: 53% 55%;
+}
+
+.motion-comic-page.page-1 .panel-human-cost .motion-comic-panel-art {
+  object-position: 43% 54%;
+}
+
+.motion-comic-page.page-1 .panel-final-command .motion-comic-panel-art {
+  object-position: 48% 48%;
+}
+
+.motion-comic-page.page-1 .panel-anomaly .motion-comic-panel-art {
+  object-position: 50% 58%;
+}
+
+.motion-comic-page.page-1 .panel-hypothesis .motion-comic-panel-art {
+  object-position: 50% 50%;
+}
+
+.motion-comic-page.page-1 .panel-order .motion-comic-panel-art {
+  object-position: 61% 51%;
+}
+
+.motion-comic-page.page-1 .comic-panel-shade,
+.motion-comic-page.page-1 .comic-panel-effect,
+.motion-comic-page.page-1 .comic-panel-number {
+  z-index: 3;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:not(.is-active)::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: rgba(2, 5, 7, .10);
+  pointer-events: none;
+}
+
+@media (max-width: 900px), (max-height: 610px) {
+  .motion-comic-panel-art {
+    transform: scale(1.012);
+  }
+
+  .motion-comic-page.page-1 .comic-page-panel.is-active .motion-comic-panel-art {
+    transform: scale(1.018);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-comic-panel-art,
+  .motion-comic-page.page-1 .comic-page-panel.is-active .motion-comic-panel-art {
+    transition: none;
+    transform: scale(1.006);
+  }
+}
