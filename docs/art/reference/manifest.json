@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "status": "approved-canon",
+  "assets": [
+    {
+      "path": "canon-armour-and-male-general.webp",
+      "role": "Direct canon reference for powered infantry, modular armour, primary weapon and male-presenting General",
+      "sha256": "711291b403dbabf792271235a213f05eae7b734261866dd870be9a4cfb396754",
+      "dimensions": "640x360"
+    },
+    {
+      "path": "canon-visual-board.webp",
+      "role": "Compact contact sheet covering the approved armour system, male and female General variants, ruined-future environment, present-day contrast and portal language",
+      "sha256": "3ae861b4048e3ea2b8ee15b5420452caa8b64a04ef36b6a1e6fa3876bb32037a",
+      "dimensions": "240x405",
+      "qualification": "Generated logos, readable place names, incidental unit codes and vehicle branding visible in concept art are non-canon. The written design bible controls where visual details conflict."
+    }
+  ]
+}
