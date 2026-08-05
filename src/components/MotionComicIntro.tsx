@@ -8,6 +8,7 @@ import {
   type CSSProperties
 } from 'react';
 import { MOTION_COMIC_SPRITE } from '../assets/motion-comic-v2/sprite';
+import { PAGE_1_PANEL_ASSETS } from '../assets/motion-comic-v3/panel-assets';
 import { BUILD_SHA } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import {
@@ -21,6 +22,7 @@ import {
 import './motion-comic-intro.css';
 import './motion-comic-image-element.css';
 import './motion-comic-responsive.css';
+import './motion-comic-panel-assets.css';
 
 export type ArtworkStatus = 'loading' | 'loaded' | 'error';
 type LayoutMode = 'wide' | 'compact' | 'narrow';
@@ -81,6 +83,12 @@ function Beat({ beat, style, viewport = false }: BeatProps) {
   );
 }
 
+function cacheBustedUrl(assetPath: string): string {
+  const url = new URL(assetPath, document.baseURI);
+  url.searchParams.set('build', BUILD_SHA);
+  return url.href;
+}
+
 export function MotionComicIntro({
   onComplete,
   portalTerritory,
@@ -99,11 +107,13 @@ export function MotionComicIntro({
   const [artworkStatus, setArtworkStatus] = useState<ArtworkStatus>('loading');
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const artworkUrl = useMemo(() => {
-    const url = new URL(MOTION_COMIC_SPRITE, document.baseURI);
-    url.searchParams.set('build', BUILD_SHA);
-    return url.href;
-  }, []);
+  const artworkUrl = useMemo(() => cacheBustedUrl(MOTION_COMIC_SPRITE), []);
+  const page1ArtworkUrls = useMemo<Record<string, string>>(
+    () => Object.fromEntries(
+      Object.entries(PAGE_1_PANEL_ASSETS).map(([panelId, assetPath]) => [panelId, cacheBustedUrl(assetPath)])
+    ),
+    []
+  );
 
   const isTitleCard = stepIndex === INTRO_PANELS.length;
   const activePanel = isTitleCard ? undefined : INTRO_PANELS[stepIndex];
@@ -124,23 +134,28 @@ export function MotionComicIntro({
 
   useEffect(() => {
     let active = true;
-    const image = new Image();
+    const assetUrls = [artworkUrl, ...Object.values(page1ArtworkUrls)];
+    const images = assetUrls.map(assetUrl => new Image());
 
     setArtworkStatus('loading');
-    image.onload = () => {
+    Promise.all(images.map((image, index) => new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(`Failed to load ${assetUrls[index]}`));
+      image.src = assetUrls[index];
+    }))).then(() => {
       if (active) setArtworkStatus('loaded');
-    };
-    image.onerror = () => {
+    }).catch(() => {
       if (active) setArtworkStatus('error');
-    };
-    image.src = artworkUrl;
+    });
 
     return () => {
       active = false;
-      image.onload = null;
-      image.onerror = null;
+      for (const image of images) {
+        image.onload = null;
+        image.onerror = null;
+      }
     };
-  }, [artworkUrl]);
+  }, [artworkUrl, page1ArtworkUrls]);
 
   const finishIntro = useCallback(() => {
     window.localStorage.setItem(INTRO_STORAGE_KEY, 'true');
@@ -346,15 +361,17 @@ export function MotionComicIntro({
             className={`motion-comic-page page-${activePage} ${isPageOverview ? 'is-overview' : 'is-focused'}`}
             style={cameraStyle}
           >
-            <div className="motion-comic-page-art" role="img" aria-label={activePanel?.alt}>
-              <img
-                className={`motion-comic-sprite-image motion-comic-page-sprite sprite-page-${activePage}`}
-                src={artworkUrl}
-                alt=""
-                aria-hidden="true"
-                draggable={false}
-              />
-            </div>
+            {activePage === 2 && (
+              <div className="motion-comic-page-art" role="img" aria-label={activePanel?.alt}>
+                <img
+                  className="motion-comic-sprite-image motion-comic-page-sprite sprite-page-2"
+                  src={artworkUrl}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+              </div>
+            )}
             {INTRO_PANELS.filter(panel => panel.page === activePage).map(panel => {
               const active = panel.id === activePanel?.id;
               const panelStyle = {
@@ -363,15 +380,26 @@ export function MotionComicIntro({
                 width: `${panel.width}%`,
                 height: `${panel.height}%`
               } as CSSProperties;
+              const panelArtworkUrl = panel.page === 1 ? page1ArtworkUrls[panel.id] : undefined;
 
               return (
                 <article
-                  className={`comic-page-panel mood-${panel.mood} ${active ? 'is-active' : ''}`}
+                  className={`comic-page-panel panel-${panel.sequence} panel-${panel.id} mood-${panel.mood} ${active ? 'is-active' : ''}`}
                   style={panelStyle}
                   key={panel.id}
                   aria-current={active ? 'step' : undefined}
                   aria-label={active ? panel.alt : undefined}
                 >
+                  {panelArtworkUrl && (
+                    <img
+                      className="motion-comic-panel-art"
+                      src={panelArtworkUrl}
+                      alt=""
+                      aria-hidden="true"
+                      draggable={false}
+                      loading="eager"
+                    />
+                  )}
                   <div className="comic-panel-shade" aria-hidden="true" />
                   {active && <div className="comic-panel-effect" aria-hidden="true" />}
                   {active && panel.sequence === 9 && arrivalLocation && (
@@ -393,7 +421,7 @@ export function MotionComicIntro({
 
       {artworkStatus === 'error' && (
         <div className="motion-comic-artwork-error" role="alert">
-          Prologue artwork failed to load. Asset: {artworkUrl}
+          One or more prologue artwork assets failed to load.
         </div>
       )}
 
