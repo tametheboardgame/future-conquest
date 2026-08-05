@@ -305,7 +305,6 @@ Do not introduce:
 ## Canon references
 
 - `reference/canon-armour-and-male-general.webp`
-- `reference/canon-female-general.webp`
-- `reference/canon-environments-and-portal.webp`
+- `reference/canon-visual-board.webp`
 
-The first two sheets are direct character and armour canon. The environment sheet is canonical for mood, contrast and portal behaviour; readable locations, generated logos and incidental markings within it remain non-canon examples.
+The armour sheet is direct canon for infantry, weapon and male-presenting General. The compact visual board records the approved female-presenting General and the environmental/portal language. Readable locations, generated logos and incidental markings within either image remain non-canon examples.

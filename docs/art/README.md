@@ -14,10 +14,9 @@ Where older concept art or prompts conflict with these files, this directory tak
 ## Approved reference sheets
 
 - `reference/canon-armour-and-male-general.webp`
-- `reference/canon-female-general.webp`
-- `reference/canon-environments-and-portal.webp`
+- `reference/canon-visual-board.webp`
 
-The environment sheet establishes atmosphere, portal behaviour and the future/present contrast. Exact place names, logos, markings and vehicle branding visible in generated reference art are illustrative and are not canon unless separately approved.
+The compact visual board records the approved female General, environment, portal and future/present contrast alongside the armour reference. Exact place names, logos, markings and vehicle branding visible in generated reference art are illustrative and are not canon unless separately approved.
 
 ## Change control
 

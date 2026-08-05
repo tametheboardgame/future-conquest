@@ -16,7 +16,7 @@ Always supply the approved relevant image from `reference/` where the generation
 
 ## Character continuity rule
 
-For any scene containing the General, specify the selected male-presenting or female-presenting canon variant and provide the matching reference sheet. The player-provided name is applied in UI or captions, not embedded into illustration source art.
+For any scene containing the General, specify the selected male-presenting or female-presenting canon variant and provide the armour reference and the relevant section of the approved visual board. The player-provided name is applied in UI or captions, not embedded into illustration source art.
 
 ## Production rule
 
