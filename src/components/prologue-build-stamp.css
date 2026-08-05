@@ -18,6 +18,17 @@
   pointer-events: none;
 }
 
+.motion-comic-build-stamp.art-loaded {
+  border-color: rgba(116, 229, 158, .72);
+  color: #dfffea;
+}
+
+.motion-comic-build-stamp.art-error {
+  border-color: rgba(255, 105, 105, .84);
+  color: #ffe4e4;
+  background: rgba(61, 4, 9, .94);
+}
+
 @media (max-width: 680px) {
   .motion-comic-build-stamp {
     top: 8px;
