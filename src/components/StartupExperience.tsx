@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { BUILD_LABEL, BUILD_TIME } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import { INTRO_STORAGE_KEY } from '../game/intro-story';
 import { MotionComicIntro } from './MotionComicIntro';
+import './prologue-build-stamp.css';
 
 interface Props {
   children: ReactNode;
@@ -59,6 +61,9 @@ export function StartupExperience({ children }: Props) {
       refreshPortalTerritory();
       setShowIntro(true);
     }}>Replay prologue</button>}
-    {showIntro && <MotionComicIntro portalTerritory={portalTerritory} onComplete={() => setShowIntro(false)} />}
+    {showIntro && <>
+      <MotionComicIntro portalTerritory={portalTerritory} onComplete={() => setShowIntro(false)} />
+      <div className="motion-comic-build-stamp" title={`Built ${BUILD_TIME}`}>{BUILD_LABEL}</div>
+    </>}
   </>;
 }
