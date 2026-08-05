@@ -16,12 +16,16 @@ if (partNames.length === 0) {
 }
 
 const encodedParts = await Promise.all(
-  partNames.map(async name => (await readFile(path.join(partsDirectory, name), 'utf8')).trim())
+  partNames.map(async name => (await readFile(path.join(partsDirectory, name), 'utf8')).replace(/\s+/gu, ''))
 );
 
 const decodedParts = encodedParts.map((encodedPart, index) => {
+  const invalidIndex = encodedPart.search(/[^A-Za-z0-9+/=]/u);
   if (encodedPart.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedPart)) {
-    throw new Error(`Motion-comic sprite part ${partNames[index]} is not valid base64.`);
+    const detail = invalidIndex >= 0
+      ? `invalid character ${JSON.stringify(encodedPart[invalidIndex])} at position ${invalidIndex}`
+      : `length ${encodedPart.length} is not valid padded base64`;
+    throw new Error(`Motion-comic sprite part ${partNames[index]} is not valid base64: ${detail}.`);
   }
 
   const decodedPart = Buffer.from(encodedPart, 'base64');
