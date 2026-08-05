@@ -4,18 +4,40 @@ import './motion-comic-intro.css';
 
 interface Props {
   onComplete: () => void;
+  portalTerritory?: string;
   initialPanel?: number;
   autoplay?: boolean;
 }
 
-const clampPanel = (index: number) => Math.max(0, Math.min(INTRO_PANELS.length - 1, index));
+const assets = import.meta.glob('../assets/motion-comic/*.webp', {
+  eager: true,
+  query: '?url',
+  import: 'default'
+}) as Record<string, string>;
 
-export function MotionComicIntro({ onComplete, initialPanel = 0, autoplay = true }: Props) {
+const clampPanel = (index: number) => Math.max(0, Math.min(INTRO_PANELS.length - 1, index));
+const assetKey = (file: string) => `../assets/motion-comic/${file}`;
+
+function resolveAsset(file: string, portalTerritory?: string): string {
+  if (file === 'panel-07-arrival-default.webp' && portalTerritory) {
+    const territoryVariant = assets[assetKey(`panel-07-arrival-${portalTerritory}.webp`)];
+    if (territoryVariant) return territoryVariant;
+  }
+  return assets[assetKey(file)];
+}
+
+export function MotionComicIntro({ onComplete, portalTerritory, initialPanel = 0, autoplay = true }: Props) {
   const [panelIndex, setPanelIndex] = useState(() => clampPanel(initialPanel));
   const [isPlaying, setIsPlaying] = useState(autoplay);
   const [reducedMotion, setReducedMotion] = useState(false);
   const panel = INTRO_PANELS[panelIndex];
+  const imageUrl = resolveAsset(panel.assetFile, portalTerritory);
   const isLastPanel = panelIndex === INTRO_PANELS.length - 1;
+
+  const finishIntro = () => {
+    window.localStorage.setItem(INTRO_STORAGE_KEY, 'true');
+    onComplete();
+  };
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -26,8 +48,15 @@ export function MotionComicIntro({ onComplete, initialPanel = 0, autoplay = true
   }, []);
 
   useEffect(() => {
+    const next = INTRO_PANELS[panelIndex + 1];
+    if (!next) return;
+    const preload = new Image();
+    preload.src = resolveAsset(next.assetFile, portalTerritory);
+  }, [panelIndex, portalTerritory]);
+
+  useEffect(() => {
     if (!isPlaying) return;
-    const duration = reducedMotion ? Math.max(4500, panel.durationMs) : panel.durationMs;
+    const duration = reducedMotion ? Math.max(5000, panel.durationMs) : panel.durationMs;
     const timer = window.setTimeout(() => {
       if (isLastPanel) {
         setIsPlaying(false);
@@ -54,11 +83,6 @@ export function MotionComicIntro({ onComplete, initialPanel = 0, autoplay = true
 
   const progress = useMemo(() => ((panelIndex + 1) / INTRO_PANELS.length) * 100, [panelIndex]);
 
-  const finishIntro = () => {
-    window.localStorage.setItem(INTRO_STORAGE_KEY, 'true');
-    onComplete();
-  };
-
   const advance = () => {
     if (isLastPanel) {
       finishIntro();
@@ -68,24 +92,12 @@ export function MotionComicIntro({ onComplete, initialPanel = 0, autoplay = true
   };
 
   return <section className={`motion-comic ${reducedMotion ? 'reduced-motion' : ''}`} aria-label="Future Conquest story introduction">
-    <div className={`motion-comic-panel mood-${panel.mood}`} key={panel.id}>
-      <div className="motion-comic-art" role="img" aria-label={panel.visualDescription}>
-        <div className="motion-comic-sky" />
-        <div className="motion-comic-horizon" />
-        <div className="motion-comic-grid" />
-        <div className="motion-comic-portal" />
-        <div className="motion-comic-figure figure-one" />
-        <div className="motion-comic-figure figure-two" />
-        <div className="motion-comic-particles" />
-        <div className="motion-comic-vignette" />
-      </div>
-
-      <div className="motion-comic-copy" aria-live="polite">
-        {panel.eyebrow && <p className="motion-comic-eyebrow">{panel.eyebrow}</p>}
-        <h1>{panel.caption}</h1>
-        {panel.narration && <p className="motion-comic-narration">{panel.narration}</p>}
-      </div>
-
+    <div className={`motion-comic-panel mood-${panel.mood}`} key={`${panel.id}-${portalTerritory ?? 'default'}`}>
+      {imageUrl
+        ? <img className={`motion-comic-image motion-${panel.motion}`} src={imageUrl} alt={panel.alt} />
+        : <div className="motion-comic-missing" role="img" aria-label={panel.alt}>Panel asset unavailable</div>}
+      <div className="motion-comic-vignette" aria-hidden="true" />
+      <p className="motion-comic-transcript">{panel.transcript}</p>
       <div className="motion-comic-frame-number" aria-hidden="true">
         {String(panel.sequence).padStart(2, '0')} / {String(INTRO_PANELS.length).padStart(2, '0')}
       </div>
@@ -96,7 +108,7 @@ export function MotionComicIntro({ onComplete, initialPanel = 0, autoplay = true
     <nav className="motion-comic-controls" aria-label="Introduction controls">
       <button type="button" onClick={() => setPanelIndex(current => clampPanel(current - 1))} disabled={panelIndex === 0}>Previous</button>
       <button type="button" onClick={() => setIsPlaying(current => !current)}>{isPlaying ? 'Pause' : 'Play'}</button>
-      <button type="button" onClick={advance}>{isLastPanel ? 'Begin campaign' : 'Next'}</button>
+      <button type="button" onClick={advance}>{isLastPanel ? 'Enter command' : 'Next'}</button>
       <button type="button" className="motion-comic-skip" onClick={finishIntro}>Skip intro</button>
     </nav>
   </section>;
