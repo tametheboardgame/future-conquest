@@ -9,7 +9,7 @@ const PAGE_1_ASSETS = [
   { fileName: 'panel-01-world-that-remains.webp', length: 16_524 },
   { fileName: 'panel-02-human-cost.webp', length: 16_464 },
   { fileName: 'panel-03-final-command.webp', length: 17_470 },
-  { fileName: 'panel-04-anomaly.webp', length: 8_548 },
+  { fileName: 'panel-04-anomaly.webp', length: 13_008 },
   { fileName: 'panel-05-hypothesis.webp', length: 35_618 },
   { fileName: 'panel-06-order.webp', length: 17_222 }
 ];
