@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
+// These regressions keep page explanations readable without changing campaign mechanics.
 test('Logistics and Intelligence retain three readable explanation phases after their pages open', () => {
   const overlay = fs.readFileSync('src/components/TutorialOverlay.tsx', 'utf8');
 
