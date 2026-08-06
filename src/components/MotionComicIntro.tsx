@@ -24,6 +24,7 @@ import './motion-comic-responsive.css';
 
 export type ArtworkStatus = 'loading' | 'loaded' | 'error';
 type LayoutMode = 'wide' | 'compact' | 'narrow';
+type BeatTailSide = 'top' | 'right' | 'bottom' | 'left';
 
 interface Props {
   onComplete: () => void;
@@ -46,6 +47,12 @@ interface BeatProps {
   beat: IntroBeat;
   style?: CSSProperties;
   viewport?: boolean;
+  tailSide?: BeatTailSide;
+}
+
+interface ViewportBeatPlacement {
+  style: CSSProperties;
+  tailSide?: BeatTailSide;
 }
 
 const clampStep = (index: number) => Math.max(0, Math.min(INTRO_TOTAL_STEPS - 1, index));
@@ -63,7 +70,7 @@ function layoutModeFor(width: number, height: number): LayoutMode {
   return 'wide';
 }
 
-function Beat({ beat, style, viewport = false }: BeatProps) {
+function Beat({ beat, style, viewport = false, tailSide }: BeatProps) {
   const defaultStyle = {
     left: `${beat.x}%`,
     top: `${beat.y}%`,
@@ -72,7 +79,12 @@ function Beat({ beat, style, viewport = false }: BeatProps) {
 
   return (
     <div
-      className={`motion-comic-beat beat-${beat.kind} ${viewport ? 'motion-comic-viewport-beat' : ''}`}
+      className={[
+        'motion-comic-beat',
+        `beat-${beat.kind}`,
+        viewport ? 'motion-comic-viewport-beat' : '',
+        tailSide ? `beat-tail-${tailSide}` : 'beat-tail-none'
+      ].filter(Boolean).join(' ')}
       style={style ?? defaultStyle}
     >
       {beat.speaker && <strong>{beat.speaker}</strong>}
@@ -279,7 +291,7 @@ export function MotionComicIntro({
   );
   const progress = ((stepIndex + Math.min(1, elapsedMs / Math.max(stepDurationMs, 1))) / INTRO_TOTAL_STEPS) * 100;
 
-  const viewportBeatStyle = useMemo<CSSProperties | undefined>(() => {
+  const viewportBeatPlacement = useMemo<ViewportBeatPlacement | undefined>(() => {
     if (!activeBeat || !cameraMetrics || isTitleCard || isPageOverview) return undefined;
 
     const {
@@ -292,32 +304,81 @@ export function MotionComicIntro({
     } = cameraMetrics;
 
     const viewportWidthLimit = layoutMode === 'wide' ? 0.42 : layoutMode === 'compact' ? 0.56 : 0.82;
-    const minimumWidth = layoutMode === 'narrow' ? 190 : 220;
+    const shortBeat = activeBeat.text.length < 18;
+    const minimumWidth = shortBeat ? 140 : layoutMode === 'narrow' ? 180 : 210;
     const requestedWidth = panelWidth * activeBeat.maxWidth / 100;
     const width = clamp(requestedWidth, minimumWidth, Math.min(540, stageWidth * viewportWidthLimit));
     const horizontalPadding = layoutMode === 'narrow' ? 12 : 20;
-    const topPadding = 18;
-    const bottomPadding = showSubtitles ? 94 : 24;
-    const estimatedCharactersPerLine = Math.max(18, Math.floor(width / (layoutMode === 'narrow' ? 8 : 9)));
-    const estimatedLines = Math.max(1, Math.ceil((activeBeat.text.length + (activeBeat.speaker?.length ?? 0)) / estimatedCharactersPerLine));
-    const estimatedHeight = 48 + estimatedLines * (layoutMode === 'narrow' ? 17 : 20);
+    const topPadding = activePanel?.sequence === 9 && arrivalLocation ? 58 : 18;
+    const subtitlesVisibleInViewport = showSubtitles && layoutMode !== 'narrow';
+    const bottomPadding = subtitlesVisibleInViewport ? 98 : 22;
+    const charactersPerLine = Math.max(18, Math.floor(width / (layoutMode === 'narrow' ? 8 : 9)));
+    const contentLength = activeBeat.text.length + (activeBeat.speaker?.length ?? 0);
+    const estimatedLines = Math.max(1, Math.ceil(contentLength / charactersPerLine));
+    const lineHeight = layoutMode === 'narrow' ? 17 : 20;
+    const estimatedHeight = 24 + (activeBeat.speaker ? 20 : 0) + estimatedLines * lineHeight;
 
-    let left = panelLeft + panelWidth * activeBeat.x / 100;
-    let top = panelTop + panelHeight * activeBeat.y / 100;
+    const preferredX = layoutMode === 'narrow' ? activeBeat.narrowX ?? activeBeat.x : activeBeat.x;
+    const preferredY = layoutMode === 'narrow' ? activeBeat.narrowY ?? activeBeat.y : activeBeat.y;
+    let left = panelLeft + panelWidth * preferredX / 100;
+    let top = panelTop + panelHeight * preferredY / 100;
 
     left = clamp(left, horizontalPadding, Math.max(horizontalPadding, stageWidth - width - horizontalPadding));
-    if (left > stageWidth * 0.62) {
-      top = Math.max(top, 58);
-    }
     top = clamp(top, topPadding, Math.max(topPadding, stageHeight - estimatedHeight - bottomPadding));
 
-    return {
+    const style = {
       left: `${left}px`,
       top: `${top}px`,
       width: `${width}px`,
       maxWidth: 'none'
-    };
-  }, [activeBeat, cameraMetrics, isPageOverview, isTitleCard, layoutMode, showSubtitles]);
+    } as CSSProperties & { '--beat-tail-offset'?: string };
+
+    let tailSide: BeatTailSide | undefined;
+    if (
+      activeBeat.kind === 'dialogue'
+      && activeBeat.targetX !== undefined
+      && activeBeat.targetY !== undefined
+    ) {
+      const targetLeft = panelLeft + panelWidth * activeBeat.targetX / 100;
+      const targetTop = panelTop + panelHeight * activeBeat.targetY / 100;
+      const right = left + width;
+      const bottom = top + estimatedHeight;
+
+      if (targetTop < top - 6) {
+        tailSide = 'top';
+      } else if (targetTop > bottom + 6) {
+        tailSide = 'bottom';
+      } else if (targetLeft < left) {
+        tailSide = 'left';
+      } else if (targetLeft > right) {
+        tailSide = 'right';
+      } else {
+        const edgeDistances: Array<[BeatTailSide, number]> = [
+          ['top', Math.abs(targetTop - top)],
+          ['right', Math.abs(targetLeft - right)],
+          ['bottom', Math.abs(targetTop - bottom)],
+          ['left', Math.abs(targetLeft - left)]
+        ];
+        tailSide = edgeDistances.sort((first, second) => first[1] - second[1])[0][0];
+      }
+
+      const offset = tailSide === 'top' || tailSide === 'bottom'
+        ? clamp(targetLeft - left, 20, Math.max(20, width - 26))
+        : clamp(targetTop - top, 18, Math.max(18, estimatedHeight - 22));
+      style['--beat-tail-offset'] = `${offset}px`;
+    }
+
+    return { style, tailSide };
+  }, [
+    activeBeat,
+    activePanel?.sequence,
+    arrivalLocation,
+    cameraMetrics,
+    isPageOverview,
+    isTitleCard,
+    layoutMode,
+    showSubtitles
+  ]);
 
   return (
     <section
@@ -367,6 +428,7 @@ export function MotionComicIntro({
               return (
                 <article
                   className={`comic-page-panel mood-${panel.mood} ${active ? 'is-active' : ''}`}
+                  data-panel-id={panel.id}
                   style={panelStyle}
                   key={panel.id}
                   aria-current={active ? 'step' : undefined}
@@ -384,9 +446,15 @@ export function MotionComicIntro({
           </div>
         )}
 
-        {!isTitleCard && activeBeat && viewportBeatStyle && (
+        {!isTitleCard && activeBeat && viewportBeatPlacement && (
           <div className="motion-comic-beat-layer" aria-live="polite">
-            <Beat key={activeBeat.id} beat={activeBeat} style={viewportBeatStyle} viewport />
+            <Beat
+              key={activeBeat.id}
+              beat={activeBeat}
+              style={viewportBeatPlacement.style}
+              tailSide={viewportBeatPlacement.tailSide}
+              viewport
+            />
           </div>
         )}
       </div>
