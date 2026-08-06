@@ -35,6 +35,17 @@
   transform: translate(-50%, -83.333333%);
 }
 
+/* Corrective Workstream 2 hotfix: the first panel is now the actual
+   separately generated artwork, painted over the legacy page sprite. */
+.motion-comic-page.page-1 .comic-page-panel.mood-ruin {
+  overflow: hidden;
+  background-color: #070b0e;
+  background-image: url('../generated/motion-comic-v3/panel-01-world-that-remains.webp');
+  background-position: 53% 55%;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
 .motion-comic-artwork-error {
   position: absolute;
   z-index: 3020;
