@@ -151,7 +151,7 @@ if (panel6Bytes.length !== PANEL_6_LENGTH || !isWebP(panel6Bytes)) {
   throw new Error(`Panel 6 reconstruction produced ${panel6Bytes.length} bytes instead of ${PANEL_6_LENGTH}.`);
 }
 
-const page2Bundle = await decodeTextBundle(page2BundlePartsDirectory, 9, 'Page 2 bundle');
+const page2Bundle = await decodeTextBundle(page2BundlePartsDirectory, 10, 'Page 2 bundle');
 if (page2Bundle.bytes.length !== PAGE_2_BUNDLE_LENGTH) {
   throw new Error(`Page 2 artwork bundle has ${page2Bundle.bytes.length} bytes; expected ${PAGE_2_BUNDLE_LENGTH}.`);
 }
