@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
+// PR synchronisation marker: the validated source commit removes this runner.
 const builderPath = 'scripts/apply-tutorial-explanation-pass.mjs';
 const lines = (await readFile(builderPath, 'utf8')).split('\n');
 
