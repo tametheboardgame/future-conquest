@@ -33,6 +33,14 @@ const PAGE_1_BUNDLED_ASSETS = [
   { fileName: 'panel-02-human-cost.webp', offset: 9_116, length: 16_464 },
   { fileName: 'panel-03-final-command.webp', offset: 25_580, length: 17_470 }
 ];
+const PAGE_2_SOURCE_ASSETS = [
+  { fileName: 'panel-07-portal.webp', length: 174_950 },
+  { fileName: 'panel-08-crossing.webp', length: 113_594 },
+  { fileName: 'panel-09-arrival-default.webp', length: 102_582 },
+  { fileName: 'panel-10-first-contact.webp', length: 207_250 },
+  { fileName: 'panel-11-world-responds.webp', length: 79_854 },
+  { fileName: 'panel-12-burden-of-command.webp', length: 140_736 }
+];
 
 function partNumber(fileName) {
   const match = fileName.match(/^part-(\d+)\.(?:txt|bin)$/);
@@ -117,6 +125,14 @@ if (panel6Bytes.length !== PANEL_6_LENGTH || !isWebP(panel6Bytes)) {
   throw new Error(`Panel 6 reconstruction produced ${panel6Bytes.length} bytes instead of ${PANEL_6_LENGTH}.`);
 }
 
+for (const asset of PAGE_2_SOURCE_ASSETS) {
+  const assetPath = path.join(page1SourceDirectory, asset.fileName);
+  const assetBytes = await readFile(assetPath);
+  if (assetBytes.length !== asset.length || !isWebP(assetBytes)) {
+    throw new Error(`Page 2 artwork ${asset.fileName} produced ${assetBytes.length} bytes instead of ${asset.length}.`);
+  }
+}
+
 const buildNumber = process.env.GITHUB_RUN_NUMBER ?? 'local';
 const buildSha = (process.env.GITHUB_SHA ?? 'development').slice(0, 7);
 const buildTime = new Date().toISOString();
@@ -159,4 +175,5 @@ console.log(`Built Panels 2–3 from ${page1BundlePartFiles.length} approved art
 console.log(`Built corrected standalone Panel 4 artwork (${panel4Bytes.length} bytes).`);
 console.log(`Built standalone Panel 5 artwork from 5 binary parts (${panel5Bytes.length} bytes).`);
 console.log(`Built standalone Panel 6 artwork from 5 binary parts (${panel6Bytes.length} bytes).`);
+console.log(`Validated ${PAGE_2_SOURCE_ASSETS.length} standalone Page 2 WebP panels.`);
 console.log(`Stamped prologue build ${buildNumber} at ${buildSha}.`);
