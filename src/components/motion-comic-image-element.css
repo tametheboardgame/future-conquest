@@ -35,13 +35,15 @@
   transform: translate(-50%, -83.333333%);
 }
 
-/* Page 1 production artwork is rendered over the legacy page sprite. The
-   sprite remains only as a fallback for Page 2 until its migration pass. */
-.motion-comic-page.page-1 .comic-page-panel {
+/* Production panel artwork is rendered over the legacy page sprite. The
+   sprite remains behind the standalone images as a defensive fallback. */
+.motion-comic-page.page-1 .comic-page-panel,
+.motion-comic-page.page-2 .comic-page-panel {
   overflow: hidden;
   background-color: #070b0e;
   background-repeat: no-repeat;
   background-size: cover;
+  background-position: 50% 50%;
 }
 
 .motion-comic-page.page-1 [data-panel-id='world-that-remains'] {
@@ -72,6 +74,33 @@
 .motion-comic-page.page-1 [data-panel-id='order'] {
   background-image: url('../generated/motion-comic-v3/panel-06-order.webp');
   background-position: 48% 58%;
+}
+
+/* Page 2 images are pre-cropped to the exact geometry of their comic panels.
+   This keeps the principal subject inside the frame at every responsive scale
+   and avoids a second cover-crop after the camera transform is applied. */
+.motion-comic-page.page-2 [data-panel-id='portal'] {
+  background-image: url('../generated/motion-comic-v3/panel-07-portal.webp');
+}
+
+.motion-comic-page.page-2 [data-panel-id='crossing'] {
+  background-image: url('../generated/motion-comic-v3/panel-08-crossing.webp');
+}
+
+.motion-comic-page.page-2 [data-panel-id='arrival'] {
+  background-image: url('../generated/motion-comic-v3/panel-09-arrival-default.webp');
+}
+
+.motion-comic-page.page-2 [data-panel-id='first-contact'] {
+  background-image: url('../generated/motion-comic-v3/panel-10-first-contact.webp');
+}
+
+.motion-comic-page.page-2 [data-panel-id='world-responds'] {
+  background-image: url('../generated/motion-comic-v3/panel-11-world-responds.webp');
+}
+
+.motion-comic-page.page-2 [data-panel-id='burden-of-command'] {
+  background-image: url('../generated/motion-comic-v3/panel-12-burden-of-command.webp');
 }
 
 .motion-comic-artwork-error {
