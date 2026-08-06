@@ -1,5 +1,6 @@
 name: Build and deploy Future Conquest
 
+# Deployment refresh: 2026-08-06 18:28 BST
 on:
   push:
     branches:
