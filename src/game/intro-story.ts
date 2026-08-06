@@ -24,6 +24,10 @@ export interface IntroBeat {
   x: number;
   y: number;
   maxWidth: number;
+  targetX?: number;
+  targetY?: number;
+  narrowX?: number;
+  narrowY?: number;
 }
 
 export interface IntroLayer {
@@ -75,76 +79,78 @@ export const INTRO_PANELS: IntroPanel[] = [
     alt: 'A powered infantry soldier crosses the flooded ruins of a future European city.',
     transcript: 'The future did not end in a single day.',
     x: 3, y: 4, width: 57, height: 34,
-    beats: [{ id: 'p1-caption', kind: 'caption', text: 'The future did not end in a single day.', delayMs: 700, x: 5, y: 7, maxWidth: 42 }]
+    beats: [
+      { id: 'p1-caption', kind: 'caption', text: 'The future did not end in a single day.', delayMs: 700, x: 5, y: 7, maxWidth: 42 }
+    ]
   },
   {
     id: 'human-cost', sequence: 2, page: 1, durationMs: 9000, mood: 'human-cost', motion: 'pan-right',
     assetFile: 'panel-02-human-cost.webp',
     alt: 'Medics and technicians treat casualties and salvage damaged powered armour in a field repair shelter.',
-    transcript: 'It was lost piece by piece. City by city. Decision by decision.',
+    transcript: 'It was lost piece by piece. City by city. Decision by decision. A medic orders the damaged chest plate removed while a technician salvages the intact core.',
     x: 61.2, y: 4, width: 35.8, height: 34,
     beats: [
       { id: 'p2-caption-1', kind: 'caption', text: 'It was lost piece by piece.', delayMs: 500, x: 5, y: 6, maxWidth: 48 },
       { id: 'p2-caption-2', kind: 'caption', text: 'City by city.', delayMs: 2100, x: 5, y: 24, maxWidth: 32 },
       { id: 'p2-caption-3', kind: 'caption', text: 'Decision by decision.', delayMs: 3400, x: 5, y: 39, maxWidth: 46 },
-      { id: 'p2-medic', kind: 'dialogue', speaker: 'Medic', text: 'Another suit is down.', delayMs: 5000, x: 52, y: 8, maxWidth: 40 },
-      { id: 'p2-tech', kind: 'dialogue', speaker: 'Technician', text: 'Strip what still works.', delayMs: 6500, x: 50, y: 67, maxWidth: 43 }
+      { id: 'p2-medic', kind: 'dialogue', speaker: 'Medic', text: 'He needs the chest plate off. Now.', delayMs: 5000, x: 4, y: 64, maxWidth: 41, targetX: 17, targetY: 55, narrowX: 4, narrowY: 62 },
+      { id: 'p2-tech', kind: 'dialogue', speaker: 'Technician', text: 'The core is intact. Strip the rest.', delayMs: 6500, x: 54, y: 65, maxWidth: 41, targetX: 69, targetY: 48, narrowX: 50, narrowY: 64 }
     ]
   },
   {
     id: 'final-command', sequence: 3, page: 1, durationMs: 8500, mood: 'command', motion: 'rise',
     assetFile: 'panel-03-final-command-female.webp',
     alt: 'The armoured General stands over a tactical table in the damaged final command centre.',
-    transcript: 'What remained searched for an answer. The General says: We have found the break.',
+    transcript: 'What remained searched for an answer. The General says they found the break, but the scientists cannot yet prove it.',
     x: 3, y: 39.2, width: 29, height: 27,
     beats: [
-      { id: 'p3-caption', kind: 'caption', text: 'What remained searched for an answer.', delayMs: 500, x: 5, y: 6, maxWidth: 54 },
-      { id: 'p3-general-1', kind: 'dialogue', speaker: 'General', text: 'We have found the break.', delayMs: 2500, x: 48, y: 10, maxWidth: 45 },
-      { id: 'p3-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'A divergence, perhaps. Not proof.', delayMs: 4400, x: 5, y: 66, maxWidth: 53 },
-      { id: 'p3-general-2', kind: 'dialogue', speaker: 'General', text: 'Proof will arrive too late.', delayMs: 6100, x: 51, y: 67, maxWidth: 43 }
+      { id: 'p3-caption', kind: 'caption', text: 'What remained searched for an answer.', delayMs: 500, x: 4, y: 5, maxWidth: 48 },
+      { id: 'p3-general-1', kind: 'dialogue', speaker: 'General', text: 'We found the break.', delayMs: 2500, x: 4, y: 64, maxWidth: 39, targetX: 49, targetY: 48, narrowX: 4, narrowY: 64 },
+      { id: 'p3-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'A divergence, perhaps. Not proof.', delayMs: 4400, x: 56, y: 6, maxWidth: 39, targetX: 78, targetY: 48, narrowX: 55, narrowY: 8 },
+      { id: 'p3-general-2', kind: 'dialogue', speaker: 'General', text: 'Proof will come too late.', delayMs: 6100, x: 56, y: 65, maxWidth: 39, targetX: 49, targetY: 48, narrowX: 53, narrowY: 65 }
     ]
   },
   {
     id: 'anomaly', sequence: 4, page: 1, durationMs: 9000, mood: 'discovery', motion: 'push-in',
     assetFile: 'panel-04-anomaly.webp',
     alt: 'Analysts reconstruct a branching historical timeline and isolate a divergence over Europe.',
-    transcript: 'Buried beneath corrupted records and broken timelines, a single historical divergence appeared.',
+    transcript: 'Buried beneath corrupted records and broken timelines, a single historical divergence appeared. The visible analysts cannot isolate the event, so they narrow the location.',
     x: 33.2, y: 39.2, width: 35, height: 27,
     beats: [
       { id: 'p4-caption-1', kind: 'caption', text: 'Buried beneath corrupted records and broken timelines—', delayMs: 500, x: 4, y: 5, maxWidth: 56 },
-      { id: 'p4-caption-2', kind: 'caption', text: '—a single historical divergence appeared.', delayMs: 2800, x: 4, y: 27, maxWidth: 52 },
-      { id: 'p4-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'We cannot identify the event.', delayMs: 5000, x: 53, y: 8, maxWidth: 42 },
-      { id: 'p4-general', kind: 'dialogue', speaker: 'General', text: 'Then we identify the place.', delayMs: 6700, x: 54, y: 68, maxWidth: 40 }
+      { id: 'p4-caption-2', kind: 'caption', text: '—a single historical divergence appeared.', delayMs: 2800, x: 4, y: 25, maxWidth: 50 },
+      { id: 'p4-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'We cannot isolate the event.', delayMs: 5000, x: 57, y: 6, maxWidth: 38, targetX: 78, targetY: 48, narrowX: 56, narrowY: 7 },
+      { id: 'p4-analyst', kind: 'dialogue', speaker: 'Lead analyst', text: 'Then isolate the location.', delayMs: 6700, x: 4, y: 68, maxWidth: 42, targetX: 25, targetY: 50, narrowX: 4, narrowY: 66 }
     ]
   },
   {
     id: 'hypothesis', sequence: 5, page: 1, durationMs: 9800, mood: 'discovery', motion: 'pan-left',
     assetFile: 'panel-05-hypothesis.webp',
     alt: 'A divided view contrasts devastated future Europe with ordinary present-day Europe.',
-    transcript: 'Somewhere in the past, a catalyst turned crisis into extinction. The intervention may itself become the cause.',
+    transcript: 'Somewhere in the past, a catalyst turned crisis into extinction. The General proposes intervention, while a scientist warns that the intervention may create the future they are trying to prevent.',
     x: 69.4, y: 39.2, width: 27.6, height: 27,
     beats: [
       { id: 'p5-caption', kind: 'caption', text: 'Somewhere in the past, a catalyst turned crisis into extinction.', delayMs: 500, x: 4, y: 5, maxWidth: 60 },
-      { id: 'p5-general-1', kind: 'dialogue', speaker: 'General', text: 'If it can be stopped there, this future may never happen.', delayMs: 3200, x: 44, y: 12, maxWidth: 52 },
-      { id: 'p5-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'Or the intervention becomes the cause.', delayMs: 5700, x: 4, y: 67, maxWidth: 52 },
-      { id: 'p5-general-2', kind: 'dialogue', speaker: 'General', text: 'Then we will carry that risk.', delayMs: 7600, x: 53, y: 69, maxWidth: 42 }
+      { id: 'p5-general-1', kind: 'dialogue', speaker: 'General', text: 'If we act there, this future may never exist.', delayMs: 3200, x: 4, y: 61, maxWidth: 45, targetX: 27, targetY: 66, narrowX: 4, narrowY: 60 },
+      { id: 'p5-scientist', kind: 'dialogue', speaker: 'Scientist', text: 'Or our intervention creates it.', delayMs: 5700, x: 53, y: 58, maxWidth: 42, targetX: 79, targetY: 68, narrowX: 52, narrowY: 58 },
+      { id: 'p5-general-2', kind: 'dialogue', speaker: 'General', text: 'Then that is the risk we carry.', delayMs: 7600, x: 4, y: 73, maxWidth: 40, targetX: 27, targetY: 66, narrowX: 4, narrowY: 70 }
     ]
   },
   {
     id: 'order', sequence: 6, page: 1, durationMs: 11000, mood: 'mobilisation', motion: 'drift',
     assetFile: 'panel-06-order.webp',
     alt: 'The General addresses the assembled expeditionary army of powered infantry.',
-    transcript: 'One hundred thousand soldiers. No reinforcements. No return. Secure the continent. Find the catalyst.',
+    transcript: 'One hundred thousand soldiers. No reinforcements. No return. The General orders them to secure the continent, find the catalyst and change what follows.',
     x: 3, y: 67.4, width: 94, height: 28.6,
     beats: [
       { id: 'p6-caption-1', kind: 'caption', text: 'One hundred thousand soldiers.', delayMs: 400, x: 3, y: 5, maxWidth: 27 },
       { id: 'p6-caption-2', kind: 'caption', text: 'No reinforcements.', delayMs: 1900, x: 3, y: 31, maxWidth: 22 },
       { id: 'p6-caption-3', kind: 'caption', text: 'No return.', delayMs: 3100, x: 3, y: 55, maxWidth: 16 },
-      { id: 'p6-general-1', kind: 'dialogue', speaker: 'General', text: 'Secure the continent.', delayMs: 4700, x: 70, y: 8, maxWidth: 25 },
-      { id: 'p6-general-2', kind: 'dialogue', speaker: 'General', text: 'Find the catalyst.', delayMs: 6100, x: 73, y: 35, maxWidth: 21 },
-      { id: 'p6-general-3', kind: 'dialogue', speaker: 'General', text: 'Change what follows.', delayMs: 7500, x: 70, y: 62, maxWidth: 24 },
-      { id: 'p6-soldier', kind: 'dialogue', speaker: 'Soldier', text: 'And if they resist?', delayMs: 8800, x: 45, y: 70, maxWidth: 20 },
-      { id: 'p6-general-4', kind: 'dialogue', speaker: 'General', text: 'They will.', delayMs: 9800, x: 58, y: 70, maxWidth: 14 }
+      { id: 'p6-general-1', kind: 'dialogue', speaker: 'General', text: 'Secure the continent.', delayMs: 4700, x: 72, y: 8, maxWidth: 23, targetX: 30, targetY: 35, narrowX: 70, narrowY: 8 },
+      { id: 'p6-general-2', kind: 'dialogue', speaker: 'General', text: 'Find the catalyst.', delayMs: 6100, x: 73, y: 34, maxWidth: 22, targetX: 30, targetY: 35, narrowX: 70, narrowY: 34 },
+      { id: 'p6-general-3', kind: 'dialogue', speaker: 'General', text: 'Change what follows.', delayMs: 7500, x: 72, y: 59, maxWidth: 23, targetX: 30, targetY: 35, narrowX: 68, narrowY: 58 },
+      { id: 'p6-soldier', kind: 'dialogue', speaker: 'Soldier', text: 'And if they resist?', delayMs: 8800, x: 38, y: 71, maxWidth: 22, targetX: 50, targetY: 58, narrowX: 36, narrowY: 70 },
+      { id: 'p6-general-4', kind: 'dialogue', speaker: 'General', text: 'They will.', delayMs: 9800, x: 61, y: 71, maxWidth: 15, targetX: 30, targetY: 35, narrowX: 59, narrowY: 70 }
     ]
   },
   {
@@ -155,22 +161,22 @@ export const INTRO_PANELS: IntroPanel[] = [
     x: 3, y: 4, width: 36, height: 31,
     beats: [
       { id: 'p7-caption', kind: 'caption', text: 'The expedition began.', delayMs: 500, x: 4, y: 5, maxWidth: 42 },
-      { id: 'p7-general-1', kind: 'dialogue', speaker: 'General', text: 'Open the breach.', delayMs: 2300, x: 5, y: 62, maxWidth: 35 },
-      { id: 'p7-tech', kind: 'dialogue', speaker: 'Technician', text: 'Spatial stability is collapsing.', delayMs: 4200, x: 55, y: 8, maxWidth: 40 },
-      { id: 'p7-general-2', kind: 'dialogue', speaker: 'General', text: 'Proceed.', delayMs: 6200, x: 67, y: 70, maxWidth: 25 }
+      { id: 'p7-general-1', kind: 'dialogue', speaker: 'General', text: 'Open the breach.', delayMs: 2300, x: 4, y: 64, maxWidth: 35, targetX: 22, targetY: 54, narrowX: 4, narrowY: 62 },
+      { id: 'p7-tech', kind: 'dialogue', speaker: 'Technician', text: 'Spatial stability is collapsing.', delayMs: 4200, x: 57, y: 7, maxWidth: 38, targetX: 79, targetY: 45, narrowX: 55, narrowY: 7 },
+      { id: 'p7-general-2', kind: 'dialogue', speaker: 'General', text: 'Proceed.', delayMs: 6200, x: 68, y: 70, maxWidth: 25, targetX: 22, targetY: 54, narrowX: 66, narrowY: 68 }
     ]
   },
   {
     id: 'crossing', sequence: 8, page: 2, durationMs: 8200, mood: 'crossing', motion: 'pan-right',
     assetFile: 'panel-08-crossing.webp',
     alt: 'Disciplined ranks of powered infantry enter the temporal rupture, distorting at the threshold.',
-    transcript: 'There would be no second attempt. The vanguard crosses and its signal disappears.',
+    transcript: 'There would be no second attempt. Command orders the advance, the vanguard crosses and its signal disappears.',
     x: 40.2, y: 4, width: 56.8, height: 31,
     beats: [
       { id: 'p8-caption', kind: 'caption', text: 'There would be no second attempt.', delayMs: 500, x: 4, y: 5, maxWidth: 36 },
-      { id: 'p8-general', kind: 'dialogue', speaker: 'General', text: 'Advance.', delayMs: 2600, x: 7, y: 68, maxWidth: 20 },
-      { id: 'p8-soldier', kind: 'radio', speaker: 'Vanguard', text: 'Vanguard crossing.', delayMs: 4200, x: 29, y: 70, maxWidth: 28 },
-      { id: 'p8-radio', kind: 'radio', speaker: 'Radio', text: 'Signal loss in three—', delayMs: 6100, x: 70, y: 68, maxWidth: 27 }
+      { id: 'p8-command', kind: 'radio', speaker: 'Command', text: 'Advance.', delayMs: 2600, x: 5, y: 69, maxWidth: 22 },
+      { id: 'p8-soldier', kind: 'radio', speaker: 'Vanguard', text: 'Vanguard crossing.', delayMs: 4200, x: 30, y: 69, maxWidth: 28 },
+      { id: 'p8-radio', kind: 'radio', speaker: 'Signal control', text: 'Signal loss in three—', delayMs: 6100, x: 68, y: 69, maxWidth: 28 }
     ]
   },
   {
@@ -181,9 +187,9 @@ export const INTRO_PANELS: IntroPanel[] = [
     x: 3, y: 36.2, width: 62, height: 30,
     beats: [
       { id: 'p9-caption', kind: 'caption', text: 'The past was not waiting to be saved.', delayMs: 500, x: 3, y: 5, maxWidth: 36 },
-      { id: 'p9-civilian', kind: 'dialogue', speaker: 'Civilian', text: 'What is that?', delayMs: 2800, x: 35, y: 18, maxWidth: 18 },
-      { id: 'p9-radio', kind: 'radio', speaker: 'Emergency radio', text: 'Multiple armed personnel emerging from the disturbance.', delayMs: 4700, x: 56, y: 7, maxWidth: 38 },
-      { id: 'p9-soldier', kind: 'radio', speaker: 'Future soldier', text: 'Perimeter. Two hundred metres.', delayMs: 6800, x: 65, y: 70, maxWidth: 30 }
+      { id: 'p9-civilian', kind: 'dialogue', speaker: 'Civilian', text: 'What is that?', delayMs: 2800, x: 32, y: 16, maxWidth: 20, targetX: 43, targetY: 48, narrowX: 30, narrowY: 15 },
+      { id: 'p9-radio', kind: 'radio', speaker: 'Emergency radio', text: 'Multiple armed personnel emerging from the disturbance.', delayMs: 4700, x: 57, y: 8, maxWidth: 37, narrowX: 56, narrowY: 15 },
+      { id: 'p9-soldier', kind: 'radio', speaker: 'Future officer', text: 'Perimeter. Two hundred metres.', delayMs: 6800, x: 65, y: 70, maxWidth: 30, narrowX: 63, narrowY: 68 }
     ]
   },
   {
@@ -195,9 +201,9 @@ export const INTRO_PANELS: IntroPanel[] = [
     beats: [
       { id: 'p10-caption-1', kind: 'caption', text: 'They saw no rescuers.', delayMs: 400, x: 4, y: 5, maxWidth: 42 },
       { id: 'p10-caption-2', kind: 'caption', text: 'They saw an invasion.', delayMs: 1900, x: 4, y: 25, maxWidth: 42 },
-      { id: 'p10-responder', kind: 'dialogue', speaker: 'Responder', text: 'Drop your weapons!', delayMs: 3900, x: 56, y: 8, maxWidth: 38 },
-      { id: 'p10-soldier', kind: 'dialogue', speaker: 'Future officer', text: 'Hold fire. Secure the perimeter.', delayMs: 5900, x: 7, y: 68, maxWidth: 46 },
-      { id: 'p10-radio', kind: 'radio', speaker: 'Responder', text: 'They are establishing positions.', delayMs: 7400, x: 56, y: 68, maxWidth: 38 }
+      { id: 'p10-responder', kind: 'dialogue', speaker: 'Responder', text: 'Drop your weapons!', delayMs: 3900, x: 57, y: 7, maxWidth: 38, targetX: 80, targetY: 56, narrowX: 55, narrowY: 7 },
+      { id: 'p10-soldier', kind: 'dialogue', speaker: 'Future officer', text: 'Hold fire. Secure the perimeter.', delayMs: 5900, x: 4, y: 67, maxWidth: 48, targetX: 25, targetY: 56, narrowX: 4, narrowY: 65 },
+      { id: 'p10-radio', kind: 'radio', speaker: 'Responder radio', text: 'They are establishing positions.', delayMs: 7400, x: 57, y: 68, maxWidth: 38, narrowX: 55, narrowY: 66 }
     ]
   },
   {
@@ -224,10 +230,10 @@ export const INTRO_PANELS: IntroPanel[] = [
     beats: [
       { id: 'p12-caption-1', kind: 'caption', text: 'Conquest is the method.', delayMs: 400, x: 4, y: 5, maxWidth: 35 },
       { id: 'p12-caption-2', kind: 'caption', text: 'Survival is the claim.', delayMs: 1900, x: 4, y: 27, maxWidth: 35 },
-      { id: 'p12-general-1', kind: 'dialogue', speaker: 'General', text: 'Win quickly enough to alter history.', delayMs: 3900, x: 58, y: 9, maxWidth: 37 },
-      { id: 'p12-general-2', kind: 'dialogue', speaker: 'General', text: 'Restrain the war we have begun.', delayMs: 6100, x: 56, y: 67, maxWidth: 39 },
+      { id: 'p12-general-1', kind: 'dialogue', speaker: 'General', text: 'Win quickly enough to alter history.', delayMs: 3900, x: 58, y: 8, maxWidth: 37, targetX: 79, targetY: 49, narrowX: 56, narrowY: 8 },
+      { id: 'p12-general-2', kind: 'dialogue', speaker: 'General', text: 'Restrain the war we have begun.', delayMs: 6100, x: 56, y: 67, maxWidth: 39, targetX: 79, targetY: 49, narrowX: 54, narrowY: 65 },
       { id: 'p12-officer', kind: 'radio', speaker: 'Command officer', text: 'Europe is mobilising.', delayMs: 7900, x: 4, y: 70, maxWidth: 31 },
-      { id: 'p12-general-3', kind: 'dialogue', speaker: 'General', text: 'Then we have already spent too long.', delayMs: 9000, x: 56, y: 42, maxWidth: 40 }
+      { id: 'p12-general-3', kind: 'dialogue', speaker: 'General', text: 'Then we have already spent too long.', delayMs: 9000, x: 56, y: 42, maxWidth: 40, targetX: 79, targetY: 49, narrowX: 54, narrowY: 42 }
     ]
   }
 ];

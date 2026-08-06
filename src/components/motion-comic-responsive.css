@@ -21,6 +21,46 @@
   font-size: .7em;
 }
 
+/* Viewport dialogue tails are positioned by the speaker target calculated in
+   the component, rather than remaining fixed to the bottom-left corner. */
+.motion-comic-viewport-beat.beat-dialogue::after {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(15, 20, 24, .92);
+  background: inherit;
+  transform: rotate(45deg);
+  z-index: -1;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+}
+
+.motion-comic-viewport-beat.beat-tail-none::after {
+  display: none;
+}
+
+.motion-comic-viewport-beat.beat-tail-top::after {
+  top: -9px;
+  left: calc(var(--beat-tail-offset, 28px) - 7px);
+}
+
+.motion-comic-viewport-beat.beat-tail-right::after {
+  right: -9px;
+  top: calc(var(--beat-tail-offset, 28px) - 7px);
+}
+
+.motion-comic-viewport-beat.beat-tail-bottom::after {
+  bottom: -9px;
+  left: calc(var(--beat-tail-offset, 28px) - 7px);
+}
+
+.motion-comic-viewport-beat.beat-tail-left::after {
+  left: -9px;
+  top: calc(var(--beat-tail-offset, 28px) - 7px);
+}
+
 /* Panel numbering is useful for production notes, but not for the final story. */
 .motion-comic-page .comic-panel-number {
   display: none !important;
@@ -45,13 +85,11 @@
   font-size: clamp(.78rem, .72rem + .25vw, .96rem);
 }
 
-/* On narrow screens the box type controls its safe position. This prevents
-   desktop panel coordinates from pushing text over faces, focal effects or
-   off the visible crop. */
+/* Narrow layouts retain their panel-specific anchors. The component clamps
+   every box to the visible viewport and uses optional narrow coordinates when
+   a desktop position would cover the subject. */
 .motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat {
-  width: auto !important;
-  min-width: min(44vw, 170px);
-  max-width: min(84vw, 430px) !important;
+  min-width: min(42vw, 150px);
   padding: 8px 10px;
   border-width: 1px;
   font-size: clamp(.76rem, .69rem + .28vw, .9rem);
@@ -59,29 +97,6 @@
   text-align: left;
   text-wrap: pretty;
   box-shadow: 0 3px 12px rgba(0, 0, 0, .45);
-}
-
-.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-caption {
-  top: 56px !important;
-  left: 12px !important;
-  right: auto !important;
-  bottom: auto !important;
-}
-
-.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-dialogue {
-  top: auto !important;
-  left: 12px !important;
-  right: auto !important;
-  bottom: 18px !important;
-  max-width: min(78vw, 390px) !important;
-}
-
-.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-radio {
-  top: 56px !important;
-  left: auto !important;
-  right: 12px !important;
-  bottom: auto !important;
-  max-width: min(74vw, 360px) !important;
 }
 
 /* The in-panel box already carries the current line on mobile; hiding the
