@@ -35,15 +35,43 @@
   transform: translate(-50%, -83.333333%);
 }
 
-/* Corrective Workstream 2 hotfix: the first panel is now the actual
-   separately generated artwork, painted over the legacy page sprite. */
-.motion-comic-page.page-1 .comic-page-panel.mood-ruin {
+/* Page 1 production artwork is rendered over the legacy page sprite. The
+   sprite remains only as a fallback for Page 2 until its migration pass. */
+.motion-comic-page.page-1 .comic-page-panel {
   overflow: hidden;
   background-color: #070b0e;
-  background-image: url('../generated/motion-comic-v3/panel-01-world-that-remains.webp');
-  background-position: 53% 55%;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(1) {
+  background-image: url('../generated/motion-comic-v3/panel-01-world-that-remains.webp');
+  background-position: 53% 55%;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(2) {
+  background-image: url('../generated/motion-comic-v3/panel-02-human-cost.webp');
+  background-position: 50% 54%;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(3) {
+  background-image: url('../generated/motion-comic-v3/panel-03-final-command.webp');
+  background-position: 52% 50%;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(4) {
+  background-image: url('../generated/motion-comic-v3/panel-04-anomaly.webp');
+  background-position: 50% 67%;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(5) {
+  background-image: url('../generated/motion-comic-v3/panel-05-hypothesis.webp');
+  background-position: 50% 50%;
+}
+
+.motion-comic-page.page-1 .comic-page-panel:nth-of-type(6) {
+  background-image: url('../generated/motion-comic-v3/panel-06-order.webp');
+  background-position: 50% 50%;
 }
 
 .motion-comic-artwork-error {
