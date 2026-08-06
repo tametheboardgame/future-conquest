@@ -1,6 +1,6 @@
 name: Build and deploy Future Conquest
 
-# Deployment refresh: 2026-08-06 18:28 BST
+# Deployment refresh: 2026-08-06 19:45 BST
 on:
   push:
     branches:
@@ -17,9 +17,9 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  # Superseded PR builds can be cancelled, but main deployments must finish in
-  # sequence so a later no-op commit cannot cancel the release containing new assets.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Queue runs on each ref rather than allowing a later push to cancel an active
+  # production release containing newly generated artwork.
+  cancel-in-progress: false
 
 jobs:
   build:
