@@ -27,12 +27,20 @@
   transform: translateY(-33.333333%);
 }
 
-.motion-comic-title-sprite {
-  top: 50%;
-  left: 50%;
-  width: max(100%, 177.777778vh);
-  height: auto;
-  transform: translate(-50%, -83.333333%);
+/* The final title card is rendered as a complete 16:9 frame. Contain keeps
+   the logo, tagline and portal visible on wide, compact and portrait screens
+   instead of applying the legacy sprite crop. */
+.motion-comic-title-art {
+  background-color: #020508;
+  background-image: url('../generated/motion-comic-v3/title-card-future-conquest.webp') !important;
+  background-position: center !important;
+  background-repeat: no-repeat;
+  background-size: contain !important;
+}
+
+.motion-comic-title-sprite,
+.motion-comic-title-card .motion-comic-beat {
+  display: none;
 }
 
 /* Production panel artwork is rendered over the legacy page sprite. The
