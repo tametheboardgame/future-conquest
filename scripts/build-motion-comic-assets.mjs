@@ -11,7 +11,7 @@ const panel4EncodedSource = path.join(repositoryRoot, 'src', 'assets', 'motion-c
 const panel5PartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'panel-05-parts');
 const panel6PartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'panel-06-parts');
 const page1BundlePartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'page1', 'bundle-parts');
-const page2BundlePartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'page2', 'bundle-parts');
+const page2BundlePartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'page2', 'bundle-parts-q12');
 const page1PublicDirectory = path.join(repositoryRoot, 'public', 'generated', 'motion-comic-v3', 'page1');
 const motionComicSourceDirectory = path.join(repositoryRoot, 'src', 'generated', 'motion-comic-v3');
 const panel1SourceOutput = path.join(motionComicSourceDirectory, 'panel-01-world-that-remains.webp');
@@ -30,18 +30,18 @@ const PANEL_4_LENGTH = 13_008;
 const PANEL_5_LENGTH = 35_618;
 const PANEL_6_LENGTH = 17_222;
 const PAGE_1_BUNDLE_LENGTH = 81_177;
-const PAGE_2_BUNDLE_LENGTH = 59_782;
+const PAGE_2_BUNDLE_LENGTH = 133_560;
 const PAGE_1_BUNDLED_ASSETS = [
   { fileName: 'panel-02-human-cost.webp', offset: 9_116, length: 16_464 },
   { fileName: 'panel-03-final-command.webp', offset: 25_580, length: 17_470 }
 ];
 const PAGE_2_BUNDLED_ASSETS = [
-  { fileName: 'panel-07-portal.webp', offset: 0, length: 12_224 },
-  { fileName: 'panel-08-crossing.webp', offset: 12_224, length: 8_440 },
-  { fileName: 'panel-09-arrival-default.webp', offset: 20_664, length: 8_318 },
-  { fileName: 'panel-10-first-contact.webp', offset: 28_982, length: 13_030 },
-  { fileName: 'panel-11-world-responds.webp', offset: 42_012, length: 6_944 },
-  { fileName: 'panel-12-burden-of-command.webp', offset: 48_956, length: 10_826 }
+  { fileName: 'panel-07-portal.webp', offset: 0, length: 27_900 },
+  { fileName: 'panel-08-crossing.webp', offset: 27_900, length: 18_806 },
+  { fileName: 'panel-09-arrival-default.webp', offset: 46_706, length: 18_078 },
+  { fileName: 'panel-10-first-contact.webp', offset: 64_784, length: 30_680 },
+  { fileName: 'panel-11-world-responds.webp', offset: 95_464, length: 14_460 },
+  { fileName: 'panel-12-burden-of-command.webp', offset: 109_924, length: 23_636 }
 ];
 
 function partNumber(fileName) {
@@ -74,6 +74,19 @@ async function concatenateBinaryParts(directory, expectedCount) {
     throw new Error(`Expected ${expectedCount} binary parts in ${directory}, found ${partFiles.length}.`);
   }
   return Buffer.concat(await Promise.all(partFiles.map(fileName => readFile(path.join(directory, fileName)))));
+}
+
+async function decodeTextBundle(directory, expectedCount, bundleName) {
+  const partFiles = (await readdir(directory))
+    .filter(fileName => /^part-\d+\.txt$/.test(fileName))
+    .sort((left, right) => partNumber(left) - partNumber(right));
+  if (partFiles.length !== expectedCount) {
+    throw new Error(`Expected ${expectedCount} ${bundleName} encoded parts, found ${partFiles.length}.`);
+  }
+  const encodedBundle = (await Promise.all(
+    partFiles.map(fileName => readFile(path.join(directory, fileName), 'utf8'))
+  )).map(content => content.trim()).join('');
+  return { partFiles, bytes: Buffer.from(encodedBundle, 'base64') };
 }
 
 function extractBundledAssets(bundleBytes, assets, bundleName) {
@@ -138,11 +151,11 @@ if (panel6Bytes.length !== PANEL_6_LENGTH || !isWebP(panel6Bytes)) {
   throw new Error(`Panel 6 reconstruction produced ${panel6Bytes.length} bytes instead of ${PANEL_6_LENGTH}.`);
 }
 
-const page2BundleBytes = await concatenateBinaryParts(page2BundlePartsDirectory, 8);
-if (page2BundleBytes.length !== PAGE_2_BUNDLE_LENGTH) {
-  throw new Error(`Page 2 artwork bundle has ${page2BundleBytes.length} bytes; expected ${PAGE_2_BUNDLE_LENGTH}.`);
+const page2Bundle = await decodeTextBundle(page2BundlePartsDirectory, 9, 'Page 2 bundle');
+if (page2Bundle.bytes.length !== PAGE_2_BUNDLE_LENGTH) {
+  throw new Error(`Page 2 artwork bundle has ${page2Bundle.bytes.length} bytes; expected ${PAGE_2_BUNDLE_LENGTH}.`);
 }
-const page2Assets = extractBundledAssets(page2BundleBytes, PAGE_2_BUNDLED_ASSETS, 'Page 2');
+const page2Assets = extractBundledAssets(page2Bundle.bytes, PAGE_2_BUNDLED_ASSETS, 'Page 2');
 
 const buildNumber = process.env.GITHUB_RUN_NUMBER ?? 'local';
 const buildSha = (process.env.GITHUB_SHA ?? 'development').slice(0, 7);
@@ -187,5 +200,5 @@ console.log(`Built Panels 2–3 from ${page1BundlePartFiles.length} approved art
 console.log(`Built corrected standalone Panel 4 artwork (${panel4Bytes.length} bytes).`);
 console.log(`Built standalone Panel 5 artwork from 5 binary parts (${panel5Bytes.length} bytes).`);
 console.log(`Built standalone Panel 6 artwork from 5 binary parts (${panel6Bytes.length} bytes).`);
-console.log(`Built ${page2Assets.length} standalone Page 2 panels from 8 binary bundle parts (${page2BundleBytes.length} bytes).`);
+console.log(`Built ${page2Assets.length} standalone Page 2 panels from ${page2Bundle.partFiles.length} encoded bundle parts (${page2Bundle.bytes.length} bytes).`);
 console.log(`Stamped prologue build ${buildNumber} at ${buildSha}.`);
