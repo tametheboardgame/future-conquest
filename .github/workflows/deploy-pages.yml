@@ -17,7 +17,9 @@ permissions:
 
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR builds can be cancelled, but main deployments must finish in
+  # sequence so a later no-op commit cannot cancel the release containing new assets.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -68,7 +70,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Verify live deployment commit
+      - name: Verify live deployment commit and title asset
         timeout-minutes: 7
         env:
           DEPLOY_VERIFY_ATTEMPTS: '30'
