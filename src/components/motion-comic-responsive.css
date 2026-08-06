@@ -21,13 +21,13 @@
   font-size: .7em;
 }
 
-.motion-comic-page .comic-panel-number,
-.motion-comic-page .motion-comic-location {
-  transform: scale(var(--camera-inverse-scale, 1));
-  transform-origin: top left;
+/* Panel numbering is useful for production notes, but not for the final story. */
+.motion-comic-page .comic-panel-number {
+  display: none !important;
 }
 
 .motion-comic-page .motion-comic-location {
+  transform: scale(var(--camera-inverse-scale, 1));
   transform-origin: top right;
 }
 
@@ -38,12 +38,6 @@
   line-height: 1.24;
 }
 
-.motion-comic-v2[data-layout='compact'] .comic-panel-number {
-  min-width: 24px;
-  height: 24px;
-  font-size: 12px;
-}
-
 .motion-comic-v2[data-layout='compact'] .motion-comic-subtitle {
   bottom: 76px;
   width: min(680px, calc(100vw - 32px));
@@ -51,30 +45,49 @@
   font-size: clamp(.78rem, .72rem + .25vw, .96rem);
 }
 
+/* On narrow screens the box type controls its safe position. This prevents
+   desktop panel coordinates from pushing text over faces, focal effects or
+   off the visible crop. */
 .motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat {
-  padding: 7px 9px;
+  width: auto !important;
+  min-width: min(44vw, 170px);
+  max-width: min(84vw, 430px) !important;
+  padding: 8px 10px;
   border-width: 1px;
-  font-size: clamp(.74rem, .69rem + .25vw, .88rem);
-  line-height: 1.2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .38);
-}
-
-.motion-comic-v2[data-layout='narrow'] .motion-comic-subtitle {
-  bottom: 70px;
-  width: calc(100vw - 24px);
-  padding: 7px 10px;
-  font-size: .78rem;
+  font-size: clamp(.76rem, .69rem + .28vw, .9rem);
   line-height: 1.22;
+  text-align: left;
+  text-wrap: pretty;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .45);
 }
 
-.motion-comic-v2[data-layout='narrow'] .comic-panel-number {
-  top: 5px;
-  left: 5px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 4px;
-  border-width: 1px;
-  font-size: 11px;
+.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-caption {
+  top: 56px !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-dialogue {
+  top: auto !important;
+  left: 12px !important;
+  right: auto !important;
+  bottom: 18px !important;
+  max-width: min(78vw, 390px) !important;
+}
+
+.motion-comic-v2[data-layout='narrow'] .motion-comic-viewport-beat.beat-radio {
+  top: 56px !important;
+  left: auto !important;
+  right: 12px !important;
+  bottom: auto !important;
+  max-width: min(74vw, 360px) !important;
+}
+
+/* The in-panel box already carries the current line on mobile; hiding the
+   duplicate subtitle strip leaves more artwork visible. */
+.motion-comic-v2[data-layout='narrow'] .motion-comic-subtitle {
+  display: none;
 }
 
 .motion-comic-v2[data-layout='narrow'] .motion-comic-location {
