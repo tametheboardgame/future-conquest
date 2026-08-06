@@ -1,4 +1,3 @@
-# GitHub Pages deployment workflow. Update this marker to force a clean redeploy when required.
 name: Build and deploy Future Conquest
 
 on:
@@ -35,8 +34,14 @@ jobs:
         run: npm ci
       - name: Run engine tests
         run: npm test
+      - name: Validate deployment verifier
+        run: node --check scripts/verify-pages-deployment.mjs
       - name: Build game
         run: npm run build
+      - name: Write deployment metadata
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          node --input-type=module -e "import { writeFile } from 'node:fs/promises'; await writeFile('dist/build-info.json', JSON.stringify({ sha: process.env.GITHUB_SHA, runNumber: process.env.GITHUB_RUN_NUMBER, runAttempt: process.env.GITHUB_RUN_ATTEMPT, builtAt: new Date().toISOString() }, null, 2) + '\n');"
       - name: Configure Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
@@ -54,6 +59,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Checkout deployment verifier
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify live deployment commit
+        timeout-minutes: 7
+        env:
+          DEPLOY_VERIFY_ATTEMPTS: '30'
+          DEPLOY_VERIFY_DELAY_MS: '10000'
+        run: node scripts/verify-pages-deployment.mjs "${{ steps.deployment.outputs.page_url }}" "${{ github.sha }}"
