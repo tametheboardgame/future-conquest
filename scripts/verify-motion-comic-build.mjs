@@ -4,20 +4,14 @@ import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const legacyAssetPath = path.join(repositoryRoot, 'dist', 'generated', 'motion-comic-v2-sprite.webp');
-const page1AssetDirectory = path.join(
-  repositoryRoot,
-  'dist',
-  'generated',
-  'motion-comic-v3',
-  'page1'
-);
+const page1AssetDirectory = path.join(repositoryRoot, 'dist', 'generated', 'motion-comic-v3', 'page1');
 const PAGE_1_ASSETS = [
   { fileName: 'panel-01-world-that-remains.webp', length: 16_524 },
   { fileName: 'panel-02-human-cost.webp', length: 16_464 },
   { fileName: 'panel-03-final-command.webp', length: 17_470 },
   { fileName: 'panel-04-anomaly.webp', length: 8_548 },
   { fileName: 'panel-05-hypothesis.webp', length: 25_840 },
-  { fileName: 'panel-06-order.webp', length: 8_994 }
+  { fileName: 'panel-06-order.webp', length: 21_266 }
 ];
 
 function isWebP(bytes) {
@@ -36,9 +30,7 @@ for (const asset of PAGE_1_ASSETS) {
   const assetStats = await stat(assetPath);
   const assetBytes = await readFile(assetPath);
   if (!isWebP(assetBytes) || assetStats.size !== asset.length) {
-    throw new Error(
-      `The production bundle does not contain the expected Page 1 artwork: ${asset.fileName}.`
-    );
+    throw new Error(`The production bundle does not contain the expected Page 1 artwork: ${asset.fileName}.`);
   }
   console.log(`Verified standalone ${asset.fileName} (${assetStats.size} bytes).`);
 }
