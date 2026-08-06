@@ -1,3 +1,4 @@
+# GitHub Pages deployment workflow. Update this marker to force a clean redeploy when required.
 name: Build and deploy Future Conquest
 
 on:
