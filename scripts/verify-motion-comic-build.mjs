@@ -11,7 +11,7 @@ const PAGE_1_ASSETS = [
   { fileName: 'panel-03-final-command.webp', length: 17_470 },
   { fileName: 'panel-04-anomaly.webp', length: 8_548 },
   { fileName: 'panel-05-hypothesis.webp', length: 25_840 },
-  { fileName: 'panel-06-order.webp', length: 21_266 }
+  { fileName: 'panel-06-order.webp', length: 17_222 }
 ];
 
 function isWebP(bytes) {
