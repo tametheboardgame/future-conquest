@@ -61,7 +61,7 @@
 
 .motion-comic-page.page-1 .comic-page-panel:nth-of-type(4) {
   background-image: url('../generated/motion-comic-v3/panel-04-anomaly.webp');
-  background-position: 50% 67%;
+  background-position: 50% 50%;
 }
 
 .motion-comic-page.page-1 .comic-page-panel:nth-of-type(5) {
@@ -71,7 +71,7 @@
 
 .motion-comic-page.page-1 .comic-page-panel:nth-of-type(6) {
   background-image: url('../generated/motion-comic-v3/panel-06-order.webp');
-  background-position: 50% 50%;
+  background-position: 50% 18%;
 }
 
 .motion-comic-artwork-error {
