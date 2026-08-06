@@ -7,6 +7,7 @@ const legacyPartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-
 const legacyOutputDirectory = path.join(repositoryRoot, 'public', 'generated');
 const legacyOutputFile = path.join(legacyOutputDirectory, 'motion-comic-v2-sprite.webp');
 const panel1PartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'panel-01-parts');
+const panel6PartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'panel-06-parts');
 const page1BundlePartsDirectory = path.join(repositoryRoot, 'src', 'assets', 'motion-comic-v3', 'page1', 'bundle-parts');
 const page1PublicDirectory = path.join(repositoryRoot, 'public', 'generated', 'motion-comic-v3', 'page1');
 const page1SourceDirectory = path.join(repositoryRoot, 'src', 'generated', 'motion-comic-v3');
@@ -18,7 +19,7 @@ const buildInfoDirectory = path.join(repositoryRoot, 'src', 'generated');
 const buildInfoFile = path.join(buildInfoDirectory, 'build-info.ts');
 
 const PANEL_1_LENGTH = 16_524;
-const PANEL_6_LENGTH = 21_266;
+const PANEL_6_LENGTH = 17_222;
 const PAGE_1_BUNDLE_LENGTH = 81_177;
 const PAGE_1_BUNDLED_ASSETS = [
   { fileName: 'panel-02-human-cost.webp', offset: 9_116, length: 16_464 },
@@ -49,6 +50,16 @@ function isWebP(bytes) {
     && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
 }
 
+async function concatenateBinaryParts(directory, expectedCount) {
+  const partFiles = (await readdir(directory))
+    .filter(fileName => /^part-\d+\.bin$/.test(fileName))
+    .sort((left, right) => partNumber(left) - partNumber(right));
+  if (partFiles.length !== expectedCount) {
+    throw new Error(`Expected ${expectedCount} binary parts in ${directory}, found ${partFiles.length}.`);
+  }
+  return Buffer.concat(await Promise.all(partFiles.map(fileName => readFile(path.join(directory, fileName)))));
+}
+
 const legacyPartFiles = (await readdir(legacyPartsDirectory))
   .filter(fileName => /^part-\d+\.txt$/.test(fileName))
   .sort((left, right) => partNumber(left) - partNumber(right));
@@ -63,15 +74,7 @@ if (!isWebP(spriteBytes) || spriteBytes.length < 10_000) {
   throw new Error('Motion Comic V2 sprite reconstruction did not produce a valid WebP file.');
 }
 
-const panel1PartFiles = (await readdir(panel1PartsDirectory))
-  .filter(fileName => /^part-\d+\.bin$/.test(fileName))
-  .sort((left, right) => partNumber(left) - partNumber(right));
-if (panel1PartFiles.length !== 2) {
-  throw new Error(`Expected 2 Panel 1 binary parts, found ${panel1PartFiles.length}.`);
-}
-const panel1Bundle = Buffer.concat(await Promise.all(
-  panel1PartFiles.map(fileName => readFile(path.join(panel1PartsDirectory, fileName)))
-));
+const panel1Bundle = await concatenateBinaryParts(panel1PartsDirectory, 2);
 const panel1Bytes = panel1Bundle.subarray(0, PANEL_1_LENGTH);
 if (panel1Bytes.length !== PANEL_1_LENGTH || !isWebP(panel1Bytes)) {
   throw new Error('Panel 1 reconstruction did not produce the intended standalone WebP file.');
@@ -93,9 +96,9 @@ if (page1BundleBytes.length !== PAGE_1_BUNDLE_LENGTH) {
   throw new Error(`Page 1 artwork bundle has ${page1BundleBytes.length} bytes; expected ${PAGE_1_BUNDLE_LENGTH}.`);
 }
 
-const panel6Bytes = await readFile(panel6SourceOutput);
+const panel6Bytes = await concatenateBinaryParts(panel6PartsDirectory, 5);
 if (panel6Bytes.length !== PANEL_6_LENGTH || !isWebP(panel6Bytes)) {
-  throw new Error('Panel 6 source is not the intended standalone WebP file.');
+  throw new Error(`Panel 6 reconstruction produced ${panel6Bytes.length} bytes instead of ${PANEL_6_LENGTH}.`);
 }
 
 const buildNumber = process.env.GITHUB_RUN_NUMBER ?? 'local';
@@ -125,11 +128,12 @@ for (const asset of PAGE_1_BUNDLED_ASSETS) {
   await writeFile(path.join(page1SourceDirectory, asset.fileName), bytes);
   await writeFile(path.join(page1PublicDirectory, asset.fileName), bytes);
 }
+await writeFile(panel6SourceOutput, panel6Bytes);
 await writeFile(panel6PublicOutput, panel6Bytes);
 await writeFile(buildInfoFile, buildInfoSource, 'utf8');
 
 console.log(`Built ${path.relative(repositoryRoot, legacyOutputFile)} from ${legacyPartFiles.length} parts (${spriteBytes.length} bytes).`);
 console.log(`Built standalone Panel 1 artwork (${panel1Bytes.length} bytes).`);
 console.log(`Built Panels 2–5 from ${page1BundlePartFiles.length} approved artwork parts (${page1BundleBytes.length} bytes).`);
-console.log(`Validated standalone Panel 6 artwork (${panel6Bytes.length} bytes).`);
+console.log(`Built standalone Panel 6 artwork from 5 binary parts (${panel6Bytes.length} bytes).`);
 console.log(`Stamped prologue build ${buildNumber} at ${buildSha}.`);
