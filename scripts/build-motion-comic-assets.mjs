@@ -22,13 +22,13 @@ const page1PublicDirectory = path.join(
   'motion-comic-v3',
   'page1'
 );
-const panel1SourceOutput = path.join(
+const page1SourceDirectory = path.join(
   repositoryRoot,
   'src',
   'generated',
-  'motion-comic-v3',
-  'panel-01-world-that-remains.webp'
+  'motion-comic-v3'
 );
+const panel1SourceOutput = path.join(page1SourceDirectory, 'panel-01-world-that-remains.webp');
 const panel1PublicOutput = path.join(page1PublicDirectory, 'panel-01-world-that-remains.webp');
 const buildInfoDirectory = path.join(repositoryRoot, 'src', 'generated');
 const buildInfoFile = path.join(buildInfoDirectory, 'build-info.ts');
@@ -130,7 +130,7 @@ const buildInfoSource = [
 ].join('\n');
 
 await mkdir(legacyOutputDirectory, { recursive: true });
-await mkdir(path.dirname(panel1SourceOutput), { recursive: true });
+await mkdir(page1SourceDirectory, { recursive: true });
 await mkdir(page1PublicDirectory, { recursive: true });
 await mkdir(buildInfoDirectory, { recursive: true });
 await writeFile(legacyOutputFile, spriteBytes);
@@ -142,6 +142,7 @@ for (const asset of PAGE_1_ADDITIONAL_ASSETS) {
   if (bytes.length !== asset.length || !isWebP(bytes)) {
     throw new Error(`Page 1 artwork ${asset.fileName} is not a valid WebP slice.`);
   }
+  await writeFile(path.join(page1SourceDirectory, asset.fileName), bytes);
   await writeFile(path.join(page1PublicDirectory, asset.fileName), bytes);
 }
 
