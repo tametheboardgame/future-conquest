@@ -107,10 +107,12 @@ if (page1BundlePartFiles.length !== 9) {
   throw new Error(`Expected 9 Page 1 bundle parts, found ${page1BundlePartFiles.length}.`);
 }
 
-const encodedPage1Bundle = (await Promise.all(
-  page1BundlePartFiles.map(fileName => readFile(path.join(page1BundlePartsDirectory, fileName), 'utf8'))
-)).map(content => content.trim()).join('');
-const page1BundleBytes = Buffer.from(encodedPage1Bundle, 'base64');
+const page1BundleBytes = Buffer.concat(await Promise.all(
+  page1BundlePartFiles.map(async fileName => {
+    const encodedPart = (await readFile(path.join(page1BundlePartsDirectory, fileName), 'utf8')).trim();
+    return Buffer.from(encodedPart, 'base64');
+  })
+));
 
 if (page1BundleBytes.length !== PAGE_1_BUNDLE_LENGTH) {
   throw new Error(
