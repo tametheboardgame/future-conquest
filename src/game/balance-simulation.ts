@@ -96,7 +96,10 @@ export interface PortalBalanceSummary {
 export interface CurrentEngineBalanceReport {
   engineSaveVersion: number;
   territoryCount: number;
-  options: Required<Pick<BalanceSimulationOptions, 'runsPerStart' | 'maxTurns' | 'seedOffset'>> & {
+  options: {
+    runsPerStart: number;
+    maxTurns: number;
+    seedOffset: number;
     difficulties: Difficulty[];
     policies: BalancePolicyId[];
   };
@@ -125,149 +128,95 @@ interface ActionTelemetry {
 
 const STARTING_PERSONNEL = 10_000;
 const STARTING_FUNCTIONAL_ARMOUR = 9_000;
-const TERRAIN_ATTACK_CAUTION: Record<string, number> = {
+const DEFAULT_DIFFICULTIES: Difficulty[] = ['story', 'standard', 'hard'];
+const DEFAULT_POLICIES: BalancePolicyId[] = ['aggressive', 'balanced', 'cautious'];
+const TERRAIN_CAUTION: Record<string, number> = {
   'open-lowland': 0,
   'mixed-lowland': 0.03,
   'mixed-upland': 0.08,
   mountainous: 0.16
 };
 
-const POLICY_PROFILES: Record<BalancePolicyId, PolicyProfile> = {
-  aggressive: {
-    attackRatio: 0.58,
-    joinRatio: 0.45,
-    garrisonResistance: 72,
-    releaseResistance: 62,
-    holdUntilAdministered: false,
-    protectPortalAtEscalation: 88
-  },
-  balanced: {
-    attackRatio: 0.82,
-    joinRatio: 0.64,
-    garrisonResistance: 46,
-    releaseResistance: 36,
-    holdUntilAdministered: false,
-    protectPortalAtEscalation: 58
-  },
-  cautious: {
-    attackRatio: 1.02,
-    joinRatio: 0.82,
-    garrisonResistance: 30,
-    releaseResistance: 24,
-    holdUntilAdministered: true,
-    protectPortalAtEscalation: 42
-  }
+const POLICY: Record<BalancePolicyId, PolicyProfile> = {
+  aggressive: { attackRatio: 0.58, joinRatio: 0.45, garrisonResistance: 72, releaseResistance: 62, holdUntilAdministered: false, protectPortalAtEscalation: 88 },
+  balanced: { attackRatio: 0.82, joinRatio: 0.64, garrisonResistance: 46, releaseResistance: 36, holdUntilAdministered: false, protectPortalAtEscalation: 58 },
+  cautious: { attackRatio: 1.02, joinRatio: 0.82, garrisonResistance: 30, releaseResistance: 24, holdUntilAdministered: true, protectPortalAtEscalation: 42 }
 };
 
-const totalPersonnel = (state: GameState) => Object.values(state.taskGroups)
-  .reduce((sum, group) => sum + group.personnel, 0);
+const totalPersonnel = (state: GameState) => Object.values(state.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
+const totalFunctionalArmour = (state: GameState) => Object.values(state.taskGroups).reduce((sum, group) => sum + group.functionalArmour, 0);
+const totalDamagedArmour = (state: GameState) => Object.values(state.taskGroups).reduce((sum, group) => sum + group.damagedArmour, 0);
+const localGroups = (state: GameState, territoryId: string) => Object.values(state.taskGroups).filter(group => group.location === territoryId && group.personnel > 0);
+const frontier = (state: GameState, territoryId: string) => state.territories[territoryId]?.controller === 'player'
+  && TERRITORIES[territoryId].neighbours.some(id => state.territories[id]?.controller === 'enemy');
 
-const totalFunctionalArmour = (state: GameState) => Object.values(state.taskGroups)
-  .reduce((sum, group) => sum + group.functionalArmour, 0);
-
-const totalDamagedArmour = (state: GameState) => Object.values(state.taskGroups)
-  .reduce((sum, group) => sum + group.damagedArmour, 0);
-
-const groupCombatPower = (group: TaskGroup) => {
+const combatPower = (group: TaskGroup) => {
   const deployableArmour = Math.min(group.functionalArmour, group.personnel);
-  return (
-    (group.personnel / 1000 * 4.1 + deployableArmour / 1000 * 1.9)
+  return (group.personnel / 1000 * 4.1 + deployableArmour / 1000 * 1.9)
     * (0.58 + group.morale / 150)
-    * (0.55 + group.supply / 190)
-  );
+    * (0.55 + group.supply / 190);
 };
 
-const localFriendlyGroups = (state: GameState, territoryId: string) => Object.values(state.taskGroups)
-  .filter(group => group.location === territoryId && group.personnel > 0);
-
-const frontierTerritory = (state: GameState, territoryId: string) => (
-  state.territories[territoryId]?.controller === 'player'
-  && TERRITORIES[territoryId].neighbours.some(id => state.territories[id]?.controller === 'enemy')
-);
-
-function shouldReleaseGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
+function releaseGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
   if (group.status !== 'garrison') return false;
   const territory = state.territories[group.location];
   if (!territory) return false;
-
   if (group.location === state.portalTerritory) {
-    const otherPortalGarrison = localFriendlyGroups(state, group.location)
-      .some(candidate => candidate.id !== group.id && candidate.status === 'garrison');
-    if (!otherPortalGarrison && state.escalation >= profile.protectPortalAtEscalation) return false;
+    const other = localGroups(state, group.location).some(candidate => candidate.id !== group.id && candidate.status === 'garrison');
+    if (!other && state.escalation >= profile.protectPortalAtEscalation) return false;
   }
-
-  if (profile.holdUntilAdministered) {
-    return territory.occupation === 'administered' && territory.resistance <= profile.releaseResistance;
-  }
-  return (
-    territory.occupation !== 'unsecured'
+  if (profile.holdUntilAdministered) return territory.occupation === 'administered' && territory.resistance <= profile.releaseResistance;
+  return territory.occupation !== 'unsecured'
     && territory.resistance <= profile.releaseResistance
-    && (!frontierTerritory(state, group.location) || localFriendlyGroups(state, group.location).length > 1)
-  );
+    && (!frontier(state, group.location) || localGroups(state, group.location).length > 1);
 }
 
-function shouldAssignGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
+function assignGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
   if (group.status !== 'ready') return false;
   const territory = state.territories[group.location];
   if (!territory || territory.controller !== 'player') return false;
-  const existingGarrison = localFriendlyGroups(state, group.location)
-    .some(candidate => candidate.id !== group.id && candidate.status === 'garrison');
-  if (existingGarrison) return false;
-
+  if (localGroups(state, group.location).some(candidate => candidate.id !== group.id && candidate.status === 'garrison')) return false;
   if (group.location === state.portalTerritory) {
     const controlled = Object.values(state.territories).filter(candidate => candidate.controller === 'player').length;
     return controlled >= 4 && state.escalation >= profile.protectPortalAtEscalation;
   }
-
   if (territory.occupation === 'unsecured') return true;
-  if (profile.holdUntilAdministered && territory.occupation !== 'administered') {
-    return territory.resistance >= profile.garrisonResistance;
-  }
+  if (profile.holdUntilAdministered && territory.occupation !== 'administered') return territory.resistance >= profile.garrisonResistance;
   return territory.occupation === 'contested' && territory.resistance >= profile.garrisonResistance;
 }
 
-function combinedOperationPower(state: GameState, targetId: string): number {
+function operationPower(state: GameState, targetId: string): number {
   const operation = getOperationAtTarget(state, targetId);
   if (!operation) return 0;
-  return operation.participantGroupIds.reduce((sum, groupId) => {
-    const group = state.taskGroups[groupId];
-    return sum + (group ? groupCombatPower(group) : 0);
-  }, 0);
+  return operation.participantGroupIds.reduce((sum, groupId) => sum + (state.taskGroups[groupId] ? combatPower(state.taskGroups[groupId]) : 0), 0);
 }
 
-function chooseAttackTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
-  const profile = POLICY_PROFILES[policy];
+function attackTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+  const profile = POLICY[policy];
   const candidates = getAdjacentOrderTargets(state, group.id)
-    .filter(id => state.territories[id]?.controller === 'enemy');
-  if (!candidates.length) return undefined;
-
-  const scored = candidates.map(id => {
-    const defenderPower = enemyStrengthAt(state, id).power;
-    const existingPower = combinedOperationPower(state, id);
-    const totalAttackPower = groupCombatPower(group) + existingPower;
-    const ratio = totalAttackPower / Math.max(1, defenderPower);
-    const operation = getOperationAtTarget(state, id);
-    const terrainCaution = TERRAIN_ATTACK_CAUTION[TERRITORIES[id].terrain] ?? 0;
-    const threshold = (operation ? profile.joinRatio : profile.attackRatio) + terrainCaution;
-    const strategicValue = TERRITORIES[id].supply * 0.06;
-    const operationBonus = operation ? 0.35 : 0;
-    return { id, ratio, threshold, score: ratio + strategicValue + operationBonus };
-  }).filter(candidate => candidate.ratio >= candidate.threshold);
-
-  scored.sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
-  return scored[0]?.id;
+    .filter(id => state.territories[id]?.controller === 'enemy')
+    .map(id => {
+      const operation = getOperationAtTarget(state, id);
+      const ratio = (combatPower(group) + operationPower(state, id)) / Math.max(1, enemyStrengthAt(state, id).power);
+      const threshold = (operation ? profile.joinRatio : profile.attackRatio) + (TERRAIN_CAUTION[TERRITORIES[id].terrain] ?? 0);
+      const score = ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.35 : 0);
+      return { id, ratio, threshold, score };
+    })
+    .filter(candidate => candidate.ratio >= candidate.threshold)
+    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
+  return candidates[0]?.id;
 }
 
-function distanceToEnemyFront(state: GameState, startId: string): number {
-  if (state.territories[startId]?.controller !== 'player') return Number.POSITIVE_INFINITY;
-  if (frontierTerritory(state, startId)) return 0;
-  const visited = new Set([startId]);
+function distanceToFront(state: GameState, startId: string): number {
+  if (frontier(state, startId)) return 0;
+  const visited = new Set<string>([startId]);
   const queue: Array<{ id: string; distance: number }> = [{ id: startId, distance: 0 }];
   while (queue.length) {
-    const current = queue.shift()!;
+    const current = queue.shift();
+    if (!current) break;
     for (const neighbour of TERRITORIES[current.id].neighbours) {
       if (visited.has(neighbour) || state.territories[neighbour]?.controller !== 'player') continue;
-      if (frontierTerritory(state, neighbour)) return current.distance + 1;
+      if (frontier(state, neighbour)) return current.distance + 1;
       visited.add(neighbour);
       queue.push({ id: neighbour, distance: current.distance + 1 });
     }
@@ -275,76 +224,66 @@ function distanceToEnemyFront(state: GameState, startId: string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-function chooseMoveTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+function moveTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+  const profile = POLICY[policy];
   const candidates = getAdjacentOrderTargets(state, group.id)
-    .filter(id => state.territories[id]?.controller === 'player');
-  if (!candidates.length) return undefined;
-
-  const scored = candidates.map(id => {
-    const distance = distanceToEnemyFront(state, id);
-    const territory = state.territories[id];
-    const supplyBonus = territory.supplied ? 0.4 : -0.3;
-    const occupationBonus = territory.occupation === 'unsecured' ? 0.5 : territory.occupation === 'contested' ? 0.25 : 0;
-    const portalPenalty = id === state.portalTerritory && state.escalation >= POLICY_PROFILES[policy].protectPortalAtEscalation ? -0.6 : 0;
-    return {
-      id,
-      score: (Number.isFinite(distance) ? -distance : -99) + supplyBonus + occupationBonus + portalPenalty + TERRITORIES[id].supply * 0.03
-    };
-  });
-  scored.sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
-  return scored[0]?.id;
+    .filter(id => state.territories[id]?.controller === 'player')
+    .map(id => {
+      const territory = state.territories[id];
+      const distance = distanceToFront(state, id);
+      const supply = territory.supplied ? 0.4 : -0.3;
+      const occupation = territory.occupation === 'unsecured' ? 0.5 : territory.occupation === 'contested' ? 0.25 : 0;
+      const portal = id === state.portalTerritory && state.escalation >= profile.protectPortalAtEscalation ? -0.6 : 0;
+      return { id, score: (Number.isFinite(distance) ? -distance : -99) + supply + occupation + portal + TERRITORIES[id].supply * 0.03 };
+    })
+    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
+  return candidates[0]?.id;
 }
 
-function issueAutomatedOrders(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
+function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
   let next = state;
-  const groupIds = Object.keys(next.taskGroups).sort();
-
-  for (const groupId of groupIds) {
-    if (next.status !== 'playing') break;
-    if (!next.taskGroups[groupId]) continue;
+  for (const groupId of Object.keys(next.taskGroups).sort()) {
+    if (!next.taskGroups[groupId] || next.status !== 'playing') continue;
     next = selectTaskGroup(next, groupId);
     let group = next.taskGroups[groupId];
     if (!group) continue;
 
-    if (shouldReleaseGarrison(next, group, POLICY_PROFILES[policy])) {
+    if (releaseGarrison(next, group, POLICY[policy])) {
       next = setGarrison(next);
       telemetry.garrisonsReleased += 1;
       group = next.taskGroups[groupId];
     }
-
     if (!canIssueOperationalOrder(group)) continue;
 
-    if (shouldAssignGarrison(next, group, POLICY_PROFILES[policy])) {
+    if (assignGarrison(next, group, POLICY[policy])) {
       next = setGarrison(next);
       telemetry.garrisonsAssigned += 1;
       continue;
     }
 
-    const attackTarget = chooseAttackTarget(next, group, policy);
-    if (attackTarget) {
-      const joining = Boolean(getOperationAtTarget(next, attackTarget));
-      next = selectTerritory(next, attackTarget);
-      const beforeOperationCount = Object.keys(next.operations).length;
+    const attack = attackTarget(next, group, policy);
+    if (attack) {
+      const joining = Boolean(getOperationAtTarget(next, attack));
+      next = selectTerritory(next, attack);
+      const before = Object.keys(next.operations).length;
       next = beginOperation(next);
-      const afterOperationCount = Object.keys(next.operations).length;
+      const after = Object.keys(next.operations).length;
       if (joining) telemetry.operationsJoined += 1;
-      else if (afterOperationCount > beforeOperationCount) telemetry.operationsStarted += 1;
+      else if (after > before) telemetry.operationsStarted += 1;
       continue;
     }
 
-    const moveTarget = chooseMoveTarget(next, group, policy);
-    if (moveTarget && moveTarget !== group.location) {
-      next = selectTerritory(next, moveTarget);
-      const beforeOrder = next.taskGroups[groupId]?.order;
+    const move = moveTarget(next, group, policy);
+    if (move && move !== group.location) {
+      next = selectTerritory(next, move);
       next = issueMove(next);
-      if (!beforeOrder && next.taskGroups[groupId]?.order?.type === 'move') telemetry.movesIssued += 1;
+      if (next.taskGroups[groupId]?.order?.type === 'move') telemetry.movesIssued += 1;
     }
   }
-
   return next;
 }
 
-function defeatCauseFor(state: GameState): DefeatCause | undefined {
+function defeatCause(state: GameState): DefeatCause | undefined {
   if (state.status !== 'defeat') return undefined;
   if (state.territories[state.portalTerritory]?.controller !== 'player') return 'portal-lost';
   if (totalPersonnel(state) < 1200) return 'personnel-collapse';
@@ -352,7 +291,7 @@ function defeatCauseFor(state: GameState): DefeatCause | undefined {
   return 'unknown';
 }
 
-function countSupplyDays(state: GameState) {
+function supplyExposure(state: GameState) {
   let cutOff = 0;
   let critical = 0;
   for (const allocation of Object.values(state.logistics.formationAllocations)) {
@@ -362,12 +301,7 @@ function countSupplyDays(state: GameState) {
   return { cutOff, critical };
 }
 
-export function simulateCurrentEngineCampaign(
-  seed: number,
-  difficulty: Difficulty,
-  policy: BalancePolicyId,
-  maxTurns = 120
-): CampaignBalanceResult {
+export function simulateCurrentEngineCampaign(seed: number, difficulty: Difficulty, policy: BalancePolicyId, maxTurns = 120): CampaignBalanceResult {
   let state = newGame(seed, difficulty, false);
   let maxEscalation = state.escalation;
   let minNetworkEfficiency = state.logistics.networkEfficiency;
@@ -376,27 +310,19 @@ export function simulateCurrentEngineCampaign(
   let enemyRecaptures = 0;
   let cutOffFormationDays = 0;
   let criticalSupplyFormationDays = 0;
-  const telemetry: ActionTelemetry = {
-    operationsStarted: 0,
-    operationsJoined: 0,
-    movesIssued: 0,
-    garrisonsAssigned: 0,
-    garrisonsReleased: 0
-  };
+  const telemetry: ActionTelemetry = { operationsStarted: 0, operationsJoined: 0, movesIssued: 0, garrisonsAssigned: 0, garrisonsReleased: 0 };
 
   while (state.status === 'playing' && state.turn < maxTurns) {
-    state = issueAutomatedOrders(state, policy, telemetry);
-    const controllersBefore = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
+    state = issueOrders(state, policy, telemetry);
+    const controllers = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
     state = endTurn(state);
-
     for (const [id, territory] of Object.entries(state.territories)) {
-      if (controllersBefore[id] === 'enemy' && territory.controller === 'player') captures += 1;
-      if (controllersBefore[id] === 'player' && territory.controller === 'enemy') enemyRecaptures += 1;
+      if (controllers[id] === 'enemy' && territory.controller === 'player') captures += 1;
+      if (controllers[id] === 'player' && territory.controller === 'enemy') enemyRecaptures += 1;
     }
-
-    const supplyDays = countSupplyDays(state);
-    cutOffFormationDays += supplyDays.cutOff;
-    criticalSupplyFormationDays += supplyDays.critical;
+    const exposure = supplyExposure(state);
+    cutOffFormationDays += exposure.cutOff;
+    criticalSupplyFormationDays += exposure.critical;
     maxEscalation = Math.max(maxEscalation, state.escalation);
     minNetworkEfficiency = Math.min(minNetworkEfficiency, state.logistics.networkEfficiency);
     maxOperationalCrisisTurns = Math.max(maxOperationalCrisisTurns, state.enemyStrategy.operationalCrisisTurns);
@@ -404,12 +330,7 @@ export function simulateCurrentEngineCampaign(
 
   const activePersonnel = totalPersonnel(state);
   const woundedPool = state.woundedPool;
-  const permanentLossEstimate = Math.max(0, STARTING_PERSONNEL - activePersonnel - woundedPool);
   const functionalArmour = totalFunctionalArmour(state);
-  const damagedArmour = totalDamagedArmour(state);
-  const controlledTerritories = Object.values(state.territories).filter(territory => territory.controller === 'player').length;
-  const administeredTerritories = Object.values(state.territories).filter(territory => territory.occupation === 'administered').length;
-  const unsecuredTerritories = Object.values(state.territories).filter(territory => territory.occupation === 'unsecured').length;
   const outcome: BalanceOutcome = state.status === 'playing' ? 'timeout' : state.status;
 
   return {
@@ -418,16 +339,16 @@ export function simulateCurrentEngineCampaign(
     difficulty,
     policy,
     outcome,
-    defeatCause: defeatCauseFor(state),
+    defeatCause: defeatCause(state),
     finalTurn: state.turn,
-    controlledTerritories,
-    administeredTerritories,
-    unsecuredTerritories,
+    controlledTerritories: Object.values(state.territories).filter(territory => territory.controller === 'player').length,
+    administeredTerritories: Object.values(state.territories).filter(territory => territory.occupation === 'administered').length,
+    unsecuredTerritories: Object.values(state.territories).filter(territory => territory.occupation === 'unsecured').length,
     activePersonnel,
     woundedPool,
-    permanentLossEstimate,
+    permanentLossEstimate: Math.max(0, STARTING_PERSONNEL - activePersonnel - woundedPool),
     functionalArmour,
-    damagedArmour,
+    damagedArmour: totalDamagedArmour(state),
     functionalArmourPercentOfStart: Math.round(functionalArmour / STARTING_FUNCTIONAL_ARMOUR * 1000) / 10,
     maxEscalation: Math.round(maxEscalation * 10) / 10,
     minNetworkEfficiency,
@@ -441,31 +362,21 @@ export function simulateCurrentEngineCampaign(
   };
 }
 
-const median = (values: number[]): number => {
+const round1 = (value: number) => Math.round(value * 10) / 10;
+const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+const median = (values: number[]) => {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
-const average = (values: number[]): number => values.length
-  ? values.reduce((sum, value) => sum + value, 0) / values.length
-  : 0;
-
-const round1 = (value: number) => Math.round(value * 10) / 10;
-
-function summariseGroup(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId): BalanceGroupSummary {
+function groupSummary(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId): BalanceGroupSummary {
   const victories = results.filter(result => result.outcome === 'victory');
   const defeats = results.filter(result => result.outcome === 'defeat');
   const timeouts = results.filter(result => result.outcome === 'timeout');
-  const defeatCauses: Record<DefeatCause, number> = {
-    'portal-lost': 0,
-    'personnel-collapse': 0,
-    'operational-crisis': 0,
-    unknown: 0
-  };
+  const defeatCauses: Record<DefeatCause, number> = { 'portal-lost': 0, 'personnel-collapse': 0, 'operational-crisis': 0, unknown: 0 };
   for (const result of defeats) defeatCauses[result.defeatCause ?? 'unknown'] += 1;
-
   return {
     difficulty,
     policy,
@@ -490,14 +401,13 @@ function summariseGroup(results: CampaignBalanceResult[], difficulty: Difficulty
   };
 }
 
-function summarisePortal(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId, portalTerritory: string): PortalBalanceSummary {
-  const victories = results.filter(result => result.outcome === 'victory').length;
+function portalSummary(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId, portalTerritory: string): PortalBalanceSummary {
   return {
     difficulty,
     policy,
     portalTerritory,
     campaigns: results.length,
-    victoryRate: round1(victories / Math.max(1, results.length) * 100),
+    victoryRate: round1(results.filter(result => result.outcome === 'victory').length / Math.max(1, results.length) * 100),
     medianFinalTurn: round1(median(results.map(result => result.finalTurn))),
     medianActivePersonnel: Math.round(median(results.map(result => result.activePersonnel))),
     averageEnemyRecaptures: round1(average(results.map(result => result.enemyRecaptures)))
@@ -508,8 +418,8 @@ export function runCurrentEngineBalanceSimulation(options: BalanceSimulationOpti
   const runsPerStart = Math.max(1, Math.round(options.runsPerStart));
   const maxTurns = Math.max(10, Math.round(options.maxTurns));
   const seedOffset = Math.max(0, Math.round(options.seedOffset ?? 1));
-  const difficulties = options.difficulties?.length ? [...options.difficulties] : ['story', 'standard', 'hard'];
-  const policies = options.policies?.length ? [...options.policies] : ['aggressive', 'balanced', 'cautious'];
+  const difficulties: Difficulty[] = options.difficulties?.length ? [...options.difficulties] : [...DEFAULT_DIFFICULTIES];
+  const policies: BalancePolicyId[] = options.policies?.length ? [...options.policies] : [...DEFAULT_POLICIES];
   const results: CampaignBalanceResult[] = [];
 
   for (const difficulty of difficulties) {
@@ -523,17 +433,11 @@ export function runCurrentEngineBalanceSimulation(options: BalanceSimulationOpti
     }
   }
 
-  const summaries = difficulties.flatMap(difficulty => policies.map(policy => summariseGroup(
-    results.filter(result => result.difficulty === difficulty && result.policy === policy),
-    difficulty,
-    policy
+  const summaries: BalanceGroupSummary[] = difficulties.flatMap(difficulty => policies.map(policy => groupSummary(
+    results.filter(result => result.difficulty === difficulty && result.policy === policy), difficulty, policy
   )));
-
-  const portalSummaries = difficulties.flatMap(difficulty => policies.flatMap(policy => SLICE_IDS.map(portalTerritory => summarisePortal(
-    results.filter(result => result.difficulty === difficulty && result.policy === policy && result.portalTerritory === portalTerritory),
-    difficulty,
-    policy,
-    portalTerritory
+  const portalSummaries: PortalBalanceSummary[] = difficulties.flatMap(difficulty => policies.flatMap(policy => SLICE_IDS.map(portalTerritory => portalSummary(
+    results.filter(result => result.difficulty === difficulty && result.policy === policy && result.portalTerritory === portalTerritory), difficulty, policy, portalTerritory
   ))));
 
   return {
@@ -548,7 +452,7 @@ export function runCurrentEngineBalanceSimulation(options: BalanceSimulationOpti
 }
 
 export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceReport): string {
-  const lines: string[] = [
+  const lines = [
     '# Future Conquest current-engine balance simulation',
     '',
     `Campaigns: ${report.campaigns} across ${report.territoryCount} portal starts. Maximum campaign day: ${report.options.maxTurns}.`,
@@ -558,19 +462,16 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Median victory day | Median personnel | Functional armour | Median minimum network | Avg enemy recaptures |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'
   ];
-
   for (const summary of report.summaries) {
     lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} |`);
   }
 
-  const standardBalanced = report.portalSummaries
+  const starts = report.portalSummaries
     .filter(summary => summary.difficulty === 'standard' && summary.policy === 'balanced')
     .sort((first, second) => first.victoryRate - second.victoryRate || second.medianFinalTurn - first.medianFinalTurn);
-  if (standardBalanced.length) {
+  if (starts.length) {
     lines.push('', '## Standard / balanced portal sensitivity', '', '| Portal | Victory | Median final day | Median personnel | Avg enemy recaptures |', '| --- | ---: | ---: | ---: | ---: |');
-    for (const summary of standardBalanced) {
-      lines.push(`| ${TERRITORIES[summary.portalTerritory].centre} (${summary.portalTerritory}) | ${summary.victoryRate}% | ${summary.medianFinalTurn} | ${summary.medianActivePersonnel} | ${summary.averageEnemyRecaptures} |`);
-    }
+    for (const summary of starts) lines.push(`| ${TERRITORIES[summary.portalTerritory].centre} (${summary.portalTerritory}) | ${summary.victoryRate}% | ${summary.medianFinalTurn} | ${summary.medianActivePersonnel} | ${summary.averageEnemyRecaptures} |`);
   }
 
   lines.push(
@@ -580,8 +481,7 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '- These are deterministic heuristic player doctrines driving the real current playable engine through its public order functions.',
     '- They are comparative balance probes, not predictions of human win rate.',
     '- The bots currently use movement, attack and garrison orders. Manual engineering, interdiction and logistics-priority optimisation are deliberately excluded from this first baseline.',
-    '- A result that is trivial for every doctrine is strong evidence of an overly forgiving engine. A result that defeats even cautious play frequently is strong evidence of excessive pressure.'
+    '- If every doctrine wins easily, the campaign is probably too forgiving. If cautious play loses frequently, pressure is probably too high.'
   );
-
   return `${lines.join('\n')}\n`;
 }
