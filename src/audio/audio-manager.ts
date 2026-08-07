@@ -1,24 +1,34 @@
 import type { GlobalSettings } from '../game/global-settings';
 import { DEFAULT_GLOBAL_SETTINGS } from '../game/global-settings';
 
+interface RegisteredAudioTrack {
+  src: string;
+  gain: number;
+}
+
+interface RegisteredMusicTrack extends RegisteredAudioTrack {
+  loop: boolean;
+}
+
 export const MUSIC_TRACKS = {
   'black-protocol-dawn': {
-    src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.mp3`,
+    src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.webm`,
     loop: true,
     gain: 1
   }
-} as const;
+} as const satisfies Record<string, RegisteredMusicTrack>;
 
 export const MUSIC_CONTEXTS = {
   title: 'black-protocol-dawn',
   prologue: 'black-protocol-dawn'
 } as const;
 
-export const SFX_TRACKS = {} as const;
+// Sound effects can be registered here as the interface gains authored SFX.
+export const SFX_TRACKS: Record<string, RegisteredAudioTrack> = {};
 
 export type MusicTrackId = keyof typeof MUSIC_TRACKS;
 export type MusicContext = keyof typeof MUSIC_CONTEXTS;
-export type SfxId = keyof typeof SFX_TRACKS;
+export type SfxId = string;
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
@@ -73,11 +83,11 @@ class AudioManager {
     const track = SFX_TRACKS[id];
     if (!track || this.settings.muted) return;
     const sound = new Audio(track.src);
-    sound.volume = clamp(this.settings.masterVolume * this.settings.sfxVolume);
+    sound.volume = clamp(this.settings.masterVolume * this.settings.sfxVolume * track.gain);
     try {
       await sound.play();
     } catch {
-      // SFX is intentionally best-effort when browser autoplay policy blocks playback.
+      // SFX is best-effort when browser autoplay policy blocks playback.
     }
   }
 
