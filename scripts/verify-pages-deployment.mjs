@@ -20,6 +20,9 @@ if (!Number.isInteger(delayMs) || delayMs < 0) {
 const siteRoot = pageUrl.endsWith('/') ? pageUrl : `${pageUrl}/`;
 const metadataUrl = new URL('build-info.json', siteRoot);
 const titleManifestUrl = new URL('title-card-info.json', siteRoot);
+const soundtrackUrl = new URL('audio/black-protocol-dawn.mp3', siteRoot);
+const SOUNDTRACK_BYTES = 6_085_073;
+const SOUNDTRACK_SHA256 = '80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622';
 const runId = process.env.GITHUB_RUN_ID ?? Date.now().toString();
 const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const noCacheHeaders = {
@@ -68,6 +71,23 @@ async function verifyTitleCard(attempt) {
   return null;
 }
 
+async function verifySoundtrack(attempt) {
+  const requestUrl = cacheBustedUrl(soundtrackUrl, `${runId}-${attempt}-soundtrack`);
+  const response = await fetch(requestUrl, { headers: noCacheHeaders });
+  if (!response.ok) {
+    return `soundtrack returned HTTP ${response.status}`;
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const actualHash = createHash('sha256').update(bytes).digest('hex');
+  const hasId3Header = bytes.subarray(0, 3).toString('ascii') === 'ID3';
+  if (bytes.length !== SOUNDTRACK_BYTES || !hasId3Header || actualHash !== SOUNDTRACK_SHA256) {
+    return `soundtrack failed integrity: ${bytes.length} bytes, SHA-256 ${actualHash}`;
+  }
+
+  return null;
+}
+
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
   const requestUrl = cacheBustedUrl(metadataUrl, `${runId}-${attempt}`);
 
@@ -80,11 +100,16 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
 
       if (actualSha === expectedSha) {
         const titleError = await verifyTitleCard(attempt);
-        if (!titleError) {
-          console.log(`Verified GitHub Pages deployment at ${pageUrl}: ${actualSha}, including the title-card WebP.`);
-          process.exit(0);
+        if (titleError) {
+          console.log(`Attempt ${attempt}/${attempts}: commit is live but ${titleError}.`);
+        } else {
+          const soundtrackError = await verifySoundtrack(attempt);
+          if (!soundtrackError) {
+            console.log(`Verified GitHub Pages deployment at ${pageUrl}: ${actualSha}, including the title-card WebP and Black Protocol Dawn soundtrack.`);
+            process.exit(0);
+          }
+          console.log(`Attempt ${attempt}/${attempts}: commit and title card are live but ${soundtrackError}.`);
         }
-        console.log(`Attempt ${attempt}/${attempts}: commit is live but ${titleError}.`);
       } else {
         console.log(`Attempt ${attempt}/${attempts}: live SHA is ${actualSha || 'missing'}; expected ${expectedSha}.`);
       }
@@ -101,5 +126,5 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
 }
 
 throw new Error(
-  `GitHub Pages did not serve commit ${expectedSha} with a verified title card from ${siteRoot} after ${attempts} attempts.`
+  `GitHub Pages did not serve commit ${expectedSha} with a verified title card and soundtrack from ${siteRoot} after ${attempts} attempts.`
 );
