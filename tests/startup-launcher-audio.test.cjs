@@ -57,10 +57,9 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
 
 test('Engineering and Logistics stacks use the desktop scrolling contract', () => {
   const layout = fs.readFileSync('src/desktop-command-fit.css', 'utf8');
-  assert.match(layout, /\.command-view,\s*\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{/);
-  assert.match(layout, /overflow-y:\s*auto/);
-  assert.match(layout, /overscroll-behavior:\s*contain/);
-  assert.match(layout, /scrollbar-gutter:\s*stable/);
+  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?overflow-y:\s*auto/);
+  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?overscroll-behavior:\s*contain/);
+  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?scrollbar-gutter:\s*stable/);
 });
 
 test('launcher uses the approved title card rather than drawing a duplicate title over it', () => {
