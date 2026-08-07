@@ -1,0 +1,238 @@
+/* Final prologue presentation pass: retain the off-register energy while making
+   the page plate, panel framing and controls read as one deliberate system. */
+.motion-comic-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(118, 70, 177, .12), transparent 34%),
+    radial-gradient(circle at 82% 72%, rgba(81, 177, 199, .08), transparent 38%),
+    linear-gradient(135deg, rgba(126, 70, 174, .035), transparent 36% 64%, rgba(66, 157, 184, .03));
+}
+
+.motion-comic-page {
+  border-width: 7px;
+  border-color: rgba(210, 213, 207, .92);
+  background: #070910;
+  box-shadow:
+    9px 8px 0 rgba(116, 67, 166, .28),
+    -5px 4px 0 rgba(73, 153, 179, .11),
+    0 26px 72px rgba(0, 0, 0, .72);
+}
+
+.motion-comic-page::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  border: 1px solid rgba(232, 236, 232, .16);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .34);
+  pointer-events: none;
+}
+
+.motion-comic-page-art {
+  background:
+    radial-gradient(circle at 72% 26%, rgba(123, 73, 181, .24), transparent 30%),
+    radial-gradient(circle at 22% 75%, rgba(62, 142, 168, .13), transparent 34%),
+    linear-gradient(145deg, #090c13 0%, #17101f 46%, #091017 100%) !important;
+}
+
+/* Keep a restrained ghost of the original page sprite as texture rather than
+   allowing it to read as an accidentally misregistered second artwork layer. */
+.motion-comic-page-sprite {
+  opacity: .12;
+  filter: saturate(1.18) contrast(.92) brightness(.74) blur(1px);
+}
+
+.motion-comic-page-sprite.sprite-page-1 {
+  transform: translateY(0) scale(1.012);
+}
+
+.motion-comic-page-sprite.sprite-page-2 {
+  transform: translateY(-33.333333%) scale(1.012);
+}
+
+.comic-page-panel {
+  border-color: rgba(5, 8, 12, .82);
+  box-shadow: inset 0 0 0 1px rgba(225, 232, 231, .06);
+}
+
+.comic-page-panel.is-active {
+  border-color: rgba(226, 233, 229, .72);
+  box-shadow:
+    0 0 0 1px rgba(4, 8, 12, .9),
+    0 0 22px rgba(132, 86, 190, .2),
+    inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+/* Final Page 1 crop corrections. Increasing background-position Y moves the
+   source image up inside a cover crop; decreasing it moves the source down. */
+.motion-comic-page.page-1 [data-panel-id='anomaly'] {
+  background-position: 50% 60%;
+}
+
+.motion-comic-page.page-1 [data-panel-id='order'] {
+  background-position: 48% 44%;
+}
+
+/* Text should read as authored comic lettering, not another UI panel. */
+.motion-comic-viewport-beat {
+  border-color: rgba(11, 16, 20, .94);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .38);
+}
+
+.motion-comic-viewport-beat.beat-caption {
+  background: rgba(240, 238, 226, .97);
+}
+
+.motion-comic-viewport-beat.beat-dialogue {
+  background: rgba(248, 248, 242, .98);
+}
+
+.motion-comic-viewport-beat.beat-radio {
+  border-color: rgba(141, 218, 232, .64);
+  background: rgba(3, 16, 23, .92);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .5);
+}
+
+.motion-comic-subtitle {
+  bottom: 84px;
+  width: min(760px, calc(100vw - 40px));
+}
+
+/* The visual progress line remains thin, but the real range input has a much
+   larger pointer target for mouse, touch and pen scrubbing. */
+.motion-comic-progress {
+  position: relative;
+  z-index: 8;
+  overflow: visible;
+  background: rgba(255, 255, 255, .08);
+}
+
+.motion-comic-progress i {
+  pointer-events: none;
+}
+
+.motion-comic-progress input[type='range'] {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  transform: translateY(-50%);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.motion-comic-progress input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+
+.motion-comic-progress input[type='range']::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 2px solid #d9f7fb;
+  border-radius: 50%;
+  background: #18313a;
+  box-shadow: 0 0 0 3px rgba(117, 219, 233, .18), 0 2px 7px rgba(0, 0, 0, .45);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.motion-comic-progress input[type='range']::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+
+.motion-comic-progress input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #d9f7fb;
+  border-radius: 50%;
+  background: #18313a;
+  box-shadow: 0 0 0 3px rgba(117, 219, 233, .18), 0 2px 7px rgba(0, 0, 0, .45);
+}
+
+.motion-comic-progress input[type='range']:focus-visible {
+  outline: none;
+}
+
+.motion-comic-progress:focus-within {
+  box-shadow: 0 0 0 2px rgba(117, 219, 233, .28);
+}
+
+.motion-comic-controls {
+  gap: 8px;
+}
+
+.motion-comic-controls .motion-comic-audio-toggle,
+.motion-comic-controls .motion-comic-settings,
+.motion-comic-controls .motion-comic-subtitles {
+  padding-inline: 12px;
+}
+
+@media (max-width: 820px), (max-height: 610px) {
+  .motion-comic-controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .motion-comic-controls .motion-comic-previous { grid-column: 1; grid-row: 1; }
+  .motion-comic-controls .motion-comic-play { grid-column: 2; grid-row: 1; }
+  .motion-comic-controls .motion-comic-next { grid-column: 3; grid-row: 1; }
+  .motion-comic-controls .motion-comic-audio-toggle { grid-column: 4; grid-row: 1; }
+  .motion-comic-controls .motion-comic-settings { grid-column: 1; grid-row: 2; }
+  .motion-comic-controls .motion-comic-subtitles { grid-column: 2; grid-row: 2; }
+  .motion-comic-controls .motion-comic-counter { grid-column: 3; grid-row: 2; align-self: center; justify-self: center; }
+  .motion-comic-controls .motion-comic-skip { grid-column: 4; grid-row: 2; align-self: stretch; margin-left: 0; }
+
+  .motion-comic-controls button {
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 7px;
+    font-size: .76rem;
+  }
+
+  .motion-comic-subtitle {
+    bottom: 82px;
+    width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 560px) {
+  .motion-comic-page {
+    border-width: 4px;
+    box-shadow:
+      5px 5px 0 rgba(116, 67, 166, .25),
+      -3px 3px 0 rgba(73, 153, 179, .1),
+      0 20px 52px rgba(0, 0, 0, .7);
+  }
+
+  .motion-comic-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .motion-comic-controls .motion-comic-previous { grid-column: 1; grid-row: 1; }
+  .motion-comic-controls .motion-comic-play { grid-column: 2; grid-row: 1; }
+  .motion-comic-controls .motion-comic-next { grid-column: 3; grid-row: 1; }
+  .motion-comic-controls .motion-comic-audio-toggle { grid-column: 1; grid-row: 2; }
+  .motion-comic-controls .motion-comic-settings { grid-column: 2; grid-row: 2; }
+  .motion-comic-controls .motion-comic-subtitles { grid-column: 3; grid-row: 2; }
+  .motion-comic-controls .motion-comic-counter { grid-column: 1 / span 2; grid-row: 3; }
+  .motion-comic-controls .motion-comic-skip { grid-column: 3; grid-row: 3; }
+
+  .motion-comic-progress input[type='range'] {
+    height: 30px;
+  }
+}
