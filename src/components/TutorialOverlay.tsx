@@ -11,7 +11,7 @@ interface Props {
 }
 
 type TutorialPlacement = 'above' | 'below' | 'left' | 'right' | 'floating';
-type ExplanationTopic = 'logistics' | 'intelligence';
+type ExplanationTopic = 'forces' | 'logistics' | 'intelligence';
 
 interface TargetBox {
   top: number;
@@ -42,6 +42,15 @@ interface ExplanationPhase {
 }
 
 const EXPLANATION_PHASES: Record<ExplanationTopic, ExplanationPhase[]> = {
+  forces: [
+    {
+      id: 'forces-organisation',
+      title: 'Understand force organisation',
+      instruction: 'The Forces page is where you inspect and reorganise the expedition. Split creates a new independent formation, Transfer moves personnel or armour between formations in the same location, Merge combines compatible formations, and Rename changes a formation label. These tools are optional and are unavailable while a formation is committed to operations, movement or recovery.',
+      focusSelector: '.force-organisation',
+      hint: 'You do not need to reorganise anything now. This step is only explaining the tools available for later campaign decisions.'
+    }
+  ],
   logistics: [
     {
       id: 'logistics-network',
@@ -91,18 +100,37 @@ const EXPLANATION_PHASES: Record<ExplanationTopic, ExplanationPhase[]> = {
 };
 
 const EXPLANATION_STORAGE_KEY = 'future-conquest-tutorial-explanation-v1';
+const TUTORIAL_SEEN_STORAGE_KEY = 'future-conquest-tutorial-seen-v1';
+const TUTORIAL_REPLAY_STORAGE_KEY = 'future-conquest-tutorial-replay-v1';
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const CARD_GAP = 14;
 const VIEWPORT_MARGIN = 10;
 const MOBILE_BREAKPOINT = 760;
-const EXPANDED_TOTAL_STEPS = 13;
+const EXPANDED_TOTAL_STEPS = 14;
+
+function readFlag(key: string) {
+  try {
+    return window.localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string, value: boolean) {
+  try {
+    if (value) window.localStorage.setItem(key, 'true');
+    else window.localStorage.removeItem(key);
+  } catch {
+    // Storage is optional; campaign tutorial state remains the fallback.
+  }
+}
 
 function readStoredExplanation(): ExplanationProgress | null {
   try {
     const stored = window.localStorage.getItem(EXPLANATION_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as Partial<ExplanationProgress>;
-    if ((parsed.topic !== 'logistics' && parsed.topic !== 'intelligence') || typeof parsed.phase !== 'number') return null;
+    if ((parsed.topic !== 'forces' && parsed.topic !== 'logistics' && parsed.topic !== 'intelligence') || typeof parsed.phase !== 'number') return null;
     const maximumPhase = EXPLANATION_PHASES[parsed.topic].length - 1;
     return { topic: parsed.topic, phase: clamp(Math.round(parsed.phase), 0, maximumPhase) };
   } catch {
@@ -113,12 +141,12 @@ function readStoredExplanation(): ExplanationProgress | null {
 function expandedStepNumber(step: TutorialStep, fallback: number) {
   const mapping: Record<string, number> = {
     formation: 1,
-    operation: 2,
-    occupation: 3,
-    movement: 4,
-    logistics: 5,
-    intelligence: 9,
-    engineering: 13
+    operation: 3,
+    occupation: 4,
+    movement: 5,
+    logistics: 6,
+    intelligence: 10,
+    engineering: 14
   };
   return mapping[step.id] ?? fallback;
 }
@@ -128,6 +156,8 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const previousStepId = useRef(step?.id);
   const [explanation, setExplanation] = useState<ExplanationProgress | null>(() => readStoredExplanation());
   const [reviewPhase, setReviewPhase] = useState<number | null>(null);
+  const [tutorialSeen, setTutorialSeen] = useState(() => readFlag(TUTORIAL_SEEN_STORAGE_KEY));
+  const [replayRequested, setReplayRequested] = useState(() => readFlag(TUTORIAL_REPLAY_STORAGE_KEY));
   const [position, setPosition] = useState<OverlayPosition>({
     top: VIEWPORT_MARGIN,
     left: VIEWPORT_MARGIN,
@@ -135,23 +165,64 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     ready: false
   });
 
+  const finishTutorialExperience = useCallback(() => {
+    writeFlag(TUTORIAL_SEEN_STORAGE_KEY, true);
+    writeFlag(TUTORIAL_REPLAY_STORAGE_KEY, false);
+    setTutorialSeen(true);
+    setReplayRequested(false);
+    setExplanation(null);
+    setReviewPhase(null);
+  }, []);
+
+  useEffect(() => {
+    const onCampaignAction = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest('button');
+      if (button?.textContent?.trim() !== 'Restart tutorial') return;
+
+      writeFlag(TUTORIAL_REPLAY_STORAGE_KEY, true);
+      setReplayRequested(true);
+      setExplanation(null);
+      setReviewPhase(null);
+    };
+
+    document.addEventListener('click', onCampaignAction, true);
+    return () => document.removeEventListener('click', onCampaignAction, true);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('tutorial-seen', tutorialSeen);
+    return () => document.documentElement.classList.remove('tutorial-seen');
+  }, [tutorialSeen]);
+
+  useEffect(() => {
+    if (!step || !tutorialSeen || replayRequested) return;
+    onSkip();
+  }, [onSkip, replayRequested, step, tutorialSeen]);
+
   useLayoutEffect(() => {
     const previous = previousStepId.current;
     const current = step?.id;
 
-    if (previous === 'logistics' && current === 'intelligence') {
+    if (previous === 'formation' && current === 'operation') {
+      setExplanation({ topic: 'forces', phase: 0 });
+      setReviewPhase(null);
+    } else if (previous === 'logistics' && current === 'intelligence') {
       setExplanation({ topic: 'logistics', phase: 0 });
       setReviewPhase(null);
     } else if (previous === 'intelligence' && current === 'engineering') {
       setExplanation({ topic: 'intelligence', phase: 0 });
       setReviewPhase(null);
+    } else if (previous === 'engineering' && current === undefined) {
+      finishTutorialExperience();
     } else if (current === 'formation') {
       setExplanation(null);
       setReviewPhase(null);
     }
 
     previousStepId.current = current;
-  }, [step?.id]);
+  }, [finishTutorialExperience, step?.id]);
 
   useEffect(() => {
     try {
@@ -168,6 +239,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const displayId = currentExplanationPhase?.id ?? step?.id;
   const resolvedSelector = currentExplanationPhase?.focusSelector ?? anchorSelector;
   const explanationMode = Boolean(currentExplanationPhase);
+  const suppressAutomaticTutorial = Boolean(step && tutorialSeen && !replayRequested);
 
   const findTarget = useCallback(() => (
     resolvedSelector ? document.querySelector<HTMLElement>(resolvedSelector) : null
@@ -251,7 +323,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   }, [findTarget]);
 
   useEffect(() => {
-    if (!step && !currentExplanationPhase) return;
+    if ((!step && !currentExplanationPhase) || suppressAutomaticTutorial) return;
     const target = findTarget();
     if (target) {
       const rect = target.getBoundingClientRect();
@@ -265,10 +337,10 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       window.cancelAnimationFrame(frame);
       window.clearTimeout(settle);
     };
-  }, [displayId, findTarget, step, currentExplanationPhase, updatePosition]);
+  }, [displayId, findTarget, step, currentExplanationPhase, suppressAutomaticTutorial, updatePosition]);
 
   useLayoutEffect(() => {
-    if (!step && !currentExplanationPhase) return;
+    if ((!step && !currentExplanationPhase) || suppressAutomaticTutorial) return;
     const target = findTarget();
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition);
     if (cardRef.current) observer?.observe(cardRef.current);
@@ -285,19 +357,9 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       window.visualViewport?.removeEventListener('resize', updatePosition);
       window.visualViewport?.removeEventListener('scroll', updatePosition);
     };
-  }, [displayId, findTarget, step, currentExplanationPhase, updatePosition]);
+  }, [displayId, findTarget, step, currentExplanationPhase, suppressAutomaticTutorial, updatePosition]);
 
-  if (!step && !currentExplanationPhase) return null;
-
-  const focusControl = () => {
-    const target = findTarget();
-    if (!target) return;
-    target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
-    window.setTimeout(() => {
-      target.focus({ preventScroll: true });
-      updatePosition();
-    }, 320);
-  };
+  if (suppressAutomaticTutorial || (!step && !currentExplanationPhase)) return null;
 
   const advanceExplanation = () => {
     if (!explanation) return;
@@ -323,8 +385,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   };
 
   const skip = () => {
-    setExplanation(null);
-    setReviewPhase(null);
+    finishTutorialExperience();
     onSkip();
   };
 
@@ -333,7 +394,9 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const hint = currentExplanationPhase?.hint ?? 'The highlighted control is your next action.';
   const visibleExplanationPhase = explanation ? (reviewPhase ?? explanation.phase) : 0;
   const visibleStepNumber = explanation
-    ? (explanation.topic === 'logistics' ? 6 : 10) + visibleExplanationPhase
+    ? explanation.topic === 'forces'
+      ? 2
+      : (explanation.topic === 'logistics' ? 7 : 11) + visibleExplanationPhase
     : step ? expandedStepNumber(step, stepNumber) : stepNumber;
   const visibleTotalSteps = Math.max(EXPANDED_TOTAL_STEPS, totalSteps);
 
@@ -361,9 +424,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       <div className="tutorial-hint"><span aria-hidden="true">◎</span><strong>{hint}</strong></div>
       <div className="tutorial-actions">
         {explanationMode && visibleExplanationPhase > 0 && <button type="button" onClick={reviewPreviousExplanation}>Back</button>}
-        {explanationMode
-          ? <button type="button" className="primary" onClick={advanceExplanation}>Continue</button>
-          : <button type="button" className="primary" onClick={focusControl}>Find highlighted control</button>}
+        {explanationMode && <button type="button" className="primary" onClick={advanceExplanation}>Continue</button>}
         <button type="button" onClick={skip}>Skip tutorial</button>
       </div>
     </aside>
