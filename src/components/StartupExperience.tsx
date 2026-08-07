@@ -151,6 +151,15 @@ export function StartupExperience({ children }: Props) {
     else setMode('launcher');
   }, [introDestination, openCampaignSetup]);
 
+  const openSettings = useCallback(() => {
+    void audioManager.unlock();
+    setShowSettings(true);
+  }, []);
+
+  const setMuted = useCallback((muted: boolean) => {
+    applySettings({ ...settings, muted });
+  }, [applySettings, settings]);
+
   const saved = saveInspection.ok ? saveInspection as SuccessfulInspection : null;
   const saveFailure = !saveInspection.ok ? saveInspection : null;
   const saveSummary = saved
@@ -172,7 +181,7 @@ export function StartupExperience({ children }: Props) {
             <span>CONTINUE CAMPAIGN</span><small>{saveSummary}</small>
           </button>}
           <button type="button" className="launcher-primary" onClick={beginCampaign}>BEGIN CAMPAIGN</button>
-          <button type="button" className="launcher-secondary" onClick={() => { void audioManager.unlock(); setShowSettings(true); }}>SETTINGS</button>
+          <button type="button" className="launcher-secondary" onClick={openSettings}>SETTINGS</button>
         </div>
         {saveFailure && saveFailure.code !== 'missing' && <p className="launcher-save-warning">Saved campaign unavailable: {saveFailure.message}</p>}
         <div className="launcher-footer">
@@ -182,11 +191,14 @@ export function StartupExperience({ children }: Props) {
       </div>
     </section>}
 
-    {mode === 'game' && <button type="button" className="global-settings-toggle" onClick={() => setShowSettings(true)} aria-label="Open game settings" title="Settings">⚙</button>}
+    {mode === 'game' && <button type="button" className="global-settings-toggle" onClick={openSettings} aria-label="Open game settings" title="Settings">⚙</button>}
 
     {mode === 'intro' && <>
       <MotionComicIntro
         portalTerritory={portalTerritory}
+        muted={settings.muted}
+        onMutedChange={setMuted}
+        onOpenSettings={openSettings}
         onComplete={finishIntro}
         onArtworkStatusChange={setArtworkStatus}
       />
