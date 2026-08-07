@@ -45,18 +45,30 @@ const encoded = (await Promise.all(
   partFiles.map(fileName => readFile(path.join(partsDirectory, fileName), 'utf8'))
 )).map(content => content.trim()).join('');
 
-const bytes = Buffer.from(encoded, 'base64');
+const reconstructed = Buffer.from(encoded, 'base64');
+if (reconstructed.length < EXPECTED_LENGTH) {
+  throw new Error(
+    `Title card reconstruction is truncated: ${reconstructed.length} bytes; expected at least ${EXPECTED_LENGTH}.`
+  );
+}
+
+// The final source chunk in the original GitHub upload contains 654 trailing bytes.
+// Recover only the approved WebP payload and then prove it is byte-for-byte the
+// original asset before writing it. Any corruption inside the approved payload
+// still fails the build because the SHA-256 check below must match exactly.
+const bytes = reconstructed.subarray(0, EXPECTED_LENGTH);
 const sha256 = createHash('sha256').update(bytes).digest('hex');
 
-if (bytes.length !== EXPECTED_LENGTH || !isWebP(bytes) || sha256 !== EXPECTED_SHA256) {
+if (!isWebP(bytes) || sha256 !== EXPECTED_SHA256) {
   throw new Error(
-    `Title card reconstruction failed: ${bytes.length} bytes, SHA-256 ${sha256}.`
+    `Title card reconstruction failed: source ${reconstructed.length} bytes; approved prefix ${bytes.length} bytes, SHA-256 ${sha256}.`
   );
 }
 
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputPath, bytes);
 
+const trailingBytes = reconstructed.length - EXPECTED_LENGTH;
 console.log(
-  `Built title-card-future-conquest.webp from ${partFiles.length} verified source parts (${bytes.length} bytes).`
+  `Built title-card-future-conquest.webp from ${partFiles.length} verified source parts (${bytes.length} approved bytes; ignored ${trailingBytes} trailing source bytes).`
 );
