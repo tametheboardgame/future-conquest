@@ -1,0 +1,86 @@
+name: Finalise balance tuning branch
+
+on:
+  push:
+    branches:
+      - agent/current-engine-balance-tuning
+    paths:
+      - '.github/workflows/finalise-balance-tuning.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  finalise:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/current-engine-balance-tuning
+          fetch-depth: 0
+      - name: Restore permanent balance workflow
+        run: |
+          git fetch origin main
+          git checkout origin/main -- .github/workflows/current-engine-balance.yml
+      - name: Build PR evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > /tmp/pr-body.md <<'EOF'
+          ## Purpose
+
+          Tune the current 15-territory playable campaign using the deterministic current-engine balance harness merged in PR #87. The goal is to make Story and Standard genuinely winnable without returning to the original vertical slice's near-impossible-to-lose behaviour.
+
+          ## Changes
+
+          - keeps player combat power, powered-armour effectiveness, starting personnel, starting armour and supply capacities unchanged
+          - slows sustained enemy strategic-pressure growth on Story and Standard while retaining Hard's original tempo
+          - makes Phase VIII-C doctrine the sole authority for offensive enemy counterattacks; the older Phase VIII-A response layer still handles withdrawal, entrenchment and repositioning
+          - requires a stronger advantage before lower-difficulty coordinated enemy counterattacks are committed
+          - reduces repeated strategic interdiction on lower difficulties with difficulty-specific cooldown, probability and severity
+          - extends recoverable operational-crisis windows on Story and Standard
+          - delays and scales mobilisation on lower difficulties
+          - reduces the persistent daily escalation contribution from already-captured strategic territory on Story and Standard
+          - centralises these difficulty values in `src/game/strategic-balance.ts`
+
+          ## Evidence
+
+          The original PR #87 baseline ran 720 campaigns and produced zero victories even after the automated managed doctrine was upgraded to use portal reserves, garrison detachments, logistics priorities, engineering, coordinated two-formation attacks and emergency breakouts.
+
+          The tuning work was then measured in several passes. A deterministic parameter sweep compared five lower-pressure Story/Standard profiles while holding Hard constant, selected the profile closest to deliberately modest automated win-rate targets, and reran the selected profile across the full 720-campaign sample.
+
+          EOF
+          if [ -f balance-pass4-sweep-summary.md ]; then
+            cat balance-pass4-sweep-summary.md >> /tmp/pr-body.md
+          fi
+          cat >> /tmp/pr-body.md <<'EOF'
+
+          ## Validation
+
+          - full repository regression suite
+          - TypeScript/Vite production build
+          - deterministic tuning sweep
+          - selected full 720-campaign current-engine sample
+          - Hard held at the existing strategic-response settings throughout the sweep
+
+          ## Scope boundary
+
+          This is balance tuning only. No graphics, map geometry, save schema, player unit statistics or new campaign mechanics are introduced. Human playtesting remains the next gate after merge/deployment.
+          EOF
+          gh pr edit 88 --repo tametheboardgame/future-conquest --body-file /tmp/pr-body.md
+      - name: Remove temporary tuning artefacts
+        run: |
+          rm -f balance-pass3-summary.md balance-pass4-sweep-summary.md
+          rm -f scripts/apply-strategic-balance-pass.mjs scripts/run-strategic-balance-sweep.mjs
+          rm -f .github/workflows/apply-strategic-balance-pass.yml
+          rm -f .github/workflows/capture-balance-pass3.yml
+          rm -f .github/workflows/run-strategic-balance-sweep.yml
+          git rm .github/workflows/finalise-balance-tuning.yml
+          git add -A
+      - name: Commit clean tuning branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Finalise current-engine balance tuning"
+          git push origin HEAD:agent/current-engine-balance-tuning
