@@ -7,10 +7,10 @@ const require = createRequire(import.meta.url);
 const outputDir = resolve(process.cwd(), process.env.FC_BALANCE_OUTPUT_DIR ?? 'balance-output');
 
 const cases = [
-  { id: 'story-balanced-stall', seed: 17, difficulty: 'story', policy: 'balanced', maxTurns: 120 },
-  { id: 'story-balanced-logistics-stall', seed: 15, difficulty: 'story', policy: 'balanced', maxTurns: 120 },
-  { id: 'standard-managed-swiss-stall', seed: 28, difficulty: 'standard', policy: 'managed', maxTurns: 120 },
-  { id: 'standard-managed-austrian-stall', seed: 29, difficulty: 'standard', policy: 'managed', maxTurns: 120 }
+  { id: 'story-managed-best-progress', seed: 18, difficulty: 'story', policy: 'managed', maxTurns: 120 },
+  { id: 'standard-managed-best-progress', seed: 54, difficulty: 'standard', policy: 'managed', maxTurns: 120 },
+  { id: 'standard-managed-cutoff-stall', seed: 17, difficulty: 'standard', policy: 'managed', maxTurns: 120 },
+  { id: 'hard-managed-healthy-network-stall', seed: 16, difficulty: 'hard', policy: 'managed', maxTurns: 120 }
 ];
 
 rmSync('.balance-dist', { recursive: true, force: true });
