@@ -1,5 +1,5 @@
 .startup-game-shell.launcher-covered {
-  visibility: hidden;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -8,19 +8,18 @@
   inset: 0;
   z-index: 2800;
   display: grid;
-  place-items: center;
   min-height: 100dvh;
   overflow: auto;
   padding: clamp(18px, 4vw, 52px);
   color: #eff8fa;
   background-color: #020508;
   background-image:
-    linear-gradient(90deg, rgba(1, 5, 8, .8) 0%, rgba(1, 5, 8, .5) 42%, rgba(1, 5, 8, .1) 72%, rgba(1, 5, 8, .45) 100%),
-    linear-gradient(0deg, rgba(1, 5, 8, .88) 0%, transparent 42%),
+    linear-gradient(90deg, rgba(1, 5, 8, .36) 0%, rgba(1, 5, 8, .04) 48%, rgba(1, 5, 8, .08) 100%),
+    linear-gradient(0deg, rgba(1, 5, 8, .9) 0%, transparent 38%),
     url('../generated/motion-comic-v3/title-card-future-conquest.webp');
   background-position: center;
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: cover, cover, contain;
   isolation: isolate;
 }
 
@@ -30,46 +29,34 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(circle at 67% 70%, rgba(116, 72, 191, .18), transparent 24%);
+  background: radial-gradient(circle at 72% 76%, rgba(116, 72, 191, .14), transparent 22%);
 }
 
 .startup-launcher-panel {
-  width: min(520px, 92vw);
-  margin-right: auto;
-  padding: clamp(22px, 3.5vw, 38px);
-  border: 1px solid rgba(160, 221, 232, .28);
+  align-self: end;
+  justify-self: start;
+  width: min(440px, 92vw);
+  padding: 18px;
+  border: 1px solid rgba(160, 221, 232, .24);
   border-radius: 5px;
-  background: rgba(3, 12, 18, .86);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+  background: rgba(3, 12, 18, .82);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .52);
   backdrop-filter: blur(8px);
 }
 
 .launcher-kicker {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   color: #82dbe8;
-  font-size: .72rem;
+  font-size: .7rem;
   font-weight: 850;
   letter-spacing: .18em;
   text-transform: uppercase;
 }
 
-.startup-launcher-panel h1,
 .global-settings-panel h2,
 .global-settings-panel h3 { margin: 0; }
 
-.startup-launcher-panel h1 {
-  font-size: clamp(2.2rem, 6vw, 4rem);
-  letter-spacing: .045em;
-  line-height: .95;
-}
-
-.launcher-tagline {
-  margin: 12px 0 26px;
-  color: rgba(226, 239, 242, .76);
-  line-height: 1.45;
-}
-
-.launcher-actions { display: grid; gap: 10px; }
+.launcher-actions { display: grid; gap: 9px; }
 .launcher-actions button,
 .global-settings-panel button,
 .global-settings-toggle {
@@ -97,7 +84,7 @@
 .launcher-continue small { display: block; margin-top: 4px; color: rgba(224, 239, 242, .64); font-weight: 600; letter-spacing: 0; }
 .launcher-secondary { background: rgba(7, 18, 25, .82) !important; }
 .launcher-save-warning { margin: 10px 0 0; color: #f2b99c; font-size: .82rem; line-height: 1.35; }
-.launcher-footer { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 24px; color: rgba(225, 239, 242, .55); font-size: .72rem; }
+.launcher-footer { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; color: rgba(225, 239, 242, .55); font-size: .72rem; }
 .launcher-footer button { padding: 0; border: 0; color: #b7e9ef; background: transparent; font: inherit; cursor: pointer; }
 
 .global-settings-toggle {
@@ -151,7 +138,7 @@
 .global-settings-panel > footer button { min-width: 130px; padding: 9px 16px; }
 
 @media (max-width: 760px) {
-  .startup-launcher { align-items: end; padding: 12px; background-position: 64% center; }
-  .startup-launcher-panel { width: 100%; padding: 20px; }
+  .startup-launcher { align-items: end; padding: 12px; background-position: center; }
+  .startup-launcher-panel { width: 100%; padding: 16px; }
   .global-settings-toggle { top: 10px; right: 10px; }
 }
