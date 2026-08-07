@@ -5,11 +5,13 @@ interface Props {
   settings: GlobalSettings;
   onChange: (settings: GlobalSettings) => void;
   onClose: () => void;
+  onPreviewVictory?: () => void;
+  onPreviewDefeat?: () => void;
 }
 
 const percentage = (value: number) => `${Math.round(value * 100)}%`;
 
-export function GlobalSettingsPanel({ settings, onChange, onClose }: Props) {
+export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVictory, onPreviewDefeat }: Props) {
   const updateVolume = (key: 'masterVolume' | 'musicVolume' | 'sfxVolume', value: string) => {
     onChange({ ...settings, [key]: Number(value) });
   };
@@ -47,6 +49,15 @@ export function GlobalSettingsPanel({ settings, onChange, onClose }: Props) {
         <button type="button" className="settings-secondary" onClick={toggleFullscreen}>Toggle fullscreen</button>
         <p className="settings-future-copy">Graphics quality, UI scale, animation controls and additional accessibility options will live here as those systems are added.</p>
       </div>
+
+      {(onPreviewVictory || onPreviewDefeat) && <div className="settings-section ending-preview-settings">
+        <div className="settings-section-heading"><div><p className="launcher-kicker">ENDING PREVIEW</p><h3>Temporary test controls</h3></div></div>
+        <p className="settings-future-copy">These buttons bypass campaign completion so the ending presentation can be reviewed during development. They can be removed once the ending package is signed off.</p>
+        <div className="ending-preview-actions">
+          {onPreviewVictory && <button type="button" className="settings-secondary" onClick={onPreviewVictory}>Preview victory ending</button>}
+          {onPreviewDefeat && <button type="button" className="settings-secondary" onClick={onPreviewDefeat}>Preview defeat screen</button>}
+        </div>
+      </div>}
 
       <footer><button type="button" className="launcher-primary" onClick={onClose}>Done</button></footer>
     </section>
