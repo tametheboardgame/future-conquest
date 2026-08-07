@@ -34,11 +34,12 @@ test('audio manager is registry based and Black Protocol Dawn is the first title
 
   assert.match(audio, /MUSIC_TRACKS/);
   assert.match(audio, /SFX_TRACKS/);
-  assert.match(audio, /black-protocol-dawn\.webm/);
+  assert.match(audio, /black-protocol-dawn\.mp3/);
   assert.match(audio, /title: 'black-protocol-dawn'/);
   assert.match(audio, /prologue: 'black-protocol-dawn'/);
-  assert.match(builder, /f030c8ea0d16b06eda35d245b0e119820e8960d77965d73e4c581672b4888c85/);
-  assert.match(builder, /1_676_274/);
+  assert.match(builder, /80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622/);
+  assert.match(builder, /6_085_073/);
+  assert.match(builder, /response\.arrayBuffer/);
   assert.match(packageJson, /"build:audio": "node scripts\/build-audio-assets\.mjs"/);
 });
 
