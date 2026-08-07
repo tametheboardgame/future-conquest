@@ -12,7 +12,7 @@ interface RegisteredMusicTrack extends RegisteredAudioTrack {
 
 export const MUSIC_TRACKS = {
   'black-protocol-dawn': {
-    src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.webm`,
+    src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.mp3`,
     loop: true,
     gain: 1
   }
