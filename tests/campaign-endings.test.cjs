@@ -49,7 +49,7 @@ test('settings includes temporary ending preview triggers', () => {
 
 test('ending artwork uses verified high-resolution build reconstruction', () => {
   assert.match(builder, /BUNDLE_LENGTH = 988_260/);
-  assert.match(builder, /PART_COUNT = 66/);
+  assert.match(builder, /PART_COUNT = 60/);
   assert.match(builder, /width: 1672, height: 941/);
   assert.match(verifier, /Verified .* campaign ending assets/);
   assert.match(packageJson, /"build:endings": "node scripts\/build-ending-assets\.mjs"/);
