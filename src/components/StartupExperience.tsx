@@ -152,6 +152,7 @@ export function StartupExperience({ children }: Props) {
   }, [introDestination, openCampaignSetup]);
 
   const saved = saveInspection.ok ? saveInspection as SuccessfulInspection : null;
+  const saveFailure = !saveInspection.ok ? saveInspection : null;
   const saveSummary = saved
     ? `Day ${String(saved.metadata.campaignDay).padStart(3, '0')} · ${saved.metadata.difficulty} · ${saved.metadata.formationCount} formations · ${formatSaveTime(saved.metadata.savedAt)}`
     : '';
@@ -173,7 +174,7 @@ export function StartupExperience({ children }: Props) {
           <button type="button" className="launcher-primary" onClick={beginCampaign}>BEGIN CAMPAIGN</button>
           <button type="button" className="launcher-secondary" onClick={() => { void audioManager.unlock(); setShowSettings(true); }}>SETTINGS</button>
         </div>
-        {!saved && saveInspection.code !== 'missing' && <p className="launcher-save-warning">Saved campaign unavailable: {saveInspection.message}</p>}
+        {saveFailure && saveFailure.code !== 'missing' && <p className="launcher-save-warning">Saved campaign unavailable: {saveFailure.message}</p>}
         <div className="launcher-footer">
           <button type="button" onClick={replayPrologue}>Replay prologue</button>
           <span>{BUILD_LABEL}</span>
