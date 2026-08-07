@@ -8,8 +8,8 @@ const {
 const { SLICE_IDS } = require('../.test-dist/data.js');
 
 test('current-engine balance campaigns are deterministic for the same seed and doctrine', () => {
-  const first = simulateCurrentEngineCampaign(37, 'standard', 'balanced', 35);
-  const second = simulateCurrentEngineCampaign(37, 'standard', 'balanced', 35);
+  const first = simulateCurrentEngineCampaign(37, 'standard', 'managed', 35);
+  const second = simulateCurrentEngineCampaign(37, 'standard', 'managed', 35);
   assert.deepEqual(second, first);
 });
 
@@ -18,7 +18,7 @@ test('one run per start covers every active portal territory exactly once', () =
     runsPerStart: 1,
     maxTurns: 20,
     difficulties: ['story'],
-    policies: ['aggressive'],
+    policies: ['managed'],
     seedOffset: 1
   });
 
@@ -29,8 +29,8 @@ test('one run per start covers every active portal territory exactly once', () =
   );
 });
 
-test('all three player doctrines produce bounded current-engine telemetry', () => {
-  for (const policy of ['aggressive', 'balanced', 'cautious']) {
+test('all four player doctrines produce bounded current-engine telemetry', () => {
+  for (const policy of ['aggressive', 'balanced', 'cautious', 'managed']) {
     const result = simulateCurrentEngineCampaign(44, 'hard', policy, 25);
     assert.ok(['victory', 'defeat', 'timeout'].includes(result.outcome));
     assert.ok(result.finalTurn >= 1 && result.finalTurn <= 25);
@@ -40,5 +40,6 @@ test('all three player doctrines produce bounded current-engine telemetry', () =
     assert.ok(result.minNetworkEfficiency >= 0 && result.minNetworkEfficiency <= 100);
     assert.ok(result.operationsStarted >= 0);
     assert.ok(result.movesIssued >= 0);
+    assert.ok(result.engineeringProjectsStarted >= 0);
   }
 });
