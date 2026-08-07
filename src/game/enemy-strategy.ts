@@ -44,8 +44,26 @@ const difficultyAggression: Record<Difficulty, number> = {
   hard: 0.12
 };
 
+const turnPressureGrowth: Record<Difficulty, number> = {
+  story: 0.24,
+  standard: 0.32,
+  hard: 0.42
+};
+
+const interdictionCooldownDays: Record<Difficulty, number> = {
+  story: 3,
+  standard: 2,
+  hard: 1
+};
+
+const interdictionSeverityScale: Record<Difficulty, number> = {
+  story: 0.82,
+  standard: 1,
+  hard: 1.15
+};
+
 export function crisisLimitForDifficulty(difficulty: Difficulty): number {
-  return difficulty === 'story' ? 5 : difficulty === 'hard' ? 3 : 4;
+  return difficulty === 'story' ? 7 : difficulty === 'hard' ? 3 : 5;
 }
 
 export function createEnemyStrategyState(difficulty: Difficulty): EnemyStrategyState {
@@ -211,7 +229,7 @@ function pressureFor(state: GameState): number {
     difficultyPressure[state.difficulty]
     + Math.max(0, controlled - 1) * 4.2
     + state.escalationStage * 6.4
-    + Math.max(0, state.turn - 1) * 0.42
+    + Math.max(0, state.turn - 1) * turnPressureGrowth[state.difficulty]
     + Math.max(0, 72 - state.logistics.networkEfficiency) * 0.38
     + severeShortfalls * 4.5
     + Object.keys(state.operations).length * 3.4
@@ -353,7 +371,7 @@ function planCoordinatedCounterattack(state: GameState): GameState {
   const participantLimit = state.enemyStrategy.doctrine === 'strategic-emergency' || state.escalationStage >= 4 ? 3 : 2;
   const participants = candidates.slice(0, participantLimit);
   const combinedPower = participants.reduce((sum, formation) => sum + enemyFormationPower(formation), 0);
-  const requiredRatio = state.difficulty === 'story' ? 1.14 : state.difficulty === 'hard' ? 0.72 : 0.88;
+  const requiredRatio = state.difficulty === 'story' ? 1.28 : state.difficulty === 'hard' ? 0.76 : 1;
   if (combinedPower < playerDefenceAt(state, target) * requiredRatio) return state;
 
   const primary = participants[0];
@@ -387,18 +405,23 @@ function planCoordinatedCounterattack(state: GameState): GameState {
 function executeStrategicInterdiction(state: GameState): GameState {
   if (state.enemyStrategy.doctrine !== 'logistics-war' && state.enemyStrategy.doctrine !== 'strategic-emergency') return state;
   if (state.escalationStage < 2 || !state.enemyStrategy.threatenedRouteIds.length) return state;
-  if ((state.infrastructureIncidents ?? []).some(incident => incident.turn === state.turn && incident.cause === 'enemy-interdiction')) return state;
+  const cooldown = interdictionCooldownDays[state.difficulty];
+  if ((state.infrastructureIncidents ?? []).some(incident => (
+    incident.cause === 'enemy-interdiction'
+    && state.turn - incident.turn < cooldown
+  ))) return state;
   const routeId = state.enemyStrategy.threatenedRouteIds[0];
   const chance = clamp(
-    0.16
-    + state.enemyStrategy.pressure / 260
-    + (state.enemyStrategy.doctrine === 'strategic-emergency' ? 0.14 : 0)
+    0.12
+    + state.enemyStrategy.pressure / 300
+    + (state.enemyStrategy.doctrine === 'strategic-emergency' ? 0.12 : 0)
     + difficultyAggression[state.difficulty],
-    0.08,
-    0.76
+    0.06,
+    0.68
   );
   if (randomFor(state.seed, state.turn, saltFor(routeId) + 1709) >= chance) return state;
-  const severity = Math.round(9 + state.enemyStrategy.pressure / 8 + randomFor(state.seed, state.turn, saltFor(routeId) + 1901) * 10);
+  const baseSeverity = 9 + state.enemyStrategy.pressure / 8 + randomFor(state.seed, state.turn, saltFor(routeId) + 1901) * 10;
+  const severity = Math.max(6, Math.round(baseSeverity * interdictionSeverityScale[state.difficulty]));
   let next = applyInfrastructureDamage(state, routeId, severity, 'enemy-interdiction');
   const route = STRATEGIC_ROUTES.find(candidate => candidate.id === routeId);
   if (!route) return next;
