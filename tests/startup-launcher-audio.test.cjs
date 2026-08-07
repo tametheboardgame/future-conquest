@@ -30,6 +30,7 @@ test('global settings persist independently and expose audio and display control
 test('audio manager is registry based and Black Protocol Dawn is the first title and prologue track', () => {
   const audio = fs.readFileSync('src/audio/audio-manager.ts', 'utf8');
   const builder = fs.readFileSync('scripts/build-audio-assets.mjs', 'utf8');
+  const verifier = fs.readFileSync('scripts/verify-pages-deployment.mjs', 'utf8');
   const packageJson = fs.readFileSync('package.json', 'utf8');
 
   assert.match(audio, /MUSIC_TRACKS/);
@@ -40,6 +41,9 @@ test('audio manager is registry based and Black Protocol Dawn is the first title
   assert.match(builder, /80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622/);
   assert.match(builder, /6_085_073/);
   assert.match(builder, /response\.arrayBuffer/);
+  assert.match(verifier, /audio\/black-protocol-dawn\.mp3/);
+  assert.match(verifier, /SOUNDTRACK_SHA256/);
+  assert.match(verifier, /verifySoundtrack/);
   assert.match(packageJson, /"build:audio": "node scripts\/build-audio-assets\.mjs"/);
 });
 
