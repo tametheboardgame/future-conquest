@@ -154,7 +154,7 @@ interface ActionTelemetry {
 
 interface AttackPlan {
   targetId: string;
-  supportGroupId?: string;
+  supportGroupId: string | undefined;
   breakout: boolean;
 }
 
