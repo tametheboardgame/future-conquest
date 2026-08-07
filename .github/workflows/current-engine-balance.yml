@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/game/**'
       - 'scripts/simulate-current-engine-balance.mjs'
+      - 'scripts/trace-current-engine-balance.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'
       - 'package.json'
       - 'package-lock.json'
@@ -54,11 +55,18 @@ jobs:
       - name: Run current-engine balance simulation
         run: npm run simulate:current-balance
 
+      - name: Trace representative stalled campaigns
+        run: node scripts/trace-current-engine-balance.mjs
+
       - name: Publish balance summary
         if: always()
         run: |
           if [ -f balance-output/current-engine-balance.md ]; then
             cat balance-output/current-engine-balance.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f balance-output/current-engine-traces.md ]; then
+            printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
+            cat balance-output/current-engine-traces.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload balance report
