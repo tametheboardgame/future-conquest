@@ -4,7 +4,6 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const require = createRequire(import.meta.url);
-const tsc = process.platform === 'win32' ? 'tsc.cmd' : 'tsc';
 const outputDir = resolve(process.cwd(), process.env.FC_BALANCE_OUTPUT_DIR ?? 'balance-output');
 
 const cases = [
@@ -15,7 +14,8 @@ const cases = [
 ];
 
 rmSync('.balance-dist', { recursive: true, force: true });
-execFileSync(tsc, ['-p', 'tsconfig.test.json', '--outDir', '.balance-dist'], { stdio: 'inherit' });
+const tscEntry = require.resolve('typescript/bin/tsc');
+execFileSync(process.execPath, [tscEntry, '-p', 'tsconfig.test.json', '--outDir', '.balance-dist'], { stdio: 'inherit' });
 writeFileSync('.balance-dist/package.json', '{"type":"commonjs"}\n');
 
 const { simulateCurrentEngineCampaign } = require(resolve(process.cwd(), '.balance-dist/balance-simulation.js'));
