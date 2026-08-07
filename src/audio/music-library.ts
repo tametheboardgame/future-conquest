@@ -37,7 +37,7 @@ const discoveredTracks = Object.fromEntries(
       id,
       label: labelFromSlug(id),
       src,
-      loop: true,
+      loop: false,
       gain: 1
     } satisfies MusicTrack]];
   })
@@ -47,7 +47,7 @@ const defaultTrack: MusicTrack = {
   id: DEFAULT_MUSIC_TRACK_ID,
   label: 'Black Protocol Dawn',
   src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.mp3`,
-  loop: true,
+  loop: false,
   gain: 1
 };
 

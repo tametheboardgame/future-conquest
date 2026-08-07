@@ -1,6 +1,6 @@
 import type { GlobalSettings } from '../game/global-settings';
 import { DEFAULT_GLOBAL_SETTINGS } from '../game/global-settings';
-import { MUSIC_TRACKS, resolveMusicTrackId } from './music-library';
+import { MUSIC_TRACK_OPTIONS, MUSIC_TRACKS, resolveMusicTrackId } from './music-library';
 
 interface RegisteredAudioTrack {
   src: string;
@@ -8,8 +8,9 @@ interface RegisteredAudioTrack {
 }
 
 export const MUSIC_CONTEXTS = {
-  title: 'selected',
-  prologue: 'selected'
+  title: 'playlist',
+  prologue: 'playlist',
+  game: 'playlist'
 } as const;
 
 // Sound effects can be registered here as the interface gains authored SFX.
@@ -24,9 +25,9 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 class AudioManager {
   private music: HTMLAudioElement | null = null;
   private currentTrack: MusicTrackId | null = null;
-  private requestedTrack: MusicTrackId | null = null;
   private settings: GlobalSettings = DEFAULT_GLOBAL_SETTINGS;
   private unlocked = false;
+  private musicRequested = false;
   private fadeFrame: number | null = null;
 
   constructor() {
@@ -46,8 +47,7 @@ class AudioManager {
     const nextTrack = resolveMusicTrackId(settings.musicTrackId);
     this.settings = settings;
 
-    if (this.requestedTrack && previousTrack !== nextTrack) {
-      this.requestedTrack = nextTrack;
+    if (this.musicRequested && previousTrack !== nextTrack) {
       if (this.unlocked) void this.playTrack(nextTrack, 350);
       return;
     }
@@ -56,19 +56,28 @@ class AudioManager {
   }
 
   requestMusic(_context: MusicContext, fadeMs = 650) {
-    const trackId = resolveMusicTrackId(this.settings.musicTrackId);
-    this.requestedTrack = trackId;
+    this.musicRequested = true;
     if (!this.unlocked) return;
-    void this.playTrack(trackId, fadeMs);
+
+    if (this.music && this.currentTrack) {
+      this.applyMusicVolume();
+      if (this.music.paused && !this.music.ended) {
+        try { void this.music.play(); } catch { /* wait for another user gesture */ }
+      }
+      return;
+    }
+
+    void this.playTrack(resolveMusicTrackId(this.settings.musicTrackId), fadeMs);
   }
 
   stopMusic(fadeMs = 650) {
-    this.requestedTrack = null;
+    this.musicRequested = false;
     if (!this.music) return;
     this.fadeTo(0, fadeMs, () => {
       this.music?.pause();
       if (this.music) this.music.currentTime = 0;
       this.currentTrack = null;
+      this.music = null;
     });
   }
 
@@ -90,8 +99,39 @@ class AudioManager {
   }
 
   private async resumeRequestedMusic() {
-    if (!this.requestedTrack) return;
-    await this.playTrack(this.requestedTrack, 350);
+    if (!this.musicRequested) return;
+
+    if (this.music && this.currentTrack) {
+      if (this.music.ended) this.music.currentTime = 0;
+      this.applyMusicVolume();
+      try { await this.music.play(); } catch { /* wait for another user gesture */ }
+      return;
+    }
+
+    await this.playTrack(resolveMusicTrackId(this.settings.musicTrackId), 350);
+  }
+
+  private async playNextTrack() {
+    if (!this.musicRequested || MUSIC_TRACK_OPTIONS.length === 0) return;
+
+    const currentIndex = MUSIC_TRACK_OPTIONS.findIndex(track => track.id === this.currentTrack);
+    const nextIndex = currentIndex >= 0
+      ? (currentIndex + 1) % MUSIC_TRACK_OPTIONS.length
+      : 0;
+    const nextTrack = MUSIC_TRACK_OPTIONS[nextIndex];
+
+    if (MUSIC_TRACK_OPTIONS.length === 1 && this.music) {
+      this.music.currentTime = 0;
+      this.applyMusicVolume();
+      try {
+        await this.music.play();
+      } catch {
+        this.unlocked = false;
+      }
+      return;
+    }
+
+    await this.playTrack(nextTrack.id, 0);
   }
 
   private async playTrack(trackId: MusicTrackId, fadeMs: number) {
@@ -99,6 +139,7 @@ class AudioManager {
     const track = MUSIC_TRACKS[resolvedTrackId];
 
     if (this.currentTrack === resolvedTrackId && this.music) {
+      if (this.music.ended) this.music.currentTime = 0;
       this.applyMusicVolume();
       if (this.music.paused) {
         try { await this.music.play(); } catch { /* wait for another user gesture */ }
@@ -111,8 +152,12 @@ class AudioManager {
 
     const audio = new Audio(track.src);
     audio.preload = 'auto';
-    audio.loop = track.loop;
+    audio.loop = false;
     audio.volume = 0;
+    audio.addEventListener('ended', () => {
+      if (this.music !== audio || !this.musicRequested) return;
+      void this.playNextTrack();
+    });
     this.music = audio;
     this.currentTrack = resolvedTrackId;
 

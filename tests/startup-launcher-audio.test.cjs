@@ -55,6 +55,22 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
   assert.match(packageJson, /"build:audio": "node scripts\/build-audio-assets\.mjs"/);
 });
 
+test('music continues into gameplay and cycles through the complete library', () => {
+  const audio = fs.readFileSync('src/audio/audio-manager.ts', 'utf8');
+  const library = fs.readFileSync('src/audio/music-library.ts', 'utf8');
+  const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
+
+  assert.match(audio, /game: 'playlist'/);
+  assert.match(audio, /MUSIC_TRACK_OPTIONS\.findIndex/);
+  assert.match(audio, /\(currentIndex \+ 1\) % MUSIC_TRACK_OPTIONS\.length/);
+  assert.match(audio, /addEventListener\('ended'/);
+  assert.match(audio, /playNextTrack\(\)/);
+  assert.match(audio, /previousTrack !== nextTrack[\s\S]*playTrack\(nextTrack, 350\)/);
+  assert.match(library, /loop: false/);
+  assert.match(startup, /audioManager\.requestMusic\('game'\)/);
+  assert.doesNotMatch(startup, /else \{\s*audioManager\.stopMusic\(\)/);
+});
+
 test('Engineering and Logistics stacks use the desktop scrolling contract', () => {
   const layout = fs.readFileSync('src/desktop-command-fit.css', 'utf8');
   assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?overflow-y:\s*auto/);

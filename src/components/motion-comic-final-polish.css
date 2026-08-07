@@ -74,7 +74,26 @@
 }
 
 .motion-comic-page.page-1 [data-panel-id='order'] {
-  background-position: 48% 44%;
+  background-position: 48% 30%;
+}
+
+/* Small Page 2 placement nudges from live playtesting. These are limited to
+   caption/radio boxes so dialogue tails remain mathematically anchored to the
+   visible speaker targets calculated by the component. */
+.motion-comic-v2[data-panel-id='arrival'] .motion-comic-viewport-beat[data-beat-id='p9-radio'] {
+  translate: -32px 18px;
+}
+
+.motion-comic-v2[data-panel-id='arrival'] .motion-comic-viewport-beat[data-beat-id='p9-soldier'] {
+  translate: -24px -18px;
+}
+
+.motion-comic-v2[data-panel-id='world-responds'] .motion-comic-viewport-beat[data-beat-id='p11-government'] {
+  translate: -30px -14px;
+}
+
+.motion-comic-v2[data-panel-id='burden-of-command'] .motion-comic-viewport-beat[data-beat-id='p12-officer'] {
+  translate: 20px -18px;
 }
 
 /* Text should read as authored comic lettering, not another UI panel. */
@@ -207,6 +226,22 @@
   .motion-comic-subtitle {
     bottom: 82px;
     width: calc(100vw - 24px);
+  }
+
+  .motion-comic-v2[data-panel-id='arrival'] .motion-comic-viewport-beat[data-beat-id='p9-radio'] {
+    translate: -18px 10px;
+  }
+
+  .motion-comic-v2[data-panel-id='arrival'] .motion-comic-viewport-beat[data-beat-id='p9-soldier'] {
+    translate: -14px -10px;
+  }
+
+  .motion-comic-v2[data-panel-id='world-responds'] .motion-comic-viewport-beat[data-beat-id='p11-government'] {
+    translate: -16px -8px;
+  }
+
+  .motion-comic-v2[data-panel-id='burden-of-command'] .motion-comic-viewport-beat[data-beat-id='p12-officer'] {
+    translate: 10px -10px;
   }
 }
 

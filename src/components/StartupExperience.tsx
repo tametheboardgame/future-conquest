@@ -95,7 +95,7 @@ export function StartupExperience({ children }: Props) {
     } else if (mode === 'intro') {
       audioManager.requestMusic('prologue');
     } else {
-      audioManager.stopMusic();
+      audioManager.requestMusic('game');
     }
   }, [mode, refreshSaveInspection]);
 
