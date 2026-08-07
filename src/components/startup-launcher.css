@@ -1,0 +1,157 @@
+.startup-game-shell.launcher-covered {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.startup-launcher {
+  position: fixed;
+  inset: 0;
+  z-index: 2800;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  overflow: auto;
+  padding: clamp(18px, 4vw, 52px);
+  color: #eff8fa;
+  background-color: #020508;
+  background-image:
+    linear-gradient(90deg, rgba(1, 5, 8, .8) 0%, rgba(1, 5, 8, .5) 42%, rgba(1, 5, 8, .1) 72%, rgba(1, 5, 8, .45) 100%),
+    linear-gradient(0deg, rgba(1, 5, 8, .88) 0%, transparent 42%),
+    url('../generated/motion-comic-v3/title-card-future-conquest.webp');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  isolation: isolate;
+}
+
+.startup-launcher::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 67% 70%, rgba(116, 72, 191, .18), transparent 24%);
+}
+
+.startup-launcher-panel {
+  width: min(520px, 92vw);
+  margin-right: auto;
+  padding: clamp(22px, 3.5vw, 38px);
+  border: 1px solid rgba(160, 221, 232, .28);
+  border-radius: 5px;
+  background: rgba(3, 12, 18, .86);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(8px);
+}
+
+.launcher-kicker {
+  margin: 0 0 6px;
+  color: #82dbe8;
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.startup-launcher-panel h1,
+.global-settings-panel h2,
+.global-settings-panel h3 { margin: 0; }
+
+.startup-launcher-panel h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  letter-spacing: .045em;
+  line-height: .95;
+}
+
+.launcher-tagline {
+  margin: 12px 0 26px;
+  color: rgba(226, 239, 242, .76);
+  line-height: 1.45;
+}
+
+.launcher-actions { display: grid; gap: 10px; }
+.launcher-actions button,
+.global-settings-panel button,
+.global-settings-toggle {
+  min-height: 46px;
+  border: 1px solid rgba(160, 221, 232, .28);
+  border-radius: 4px;
+  color: #edf8fa;
+  background: rgba(11, 29, 38, .92);
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: .045em;
+  cursor: pointer;
+}
+
+.launcher-actions button:hover,
+.launcher-actions button:focus-visible,
+.global-settings-panel button:hover,
+.global-settings-panel button:focus-visible,
+.global-settings-toggle:hover,
+.global-settings-toggle:focus-visible { border-color: #75dbe9; background: #15313b; }
+
+.launcher-primary { background: linear-gradient(180deg, #18414c, #102a33) !important; }
+.launcher-continue { text-align: left; padding: 12px 14px; }
+.launcher-continue span { display: block; }
+.launcher-continue small { display: block; margin-top: 4px; color: rgba(224, 239, 242, .64); font-weight: 600; letter-spacing: 0; }
+.launcher-secondary { background: rgba(7, 18, 25, .82) !important; }
+.launcher-save-warning { margin: 10px 0 0; color: #f2b99c; font-size: .82rem; line-height: 1.35; }
+.launcher-footer { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 24px; color: rgba(225, 239, 242, .55); font-size: .72rem; }
+.launcher-footer button { padding: 0; border: 0; color: #b7e9ef; background: transparent; font: inherit; cursor: pointer; }
+
+.global-settings-toggle {
+  position: fixed;
+  z-index: 1150;
+  right: 16px;
+  top: 16px;
+  min-width: 42px;
+  padding: 8px 11px;
+  background: rgba(5, 17, 24, .88);
+}
+
+.global-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3600;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: #edf8fa;
+  background: rgba(0, 4, 7, .78);
+  backdrop-filter: blur(5px);
+}
+
+.global-settings-panel {
+  width: min(650px, 96vw);
+  max-height: min(760px, 92dvh);
+  overflow: auto;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid rgba(160, 221, 232, .34);
+  border-radius: 6px;
+  background: #07141c;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, .7);
+}
+
+.global-settings-panel > header,
+.settings-section-heading,
+.global-settings-panel > footer,
+.settings-slider > span { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.global-settings-panel > header { margin-bottom: 22px; }
+.settings-close { min-width: 42px; padding: 0; font-size: 1.6rem !important; }
+.settings-section { padding: 18px 0; border-top: 1px solid rgba(160, 221, 232, .13); }
+.settings-section-heading { margin-bottom: 16px; }
+.settings-mute { display: flex; align-items: center; gap: 7px; font-weight: 700; }
+.settings-slider { display: grid; gap: 7px; margin: 14px 0; }
+.settings-slider output { color: #8bdce7; font-variant-numeric: tabular-nums; }
+.settings-slider input[type='range'] { width: 100%; accent-color: #75dbe9; }
+.settings-secondary { padding: 9px 14px; }
+.settings-future-copy { color: rgba(224, 239, 242, .65); line-height: 1.45; }
+.global-settings-panel > footer { justify-content: flex-end; margin-top: 8px; }
+.global-settings-panel > footer button { min-width: 130px; padding: 9px 16px; }
+
+@media (max-width: 760px) {
+  .startup-launcher { align-items: end; padding: 12px; background-position: 64% center; }
+  .startup-launcher-panel { width: 100%; padding: 20px; }
+  .global-settings-toggle { top: 10px; right: 10px; }
+}
