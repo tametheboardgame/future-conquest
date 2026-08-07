@@ -1,0 +1,34 @@
+/* Logistics and Intelligence explanation phases keep the command page readable. */
+.tutorial-guide.explanation .tutorial-spotlight {
+  border-width: 2px;
+  border-color: #8adfff;
+  box-shadow: 0 0 0 1px rgba(138, 223, 255, .2), 0 0 28px rgba(74, 185, 255, .5);
+  animation: tutorialExplanationPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tutorialExplanationPulse {
+  50% {
+    border-color: #d9f7ff;
+    box-shadow: 0 0 0 2px rgba(138, 223, 255, .22), 0 0 38px rgba(74, 185, 255, .64);
+  }
+}
+
+.tutorial-overlay[data-mode='explanation'] {
+  max-height: min(56vh, 430px);
+  border-color: rgba(138, 223, 255, .62);
+  background: rgba(9, 20, 31, .96);
+}
+
+.tutorial-overlay[data-mode='explanation'] .tutorial-hint {
+  color: #c4eefa;
+}
+
+.tutorial-overlay[data-mode='explanation'] .tutorial-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .tutorial-overlay[data-mode='explanation'] {
+    max-height: 48vh;
+  }
+}
