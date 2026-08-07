@@ -7,17 +7,17 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const partsDirectory = path.join(repositoryRoot, 'src', 'assets', 'endings', 'v1', 'bundle-parts');
 const outputDirectory = path.join(repositoryRoot, 'public', 'generated', 'endings', 'v1');
 
-const BUNDLE_LENGTH = 1_759_170;
-const BUNDLE_SHA256 = '3542be73e1e19edadb40b6e0a4edb334db95d3de6a2104db7a8c8cb617475465';
-const PART_COUNT = 10;
+const BUNDLE_LENGTH = 988_260;
+const BUNDLE_SHA256 = '4be5786ead501ed2dcfc0e6192242e25a24bbd1e55f4f4e4253e3455ce1b541a';
+const PART_COUNT = 22;
 const ASSETS = [
-  { fileName: 'victory-01-europe-secured.webp', offset: 0, length: 253_260, sha256: 'dad254b212e10e39617b446cbe97d9bb67812ff4c2a899562708dcf2fb592f50' },
-  { fileName: 'victory-02-occupation.webp', offset: 253_260, length: 238_084, sha256: '6b538fa0428b86aa635a17ca3d5279becdd5ef8baf1d9978bb182f40e1fcf531' },
-  { fileName: 'victory-03-archives.webp', offset: 491_344, length: 304_360, sha256: 'bd0baa73cc5c25d808ca39cfd2ef7b1ecff533be2776a44edbe78377c0318993' },
-  { fileName: 'victory-04-revelation.webp', offset: 795_704, length: 254_204, sha256: 'e8ec5a1a851b6014dee446047cb65c9729088df2f53d665c400c52e2816205fa' },
-  { fileName: 'victory-05-consequences.webp', offset: 1_049_908, length: 306_568, sha256: '0d4802c4a4ed13f20653048c3e90d1a39623bfd3b0c02cbbc2418749ddfb249c' },
-  { fileName: 'victory-06-the-loop.webp', offset: 1_356_476, length: 232_550, sha256: '3983b9c179b2f76bc962fc0c7da162e51347ca911c443efac39f5fb2575eab2c' },
-  { fileName: 'defeat-campaign-failed.webp', offset: 1_589_026, length: 170_144, sha256: 'bf1b64e6d76b08a20dab1ce0b625eeb210174f38893b0eebb04d4d70a2ba5d2d' }
+  { fileName: 'victory-01-europe-secured.webp', offset: 0, length: 139_794, sha256: '386f23118bdb297b02868ad9601ae003a1bbd1cbe4301f0f7804895209f7b7d3' },
+  { fileName: 'victory-02-occupation.webp', offset: 139_794, length: 131_134, sha256: '2e6faf950a37fe6abc23e072f77cbfed4019e4ae09230f5ba565676cd2efbcfc' },
+  { fileName: 'victory-03-archives.webp', offset: 270_928, length: 175_638, sha256: 'bb8411e4c971aed46ea8c128ff094791077c0b855967332fa84114550eb49357' },
+  { fileName: 'victory-04-revelation.webp', offset: 446_566, length: 143_514, sha256: 'a1f7d53b338484706d3dc7b6c591392f4472d66396f0ad6b3e8e57f386e0d63a' },
+  { fileName: 'victory-05-consequences.webp', offset: 590_080, length: 176_994, sha256: '3934fe184580e11eb1b2372a453cda601a4482691889c49418fe96fb17e82646' },
+  { fileName: 'victory-06-the-loop.webp', offset: 767_074, length: 130_818, sha256: '467b67733f0feac5cb73a6a7e43092784798a50593a4c3b548d0ba33e3e87ac0' },
+  { fileName: 'defeat-campaign-failed.webp', offset: 897_892, length: 90_368, sha256: '0abc1f23028bc7e39194223e2725fc4bf37b2d275ea13d237e1a76655a68ac01' }
 ];
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
