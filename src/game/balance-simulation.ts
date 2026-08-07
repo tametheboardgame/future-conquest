@@ -118,8 +118,12 @@ interface PolicyProfile {
   garrisonResistance: number;
   releaseResistance: number;
   holdUntilAdministered: boolean;
-  portalReserve: 0 | 1;
+  portalReserve: number;
   reinforcePortalAtEscalation: number;
+  maxOperationParticipants: number;
+  maxConcurrentOperations: number;
+  minimumAttackDeliveryRatio: number;
+  minimumAttackSupplyStock: number;
 }
 
 interface ActionTelemetry {
@@ -150,25 +154,37 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
     releaseResistance: 62,
     holdUntilAdministered: false,
     portalReserve: 0,
-    reinforcePortalAtEscalation: 75
+    reinforcePortalAtEscalation: 75,
+    maxOperationParticipants: 4,
+    maxConcurrentOperations: 3,
+    minimumAttackDeliveryRatio: 0.2,
+    minimumAttackSupplyStock: 22
   },
   balanced: {
     attackRatio: 0.82,
     joinRatio: 0.64,
-    garrisonResistance: 46,
-    releaseResistance: 36,
+    garrisonResistance: 38,
+    releaseResistance: 32,
     holdUntilAdministered: false,
     portalReserve: 1,
-    reinforcePortalAtEscalation: 62
+    reinforcePortalAtEscalation: 62,
+    maxOperationParticipants: 2,
+    maxConcurrentOperations: 2,
+    minimumAttackDeliveryRatio: 0.55,
+    minimumAttackSupplyStock: 48
   },
   cautious: {
     attackRatio: 1.02,
     joinRatio: 0.82,
-    garrisonResistance: 30,
-    releaseResistance: 24,
+    garrisonResistance: 26,
+    releaseResistance: 22,
     holdUntilAdministered: true,
     portalReserve: 1,
-    reinforcePortalAtEscalation: 45
+    reinforcePortalAtEscalation: 45,
+    maxOperationParticipants: 2,
+    maxConcurrentOperations: 1,
+    minimumAttackDeliveryRatio: 0.7,
+    minimumAttackSupplyStock: 62
   }
 };
 
@@ -200,9 +216,11 @@ function portalReserveIds(state: GameState, policy: BalancePolicyId): Set<string
   ));
 
   let reserveCount = profile.portalReserve;
-  if (plannedPortalAttack || state.escalation >= profile.reinforcePortalAtEscalation) reserveCount = Math.max(reserveCount, 1) as 0 | 1;
-  if (policy === 'cautious' && (plannedPortalAttack || state.escalation >= 65)) reserveCount = 2 as never;
-  if (!reserveCount) return new Set<string>();
+  if (plannedPortalAttack || state.escalation >= profile.reinforcePortalAtEscalation) {
+    reserveCount = Math.max(reserveCount, 1);
+  }
+  if (policy === 'cautious' && (plannedPortalAttack || state.escalation >= 65)) reserveCount = 2;
+  if (reserveCount <= 0) return new Set<string>();
 
   const candidates = localGroups(state, state.portalTerritory)
     .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison'))
@@ -210,7 +228,12 @@ function portalReserveIds(state: GameState, policy: BalancePolicyId): Set<string
   return new Set(candidates.slice(0, reserveCount).map(group => group.id));
 }
 
-function releaseGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile, reserved: Set<string>): boolean {
+function releaseGarrison(
+  state: GameState,
+  group: TaskGroup,
+  profile: PolicyProfile,
+  reserved: Set<string>
+): boolean {
   if (group.status !== 'garrison' || reserved.has(group.id)) return false;
   const territory = state.territories[group.location];
   if (!territory) return false;
@@ -243,17 +266,30 @@ function operationPower(state: GameState, targetId: string): number {
   }, 0);
 }
 
+function formationCanAttack(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
+  const allocation = state.logistics.formationAllocations[group.id];
+  const deliveryRatio = allocation ? allocation.ratio / 100 : 1;
+  return group.supply >= profile.minimumAttackSupplyStock
+    && deliveryRatio >= profile.minimumAttackDeliveryRatio;
+}
+
 function attackTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
   const profile = POLICY[policy];
+  if (!formationCanAttack(state, group, profile)) return undefined;
+
   const candidates = getAdjacentOrderTargets(state, group.id)
     .filter(id => state.territories[id]?.controller === 'enemy')
     .map(id => {
       const operation = getOperationAtTarget(state, id);
+      if (operation && operation.participantGroupIds.length >= profile.maxOperationParticipants) return null;
+      if (!operation && Object.keys(state.operations).length >= profile.maxConcurrentOperations) return null;
       const ratio = (combatPower(group) + operationPower(state, id)) / Math.max(1, enemyStrengthAt(state, id).power);
-      const threshold = (operation ? profile.joinRatio : profile.attackRatio) + (TERRAIN_CAUTION[TERRITORIES[id].terrain] ?? 0);
-      const score = ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.35 : 0);
+      const threshold = (operation ? profile.joinRatio : profile.attackRatio)
+        + (TERRAIN_CAUTION[TERRITORIES[id].terrain] ?? 0);
+      const score = ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.22 : 0);
       return { id, ratio, threshold, score };
     })
+    .filter((candidate): candidate is { id: string; ratio: number; threshold: number; score: number } => Boolean(candidate))
     .filter(candidate => candidate.ratio >= candidate.threshold)
     .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
   return candidates[0]?.id;
@@ -276,15 +312,28 @@ function distanceToFront(state: GameState, startId: string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-function moveTarget(state: GameState, group: TaskGroup): string | undefined {
+function moveTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+  const profile = POLICY[policy];
+  const allocation = state.logistics.formationAllocations[group.id];
+  const currentDelivery = allocation ? allocation.ratio / 100 : 1;
+  const underPressure = group.supply < profile.minimumAttackSupplyStock
+    || currentDelivery < profile.minimumAttackDeliveryRatio;
+
   const candidates = getAdjacentOrderTargets(state, group.id)
     .filter(id => state.territories[id]?.controller === 'player')
     .map(id => {
       const territory = state.territories[id];
       const distance = distanceToFront(state, id);
-      const supply = territory.supplied ? 0.4 : -0.3;
-      const occupation = territory.occupation === 'unsecured' ? 0.5 : territory.occupation === 'contested' ? 0.25 : 0;
-      return { id, score: (Number.isFinite(distance) ? -distance : -99) + supply + occupation + TERRITORIES[id].supply * 0.03 };
+      const supplyAllocation = state.logistics.territoryAllocations[id];
+      const delivery = supplyAllocation?.ratio ?? (territory.supplied ? 100 : 0);
+      const supplyScore = delivery / 100 * (underPressure ? 2.2 : 0.7);
+      const occupation = territory.occupation === 'unsecured' ? 0.55 : territory.occupation === 'contested' ? 0.25 : 0;
+      const frontScore = Number.isFinite(distance) ? -distance * (underPressure ? 0.25 : 1) : -99;
+      const portalRecovery = underPressure && id === state.portalTerritory ? 1.2 : 0;
+      return {
+        id,
+        score: frontScore + supplyScore + occupation + portalRecovery + TERRITORIES[id].supply * 0.03
+      };
     })
     .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
   return candidates[0]?.id;
@@ -334,7 +383,7 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
       continue;
     }
 
-    const move = moveTarget(next, group);
+    const move = moveTarget(next, group, policy);
     if (move && move !== group.location) {
       next = selectTerritory(next, move);
       const before = next.taskGroups[groupId]?.order;
@@ -596,7 +645,7 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '## Interpretation boundary',
     '',
     '- These are deterministic heuristic player doctrines driving the real current playable engine through its public order functions.',
-    '- Aggressive play accepts an exposed portal unless an explicit attack is already forming; balanced play holds one portal reserve; cautious play can hold two under high pressure.',
+    '- Aggressive play accepts an exposed portal and accepts severe logistics risk; balanced play holds one portal reserve, limits stacking, pauses attacks during severe shortfalls and can fight on two fronts; cautious play holds additional reserves under pressure and limits itself to one operation at a time.',
     '- They are comparative balance probes, not predictions of human win rate.',
     '- The bots currently use movement, attack and garrison orders. Manual engineering, interdiction and logistics-priority optimisation are deliberately excluded from this first baseline.',
     '- If every sensible doctrine wins easily, the campaign is probably too forgiving. If cautious play loses frequently, pressure is probably too high.'
