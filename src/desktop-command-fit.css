@@ -184,7 +184,9 @@
     scrollbar-gutter: stable;
   }
 
-  .command-view {
+  .command-view,
+  .infrastructure-command-stack,
+  .logistics-command-stack {
     height: 100%;
     min-height: 0;
     overflow-y: auto;
@@ -192,8 +194,6 @@
     scrollbar-gutter: stable;
   }
 }
-
-
 
 .map-operation-confirmation {
   cursor: pointer;
