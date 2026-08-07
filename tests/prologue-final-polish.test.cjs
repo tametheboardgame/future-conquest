@@ -44,7 +44,14 @@ test('bubble placement protects speaker targets and subtitle safe space', () => 
 test('final polish keeps the energy backing deliberate and corrects Page 1 framing', () => {
   assert.match(polish, /box-shadow:\s*\n\s*9px 8px 0 rgba\(116, 67, 166, \.28\)/);
   assert.match(polish, /\[data-panel-id='anomaly'\][\s\S]*background-position: 50% 60%/);
-  assert.match(polish, /\[data-panel-id='order'\][\s\S]*background-position: 48% 44%/);
+  assert.match(polish, /\[data-panel-id='order'\][\s\S]*background-position: 48% 30%/);
   assert.match(polish, /motion-comic-page-sprite[\s\S]*opacity: \.12/);
   assert.match(polish, /touch-action: none/);
+});
+
+test('playtest nudges keep selected Page 2 radio boxes away from crowded edges', () => {
+  assert.match(polish, /data-panel-id='arrival'[\s\S]*data-beat-id='p9-radio'[\s\S]*translate: -32px 18px/);
+  assert.match(polish, /data-panel-id='arrival'[\s\S]*data-beat-id='p9-soldier'[\s\S]*translate: -24px -18px/);
+  assert.match(polish, /data-panel-id='world-responds'[\s\S]*data-beat-id='p11-government'[\s\S]*translate: -30px -14px/);
+  assert.match(polish, /data-panel-id='burden-of-command'[\s\S]*data-beat-id='p12-officer'[\s\S]*translate: 20px -18px/);
 });
