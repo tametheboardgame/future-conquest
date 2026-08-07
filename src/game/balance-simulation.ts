@@ -61,6 +61,8 @@ export interface CampaignBalanceResult {
   criticalSupplyFormationDays: number;
   operationsStarted: number;
   operationsJoined: number;
+  coordinatedAssaults: number;
+  breakoutOperations: number;
   movesIssued: number;
   garrisonsAssigned: number;
   garrisonsReleased: number;
@@ -93,6 +95,8 @@ export interface BalanceGroupSummary {
   averagePortalReserveTurns: number;
   averageEngineeringProjectsStarted: number;
   averageFormationsSplit: number;
+  averageCoordinatedAssaults: number;
+  averageBreakoutOperations: number;
   defeatCauses: Record<DefeatCause, number>;
 }
 
@@ -138,12 +142,20 @@ interface PolicyProfile {
 interface ActionTelemetry {
   operationsStarted: number;
   operationsJoined: number;
+  coordinatedAssaults: number;
+  breakoutOperations: number;
   movesIssued: number;
   garrisonsAssigned: number;
   garrisonsReleased: number;
   portalReserveTurns: number;
   engineeringProjectsStarted: number;
   formationsSplit: number;
+}
+
+interface AttackPlan {
+  targetId: string;
+  supportGroupId?: string;
+  breakout: boolean;
 }
 
 const STARTING_PERSONNEL = 10_000;
@@ -181,7 +193,7 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
     specialistManagement: false
   },
   cautious: {
-    attackRatio: 1.0,
+    attackRatio: 1,
     joinRatio: 0.8,
     portalReserve: 1,
     maxOperationParticipants: 2,
@@ -192,13 +204,13 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
     specialistManagement: false
   },
   managed: {
-    attackRatio: 0.92,
-    joinRatio: 0.72,
+    attackRatio: 0.88,
+    joinRatio: 0.7,
     portalReserve: 1,
     maxOperationParticipants: 2,
     maxConcurrentOperations: 1,
-    minimumAttackDeliveryRatio: 0.62,
-    minimumAttackSupplyStock: 54,
+    minimumAttackDeliveryRatio: 0.6,
+    minimumAttackSupplyStock: 52,
     occupationHold: 'administered',
     specialistManagement: true
   }
@@ -220,6 +232,8 @@ const stableStaging = (state: GameState, territoryId: string) => (
   || state.territories[territoryId]?.occupation === 'controlled'
   || state.territories[territoryId]?.occupation === 'administered'
 );
+const formationCondition = (state: GameState, groupId: string) => state.logistics.formationAllocations[groupId]?.condition;
+const isCutOff = (state: GameState, groupId: string) => formationCondition(state, groupId) === 'cut-off';
 
 const combatPower = (group: TaskGroup) => {
   const deployableArmour = Math.min(group.functionalArmour, group.personnel);
@@ -231,10 +245,10 @@ const combatPower = (group: TaskGroup) => {
 function portalReserveIds(state: GameState, policy: BalancePolicyId): Set<string> {
   const profile = POLICY[policy];
   if (profile.portalReserve <= 0 || !isFrontier(state, state.portalTerritory)) return new Set<string>();
-  const candidates = groupsAt(state, state.portalTerritory)
+  const fullSize = groupsAt(state, state.portalTerritory)
     .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison') && !isSecurityDetachment(group))
     .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id));
-  const fallback = candidates.length ? candidates : groupsAt(state, state.portalTerritory)
+  const fallback = fullSize.length ? fullSize : groupsAt(state, state.portalTerritory)
     .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison'))
     .sort((first, second) => combatPower(second) - combatPower(first) || first.id.localeCompare(second.id));
   return new Set(fallback.slice(0, profile.portalReserve).map(group => group.id));
@@ -272,43 +286,93 @@ function shouldAssignWholeGarrison(state: GameState, group: TaskGroup, policy: B
 function operationPower(state: GameState, targetId: string): number {
   const operation = getOperationAtTarget(state, targetId);
   if (!operation) return 0;
-  return operation.participantGroupIds.reduce((sum, groupId) => {
-    const group = state.taskGroups[groupId];
-    return sum + (group ? combatPower(group) : 0);
-  }, 0);
+  const participants = operation.participantGroupIds
+    .map(groupId => state.taskGroups[groupId])
+    .filter((group): group is TaskGroup => Boolean(group));
+  const coordination = Math.max(0.82, 1 - Math.max(0, participants.length - 1) * 0.04);
+  return participants.reduce((sum, group) => sum + combatPower(group), 0) * coordination;
 }
 
-function formationCanAttack(state: GameState, group: TaskGroup, policy: BalancePolicyId): boolean {
+function formationCanAttack(state: GameState, group: TaskGroup, policy: BalancePolicyId, breakout = false): boolean {
   const profile = POLICY[policy];
+  if (profile.specialistManagement && isSecurityDetachment(group)) return false;
+  if (breakout) return group.supply >= 16;
   const allocation = state.logistics.formationAllocations[group.id];
   const deliveryRatio = allocation ? allocation.ratio / 100 : 1;
   if (profile.specialistManagement && !stableStaging(state, group.location)) return false;
-  if (profile.specialistManagement && isSecurityDetachment(group)) return false;
   return group.supply >= profile.minimumAttackSupplyStock && deliveryRatio >= profile.minimumAttackDeliveryRatio;
 }
 
-function chooseAttack(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+function supporterFor(
+  state: GameState,
+  group: TaskGroup,
+  targetId: string,
+  policy: BalancePolicyId,
+  reserved: Set<string>,
+  breakout: boolean
+): TaskGroup | undefined {
+  if (POLICY[policy].maxOperationParticipants < 2) return undefined;
+  return Object.values(state.taskGroups)
+    .filter(candidate => (
+      candidate.id !== group.id
+      && !reserved.has(candidate.id)
+      && candidate.status === 'ready'
+      && canIssueOperationalOrder(candidate)
+      && !isSecurityDetachment(candidate)
+      && getAdjacentOrderTargets(state, candidate.id).includes(targetId)
+      && formationCanAttack(state, candidate, policy, breakout)
+    ))
+    .sort((first, second) => combatPower(second) - combatPower(first) || first.id.localeCompare(second.id))[0];
+}
+
+function reconnectValue(state: GameState, targetId: string): number {
+  if (targetId === state.portalTerritory) return 3;
+  return TERRITORIES[targetId].neighbours.some(neighbour => (
+    state.territories[neighbour]?.controller === 'player'
+    && state.territories[neighbour]?.supplied
+    && state.territories[neighbour]?.occupation !== 'unsecured'
+  )) ? 1.5 : 0;
+}
+
+function chooseAttackPlan(
+  state: GameState,
+  group: TaskGroup,
+  policy: BalancePolicyId,
+  reserved: Set<string>
+): AttackPlan | undefined {
   const profile = POLICY[policy];
-  if (!formationCanAttack(state, group, policy)) return undefined;
-  return getAdjacentOrderTargets(state, group.id)
+  const breakout = isCutOff(state, group.id) && group.location !== state.portalTerritory;
+  if (!formationCanAttack(state, group, policy, breakout)) return undefined;
+
+  const plans = getAdjacentOrderTargets(state, group.id)
     .filter(id => state.territories[id]?.controller === 'enemy')
-    .map(id => {
-      const operation = getOperationAtTarget(state, id);
+    .map(targetId => {
+      const operation = getOperationAtTarget(state, targetId);
       if (operation && operation.participantGroupIds.length >= profile.maxOperationParticipants) return null;
-      if (!operation && Object.keys(state.operations).length >= profile.maxConcurrentOperations) return null;
-      const ratio = (combatPower(group) + operationPower(state, id)) / Math.max(1, enemyStrengthAt(state, id).power);
-      const threshold = (operation ? profile.joinRatio : profile.attackRatio)
-        + (TERRAIN_CAUTION[TERRITORIES[id].terrain] ?? 0);
-      return {
-        id,
-        ratio,
-        threshold,
-        score: ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.2 : 0)
-      };
+      if (!operation && !breakout && Object.keys(state.operations).length >= profile.maxConcurrentOperations) return null;
+
+      const support = operation ? undefined : supporterFor(state, group, targetId, policy, reserved, breakout);
+      const basePower = combatPower(group) + operationPower(state, targetId);
+      const plannedPower = support ? (basePower + combatPower(support)) * 0.96 : basePower;
+      const ratio = plannedPower / Math.max(1, enemyStrengthAt(state, targetId).power);
+      const terrain = TERRAIN_CAUTION[TERRITORIES[targetId].terrain] ?? 0;
+      const threshold = breakout
+        ? Math.min(profile.attackRatio, 0.68) + terrain * 0.35
+        : (operation ? profile.joinRatio : profile.attackRatio) + terrain;
+      const score = ratio
+        + TERRITORIES[targetId].supply * 0.06
+        + (operation ? 0.2 : 0)
+        + (breakout ? reconnectValue(state, targetId) : 0);
+      return { targetId, supportGroupId: support?.id, breakout, ratio, threshold, score };
     })
-    .filter((candidate): candidate is { id: string; ratio: number; threshold: number; score: number } => Boolean(candidate))
+    .filter((candidate): candidate is AttackPlan & { ratio: number; threshold: number; score: number } => Boolean(candidate))
     .filter(candidate => candidate.ratio >= candidate.threshold)
-    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id))[0]?.id;
+    .sort((first, second) => second.score - first.score || first.targetId.localeCompare(second.targetId));
+
+  const selected = plans[0];
+  return selected
+    ? { targetId: selected.targetId, supportGroupId: selected.supportGroupId, breakout: selected.breakout }
+    : undefined;
 }
 
 function distanceToFront(state: GameState, startId: string): number {
@@ -455,6 +519,35 @@ function prepareManaged(state: GameState, telemetry: ActionTelemetry): GameState
   return next;
 }
 
+function executeAttackPlan(state: GameState, groupId: string, plan: AttackPlan, telemetry: ActionTelemetry): GameState {
+  let next = selectTaskGroup(state, groupId);
+  next = selectTerritory(next, plan.targetId);
+  const existingBefore = Boolean(getOperationAtTarget(next, plan.targetId));
+  const operationCountBefore = Object.keys(next.operations).length;
+  next = beginOperation(next);
+  const currentJoined = Boolean(next.taskGroups[groupId]?.order?.type === 'attack');
+  if (!currentJoined) return state;
+
+  if (existingBefore) telemetry.operationsJoined += 1;
+  else if (Object.keys(next.operations).length > operationCountBefore) telemetry.operationsStarted += 1;
+  if (plan.breakout && !existingBefore) telemetry.breakoutOperations += 1;
+
+  if (plan.supportGroupId) {
+    const supporter = next.taskGroups[plan.supportGroupId];
+    if (supporter?.status === 'ready' && canIssueOperationalOrder(supporter)) {
+      next = selectTaskGroup(next, supporter.id);
+      next = selectTerritory(next, plan.targetId);
+      const supportBefore = next.taskGroups[supporter.id]?.order;
+      next = beginOperation(next);
+      if (!supportBefore && next.taskGroups[supporter.id]?.order?.type === 'attack') {
+        telemetry.operationsJoined += 1;
+        telemetry.coordinatedAssaults += 1;
+      }
+    }
+  }
+  return next;
+}
+
 function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
   let next = POLICY[policy].specialistManagement ? prepareManaged(state, telemetry) : state;
   const reserved = portalReserveIds(next, policy);
@@ -507,15 +600,9 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
       continue;
     }
 
-    const attack = chooseAttack(next, group, policy);
+    const attack = chooseAttackPlan(next, group, policy, reserved);
     if (attack) {
-      const joining = Boolean(getOperationAtTarget(next, attack));
-      next = selectTerritory(next, attack);
-      const before = Object.keys(next.operations).length;
-      next = beginOperation(next);
-      const after = Object.keys(next.operations).length;
-      if (joining) telemetry.operationsJoined += 1;
-      else if (after > before) telemetry.operationsStarted += 1;
+      next = executeAttackPlan(next, groupId, attack, telemetry);
       continue;
     }
 
@@ -564,6 +651,8 @@ export function simulateCurrentEngineCampaign(
   const telemetry: ActionTelemetry = {
     operationsStarted: 0,
     operationsJoined: 0,
+    coordinatedAssaults: 0,
+    breakoutOperations: 0,
     movesIssued: 0,
     garrisonsAssigned: 0,
     garrisonsReleased: 0,
@@ -665,6 +754,8 @@ function groupSummary(results: CampaignBalanceResult[], difficulty: Difficulty, 
     averagePortalReserveTurns: round1(average(results.map(result => result.portalReserveTurns))),
     averageEngineeringProjectsStarted: round1(average(results.map(result => result.engineeringProjectsStarted))),
     averageFormationsSplit: round1(average(results.map(result => result.formationsSplit))),
+    averageCoordinatedAssaults: round1(average(results.map(result => result.coordinatedAssaults))),
+    averageBreakoutOperations: round1(average(results.map(result => result.breakoutOperations))),
     defeatCauses
   };
 }
@@ -731,11 +822,11 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '',
     '## Difficulty and policy summary',
     '',
-    '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Portal loss | Crisis loss | Median victory day | Median territory control | Median personnel | Functional armour | Median minimum network | Avg recaptures | Avg engineering | Avg splits |',
+    '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Portal loss | Crisis loss | Median victory day | Median territory control | Median personnel | Functional armour | Median minimum network | Avg recaptures | Avg coordinated | Avg breakouts |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'
   ];
   for (const summary of report.summaries) {
-    lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.defeatCauses['portal-lost']} | ${summary.defeatCauses['operational-crisis']} | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianControlledTerritories} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} | ${summary.averageEngineeringProjectsStarted} | ${summary.averageFormationsSplit} |`);
+    lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.defeatCauses['portal-lost']} | ${summary.defeatCauses['operational-crisis']} | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianControlledTerritories} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} | ${summary.averageCoordinatedAssaults} | ${summary.averageBreakoutOperations} |`);
   }
   const starts = report.portalSummaries
     .filter(summary => summary.difficulty === 'standard' && summary.policy === 'managed')
@@ -751,11 +842,12 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '## Interpretation boundary',
     '',
     '- These are deterministic heuristic player doctrines driving the real current playable engine through its public order functions.',
-    '- Aggressive play accepts severe strategic risk. Balanced play keeps one full-sized portal reserve and releases whole-formation occupation duties once local control is established. Cautious play consolidates longer. Managed play adds dedicated security detachments, logistics priorities and engineering.',
+    '- Aggressive play accepts severe strategic risk. Balanced play keeps one full-sized portal reserve. Cautious play consolidates longer. Managed play adds dedicated security detachments, logistics priorities and engineering.',
+    '- Managed and cautious doctrines can deliberately form two-formation assaults when no single group has enough power to justify the attack alone.',
+    '- Cut-off full-sized formations may attempt a lower-threshold breakout against an adjacent enemy corridor, prioritising targets that reconnect to supplied friendly ground.',
     '- Managed security detachments remain defensive while a territory is exposed; small detached security units are never used as assault formations.',
-    '- Formations already on a viable frontline do not shuttle between safe territories merely because no attack meets the doctrine threshold.',
     '- They are comparative balance probes, not predictions of human win rate. Player interdiction remains excluded because it should be an offensive choice, not a prerequisite for basic campaign viability.',
-    '- If managed play still cannot progress after these doctrine safeguards, representative traces should be inspected before changing game balance.'
+    '- If managed play still cannot achieve victories after coordinated assaults and breakout behaviour, the remaining wall is strong evidence for actual game-balance tuning.'
   );
   return `${lines.join('\n')}\n`;
 }
