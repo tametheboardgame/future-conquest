@@ -19,10 +19,7 @@ import {
 import { crisisLimitForDifficulty } from './enemy-strategy';
 import { occupationRequirement, splitFormation } from './formation-organisation';
 import { getAdjacentOrderTargets } from './order-targeting';
-import {
-  setFormationLogisticsPriority,
-  setTerritoryLogisticsPriority
-} from './supply-network';
+import { setFormationLogisticsPriority, setTerritoryLogisticsPriority } from './supply-network';
 import type { Difficulty, GameState, TaskGroup } from './types';
 
 export type BalancePolicyId = 'aggressive' | 'balanced' | 'cautious' | 'managed';
@@ -129,16 +126,12 @@ export interface CurrentEngineBalanceReport {
 interface PolicyProfile {
   attackRatio: number;
   joinRatio: number;
-  garrisonResistance: number;
-  releaseResistance: number;
-  holdUntilAdministered: boolean;
   portalReserve: number;
-  reinforcePortalAtEscalation: number;
   maxOperationParticipants: number;
   maxConcurrentOperations: number;
   minimumAttackDeliveryRatio: number;
   minimumAttackSupplyStock: number;
-  requireStableStaging: boolean;
+  occupationHold: 'minimal' | 'controlled' | 'administered';
   specialistManagement: boolean;
 }
 
@@ -168,61 +161,45 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
   aggressive: {
     attackRatio: 0.58,
     joinRatio: 0.45,
-    garrisonResistance: 72,
-    releaseResistance: 62,
-    holdUntilAdministered: false,
     portalReserve: 0,
-    reinforcePortalAtEscalation: 75,
     maxOperationParticipants: 4,
     maxConcurrentOperations: 3,
     minimumAttackDeliveryRatio: 0.2,
     minimumAttackSupplyStock: 22,
-    requireStableStaging: false,
+    occupationHold: 'minimal',
     specialistManagement: false
   },
   balanced: {
     attackRatio: 0.82,
     joinRatio: 0.64,
-    garrisonResistance: 38,
-    releaseResistance: 32,
-    holdUntilAdministered: false,
     portalReserve: 1,
-    reinforcePortalAtEscalation: 62,
     maxOperationParticipants: 2,
     maxConcurrentOperations: 2,
-    minimumAttackDeliveryRatio: 0.55,
-    minimumAttackSupplyStock: 48,
-    requireStableStaging: false,
+    minimumAttackDeliveryRatio: 0.52,
+    minimumAttackSupplyStock: 46,
+    occupationHold: 'controlled',
     specialistManagement: false
   },
   cautious: {
-    attackRatio: 1.02,
-    joinRatio: 0.82,
-    garrisonResistance: 26,
-    releaseResistance: 22,
-    holdUntilAdministered: true,
+    attackRatio: 1.0,
+    joinRatio: 0.8,
     portalReserve: 1,
-    reinforcePortalAtEscalation: 45,
     maxOperationParticipants: 2,
     maxConcurrentOperations: 1,
-    minimumAttackDeliveryRatio: 0.7,
-    minimumAttackSupplyStock: 62,
-    requireStableStaging: false,
+    minimumAttackDeliveryRatio: 0.68,
+    minimumAttackSupplyStock: 58,
+    occupationHold: 'administered',
     specialistManagement: false
   },
   managed: {
-    attackRatio: 0.96,
-    joinRatio: 0.76,
-    garrisonResistance: 24,
-    releaseResistance: 20,
-    holdUntilAdministered: true,
+    attackRatio: 0.92,
+    joinRatio: 0.72,
     portalReserve: 1,
-    reinforcePortalAtEscalation: 45,
     maxOperationParticipants: 2,
     maxConcurrentOperations: 1,
-    minimumAttackDeliveryRatio: 0.65,
-    minimumAttackSupplyStock: 58,
-    requireStableStaging: true,
+    minimumAttackDeliveryRatio: 0.62,
+    minimumAttackSupplyStock: 54,
+    occupationHold: 'administered',
     specialistManagement: true
   }
 };
@@ -233,10 +210,11 @@ const totalFunctionalArmour = (state: GameState) => Object.values(state.taskGrou
   .reduce((sum, group) => sum + group.functionalArmour, 0);
 const totalDamagedArmour = (state: GameState) => Object.values(state.taskGroups)
   .reduce((sum, group) => sum + group.damagedArmour, 0);
-const localGroups = (state: GameState, territoryId: string) => Object.values(state.taskGroups)
+const groupsAt = (state: GameState, territoryId: string) => Object.values(state.taskGroups)
   .filter(group => group.location === territoryId && group.personnel > 0);
-const frontier = (state: GameState, territoryId: string) => state.territories[territoryId]?.controller === 'player'
+const isFrontier = (state: GameState, territoryId: string) => state.territories[territoryId]?.controller === 'player'
   && TERRITORIES[territoryId].neighbours.some(id => state.territories[id]?.controller === 'enemy');
+const isSecurityDetachment = (group: TaskGroup) => /Guard|Security/i.test(group.name) && group.personnel <= 1500;
 const stableStaging = (state: GameState, territoryId: string) => (
   territoryId === state.portalTerritory
   || state.territories[territoryId]?.occupation === 'controlled'
@@ -251,56 +229,44 @@ const combatPower = (group: TaskGroup) => {
 };
 
 function portalReserveIds(state: GameState, policy: BalancePolicyId): Set<string> {
-  if (!frontier(state, state.portalTerritory)) return new Set<string>();
   const profile = POLICY[policy];
-  const plannedPortalAttack = state.enemyOrders.some(order => (
-    order.type === 'counterattack'
-    && order.target === state.portalTerritory
-    && order.status !== 'completed'
-  ));
-
-  let reserveCount = profile.portalReserve;
-  if (plannedPortalAttack || state.escalation >= profile.reinforcePortalAtEscalation) {
-    reserveCount = Math.max(reserveCount, 1);
-  }
-  if ((policy === 'cautious' || policy === 'managed') && (plannedPortalAttack || state.escalation >= 65)) {
-    reserveCount = 2;
-  }
-  if (reserveCount <= 0) return new Set<string>();
-
-  const candidates = localGroups(state, state.portalTerritory)
-    .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison'))
+  if (profile.portalReserve <= 0 || !isFrontier(state, state.portalTerritory)) return new Set<string>();
+  const candidates = groupsAt(state, state.portalTerritory)
+    .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison') && !isSecurityDetachment(group))
     .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id));
-  return new Set(candidates.slice(0, reserveCount).map(group => group.id));
+  const fallback = candidates.length ? candidates : groupsAt(state, state.portalTerritory)
+    .filter(group => !group.order && (group.status === 'ready' || group.status === 'garrison'))
+    .sort((first, second) => combatPower(second) - combatPower(first) || first.id.localeCompare(second.id));
+  return new Set(fallback.slice(0, profile.portalReserve).map(group => group.id));
 }
 
-function releaseGarrison(
-  state: GameState,
-  group: TaskGroup,
-  profile: PolicyProfile,
-  reserved: Set<string>
-): boolean {
-  if (group.status !== 'garrison' || reserved.has(group.id)) return false;
-  const territory = state.territories[group.location];
-  if (!territory) return false;
-  if (profile.holdUntilAdministered) {
-    return territory.occupation === 'administered' && territory.resistance <= profile.releaseResistance;
-  }
-  return territory.occupation !== 'unsecured'
-    && territory.resistance <= profile.releaseResistance
-    && (!frontier(state, group.location) || localGroups(state, group.location).length > 1);
-}
-
-function assignGarrison(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
-  if (group.status !== 'ready' || group.location === state.portalTerritory) return false;
+function shouldHoldGarrison(state: GameState, group: TaskGroup, policy: BalancePolicyId, reserved: Set<string>): boolean {
+  if (reserved.has(group.id)) return true;
   const territory = state.territories[group.location];
   if (!territory || territory.controller !== 'player') return false;
-  if (localGroups(state, group.location).some(candidate => candidate.id !== group.id && candidate.status === 'garrison')) return false;
-  if (territory.occupation === 'unsecured') return true;
-  if (profile.holdUntilAdministered && territory.occupation !== 'administered') {
-    return territory.resistance >= profile.garrisonResistance;
+  if (group.location === state.portalTerritory && isSecurityDetachment(group)) return true;
+  if (isSecurityDetachment(group)) {
+    return isFrontier(state, group.location)
+      || territory.occupation === 'unsecured'
+      || territory.occupation === 'contested';
   }
-  return territory.occupation === 'contested' && territory.resistance >= profile.garrisonResistance;
+  const hold = POLICY[policy].occupationHold;
+  if (hold === 'minimal') return territory.occupation === 'unsecured';
+  if (hold === 'controlled') return territory.occupation === 'unsecured' || territory.occupation === 'contested';
+  return territory.occupation !== 'administered';
+}
+
+function shouldAssignWholeGarrison(state: GameState, group: TaskGroup, policy: BalancePolicyId): boolean {
+  if (POLICY[policy].specialistManagement) return false;
+  if (group.location === state.portalTerritory || group.status !== 'ready') return false;
+  const territory = state.territories[group.location];
+  if (!territory || territory.controller !== 'player') return false;
+  if (groupsAt(state, group.location).some(candidate => candidate.id !== group.id && candidate.status === 'garrison')) return false;
+  const hold = POLICY[policy].occupationHold;
+  if (territory.occupation === 'unsecured') return true;
+  if (hold === 'controlled') return territory.occupation === 'contested';
+  if (hold === 'administered') return territory.occupation !== 'administered';
+  return false;
 }
 
 function operationPower(state: GameState, targetId: string): number {
@@ -312,19 +278,19 @@ function operationPower(state: GameState, targetId: string): number {
   }, 0);
 }
 
-function formationCanAttack(state: GameState, group: TaskGroup, profile: PolicyProfile): boolean {
+function formationCanAttack(state: GameState, group: TaskGroup, policy: BalancePolicyId): boolean {
+  const profile = POLICY[policy];
   const allocation = state.logistics.formationAllocations[group.id];
   const deliveryRatio = allocation ? allocation.ratio / 100 : 1;
-  if (profile.requireStableStaging && !stableStaging(state, group.location)) return false;
-  return group.supply >= profile.minimumAttackSupplyStock
-    && deliveryRatio >= profile.minimumAttackDeliveryRatio;
+  if (profile.specialistManagement && !stableStaging(state, group.location)) return false;
+  if (profile.specialistManagement && isSecurityDetachment(group)) return false;
+  return group.supply >= profile.minimumAttackSupplyStock && deliveryRatio >= profile.minimumAttackDeliveryRatio;
 }
 
-function attackTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+function chooseAttack(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
   const profile = POLICY[policy];
-  if (!formationCanAttack(state, group, profile)) return undefined;
-
-  const candidates = getAdjacentOrderTargets(state, group.id)
+  if (!formationCanAttack(state, group, policy)) return undefined;
+  return getAdjacentOrderTargets(state, group.id)
     .filter(id => state.territories[id]?.controller === 'enemy')
     .map(id => {
       const operation = getOperationAtTarget(state, id);
@@ -333,17 +299,20 @@ function attackTarget(state: GameState, group: TaskGroup, policy: BalancePolicyI
       const ratio = (combatPower(group) + operationPower(state, id)) / Math.max(1, enemyStrengthAt(state, id).power);
       const threshold = (operation ? profile.joinRatio : profile.attackRatio)
         + (TERRAIN_CAUTION[TERRITORIES[id].terrain] ?? 0);
-      const score = ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.22 : 0);
-      return { id, ratio, threshold, score };
+      return {
+        id,
+        ratio,
+        threshold,
+        score: ratio + TERRITORIES[id].supply * 0.06 + (operation ? 0.2 : 0)
+      };
     })
     .filter((candidate): candidate is { id: string; ratio: number; threshold: number; score: number } => Boolean(candidate))
     .filter(candidate => candidate.ratio >= candidate.threshold)
-    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
-  return candidates[0]?.id;
+    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id))[0]?.id;
 }
 
 function distanceToFront(state: GameState, startId: string): number {
-  if (frontier(state, startId)) return 0;
+  if (isFrontier(state, startId)) return 0;
   const visited = new Set<string>([startId]);
   const queue: Array<{ id: string; distance: number }> = [{ id: startId, distance: 0 }];
   while (queue.length) {
@@ -351,7 +320,7 @@ function distanceToFront(state: GameState, startId: string): number {
     if (!current) break;
     for (const neighbour of TERRITORIES[current.id].neighbours) {
       if (visited.has(neighbour) || state.territories[neighbour]?.controller !== 'player') continue;
-      if (frontier(state, neighbour)) return current.distance + 1;
+      if (isFrontier(state, neighbour)) return current.distance + 1;
       visited.add(neighbour);
       queue.push({ id: neighbour, distance: current.distance + 1 });
     }
@@ -359,85 +328,74 @@ function distanceToFront(state: GameState, startId: string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-function moveTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
+function chooseMove(state: GameState, group: TaskGroup, policy: BalancePolicyId): string | undefined {
   const profile = POLICY[policy];
-  if (profile.requireStableStaging && !stableStaging(state, group.location)) return undefined;
   const allocation = state.logistics.formationAllocations[group.id];
-  const currentDelivery = allocation ? allocation.ratio / 100 : 1;
-  const underPressure = group.supply < profile.minimumAttackSupplyStock
-    || currentDelivery < profile.minimumAttackDeliveryRatio;
+  const deliveryRatio = allocation ? allocation.ratio / 100 : 1;
+  const underPressure = group.supply < profile.minimumAttackSupplyStock || deliveryRatio < profile.minimumAttackDeliveryRatio;
 
-  const candidates = getAdjacentOrderTargets(state, group.id)
+  if (!underPressure && isFrontier(state, group.location)) return undefined;
+  if (profile.specialistManagement && !isSecurityDetachment(group) && !stableStaging(state, group.location)) return undefined;
+
+  return getAdjacentOrderTargets(state, group.id)
     .filter(id => state.territories[id]?.controller === 'player')
     .map(id => {
       const territory = state.territories[id];
       const distance = distanceToFront(state, id);
-      const supplyAllocation = state.logistics.territoryAllocations[id];
-      const delivery = supplyAllocation?.ratio ?? (territory.supplied ? 100 : 0);
-      const supplyScore = delivery / 100 * (underPressure ? 2.2 : 0.7);
-      const occupation = territory.occupation === 'unsecured' ? 0.55 : territory.occupation === 'contested' ? 0.25 : 0;
-      const frontScore = Number.isFinite(distance) ? -distance * (underPressure ? 0.25 : 1) : -99;
-      const portalRecovery = underPressure && id === state.portalTerritory ? 1.2 : 0;
-      return {
-        id,
-        score: frontScore + supplyScore + occupation + portalRecovery + TERRITORIES[id].supply * 0.03
-      };
+      const allocationAtTarget = state.logistics.territoryAllocations[id];
+      const delivery = allocationAtTarget?.ratio ?? (territory.supplied ? 100 : 0);
+      const frontScore = Number.isFinite(distance) ? -distance * (underPressure ? 0.2 : 1) : -99;
+      const supplyScore = delivery / 100 * (underPressure ? 2.4 : 0.6);
+      const portalRecovery = underPressure && id === state.portalTerritory ? 1.4 : 0;
+      return { id, score: frontScore + supplyScore + portalRecovery + TERRITORIES[id].supply * 0.03 };
     })
-    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id));
-  return candidates[0]?.id;
+    .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id))[0]?.id;
 }
 
-function splitManagedGarrison(
+function splitSecurity(
   state: GameState,
   source: TaskGroup,
   name: string,
-  personnel: number,
+  requestedPersonnel: number,
   telemetry: ActionTelemetry
 ): GameState {
-  const size = Math.min(personnel, Math.max(0, source.personnel - 800));
-  if (size < 250) return state;
-  const functionalArmour = Math.min(source.functionalArmour, Math.round(size * 0.68));
-  const damagedArmour = Math.min(source.damagedArmour, Math.round(size * 0.06));
-  const beforeCount = Object.keys(state.taskGroups).length;
+  const personnel = Math.min(requestedPersonnel, Math.max(0, source.personnel - 1000));
+  if (personnel < 450) return state;
+  const before = Object.keys(state.taskGroups).length;
   let next = splitFormation(state, {
     sourceId: source.id,
     name,
-    personnel: size,
-    functionalArmour,
-    damagedArmour
+    personnel,
+    functionalArmour: Math.min(source.functionalArmour, Math.round(personnel * 0.68)),
+    damagedArmour: Math.min(source.damagedArmour, Math.round(personnel * 0.05))
   });
-  if (Object.keys(next.taskGroups).length <= beforeCount) return state;
+  if (Object.keys(next.taskGroups).length <= before) return state;
   telemetry.formationsSplit += 1;
   next = setGarrison(next);
   telemetry.garrisonsAssigned += 1;
   return next;
 }
 
-function createManagedGarrisonDetachments(state: GameState, telemetry: ActionTelemetry): GameState {
+function createManagedSecurity(state: GameState, telemetry: ActionTelemetry): GameState {
   let next = state;
-
-  if (frontier(next, next.portalTerritory)) {
-    const portalGroups = localGroups(next, next.portalTerritory);
-    const hasPortalGarrison = portalGroups.some(group => group.status === 'garrison');
-    if (!hasPortalGarrison) {
-      const source = portalGroups
-        .filter(group => group.status === 'ready' && !group.order && group.personnel >= 1700)
-        .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id))[0];
-      if (source) next = splitManagedGarrison(next, source, `Portal Guard ${next.turn}`, 900, telemetry);
-    }
+  if (isFrontier(next, next.portalTerritory) && !groupsAt(next, next.portalTerritory).some(group => group.status === 'garrison' && isSecurityDetachment(group))) {
+    const source = groupsAt(next, next.portalTerritory)
+      .filter(group => group.status === 'ready' && !group.order && !isSecurityDetachment(group) && group.personnel >= 1900)
+      .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id))[0];
+    if (source) next = splitSecurity(next, source, `Portal Guard ${next.turn}`, 1050, telemetry);
   }
 
   for (const territoryId of Object.keys(next.territories).sort()) {
     if (territoryId === next.portalTerritory) continue;
     const territory = next.territories[territoryId];
     if (territory.controller !== 'player' || territory.occupation === 'administered') continue;
-    if (localGroups(next, territoryId).some(group => group.status === 'garrison')) continue;
-    const source = localGroups(next, territoryId)
-      .filter(group => group.status === 'ready' && !group.order && group.personnel >= 1500)
+    if (groupsAt(next, territoryId).some(group => group.status === 'garrison' && isSecurityDetachment(group))) continue;
+    const source = groupsAt(next, territoryId)
+      .filter(group => group.status === 'ready' && !group.order && !isSecurityDetachment(group) && group.personnel >= 1800)
       .sort((first, second) => second.personnel - first.personnel || first.id.localeCompare(second.id))[0];
     if (!source) continue;
-    const desired = Math.min(1100, Math.max(750, Math.round(occupationRequirement(territoryId) * 0.7)));
-    next = splitManagedGarrison(next, source, `${TERRITORIES[territoryId].centre} Security ${next.turn}`, desired, telemetry);
+    const desired = Math.min(1050, Math.max(700, Math.round(occupationRequirement(territoryId) * 0.65)));
+    next = splitSecurity(next, source, `${TERRITORIES[territoryId].centre} Security ${next.turn}`, desired, telemetry);
   }
   return next;
 }
@@ -447,78 +405,64 @@ function applyManagedPriorities(state: GameState): GameState {
   for (const territoryId of Object.keys(next.territories).sort()) {
     const territory = next.territories[territoryId];
     if (territory.controller !== 'player') continue;
-    const desired = territoryId === next.portalTerritory
+    const priority = territoryId === next.portalTerritory
       ? 'critical'
-      : frontier(next, territoryId) || territory.occupation === 'contested'
+      : isFrontier(next, territoryId) || territory.occupation === 'contested'
         ? 'high'
         : territory.occupation === 'administered'
           ? 'restricted'
           : 'standard';
-    next = setTerritoryLogisticsPriority(next, territoryId, desired);
+    next = setTerritoryLogisticsPriority(next, territoryId, priority);
   }
   for (const groupId of Object.keys(next.taskGroups).sort()) {
     const group = next.taskGroups[groupId];
     if (!group || group.personnel <= 0) continue;
-    const desired = group.location === next.portalTerritory
+    const priority = group.location === next.portalTerritory || group.status === 'attacking' || group.status === 'moving'
       ? 'high'
-      : group.status === 'garrison' && frontier(next, group.location)
+      : group.status === 'garrison' && isFrontier(next, group.location)
         ? 'high'
         : 'automatic';
-    next = setFormationLogisticsPriority(next, groupId, desired);
+    next = setFormationLogisticsPriority(next, groupId, priority);
   }
   return next;
 }
 
 function startManagedEngineering(state: GameState, telemetry: ActionTelemetry): GameState {
   if (state.engineeringProjects.some(project => project.status === 'active')) return state;
-  const candidates = repairableEngineeringRoutes(state)
-    .filter(route => (
-      state.routeStates[route.id].condition <= 72
-      || state.logistics.bottleneckRouteIds.includes(route.id)
-    ))
-    .map(route => {
-      const routeState = state.routeStates[route.id];
-      const portalRoute = route.fromTerritoryId === state.portalTerritory || route.toTerritoryId === state.portalTerritory;
-      const score = (100 - routeState.condition)
+  const selected = repairableEngineeringRoutes(state)
+    .filter(route => state.routeStates[route.id].condition <= 72 || state.logistics.bottleneckRouteIds.includes(route.id))
+    .map(route => ({
+      route,
+      score: (100 - state.routeStates[route.id].condition)
         + (state.logistics.bottleneckRouteIds.includes(route.id) ? 42 : 0)
-        + (portalRoute ? 30 : 0);
-      return { route, score };
-    })
-    .sort((first, second) => second.score - first.score || first.route.id.localeCompare(second.route.id));
-  const selected = candidates[0]?.route;
+        + (route.fromTerritoryId === state.portalTerritory || route.toTerritoryId === state.portalTerritory ? 30 : 0)
+    }))
+    .sort((first, second) => second.score - first.score || first.route.id.localeCompare(second.route.id))[0]?.route;
   if (!selected) return state;
-
-  const groups = engineeringGroupsForRoute(state, selected.id)
-    .sort((first, second) => {
-      const firstFrontlineGarrison = first.status === 'garrison' && frontier(state, first.location) ? 1 : 0;
-      const secondFrontlineGarrison = second.status === 'garrison' && frontier(state, second.location) ? 1 : 0;
-      return firstFrontlineGarrison - secondFrontlineGarrison
-        || combatPower(first) - combatPower(second)
-        || first.id.localeCompare(second.id);
-    });
-  const group = groups[0];
+  const group = engineeringGroupsForRoute(state, selected.id)
+    .filter(candidate => !isSecurityDetachment(candidate) || !isFrontier(state, candidate.location))
+    .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id))[0];
   if (!group) return state;
-  const allocation = state.logistics.networkEfficiency >= 70 ? 75 : 50;
-  const next = startEngineeringProject(state, selected.id, group.id, allocation);
+  const next = startEngineeringProject(state, selected.id, group.id, state.logistics.networkEfficiency >= 70 ? 75 : 50);
   if (next !== state) telemetry.engineeringProjectsStarted += 1;
   return next;
 }
 
-function prepareSpecialists(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
-  if (!POLICY[policy].specialistManagement) return state;
-  let next = createManagedGarrisonDetachments(state, telemetry);
+function prepareManaged(state: GameState, telemetry: ActionTelemetry): GameState {
+  let next = createManagedSecurity(state, telemetry);
   next = applyManagedPriorities(next);
   if (next.turn >= 5) next = startManagedEngineering(next, telemetry);
   return next;
 }
 
 function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
-  let next = prepareSpecialists(state, policy, telemetry);
+  let next = POLICY[policy].specialistManagement ? prepareManaged(state, telemetry) : state;
   const reserved = portalReserveIds(next, policy);
   if (reserved.size) telemetry.portalReserveTurns += 1;
 
   for (const groupId of Object.keys(next.taskGroups).sort()) {
-    if (!next.taskGroups[groupId] || next.status !== 'playing') continue;
+    if (next.status !== 'playing') break;
+    if (!next.taskGroups[groupId]) continue;
     next = selectTaskGroup(next, groupId);
     let group = next.taskGroups[groupId];
     if (!group) continue;
@@ -532,23 +476,38 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
     }
 
     if (group.status === 'garrison') {
-      if (releaseGarrison(next, group, POLICY[policy], reserved)) {
-        next = setGarrison(next);
-        telemetry.garrisonsReleased += 1;
-        group = next.taskGroups[groupId];
-      } else {
-        continue;
-      }
+      if (shouldHoldGarrison(next, group, policy, reserved)) continue;
+      next = setGarrison(next);
+      telemetry.garrisonsReleased += 1;
+      group = next.taskGroups[groupId];
     }
+
     if (!canIssueOperationalOrder(group)) continue;
 
-    if (assignGarrison(next, group, POLICY[policy])) {
+    if (POLICY[policy].specialistManagement && isSecurityDetachment(group)) {
+      if (group.location === next.portalTerritory || isFrontier(next, group.location) || next.territories[group.location].occupation !== 'administered') {
+        if (group.status === 'ready') {
+          next = setGarrison(next);
+          telemetry.garrisonsAssigned += 1;
+        }
+        continue;
+      }
+      const securityMove = chooseMove(next, group, policy);
+      if (securityMove && securityMove !== group.location) {
+        next = selectTerritory(next, securityMove);
+        next = issueMove(next);
+        if (next.taskGroups[groupId]?.order?.type === 'move') telemetry.movesIssued += 1;
+      }
+      continue;
+    }
+
+    if (shouldAssignWholeGarrison(next, group, policy)) {
       next = setGarrison(next);
       telemetry.garrisonsAssigned += 1;
       continue;
     }
 
-    const attack = attackTarget(next, group, policy);
+    const attack = chooseAttack(next, group, policy);
     if (attack) {
       const joining = Boolean(getOperationAtTarget(next, attack));
       next = selectTerritory(next, attack);
@@ -560,12 +519,11 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
       continue;
     }
 
-    const move = moveTarget(next, group, policy);
+    const move = chooseMove(next, group, policy);
     if (move && move !== group.location) {
       next = selectTerritory(next, move);
-      const before = next.taskGroups[groupId]?.order;
       next = issueMove(next);
-      if (!before && next.taskGroups[groupId]?.order?.type === 'move') telemetry.movesIssued += 1;
+      if (next.taskGroups[groupId]?.order?.type === 'move') telemetry.movesIssued += 1;
     }
   }
   return next;
@@ -616,9 +574,7 @@ export function simulateCurrentEngineCampaign(
 
   while (state.status === 'playing' && state.turn < maxTurns) {
     state = issueOrders(state, policy, telemetry);
-    const controllers = Object.fromEntries(
-      Object.entries(state.territories).map(([id, territory]) => [id, territory.controller])
-    );
+    const controllers = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
     state = endTurn(state);
     for (const [id, territory] of Object.entries(state.territories)) {
       if (controllers[id] === 'enemy' && territory.controller === 'player') captures += 1;
@@ -636,7 +592,6 @@ export function simulateCurrentEngineCampaign(
   const woundedPool = state.woundedPool;
   const functionalArmour = totalFunctionalArmour(state);
   const outcome: BalanceOutcome = state.status === 'playing' ? 'timeout' : state.status;
-
   return {
     seed,
     portalTerritory: state.portalTerritory,
@@ -667,9 +622,7 @@ export function simulateCurrentEngineCampaign(
 }
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
-const average = (values: number[]) => values.length
-  ? values.reduce((sum, value) => sum + value, 0) / values.length
-  : 0;
+const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 const median = (values: number[]) => {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -677,11 +630,7 @@ const median = (values: number[]) => {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 };
 
-function groupSummary(
-  results: CampaignBalanceResult[],
-  difficulty: Difficulty,
-  policy: BalancePolicyId
-): BalanceGroupSummary {
+function groupSummary(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId): BalanceGroupSummary {
   const victories = results.filter(result => result.outcome === 'victory');
   const defeats = results.filter(result => result.outcome === 'defeat');
   const timeouts = results.filter(result => result.outcome === 'timeout');
@@ -692,7 +641,6 @@ function groupSummary(
     unknown: 0
   };
   for (const result of defeats) defeatCauses[result.defeatCause ?? 'unknown'] += 1;
-
   return {
     difficulty,
     policy,
@@ -721,12 +669,7 @@ function groupSummary(
   };
 }
 
-function portalSummary(
-  results: CampaignBalanceResult[],
-  difficulty: Difficulty,
-  policy: BalancePolicyId,
-  portalTerritory: string
-): PortalBalanceSummary {
+function portalSummary(results: CampaignBalanceResult[], difficulty: Difficulty, policy: BalancePolicyId, portalTerritory: string): PortalBalanceSummary {
   return {
     difficulty,
     policy,
@@ -743,12 +686,8 @@ export function runCurrentEngineBalanceSimulation(options: BalanceSimulationOpti
   const runsPerStart = Math.max(1, Math.round(options.runsPerStart));
   const maxTurns = Math.max(10, Math.round(options.maxTurns));
   const seedOffset = Math.max(0, Math.round(options.seedOffset ?? 1));
-  const difficulties: Difficulty[] = options.difficulties?.length
-    ? [...options.difficulties]
-    : [...DEFAULT_DIFFICULTIES];
-  const policies: BalancePolicyId[] = options.policies?.length
-    ? [...options.policies]
-    : [...DEFAULT_POLICIES];
+  const difficulties: Difficulty[] = options.difficulties?.length ? [...options.difficulties] : [...DEFAULT_DIFFICULTIES];
+  const policies: BalancePolicyId[] = options.policies?.length ? [...options.policies] : [...DEFAULT_POLICIES];
   const results: CampaignBalanceResult[] = [];
 
   for (const difficulty of difficulties) {
@@ -768,16 +707,11 @@ export function runCurrentEngineBalanceSimulation(options: BalanceSimulationOpti
     policy
   )));
   const portalSummaries = difficulties.flatMap(difficulty => policies.flatMap(policy => SLICE_IDS.map(portalTerritory => portalSummary(
-    results.filter(result => (
-      result.difficulty === difficulty
-      && result.policy === policy
-      && result.portalTerritory === portalTerritory
-    )),
+    results.filter(result => result.difficulty === difficulty && result.policy === policy && result.portalTerritory === portalTerritory),
     difficulty,
     policy,
     portalTerritory
   ))));
-
   return {
     engineSaveVersion: 14,
     territoryCount: SLICE_IDS.length,
@@ -800,37 +734,28 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Portal loss | Crisis loss | Median victory day | Median territory control | Median personnel | Functional armour | Median minimum network | Avg recaptures | Avg engineering | Avg splits |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'
   ];
-
   for (const summary of report.summaries) {
     lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.defeatCauses['portal-lost']} | ${summary.defeatCauses['operational-crisis']} | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianControlledTerritories} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} | ${summary.averageEngineeringProjectsStarted} | ${summary.averageFormationsSplit} |`);
   }
-
   const starts = report.portalSummaries
     .filter(summary => summary.difficulty === 'standard' && summary.policy === 'managed')
     .sort((first, second) => first.victoryRate - second.victoryRate || second.medianFinalTurn - first.medianFinalTurn);
   if (starts.length) {
-    lines.push(
-      '',
-      '## Standard / managed portal sensitivity',
-      '',
-      '| Portal | Victory | Median final day | Median personnel | Avg enemy recaptures |',
-      '| --- | ---: | ---: | ---: | ---: |'
-    );
+    lines.push('', '## Standard / managed portal sensitivity', '', '| Portal | Victory | Median final day | Median personnel | Avg enemy recaptures |', '| --- | ---: | ---: | ---: | ---: |');
     for (const summary of starts) {
       lines.push(`| ${TERRITORIES[summary.portalTerritory].centre} (${summary.portalTerritory}) | ${summary.victoryRate}% | ${summary.medianFinalTurn} | ${summary.medianActivePersonnel} | ${summary.averageEnemyRecaptures} |`);
     }
   }
-
   lines.push(
     '',
     '## Interpretation boundary',
     '',
     '- These are deterministic heuristic player doctrines driving the real current playable engine through its public order functions.',
-    '- Aggressive play accepts an exposed portal and severe logistics risk; balanced play holds a reserve and limits stacking; cautious play limits itself to one operation at a time; managed play additionally creates reusable garrison detachments, waits for stable occupation, sets logistics priorities and repairs damaged controlled corridors.',
-    '- Garrisons remain on defensive duty until their doctrine explicitly releases them; the harness does not silently recycle a garrison into an attack.',
-    '- They are comparative balance probes, not predictions of human win rate.',
-    '- Player interdiction is deliberately excluded because it is an offensive option rather than a prerequisite for basic campaign viability.',
-    '- If managed play still cannot progress, the next step is to inspect specific campaign traces before changing game balance.'
+    '- Aggressive play accepts severe strategic risk. Balanced play keeps one full-sized portal reserve and releases whole-formation occupation duties once local control is established. Cautious play consolidates longer. Managed play adds dedicated security detachments, logistics priorities and engineering.',
+    '- Managed security detachments remain defensive while a territory is exposed; small detached security units are never used as assault formations.',
+    '- Formations already on a viable frontline do not shuttle between safe territories merely because no attack meets the doctrine threshold.',
+    '- They are comparative balance probes, not predictions of human win rate. Player interdiction remains excluded because it should be an offensive choice, not a prerequisite for basic campaign viability.',
+    '- If managed play still cannot progress after these doctrine safeguards, representative traces should be inspected before changing game balance.'
   );
   return `${lines.join('\n')}\n`;
 }
