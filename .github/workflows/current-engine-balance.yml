@@ -50,7 +50,12 @@ jobs:
         run: npm ci
 
       - name: Run regression suite
-        run: npm test
+        run: |
+          mkdir -p balance-output
+          set +e
+          npm test 2>&1 | tee balance-output/regression-output.txt
+          status=${PIPESTATUS[0]}
+          exit $status
 
       - name: Run current-engine balance simulation
         run: npm run simulate:current-balance
@@ -67,6 +72,11 @@ jobs:
           if [ -f balance-output/current-engine-traces.md ]; then
             printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
             cat balance-output/current-engine-traces.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f balance-output/regression-output.txt ]; then
+            printf '\n---\n\n## Regression tail\n\n```text\n' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 80 balance-output/regression-output.txt >> "$GITHUB_STEP_SUMMARY"
+            printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload balance report
