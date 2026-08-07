@@ -1,32 +1,21 @@
 import type { GlobalSettings } from '../game/global-settings';
 import { DEFAULT_GLOBAL_SETTINGS } from '../game/global-settings';
+import { MUSIC_TRACKS, resolveMusicTrackId } from './music-library';
 
 interface RegisteredAudioTrack {
   src: string;
   gain: number;
 }
 
-interface RegisteredMusicTrack extends RegisteredAudioTrack {
-  loop: boolean;
-}
-
-export const MUSIC_TRACKS = {
-  'black-protocol-dawn': {
-    src: `${import.meta.env.BASE_URL}audio/black-protocol-dawn.mp3`,
-    loop: true,
-    gain: 1
-  }
-} as const satisfies Record<string, RegisteredMusicTrack>;
-
 export const MUSIC_CONTEXTS = {
-  title: 'black-protocol-dawn',
-  prologue: 'black-protocol-dawn'
+  title: 'selected',
+  prologue: 'selected'
 } as const;
 
 // Sound effects can be registered here as the interface gains authored SFX.
 export const SFX_TRACKS: Record<string, RegisteredAudioTrack> = {};
 
-export type MusicTrackId = keyof typeof MUSIC_TRACKS;
+export type MusicTrackId = string;
 export type MusicContext = keyof typeof MUSIC_CONTEXTS;
 export type SfxId = string;
 
@@ -53,12 +42,21 @@ class AudioManager {
   }
 
   setSettings(settings: GlobalSettings) {
+    const previousTrack = resolveMusicTrackId(this.settings.musicTrackId);
+    const nextTrack = resolveMusicTrackId(settings.musicTrackId);
     this.settings = settings;
+
+    if (this.requestedTrack && previousTrack !== nextTrack) {
+      this.requestedTrack = nextTrack;
+      if (this.unlocked) void this.playTrack(nextTrack, 350);
+      return;
+    }
+
     this.applyMusicVolume();
   }
 
-  requestMusic(context: MusicContext, fadeMs = 650) {
-    const trackId = MUSIC_CONTEXTS[context];
+  requestMusic(_context: MusicContext, fadeMs = 650) {
+    const trackId = resolveMusicTrackId(this.settings.musicTrackId);
     this.requestedTrack = trackId;
     if (!this.unlocked) return;
     void this.playTrack(trackId, fadeMs);
@@ -97,8 +95,10 @@ class AudioManager {
   }
 
   private async playTrack(trackId: MusicTrackId, fadeMs: number) {
-    const track = MUSIC_TRACKS[trackId];
-    if (this.currentTrack === trackId && this.music) {
+    const resolvedTrackId = resolveMusicTrackId(trackId);
+    const track = MUSIC_TRACKS[resolvedTrackId];
+
+    if (this.currentTrack === resolvedTrackId && this.music) {
       this.applyMusicVolume();
       if (this.music.paused) {
         try { await this.music.play(); } catch { /* wait for another user gesture */ }
@@ -114,7 +114,7 @@ class AudioManager {
     audio.loop = track.loop;
     audio.volume = 0;
     this.music = audio;
-    this.currentTrack = trackId;
+    this.currentTrack = resolvedTrackId;
 
     try {
       await audio.play();
@@ -126,11 +126,8 @@ class AudioManager {
 
   private targetMusicVolume() {
     if (this.settings.muted || !this.currentTrack) return 0;
-    return clamp(
-      this.settings.masterVolume
-      * this.settings.musicVolume
-      * MUSIC_TRACKS[this.currentTrack].gain
-    );
+    const track = MUSIC_TRACKS[resolveMusicTrackId(this.currentTrack)];
+    return clamp(this.settings.masterVolume * this.settings.musicVolume * track.gain);
   }
 
   private applyMusicVolume() {
