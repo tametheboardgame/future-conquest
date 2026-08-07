@@ -1,4 +1,4 @@
-/* Logistics and Intelligence explanation phases keep the command page readable. */
+/* Explanation phases keep the command page readable. */
 .tutorial-guide.explanation .tutorial-spotlight {
   border-width: 2px;
   border-color: #8adfff;
@@ -25,6 +25,12 @@
 
 .tutorial-overlay[data-mode='explanation'] .tutorial-actions {
   flex-wrap: wrap;
+}
+
+/* Once the guided tutorial has been completed or skipped, replay is deliberate
+   through the existing SYS/Campaign replay control rather than every new campaign. */
+.tutorial-seen .tutorial-toggle {
+  display: none;
 }
 
 @media (max-width: 760px) {
