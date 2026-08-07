@@ -1,17 +1,20 @@
 export const GLOBAL_SETTINGS_STORAGE_KEY = 'future-conquest-global-settings-v1';
+export const DEFAULT_MUSIC_TRACK_ID = 'black-protocol-dawn';
 
 export interface GlobalSettings {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
   muted: boolean;
+  musicTrackId: string;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   masterVolume: 0.8,
   musicVolume: 0.72,
   sfxVolume: 0.8,
-  muted: false
+  muted: false,
+  musicTrackId: DEFAULT_MUSIC_TRACK_ID
 };
 
 const clampVolume = (value: unknown, fallback: number) => (
@@ -25,7 +28,10 @@ export function normaliseGlobalSettings(value: Partial<GlobalSettings> | undefin
     masterVolume: clampVolume(value?.masterVolume, DEFAULT_GLOBAL_SETTINGS.masterVolume),
     musicVolume: clampVolume(value?.musicVolume, DEFAULT_GLOBAL_SETTINGS.musicVolume),
     sfxVolume: clampVolume(value?.sfxVolume, DEFAULT_GLOBAL_SETTINGS.sfxVolume),
-    muted: typeof value?.muted === 'boolean' ? value.muted : DEFAULT_GLOBAL_SETTINGS.muted
+    muted: typeof value?.muted === 'boolean' ? value.muted : DEFAULT_GLOBAL_SETTINGS.muted,
+    musicTrackId: typeof value?.musicTrackId === 'string' && value.musicTrackId.trim()
+      ? value.musicTrackId
+      : DEFAULT_GLOBAL_SETTINGS.musicTrackId
   };
 }
 

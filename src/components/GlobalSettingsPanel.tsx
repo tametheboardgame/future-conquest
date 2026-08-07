@@ -1,3 +1,4 @@
+import { MUSIC_TRACK_OPTIONS, resolveMusicTrackId } from '../audio/music-library';
 import type { GlobalSettings } from '../game/global-settings';
 
 interface Props {
@@ -22,6 +23,8 @@ export function GlobalSettingsPanel({ settings, onChange, onClose }: Props) {
     }
   };
 
+  const selectedTrackId = resolveMusicTrackId(settings.musicTrackId);
+
   return <div className="global-settings-backdrop" role="presentation" onMouseDown={event => {
     if (event.target === event.currentTarget) onClose();
   }}>
@@ -33,6 +36,7 @@ export function GlobalSettingsPanel({ settings, onChange, onClose }: Props) {
 
       <div className="settings-section">
         <div className="settings-section-heading"><div><p className="launcher-kicker">AUDIO</p><h3>Sound</h3></div><label className="settings-mute"><input type="checkbox" checked={settings.muted} onChange={event => onChange({ ...settings, muted: event.target.checked })} />Mute all</label></div>
+        <label className="settings-track-picker"><span><b>Music track</b><small>{MUSIC_TRACK_OPTIONS.length} available</small></span><select value={selectedTrackId} onChange={event => onChange({ ...settings, musicTrackId: event.target.value })}>{MUSIC_TRACK_OPTIONS.map(track => <option key={track.id} value={track.id}>{track.label}</option>)}</select></label>
         <label className="settings-slider"><span><b>Master volume</b><output>{percentage(settings.masterVolume)}</output></span><input type="range" min="0" max="1" step="0.01" value={settings.masterVolume} onChange={event => updateVolume('masterVolume', event.target.value)} /></label>
         <label className="settings-slider"><span><b>Music volume</b><output>{percentage(settings.musicVolume)}</output></span><input type="range" min="0" max="1" step="0.01" value={settings.musicVolume} onChange={event => updateVolume('musicVolume', event.target.value)} /></label>
         <label className="settings-slider"><span><b>Sound effects</b><output>{percentage(settings.sfxVolume)}</output></span><input type="range" min="0" max="1" step="0.01" value={settings.sfxVolume} onChange={event => updateVolume('sfxVolume', event.target.value)} /></label>
