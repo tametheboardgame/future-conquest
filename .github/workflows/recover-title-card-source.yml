@@ -1,0 +1,96 @@
+name: Recover title-card source
+
+on:
+  push:
+    branches:
+      - agent/repair-title-card-tail
+    paths:
+      - .github/workflows/recover-title-card-source.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/repair-title-card-tail
+          fetch-depth: 0
+
+      - name: Recover exact approved title tail
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readdir, readFile, writeFile } from 'node:fs/promises';
+          import path from 'node:path';
+
+          const dir = 'src/assets/motion-comic-v3/title-card-parts';
+          const expectedLength = 62346;
+          const expectedImageSha = 'c1407534915011edcf207825429572dfc60c052f046437cc749e9ad2c9502668';
+          const expectedPart7GitSha = 'a22ebdfed93c75d8b03deb39e736fbef12890ff1';
+          const files = (await readdir(dir)).filter(f => /^part-\d+\.txt$/.test(f)).sort();
+          const text = await Promise.all(files.map(f => readFile(path.join(dir, f), 'utf8')));
+          const firstSixEncoded = text.slice(0, 6).map(v => v.trim()).join('');
+          const allEncoded = text.map(v => v.trim()).join('');
+          const firstSix = Buffer.from(firstSixEncoded, 'base64');
+          const damaged = Buffer.from(allEncoded, 'base64');
+          const excess = damaged.length - expectedLength;
+
+          if (files.length !== 7 || excess <= 0) {
+            throw new Error(`Unexpected title source shape: ${files.length} parts, ${damaged.length} bytes.`);
+          }
+
+          const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+          const gitBlobSha = content => {
+            const body = Buffer.from(content, 'utf8');
+            const header = Buffer.from(`blob ${body.length}\0`, 'utf8');
+            return createHash('sha1').update(header).update(body).digest('hex');
+          };
+
+          let recovered = null;
+          let deletionOffset = -1;
+          for (let offset = firstSix.length; offset <= damaged.length - excess; offset += 1) {
+            const candidate = Buffer.concat([
+              damaged.subarray(0, offset),
+              damaged.subarray(offset + excess)
+            ]);
+            if (digest(candidate) === expectedImageSha) {
+              recovered = candidate;
+              deletionOffset = offset;
+              break;
+            }
+          }
+
+          if (!recovered) {
+            throw new Error(`No contiguous ${excess}-byte insertion can be removed to recover the approved title card.`);
+          }
+
+          const tail = recovered.subarray(firstSix.length);
+          const encodedTail = tail.toString('base64');
+          const variants = [encodedTail, `${encodedTail}\n`];
+          const exactSource = variants.find(value => gitBlobSha(value) === expectedPart7GitSha);
+          if (!exactSource) {
+            throw new Error(`Recovered image at byte ${deletionOffset}, but reconstructed part-07 text did not match original Git blob SHA.`);
+          }
+
+          await writeFile(path.join(dir, 'part-07.txt'), exactSource, 'utf8');
+          console.log(`Recovered approved title card by deleting ${excess} bytes at offset ${deletionOffset}.`);
+          console.log(`Recovered part-07 Git blob: ${gitBlobSha(exactSource)}.`);
+          NODE
+
+      - name: Verify strict production reconstruction
+        run: node scripts/build-title-card-asset.mjs
+
+      - name: Commit recovered source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/assets/motion-comic-v3/title-card-parts/part-07.txt
+          git diff --cached --quiet && { echo 'No source repair required.'; exit 0; }
+          git commit -m 'Restore exact approved title-card source tail'
+          git push origin HEAD:agent/repair-title-card-tail
