@@ -17,6 +17,7 @@ import {
   startEngineeringProject
 } from './engineering-projects';
 import { crisisLimitForDifficulty } from './enemy-strategy';
+import { occupationRequirement, splitFormation } from './formation-organisation';
 import { getAdjacentOrderTargets } from './order-targeting';
 import {
   setFormationLogisticsPriority,
@@ -68,6 +69,7 @@ export interface CampaignBalanceResult {
   garrisonsReleased: number;
   portalReserveTurns: number;
   engineeringProjectsStarted: number;
+  formationsSplit: number;
 }
 
 export interface BalanceGroupSummary {
@@ -93,6 +95,7 @@ export interface BalanceGroupSummary {
   averageCutOffFormationDays: number;
   averagePortalReserveTurns: number;
   averageEngineeringProjectsStarted: number;
+  averageFormationsSplit: number;
   defeatCauses: Record<DefeatCause, number>;
 }
 
@@ -147,6 +150,7 @@ interface ActionTelemetry {
   garrisonsReleased: number;
   portalReserveTurns: number;
   engineeringProjectsStarted: number;
+  formationsSplit: number;
 }
 
 const STARTING_PERSONNEL = 10_000;
@@ -383,6 +387,61 @@ function moveTarget(state: GameState, group: TaskGroup, policy: BalancePolicyId)
   return candidates[0]?.id;
 }
 
+function splitManagedGarrison(
+  state: GameState,
+  source: TaskGroup,
+  name: string,
+  personnel: number,
+  telemetry: ActionTelemetry
+): GameState {
+  const size = Math.min(personnel, Math.max(0, source.personnel - 800));
+  if (size < 250) return state;
+  const functionalArmour = Math.min(source.functionalArmour, Math.round(size * 0.68));
+  const damagedArmour = Math.min(source.damagedArmour, Math.round(size * 0.06));
+  const beforeCount = Object.keys(state.taskGroups).length;
+  let next = splitFormation(state, {
+    sourceId: source.id,
+    name,
+    personnel: size,
+    functionalArmour,
+    damagedArmour
+  });
+  if (Object.keys(next.taskGroups).length <= beforeCount) return state;
+  telemetry.formationsSplit += 1;
+  next = setGarrison(next);
+  telemetry.garrisonsAssigned += 1;
+  return next;
+}
+
+function createManagedGarrisonDetachments(state: GameState, telemetry: ActionTelemetry): GameState {
+  let next = state;
+
+  if (frontier(next, next.portalTerritory)) {
+    const portalGroups = localGroups(next, next.portalTerritory);
+    const hasPortalGarrison = portalGroups.some(group => group.status === 'garrison');
+    if (!hasPortalGarrison) {
+      const source = portalGroups
+        .filter(group => group.status === 'ready' && !group.order && group.personnel >= 1700)
+        .sort((first, second) => combatPower(first) - combatPower(second) || first.id.localeCompare(second.id))[0];
+      if (source) next = splitManagedGarrison(next, source, `Portal Guard ${next.turn}`, 900, telemetry);
+    }
+  }
+
+  for (const territoryId of Object.keys(next.territories).sort()) {
+    if (territoryId === next.portalTerritory) continue;
+    const territory = next.territories[territoryId];
+    if (territory.controller !== 'player' || territory.occupation === 'administered') continue;
+    if (localGroups(next, territoryId).some(group => group.status === 'garrison')) continue;
+    const source = localGroups(next, territoryId)
+      .filter(group => group.status === 'ready' && !group.order && group.personnel >= 1500)
+      .sort((first, second) => second.personnel - first.personnel || first.id.localeCompare(second.id))[0];
+    if (!source) continue;
+    const desired = Math.min(1100, Math.max(750, Math.round(occupationRequirement(territoryId) * 0.7)));
+    next = splitManagedGarrison(next, source, `${TERRITORIES[territoryId].centre} Security ${next.turn}`, desired, telemetry);
+  }
+  return next;
+}
+
 function applyManagedPriorities(state: GameState): GameState {
   let next = state;
   for (const territoryId of Object.keys(next.territories).sort()) {
@@ -447,7 +506,8 @@ function startManagedEngineering(state: GameState, telemetry: ActionTelemetry): 
 
 function prepareSpecialists(state: GameState, policy: BalancePolicyId, telemetry: ActionTelemetry): GameState {
   if (!POLICY[policy].specialistManagement) return state;
-  let next = applyManagedPriorities(state);
+  let next = createManagedGarrisonDetachments(state, telemetry);
+  next = applyManagedPriorities(next);
   if (next.turn >= 5) next = startManagedEngineering(next, telemetry);
   return next;
 }
@@ -471,10 +531,14 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
       continue;
     }
 
-    if (releaseGarrison(next, group, POLICY[policy], reserved)) {
-      next = setGarrison(next);
-      telemetry.garrisonsReleased += 1;
-      group = next.taskGroups[groupId];
+    if (group.status === 'garrison') {
+      if (releaseGarrison(next, group, POLICY[policy], reserved)) {
+        next = setGarrison(next);
+        telemetry.garrisonsReleased += 1;
+        group = next.taskGroups[groupId];
+      } else {
+        continue;
+      }
     }
     if (!canIssueOperationalOrder(group)) continue;
 
@@ -546,7 +610,8 @@ export function simulateCurrentEngineCampaign(
     garrisonsAssigned: 0,
     garrisonsReleased: 0,
     portalReserveTurns: 0,
-    engineeringProjectsStarted: 0
+    engineeringProjectsStarted: 0,
+    formationsSplit: 0
   };
 
   while (state.status === 'playing' && state.turn < maxTurns) {
@@ -651,6 +716,7 @@ function groupSummary(
     averageCutOffFormationDays: round1(average(results.map(result => result.cutOffFormationDays))),
     averagePortalReserveTurns: round1(average(results.map(result => result.portalReserveTurns))),
     averageEngineeringProjectsStarted: round1(average(results.map(result => result.engineeringProjectsStarted))),
+    averageFormationsSplit: round1(average(results.map(result => result.formationsSplit))),
     defeatCauses
   };
 }
@@ -731,12 +797,12 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '',
     '## Difficulty and policy summary',
     '',
-    '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Portal loss | Crisis loss | Median victory day | Median territory control | Median personnel | Functional armour | Median minimum network | Avg recaptures | Avg engineering |',
-    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'
+    '| Difficulty | Policy | Runs | Victory | Defeat | Timeout | Portal loss | Crisis loss | Median victory day | Median territory control | Median personnel | Functional armour | Median minimum network | Avg recaptures | Avg engineering | Avg splits |',
+    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'
   ];
 
   for (const summary of report.summaries) {
-    lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.defeatCauses['portal-lost']} | ${summary.defeatCauses['operational-crisis']} | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianControlledTerritories} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} | ${summary.averageEngineeringProjectsStarted} |`);
+    lines.push(`| ${summary.difficulty} | ${summary.policy} | ${summary.campaigns} | ${summary.victoryRate}% | ${summary.defeatRate}% | ${summary.timeoutRate}% | ${summary.defeatCauses['portal-lost']} | ${summary.defeatCauses['operational-crisis']} | ${summary.medianVictoryTurn ?? 'n/a'} | ${summary.medianControlledTerritories} | ${summary.medianActivePersonnel} | ${summary.medianFunctionalArmourPercentOfStart}% | ${summary.medianMinNetworkEfficiency}% | ${summary.averageEnemyRecaptures} | ${summary.averageEngineeringProjectsStarted} | ${summary.averageFormationsSplit} |`);
   }
 
   const starts = report.portalSummaries
@@ -760,9 +826,10 @@ export function renderCurrentEngineBalanceMarkdown(report: CurrentEngineBalanceR
     '## Interpretation boundary',
     '',
     '- These are deterministic heuristic player doctrines driving the real current playable engine through its public order functions.',
-    '- Aggressive play accepts an exposed portal and severe logistics risk; balanced play holds a reserve and limits stacking; cautious play limits itself to one operation at a time; managed play additionally waits for stable occupation, sets logistics priorities and repairs damaged controlled corridors.',
+    '- Aggressive play accepts an exposed portal and severe logistics risk; balanced play holds a reserve and limits stacking; cautious play limits itself to one operation at a time; managed play additionally creates reusable garrison detachments, waits for stable occupation, sets logistics priorities and repairs damaged controlled corridors.',
+    '- Garrisons remain on defensive duty until their doctrine explicitly releases them; the harness does not silently recycle a garrison into an attack.',
     '- They are comparative balance probes, not predictions of human win rate.',
-    '- Player interdiction is deliberately excluded from this baseline because it is an offensive option rather than a prerequisite for basic campaign viability.',
+    '- Player interdiction is deliberately excluded because it is an offensive option rather than a prerequisite for basic campaign viability.',
     '- If managed play still cannot progress, the next step is to inspect specific campaign traces before changing game balance.'
   );
   return `${lines.join('\n')}\n`;
