@@ -21,6 +21,7 @@ import {
 import './motion-comic-intro.css';
 import './motion-comic-image-element.css';
 import './motion-comic-responsive.css';
+import './motion-comic-final-polish.css';
 
 export type ArtworkStatus = 'loading' | 'loaded' | 'error';
 type LayoutMode = 'wide' | 'compact' | 'narrow';
@@ -31,6 +32,9 @@ interface Props {
   portalTerritory?: string;
   initialPanel?: number;
   autoplay?: boolean;
+  muted?: boolean;
+  onMutedChange?: (muted: boolean) => void;
+  onOpenSettings?: () => void;
   onArtworkStatusChange?: (status: ArtworkStatus) => void;
 }
 
@@ -55,6 +59,18 @@ interface ViewportBeatPlacement {
   tailSide?: BeatTailSide;
 }
 
+const INTRO_SUBTITLE_STORAGE_KEY = 'future-conquest:intro-subtitles:v1';
+const INTRO_STEP_DURATIONS = [
+  ...INTRO_PANELS.map(panel => panel.durationMs + (
+    panel.sequence === 1 || panel.sequence === 7 ? INTRO_PAGE_OVERVIEW_MS : 0
+  )),
+  INTRO_TITLE_CARD.durationMs
+];
+const INTRO_STEP_OFFSETS = INTRO_STEP_DURATIONS.map((_, index) => (
+  INTRO_STEP_DURATIONS.slice(0, index).reduce((total, duration) => total + duration, 0)
+));
+const INTRO_TIMELINE_DURATION_MS = INTRO_STEP_DURATIONS.reduce((total, duration) => total + duration, 0);
+
 const clampStep = (index: number) => Math.max(0, Math.min(INTRO_TOTAL_STEPS - 1, index));
 const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value));
 
@@ -68,6 +84,22 @@ function layoutModeFor(width: number, height: number): LayoutMode {
   if (width < 900 || height < 610) return 'narrow';
   if (width < 1500 || height < 820) return 'compact';
   return 'wide';
+}
+
+function loadSubtitlePreference() {
+  try {
+    return window.localStorage.getItem(INTRO_SUBTITLE_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveSubtitlePreference(showSubtitles: boolean) {
+  try {
+    window.localStorage.setItem(INTRO_SUBTITLE_STORAGE_KEY, String(showSubtitles));
+  } catch {
+    // Subtitle preference remains active for this session when storage is unavailable.
+  }
 }
 
 function Beat({ beat, style, viewport = false, tailSide }: BeatProps) {
@@ -85,6 +117,7 @@ function Beat({ beat, style, viewport = false, tailSide }: BeatProps) {
         viewport ? 'motion-comic-viewport-beat' : '',
         tailSide ? `beat-tail-${tailSide}` : 'beat-tail-none'
       ].filter(Boolean).join(' ')}
+      data-beat-id={beat.id}
       style={style ?? defaultStyle}
     >
       {beat.speaker && <strong>{beat.speaker}</strong>}
@@ -98,18 +131,23 @@ export function MotionComicIntro({
   portalTerritory,
   initialPanel = 0,
   autoplay = true,
+  muted = false,
+  onMutedChange,
+  onOpenSettings,
   onArtworkStatusChange
 }: Props) {
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialPanel));
   const [isPlaying, setIsPlaying] = useState(autoplay);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [showSubtitles, setShowSubtitles] = useState(true);
+  const [showSubtitles, setShowSubtitles] = useState(() => loadSubtitlePreference());
   const [cameraStyle, setCameraStyle] = useState<CSSProperties>({});
   const [cameraMetrics, setCameraMetrics] = useState<CameraMetrics>();
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('wide');
   const [artworkStatus, setArtworkStatus] = useState<ArtworkStatus>('loading');
   const stageRef = useRef<HTMLDivElement>(null);
+  const scrubbingRef = useRef(false);
+  const wasPlayingBeforeScrubRef = useRef(false);
 
   const artworkUrl = useMemo(() => {
     const url = new URL(MOTION_COMIC_SPRITE, document.baseURI);
@@ -125,10 +163,13 @@ export function MotionComicIntro({
     : 0;
   const isPageOverview = Boolean(activePanel && elapsedMs < overviewMs);
   const sceneElapsedMs = Math.max(0, elapsedMs - overviewMs);
-  const stepDurationMs = isTitleCard
-    ? INTRO_TITLE_CARD.durationMs
-    : (activePanel?.durationMs ?? 0) + overviewMs;
+  const stepDurationMs = INTRO_STEP_DURATIONS[stepIndex] ?? 0;
   const arrivalLocation = portalTerritory ? TERRITORIES[portalTerritory]?.centre : undefined;
+  const timelineElapsedMs = Math.min(
+    INTRO_TIMELINE_DURATION_MS,
+    (INTRO_STEP_OFFSETS[stepIndex] ?? 0) + Math.min(elapsedMs, stepDurationMs)
+  );
+  const progress = timelineElapsedMs / Math.max(1, INTRO_TIMELINE_DURATION_MS) * 100;
 
   useEffect(() => {
     onArtworkStatusChange?.(artworkStatus);
@@ -164,6 +205,40 @@ export function MotionComicIntro({
     setElapsedMs(0);
   }, []);
 
+  const seekToTimeline = useCallback((requestedMs: number) => {
+    let remaining = clamp(requestedMs, 0, INTRO_TIMELINE_DURATION_MS);
+    let nextStep = 0;
+
+    while (nextStep < INTRO_STEP_DURATIONS.length - 1 && remaining >= INTRO_STEP_DURATIONS[nextStep]) {
+      remaining -= INTRO_STEP_DURATIONS[nextStep];
+      nextStep += 1;
+    }
+
+    setStepIndex(nextStep);
+    setElapsedMs(Math.min(remaining, INTRO_STEP_DURATIONS[nextStep] ?? 0));
+  }, []);
+
+  const beginScrub = useCallback(() => {
+    if (scrubbingRef.current) return;
+    scrubbingRef.current = true;
+    wasPlayingBeforeScrubRef.current = isPlaying;
+    setIsPlaying(false);
+  }, [isPlaying]);
+
+  const finishScrub = useCallback(() => {
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    if (wasPlayingBeforeScrubRef.current) setIsPlaying(true);
+  }, []);
+
+  const toggleSubtitles = useCallback(() => {
+    setShowSubtitles(current => {
+      const next = !current;
+      saveSubtitlePreference(next);
+      return next;
+    });
+  }, []);
+
   const advance = useCallback(() => {
     if (isTitleCard) {
       finishIntro();
@@ -197,6 +272,8 @@ export function MotionComicIntro({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.type === 'range') return;
       if (event.key === 'ArrowRight') goToStep(stepIndex + 1);
       if (event.key === 'ArrowLeft') goToStep(stepIndex - 1);
       if (event.key === ' ') {
@@ -289,7 +366,6 @@ export function MotionComicIntro({
     () => latestVisibleBeat(currentBeats, sceneElapsedMs),
     [currentBeats, sceneElapsedMs]
   );
-  const progress = ((stepIndex + Math.min(1, elapsedMs / Math.max(stepDurationMs, 1))) / INTRO_TOTAL_STEPS) * 100;
 
   const viewportBeatPlacement = useMemo<ViewportBeatPlacement | undefined>(() => {
     if (!activeBeat || !cameraMetrics || isTitleCard || isPageOverview) return undefined;
@@ -309,9 +385,9 @@ export function MotionComicIntro({
     const requestedWidth = panelWidth * activeBeat.maxWidth / 100;
     const width = clamp(requestedWidth, minimumWidth, Math.min(540, stageWidth * viewportWidthLimit));
     const horizontalPadding = layoutMode === 'narrow' ? 12 : 20;
-    const topPadding = activePanel?.sequence === 9 && arrivalLocation ? 58 : 18;
+    const topPadding = activePanel?.sequence === 9 && arrivalLocation ? 58 : 20;
     const subtitlesVisibleInViewport = showSubtitles && layoutMode !== 'narrow';
-    const bottomPadding = subtitlesVisibleInViewport ? 98 : 22;
+    const bottomPadding = subtitlesVisibleInViewport ? 112 : 26;
     const charactersPerLine = Math.max(18, Math.floor(width / (layoutMode === 'narrow' ? 8 : 9)));
     const contentLength = activeBeat.text.length + (activeBeat.speaker?.length ?? 0);
     const estimatedLines = Math.max(1, Math.ceil(contentLength / charactersPerLine));
@@ -320,11 +396,45 @@ export function MotionComicIntro({
 
     const preferredX = layoutMode === 'narrow' ? activeBeat.narrowX ?? activeBeat.x : activeBeat.x;
     const preferredY = layoutMode === 'narrow' ? activeBeat.narrowY ?? activeBeat.y : activeBeat.y;
-    let left = panelLeft + panelWidth * preferredX / 100;
-    let top = panelTop + panelHeight * preferredY / 100;
+    const preferredLeft = panelLeft + panelWidth * preferredX / 100;
+    const preferredTop = panelTop + panelHeight * preferredY / 100;
+    const clampLeft = (value: number) => clamp(value, horizontalPadding, Math.max(horizontalPadding, stageWidth - width - horizontalPadding));
+    const clampTop = (value: number) => clamp(value, topPadding, Math.max(topPadding, stageHeight - estimatedHeight - bottomPadding));
+    let left = clampLeft(preferredLeft);
+    let top = clampTop(preferredTop);
 
-    left = clamp(left, horizontalPadding, Math.max(horizontalPadding, stageWidth - width - horizontalPadding));
-    top = clamp(top, topPadding, Math.max(topPadding, stageHeight - estimatedHeight - bottomPadding));
+    const targetLeft = activeBeat.targetX === undefined ? undefined : panelLeft + panelWidth * activeBeat.targetX / 100;
+    const targetTop = activeBeat.targetY === undefined ? undefined : panelTop + panelHeight * activeBeat.targetY / 100;
+
+    if (activeBeat.kind === 'dialogue' && targetLeft !== undefined && targetTop !== undefined) {
+      const targetCovered = targetLeft >= left - 8
+        && targetLeft <= left + width + 8
+        && targetTop >= top - 8
+        && targetTop <= top + estimatedHeight + 8;
+
+      if (targetCovered) {
+        const gap = layoutMode === 'narrow' ? 18 : 26;
+        const candidates = [
+          { left: targetLeft - width - gap, top: targetTop - estimatedHeight / 2 },
+          { left: targetLeft + gap, top: targetTop - estimatedHeight / 2 },
+          { left: targetLeft - width / 2, top: targetTop - estimatedHeight - gap },
+          { left: targetLeft - width / 2, top: targetTop + gap }
+        ].map(candidate => ({ left: clampLeft(candidate.left), top: clampTop(candidate.top) }));
+
+        const score = (candidate: { left: number; top: number }) => {
+          const coversTarget = targetLeft >= candidate.left - 6
+            && targetLeft <= candidate.left + width + 6
+            && targetTop >= candidate.top - 6
+            && targetTop <= candidate.top + estimatedHeight + 6;
+          const preferenceDistance = Math.hypot(candidate.left - preferredLeft, candidate.top - preferredTop);
+          return (coversTarget ? 100000 : 0) + preferenceDistance;
+        };
+
+        const bestCandidate = candidates.sort((first, second) => score(first) - score(second))[0];
+        left = bestCandidate.left;
+        top = bestCandidate.top;
+      }
+    }
 
     const style = {
       left: `${left}px`,
@@ -336,11 +446,9 @@ export function MotionComicIntro({
     let tailSide: BeatTailSide | undefined;
     if (
       activeBeat.kind === 'dialogue'
-      && activeBeat.targetX !== undefined
-      && activeBeat.targetY !== undefined
+      && targetLeft !== undefined
+      && targetTop !== undefined
     ) {
-      const targetLeft = panelLeft + panelWidth * activeBeat.targetX / 100;
-      const targetTop = panelTop + panelHeight * activeBeat.targetY / 100;
       const right = left + width;
       const bottom = top + estimatedHeight;
 
@@ -384,6 +492,7 @@ export function MotionComicIntro({
     <section
       className={`motion-comic-v2 ${reducedMotion ? 'reduced-motion' : ''}`}
       data-layout={layoutMode}
+      data-panel-id={activePanel?.id ?? 'title-card'}
       aria-label="Future Conquest story introduction"
     >
       <div className="motion-comic-stage" ref={stageRef}>
@@ -471,15 +580,41 @@ export function MotionComicIntro({
         </div>
       )}
 
-      <div className="motion-comic-progress" aria-hidden="true"><i style={{ width: `${Math.min(100, progress)}%` }} /></div>
+      <div className="motion-comic-progress">
+        <i aria-hidden="true" style={{ width: `${Math.min(100, progress)}%` }} />
+        <input
+          type="range"
+          min="0"
+          max={INTRO_TIMELINE_DURATION_MS}
+          step="100"
+          value={timelineElapsedMs}
+          aria-label="Introduction timeline"
+          aria-valuetext={`Scene ${stepIndex + 1} of ${INTRO_TOTAL_STEPS}`}
+          onPointerDown={beginScrub}
+          onPointerUp={finishScrub}
+          onPointerCancel={finishScrub}
+          onBlur={finishScrub}
+          onChange={event => seekToTimeline(Number(event.target.value))}
+        />
+      </div>
 
       <nav className="motion-comic-controls" aria-label="Introduction controls">
-        <button type="button" onClick={() => goToStep(stepIndex - 1)} disabled={stepIndex === 0}>Previous</button>
-        <button type="button" onClick={() => setIsPlaying(current => !current)}>{isPlaying ? 'Pause' : 'Play'}</button>
-        <button type="button" onClick={advance}>{isTitleCard ? 'Enter command' : 'Next'}</button>
-        <button type="button" className={showSubtitles ? 'is-selected' : ''} onClick={() => setShowSubtitles(current => !current)}>
-          Subtitles
-        </button>
+        <button type="button" className="motion-comic-previous" onClick={() => goToStep(stepIndex - 1)} disabled={stepIndex === 0}>Previous</button>
+        <button type="button" className="motion-comic-play" onClick={() => setIsPlaying(current => !current)}>{isPlaying ? 'Pause' : 'Play'}</button>
+        <button type="button" className="motion-comic-next" onClick={advance}>{isTitleCard ? 'Enter command' : 'Next'}</button>
+        <button
+          type="button"
+          className={`motion-comic-audio-toggle ${muted ? 'is-selected' : ''}`}
+          aria-pressed={muted}
+          onClick={() => onMutedChange?.(!muted)}
+        >{muted ? 'Unmute' : 'Mute'}</button>
+        <button type="button" className="motion-comic-settings" onClick={onOpenSettings}>Settings</button>
+        <button
+          type="button"
+          className={`motion-comic-subtitles ${showSubtitles ? 'is-selected' : ''}`}
+          aria-pressed={showSubtitles}
+          onClick={toggleSubtitles}
+        >Subtitles</button>
         <span className="motion-comic-counter">{String(stepIndex + 1).padStart(2, '0')} / {String(INTRO_TOTAL_STEPS).padStart(2, '0')}</span>
         <button type="button" className="motion-comic-skip" onClick={finishIntro}>Skip intro</button>
       </nav>
