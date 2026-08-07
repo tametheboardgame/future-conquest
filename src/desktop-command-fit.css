@@ -184,7 +184,14 @@
     scrollbar-gutter: stable;
   }
 
-  .command-view,
+  .command-view {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
   .infrastructure-command-stack,
   .logistics-command-stack {
     height: 100%;
