@@ -2,9 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-test('main deployments cannot be cancelled by a later push while PR builds remain replaceable', () => {
+test('Pages workflow queues in-progress runs instead of cancelling releases', () => {
   const workflow = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
-  assert.match(workflow, /cancel-in-progress:\s*\$\{\{ github\.event_name == 'pull_request' \}\}/);
+  assert.match(workflow, /cancel-in-progress:\s*false/);
   assert.match(workflow, /Verify live deployment commit and title asset/);
 });
 
