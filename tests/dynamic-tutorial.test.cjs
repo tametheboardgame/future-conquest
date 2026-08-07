@@ -7,7 +7,7 @@ test('guided tutorial anchors to the actionable control instead of a fixed mobil
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const css = fs.readFileSync('src/operational-clarity.css', 'utf8');
 
-  assert.match(overlay, /document\.querySelector<HTMLElement>\(anchorSelector\)/);
+  assert.match(overlay, /document\.querySelector<HTMLElement>\(resolvedSelector\)/);
   assert.match(overlay, /getBoundingClientRect\(\)/);
   assert.match(overlay, /scrollIntoView\(\{ block: 'center'/);
   assert.match(overlay, /ResizeObserver/);
