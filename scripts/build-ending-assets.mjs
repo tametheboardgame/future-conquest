@@ -9,7 +9,7 @@ const outputDirectory = path.join(repositoryRoot, 'public', 'generated', 'ending
 
 const BUNDLE_LENGTH = 988_260;
 const BUNDLE_SHA256 = '4be5786ead501ed2dcfc0e6192242e25a24bbd1e55f4f4e4253e3455ce1b541a';
-const PART_COUNT = 60;
+const PART_COUNT = 66;
 const ASSETS = [
   { fileName: 'victory-01-europe-secured.webp', offset: 0, length: 139_794, sha256: '386f23118bdb297b02868ad9601ae003a1bbd1cbe4301f0f7804895209f7b7d3' },
   { fileName: 'victory-02-occupation.webp', offset: 139_794, length: 131_134, sha256: '2e6faf950a37fe6abc23e072f77cbfed4019e4ae09230f5ba565676cd2efbcfc' },
