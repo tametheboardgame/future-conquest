@@ -165,9 +165,7 @@ export function StartupExperience({ children }: Props) {
 
     {mode === 'launcher' && <section className="startup-launcher" aria-label="Future Conquest title screen">
       <div className="startup-launcher-panel">
-        <p className="launcher-kicker">STRATEGIC COMMAND SIMULATION</p>
-        <h1>FUTURE<br />CONQUEST</h1>
-        <p className="launcher-tagline">Conquer Europe. Hold the network. Survive the response.</p>
+        <p className="launcher-kicker">COMMAND ACCESS</p>
         <div className="launcher-actions">
           {saved && <button type="button" className="launcher-primary launcher-continue" onClick={continueCampaign}>
             <span>CONTINUE CAMPAIGN</span><small>{saveSummary}</small>
