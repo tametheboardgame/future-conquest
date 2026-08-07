@@ -191,7 +191,7 @@
   .motion-comic-controls .motion-comic-previous { grid-column: 1; grid-row: 1; }
   .motion-comic-controls .motion-comic-play { grid-column: 2; grid-row: 1; }
   .motion-comic-controls .motion-comic-next { grid-column: 3; grid-row: 1; }
-  .motion-comic-controls .motion-comic-audio-toggle { grid-column: 4; grid-row: 1; }
+  .motion-comic-controls button.motion-comic-audio-toggle { grid-column: 4; grid-row: 1; }
   .motion-comic-controls .motion-comic-settings { grid-column: 1; grid-row: 2; }
   .motion-comic-controls .motion-comic-subtitles { grid-column: 2; grid-row: 2; }
   .motion-comic-controls .motion-comic-counter { grid-column: 3; grid-row: 2; align-self: center; justify-self: center; }
@@ -226,7 +226,7 @@
   .motion-comic-controls .motion-comic-previous { grid-column: 1; grid-row: 1; }
   .motion-comic-controls .motion-comic-play { grid-column: 2; grid-row: 1; }
   .motion-comic-controls .motion-comic-next { grid-column: 3; grid-row: 1; }
-  .motion-comic-controls .motion-comic-audio-toggle { grid-column: 1; grid-row: 2; }
+  .motion-comic-controls button.motion-comic-audio-toggle { grid-column: 1; grid-row: 2; }
   .motion-comic-controls .motion-comic-settings { grid-column: 2; grid-row: 2; }
   .motion-comic-controls .motion-comic-subtitles { grid-column: 3; grid-row: 2; }
   .motion-comic-controls .motion-comic-counter { grid-column: 1 / span 2; grid-row: 3; }
