@@ -1,0 +1,41 @@
+name: Capture balance pass 3
+
+on:
+  push:
+    branches:
+      - agent/current-engine-balance-tuning
+    paths:
+      - '.github/workflows/capture-balance-pass3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FC_BALANCE_RUNS_PER_START: '4'
+      FC_BALANCE_MAX_TURNS: '120'
+      FC_BALANCE_SEED_OFFSET: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/current-engine-balance-tuning
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run simulate:current-balance
+      - name: Commit condensed result
+        run: |
+          cp balance-output/current-engine-balance.md balance-pass3-summary.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/capture-balance-pass3.yml
+          git add balance-pass3-summary.md
+          git commit -m "Capture third balance tuning sample"
+          git push origin HEAD:agent/current-engine-balance-tuning
