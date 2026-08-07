@@ -27,8 +27,8 @@ test('new campaigns initialise version 13 enemy strategy state', () => {
   const state = newGame(301, 'standard');
   assert.equal(state.version, 14);
   assert.deepEqual(state.enemyStrategy, createEnemyStrategyState('standard'));
-  assert.equal(crisisLimitForDifficulty('story'), 5);
-  assert.equal(crisisLimitForDifficulty('standard'), 4);
+  assert.equal(crisisLimitForDifficulty('story'), 7);
+  assert.equal(crisisLimitForDifficulty('standard'), 5);
   assert.equal(crisisLimitForDifficulty('hard'), 3);
 });
 
