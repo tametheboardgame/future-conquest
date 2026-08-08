@@ -46,7 +46,7 @@ const traces = cases.map(testCase => {
       movesIssued: result.movesIssued,
       garrisonsAssigned: result.garrisonsAssigned,
       garrisonsReleased: result.garrisonsReleased,
-      portalReserveTurns: result.portalReserveTurns,
+      reserveTurns: result.reserveTurns,
       engineeringProjectsStarted: result.engineeringProjectsStarted,
       formationsSplit: result.formationsSplit
     };
