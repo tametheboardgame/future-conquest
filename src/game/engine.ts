@@ -22,6 +22,7 @@ import type {
   GameEvent,
   GameState,
   Operation,
+  StrategicCollapseState,
   TaskGroup,
   TerritoryState
 } from './types';
@@ -63,6 +64,103 @@ const terrainDefence: Record<string, number> = {
 function addEvent(state: GameState, text: string, tone: GameEvent['tone']): GameState {
   const next = { id: (state.events[0]?.id ?? 0) + 1, turn: state.turn, text, tone };
   return { ...state, events: [next, ...state.events].slice(0, 100) };
+}
+
+export function createStrategicCollapseState(): StrategicCollapseState {
+  return { pending: false, acknowledgedEpisode: false };
+}
+
+function strategicCollapseFor(state: GameState): StrategicCollapseState {
+  return state.strategicCollapse ?? createStrategicCollapseState();
+}
+
+export function strategicCollapseDecisionPending(state: GameState): boolean {
+  return state.status === 'playing' && strategicCollapseFor(state).pending;
+}
+
+export function continueCampaignAfterCollapse(state: GameState): GameState {
+  if (!strategicCollapseDecisionPending(state)) return state;
+  const strategicCollapse: StrategicCollapseState = {
+    ...strategicCollapseFor(state),
+    pending: false,
+    acknowledgedEpisode: true,
+    lastDecision: 'continue',
+    lastDecisionTurn: state.turn
+  };
+  return addEvent(
+    { ...state, strategicCollapse },
+    'Command rejected surrender and ordered the expedition to continue despite strategic collapse. Recovery remains possible, but this crisis episode will not prompt again unless conditions fully recover first.',
+    'warning'
+  );
+}
+
+export function surrenderCampaign(state: GameState): GameState {
+  if (!strategicCollapseDecisionPending(state)) return state;
+  const strategicCollapse: StrategicCollapseState = {
+    ...strategicCollapseFor(state),
+    pending: false,
+    acknowledgedEpisode: true,
+    lastDecision: 'surrender',
+    lastDecisionTurn: state.turn
+  };
+  return addEvent(
+    { ...state, strategicCollapse, status: 'defeat' },
+    'Expeditionary command accepted strategic collapse and ordered surrender. Organised campaign operations have ended.',
+    'danger'
+  );
+}
+
+function rearmStrategicCollapseAfterRecovery(state: GameState): GameState {
+  const strategicCollapse = strategicCollapseFor(state);
+  if (state.enemyStrategy.operationalCrisisTurns !== 0 || !strategicCollapse.acknowledgedEpisode || strategicCollapse.pending) {
+    return state.strategicCollapse ? state : { ...state, strategicCollapse };
+  }
+  return {
+    ...state,
+    strategicCollapse: {
+      ...strategicCollapse,
+      acknowledgedEpisode: false,
+      lastRecoveryTurn: state.turn
+    }
+  };
+}
+
+function resolveCampaignOutcome(state: GameState): GameState {
+  let next = rearmStrategicCollapseAfterRecovery(state);
+  const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
+  const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
+  const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
+  if (controlled === SLICE_IDS.length && unsecured === 0) {
+    return addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
+  }
+  if (personnel < 1200) {
+    return addEvent(
+      { ...next, status: 'defeat' },
+      'The expedition has fallen below the minimum force needed to continue organised operations.',
+      'danger'
+    );
+  }
+
+  const collapse = strategicCollapseFor(next);
+  const crisisLimit = crisisLimitForDifficulty(next.difficulty);
+  if (
+    next.enemyStrategy.operationalCrisisTurns >= crisisLimit
+    && !collapse.pending
+    && !collapse.acknowledgedEpisode
+  ) {
+    const strategicCollapse: StrategicCollapseState = {
+      ...collapse,
+      pending: true,
+      triggeredTurn: next.turn,
+      triggerCrisisTurns: next.enemyStrategy.operationalCrisisTurns
+    };
+    next = addEvent(
+      { ...next, strategicCollapse },
+      'Strategic collapse threshold reached. Senior command requires an explicit decision: surrender the campaign or continue operations despite the crisis.',
+      'danger'
+    );
+  }
+  return next;
 }
 
 const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);
@@ -145,6 +243,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     enemyFormations: initialEnemyFormations(seed, portalTerritory, difficulty),
     escalation: initialEscalation,
     ...strategicState,
+    strategicCollapse: createStrategicCollapseState(),
     operationalAwareness: createOperationalAwarenessState(100),
     tutorial: createTutorialState(tutorialEnabled, 1),
     routeStates: createRouteStates(),
@@ -163,12 +262,12 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
 }
 
 export function selectTaskGroup(state: GameState, id: string): GameState {
-  if (!state.taskGroups[id]) return state;
+  if (strategicCollapseDecisionPending(state) || !state.taskGroups[id]) return state;
   return progressTutorial({ ...state, selectedTaskGroupId: id, selectedTerritory: state.taskGroups[id].location, targetTerritory: null }, 'select-formation');
 }
 
 export function selectTerritory(state: GameState, id: string): GameState {
-  if (state.status !== 'playing') return state;
+  if (state.status !== 'playing' || strategicCollapseDecisionPending(state)) return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
   if (!group || !state.territories[id]) return state;
   return {
@@ -179,6 +278,7 @@ export function selectTerritory(state: GameState, id: string): GameState {
 }
 
 export function issueMove(state: GameState, requestedRouteId?: string): GameState {
+  if (strategicCollapseDecisionPending(state)) return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
   if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'player') return state;
@@ -195,6 +295,7 @@ export function issueMove(state: GameState, requestedRouteId?: string): GameStat
 }
 
 export function setGarrison(state: GameState): GameState {
+  if (strategicCollapseDecisionPending(state)) return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
   if (!canIssueOperationalOrder(group)) return state;
   const taskGroups = structuredClone(state.taskGroups);
@@ -228,6 +329,7 @@ function nextOperationId(state: GameState, target: string): string {
 }
 
 export function beginOperation(state: GameState, requestedRouteId?: string): GameState {
+  if (strategicCollapseDecisionPending(state)) return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
   const target = state.targetTerritory;
   if (!target || !canIssueOperationalOrder(group) || state.territories[target].controller !== 'enemy') return state;
@@ -725,7 +827,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
 }
 
 export function endTurn(state: GameState): GameState {
-  if (state.status !== 'playing') return state;
+  if (state.status !== 'playing' || strategicCollapseDecisionPending(state)) return state;
   const previousNetworkEfficiency = state.logistics.networkEfficiency;
   let next: GameState = {
     ...state,
@@ -738,6 +840,7 @@ export function endTurn(state: GameState): GameState {
     logistics: structuredClone(state.logistics),
     logisticsPriorities: structuredClone(state.logisticsPriorities),
     enemyStrategy: structuredClone(state.enemyStrategy),
+    strategicCollapse: structuredClone(state.strategicCollapse ?? createStrategicCollapseState()),
     operationalAwareness: structuredClone(state.operationalAwareness),
     tutorial: structuredClone(state.tutorial),
     infrastructureIncidents: structuredClone(state.infrastructureIncidents ?? []),
@@ -759,18 +862,7 @@ export function endTurn(state: GameState): GameState {
   next = syncOperationDefenders(next);
   next = refreshSupply(next);
   next = { ...next, operationalAwareness: { ...next.operationalAwareness, previousNetworkEfficiency } };
-  const controlled = Object.values(next.territories).filter(territory => territory.controller === 'player').length;
-  const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
-  const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
-  if (controlled === SLICE_IDS.length && unsecured === 0) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
-  else if (personnel < 1200 || next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)) next = addEvent(
-    { ...next, status: 'defeat' },
-    next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)
-      ? 'The expedition has remained in operational crisis too long. Command cohesion can no longer be sustained.'
-      : 'The expedition has fallen below the minimum force needed to continue organised operations.',
-    'danger'
-  );
-  return next;
+  return resolveCampaignOutcome(next);
 }
 
 interface LegacyBattle {
@@ -1050,5 +1142,7 @@ export const __testOnly = {
   resolveOperations,
   resolveOccupationAndLogistics,
   pruneOperations,
+  resolveCampaignOutcome,
+  rearmStrategicCollapseAfterRecovery,
   resolveCounterattack: (state: GameState) => resolveCounterattack(state, true)
 };
