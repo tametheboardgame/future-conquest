@@ -1,5 +1,6 @@
 import { TERRITORIES } from './data';
 import { STRATEGIC_NODES, STRATEGIC_ROUTES } from './strategic-network-data';
+import { territorySupplySourceCapacity } from './territory-resources';
 import type {
   FormationSupplyAllocation,
   GameState,
@@ -132,6 +133,7 @@ interface SupplyRequest {
 }
 
 interface CandidatePath {
+  sourceTerritoryId: string;
   routeIds: string[];
   territoryIds: string[];
   cost: number;
@@ -150,6 +152,10 @@ export function supplyConditionForRatio(ratio: number): SupplyCondition {
   if (ratio >= 0.4) return 'undersupplied';
   if (ratio >= 0.15) return 'critical';
   return 'cut-off';
+}
+
+export function estimatedFormationStockDays(group: TaskGroup): number {
+  return round1(clamp(group.supply, 0, 100) / 17);
 }
 
 export function formationSupplyDemand(group: TaskGroup): number {
@@ -188,12 +194,6 @@ export function effectiveTerritoryThroughput(state: GameState, territoryId: stri
   return Math.max(0, Math.floor((25 + definition.supply * 10 + infrastructure * 5) * factor));
 }
 
-export function portalSupplyCapacity(state: GameState): number {
-  const localThroughput = effectiveTerritoryThroughput(state, state.portalTerritory);
-  const portalInfrastructure = nodeSupplyByTerritory[state.portalTerritory] ?? 0;
-  return Math.max(180, Math.floor(145 + localThroughput * 0.72 + portalInfrastructure * 5));
-}
-
 function accessibleTerritory(state: GameState, territoryId: string): boolean {
   const territory = state.territories[territoryId];
   return Boolean(territory && territory.controller === 'player' && territory.occupation !== 'unsecured');
@@ -212,12 +212,25 @@ function findCandidatePath(
   targetTerritoryId: string,
   routeRemaining: Record<string, number>,
   routeCapacity: Record<string, number>,
-  territoryRemaining: Record<string, number>
+  territoryRemaining: Record<string, number>,
+  sourceRemaining: Record<string, number>
 ): CandidatePath | null {
+  if ((sourceRemaining[targetTerritoryId] ?? 0) >= 1) {
+    return { sourceTerritoryId: targetTerritoryId, routeIds: [], territoryIds: [], cost: 0 };
+  }
   if (!accessibleTerritory(state, targetTerritoryId)) return null;
-  if (targetTerritoryId === state.portalTerritory) return { routeIds: [], territoryIds: [], cost: 0 };
 
-  const distances = new Map<string, number>([[state.portalTerritory, 0]]);
+  const sourceIds = Object.keys(sourceRemaining).filter(id => (
+    (sourceRemaining[id] ?? 0) >= 1 && accessibleTerritory(state, id)
+  ));
+  if (!sourceIds.length) return null;
+
+  const distances = new Map<string, number>();
+  const sourceFor = new Map<string, string>();
+  for (const sourceId of sourceIds) {
+    distances.set(sourceId, 0);
+    sourceFor.set(sourceId, sourceId);
+  }
   const previous = new Map<string, { territoryId: string; routeId: string }>();
   const unvisited = new Set(Object.keys(state.territories).filter(id => accessibleTerritory(state, id)));
 
@@ -248,22 +261,24 @@ function findCandidatePath(
       if (cost < (distances.get(next) ?? Number.POSITIVE_INFINITY)) {
         distances.set(next, cost);
         previous.set(next, { territoryId: current, routeId: route.id });
+        sourceFor.set(next, sourceFor.get(current) ?? current);
       }
     }
   }
 
-  if (!previous.has(targetTerritoryId)) return null;
+  const sourceTerritoryId = sourceFor.get(targetTerritoryId);
+  if (!sourceTerritoryId) return null;
   const routeIds: string[] = [];
   const territoryIds: string[] = [];
   let cursor = targetTerritoryId;
-  while (cursor !== state.portalTerritory) {
+  while (cursor !== sourceTerritoryId) {
     const step = previous.get(cursor);
     if (!step) return null;
     routeIds.unshift(step.routeId);
     territoryIds.unshift(cursor);
     cursor = step.territoryId;
   }
-  return { routeIds, territoryIds, cost: distances.get(targetTerritoryId) ?? 0 };
+  return { sourceTerritoryId, routeIds, territoryIds, cost: distances.get(targetTerritoryId) ?? 0 };
 }
 
 function createRequests(state: GameState): SupplyRequest[] {
@@ -305,7 +320,7 @@ function createRequests(state: GameState): SupplyRequest[] {
   return requests;
 }
 
-function primaryPath(request: SupplyRequest): string[] {
+function primaryPath(request: SupplyRequest): { sourceTerritoryId: string; routeIds: string[] } {
   let selected = '';
   let count = -1;
   for (const [signature, uses] of request.pathCounts) {
@@ -314,7 +329,13 @@ function primaryPath(request: SupplyRequest): string[] {
       count = uses;
     }
   }
-  return selected ? selected.split('|').filter(Boolean) : [];
+  if (!selected) return { sourceTerritoryId: request.targetTerritoryId, routeIds: [] };
+  const separator = selected.indexOf('::');
+  if (separator < 0) return { sourceTerritoryId: request.targetTerritoryId, routeIds: selected.split('|').filter(Boolean) };
+  return {
+    sourceTerritoryId: selected.slice(0, separator) || request.targetTerritoryId,
+    routeIds: selected.slice(separator + 2).split('|').filter(Boolean)
+  };
 }
 
 function routeFlowCondition(utilisation: number, used: number): RouteSupplyFlow['condition'] {
@@ -330,11 +351,12 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
   const routeRemaining = { ...routeCapacity };
   const routeUsed = Object.fromEntries(STRATEGIC_ROUTES.map(route => [route.id, 0])) as Record<string, number>;
   const territoryRemaining = Object.fromEntries(Object.keys(state.territories).map(id => [id, effectiveTerritoryThroughput(state, id)]));
-  const sourceCapacity = portalSupplyCapacity(state);
-  let sourceRemaining = sourceCapacity;
+  const sourceCapacityByTerritory = Object.fromEntries(Object.keys(state.territories).map(id => [id, territorySupplySourceCapacity(state, id)]));
+  const sourceRemaining = { ...sourceCapacityByTerritory };
+  const sourceCapacity = Object.values(sourceCapacityByTerritory).reduce((sum, capacity) => sum + capacity, 0);
   const unavailable = new Set<string>();
 
-  while (sourceRemaining >= 1) {
+  while (Object.values(sourceRemaining).some(remaining => remaining >= 1)) {
     const candidates = requests
       .filter(request => request.delivered < request.demand && !unavailable.has(request.id))
       .sort((a, b) => {
@@ -348,19 +370,19 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
 
     let allocated = false;
     for (const request of candidates) {
-      const path = findCandidatePath(state, request.targetTerritoryId, routeRemaining, routeCapacity, territoryRemaining);
+      const path = findCandidatePath(state, request.targetTerritoryId, routeRemaining, routeCapacity, territoryRemaining, sourceRemaining);
       if (!path) {
         unavailable.add(request.id);
         continue;
       }
       request.delivered += 1;
-      sourceRemaining -= 1;
+      sourceRemaining[path.sourceTerritoryId] = Math.max(0, (sourceRemaining[path.sourceTerritoryId] ?? 0) - 1);
       for (const routeId of path.routeIds) {
         routeRemaining[routeId] = Math.max(0, routeRemaining[routeId] - 1);
         routeUsed[routeId] += 1;
       }
       for (const territoryId of path.territoryIds) territoryRemaining[territoryId] = Math.max(0, territoryRemaining[territoryId] - 1);
-      const signature = path.routeIds.join('|');
+      const signature = `${path.sourceTerritoryId}::${path.routeIds.join('|')}`;
       request.pathCounts.set(signature, (request.pathCounts.get(signature) ?? 0) + 1);
       allocated = true;
       break;
@@ -389,7 +411,7 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     const delivered = territoryRequests.reduce((sum, request) => sum + request.delivered, 0);
     const ratio = demand > 0 ? delivered / demand : accessibleTerritory(state, territoryId) ? 1 : 0;
     const administrationRequest = territoryRequests.find(request => request.id === `ADMIN:${territoryId}`);
-    const routeIds = [...new Set(territoryRequests.flatMap(primaryPath))];
+    const routeIds = [...new Set(territoryRequests.flatMap(request => primaryPath(request).routeIds))];
     territoryAllocations[territoryId] = {
       territoryId,
       demand,
@@ -410,11 +432,11 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
     const demand = request?.demand ?? 0;
     const delivered = request?.delivered ?? 0;
     const ratio = demand > 0 ? delivered / demand : 0;
-    const routeIds = request ? primaryPath(request) : [];
+    const primary = request ? primaryPath(request) : { sourceTerritoryId: group.location, routeIds: [] };
     const path: SupplyPath = {
-      sourceTerritoryId: state.portalTerritory,
+      sourceTerritoryId: primary.sourceTerritoryId,
       targetTerritoryId: group.location,
-      routeIds
+      routeIds: primary.routeIds
     };
     formationAllocations[group.id] = {
       groupId: group.id,
@@ -444,7 +466,7 @@ export function calculateSupplyNetwork(state: GameState): LogisticsState {
   return {
     turn: state.turn,
     sourceCapacity,
-    sourceUsed: sourceCapacity - sourceRemaining,
+    sourceUsed: Object.entries(sourceCapacityByTerritory).reduce((sum, [id, capacity]) => sum + capacity - (sourceRemaining[id] ?? 0), 0),
     totalDemand,
     totalDelivered,
     networkEfficiency: totalDemand > 0 ? Math.round(totalDelivered / totalDemand * 100) : 100,

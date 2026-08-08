@@ -283,20 +283,21 @@ test('counterattack retreat removes a task group from its active operation', () 
   assert.equal(resolved.operations[operationId], undefined);
 });
 
-test('isolated formations suffer attrition when local supply is exhausted', () => {
+test('formations suffer attrition only after carried stocks are exhausted and local replenishment is inadequate', () => {
   let state = newGame(2);
   state.territories['CH-02'] = {
-    controller: 'player', occupation: 'controlled', legitimacy: 50, resistance: 30,
+    controller: 'player', occupation: 'unsecured', legitimacy: 0, resistance: 100,
     supplied: false, fortification: 0, capturedTurn: 1
   };
   state.taskGroups['TG-1'].location = 'CH-02';
   state.taskGroups['TG-1'].supply = 0;
   state = __testOnly.refreshSupply(state);
+  const allocation = state.logistics.formationAllocations['TG-1'];
+  assert.ok(allocation.ratio < 40, 'scenario must provide less than 40% of daily demand');
   const before = state.taskGroups['TG-1'].personnel;
   state = endTurn(state);
-  assert.equal(state.territories['CH-02'].supplied, false);
   assert.ok(state.taskGroups['TG-1'].personnel < before);
-  assert.match(state.events[0].text, /isolated/);
+  assert.ok(state.events.some(event => /exhausted carried stocks|attrition/i.test(event.text)));
 });
 
 test('save and load preserves multiple active operations', () => {

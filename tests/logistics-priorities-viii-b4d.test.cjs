@@ -8,7 +8,6 @@ const {
   effectiveFormationLogisticsPriority,
   effectiveTerritoryLogisticsPriority,
   formationSupplyDemand,
-  portalSupplyCapacity,
   refreshSupplyNetwork,
   setFormationLogisticsPriority,
   setTerritoryLogisticsPriority
@@ -19,7 +18,7 @@ function overloadedState(seed = 91) {
   const state = newGame(seed);
   const template = state.taskGroups['TG-1'];
   const demand = formationSupplyDemand(template);
-  const capacity = portalSupplyCapacity(state);
+  const capacity = state.logistics.sourceCapacity;
   const count = Math.ceil(capacity / demand) + 12;
   state.taskGroups = {};
   for (let index = 0; index < count; index += 1) {
@@ -79,24 +78,18 @@ test('manual formation and administration priorities can return to automatic con
 test('priority changes warn when lower tiers fall below forty percent delivery', () => {
   let state = overloadedState(94);
   const ids = Object.keys(state.taskGroups);
-  const demand = formationSupplyDemand(state.taskGroups[ids[0]]);
-  const capacity = portalSupplyCapacity(state);
-  let transition = null;
-  for (let criticalCount = 0; criticalCount < ids.length - 1; criticalCount += 1) {
-    const beforeLower = (capacity - criticalCount * demand) / Math.max(1, (ids.length - criticalCount) * demand);
-    const afterLower = (capacity - (criticalCount + 1) * demand) / Math.max(1, (ids.length - criticalCount - 1) * demand);
-    if (beforeLower >= 0.4 && afterLower < 0.4) {
-      transition = criticalCount;
+  let warned = null;
+  for (const id of ids.slice(0, -1)) {
+    const beforeStarved = state.logistics.starvedFormationIds.length;
+    const next = setFormationLogisticsPriority(state, id, 'critical');
+    if (next.logistics.starvedFormationIds.length > beforeStarved && /below 40% of daily logistics demand/.test(next.events[0]?.text ?? '')) {
+      warned = next;
       break;
     }
+    state = next;
   }
-  assert.notEqual(transition, null, 'expected a calculable starvation transition');
-  for (let index = 0; index < transition; index += 1) state.logisticsPriorities.formationOverrides[ids[index]] = 'critical';
-  state = refreshSupplyNetwork(state);
-  const next = setFormationLogisticsPriority(state, ids[transition], 'critical');
-  assert.ok(next.logistics.starvedFormationIds.length > state.logistics.starvedFormationIds.length);
-  assert.match(next.events[0].text, /below 40% of daily logistics demand/);
-  assert.equal(next.events[0].tone, 'warning');
+  assert.ok(warned, 'expected prioritisation to create and report a lower-tier shortfall');
+  assert.equal(warned.events[0].tone, 'warning');
 });
 
 test('version 11 campaigns migrate to version 12 with automatic priority maps', () => {
