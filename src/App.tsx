@@ -5,6 +5,7 @@ import { FormationRoster } from './components/FormationRoster';
 import { EngineeringCommand } from './components/EngineeringCommand';
 import { InterdictionCommand } from './components/InterdictionCommand';
 import { LogisticsCommand } from './components/LogisticsCommand';
+import { DefencePanel } from './components/DefencePanel';
 import { StrategicCollapseDecision } from './components/StrategicCollapseDecision';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { MapView } from './components/MapView';
@@ -298,6 +299,7 @@ export default function App() {
           <div><dt>Resistance</dt><dd>{Math.round(state.territories[selected.id].resistance)}</dd></div>
         </>}
       </dl>
+      {state.territories[selected.id].controller === 'player' && <DefencePanel state={state} territoryId={selected.id} onChange={setState} />}
       <p className="network-section-heading">STRATEGIC INFRASTRUCTURE</p>
       <div className="network-node-list">{selectedNetworkNodes.map(node => <article key={node.id}><strong>{node.name}</strong><span>{NODE_TYPE_LABELS[node.type]}</span></article>)}</div>
       <p className="network-section-heading">ROUTE CONNECTIONS</p>
@@ -366,7 +368,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -388,13 +390,23 @@ export default function App() {
       <button type="button" onClick={() => changeView('logistics')}>Open diagnostics</button>
     </section>}
 
-    {threatenedTerritories.length > 0 && <section className="enemy-threat-strip" aria-live="assertive">
-      <strong>ENEMY ACTION DETECTED · REVIEW THREATENED AND RECENTLY CONTESTED TERRITORIES</strong>
-      <div className="enemy-threat-list">{threatenedTerritories.map(threat => <button type="button" key={threat.territoryId} className={threat.stage} onClick={() => openThreatOnMap(threat.territoryId)}>
-        <span><b>{TERRITORIES[threat.territoryId].centre}</b><small>{threat.formationCount} formation{threat.formationCount === 1 ? '' : 's'} · {threat.stage.replace('-', ' ')}</small></span>
-        <strong>{threat.stage === 'recent-combat' ? 'AFTER ACTION' : threat.stage === 'under-attack' ? 'NOW' : `DAY ${threat.executeTurn}`}</strong>
-      </button>)}</div>
-    </section>}
+    {threatenedTerritories.length > 0 && (() => {
+      const threat = threatenedTerritories[0];
+      const timing = threat.stage === 'recent-combat'
+        ? 'after action'
+        : threat.stage === 'under-attack'
+          ? 'engaged now'
+          : `estimated Day ${threat.executeTurn}`;
+      return <section className={`enemy-action-alert ${threat.stage}`} aria-live="assertive" aria-label="ENEMY ACTION DETECTED">
+        <span className="enemy-action-symbol" aria-hidden="true">⚠</span>
+        <div className="enemy-action-copy">
+          <strong>{threat.stage === 'recent-combat' ? 'COUNTERATTACK RESOLVED' : 'COUNTERATTACK DETECTED'}</strong>
+          <span>{TERRITORIES[threat.territoryId].centre} · {threat.formationCount} formation{threat.formationCount === 1 ? '' : 's'} · {timing}</span>
+          {threatenedTerritories.length > 1 && <small>+{threatenedTerritories.length - 1} additional threatened position{threatenedTerritories.length === 2 ? '' : 's'}</small>}
+        </div>
+        <button type="button" onClick={() => openThreatOnMap(threat.territoryId)}>Review</button>
+      </section>;
+    })()}
 
     {state.status !== 'playing' && <div className={`command-outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong><span>Review the campaign log or begin a new campaign.</span></div>}
 

@@ -1,5 +1,6 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
+import { recommendedReinforcementForTerritory } from './defence';
 import { STRATEGIC_ROUTE_BY_ID } from './strategic-network-data';
 import { createRouteStates } from './strategic-network';
 import { createEmptyLogisticsPriorities, createEmptyLogisticsState, refreshSupplyNetwork } from './supply-network';
@@ -294,17 +295,92 @@ export function issueMove(state: GameState, requestedRouteId?: string): GameStat
   ), 'issue-move');
 }
 
-export function setGarrison(state: GameState): GameState {
-  if (strategicCollapseDecisionPending(state)) return state;
-  const group = state.taskGroups[state.selectedTaskGroupId];
-  if (!canIssueOperationalOrder(group)) return state;
+export function setFormationGarrison(state: GameState, groupId: string, assigned?: boolean): GameState {
+  if (strategicCollapseDecisionPending(state) || state.status !== 'playing') return state;
+  const group = state.taskGroups[groupId];
+  if (!canIssueOperationalOrder(group) || state.territories[group.location]?.controller !== 'player') return state;
+  const shouldAssign = assigned ?? group.status !== 'garrison';
+  if (shouldAssign === (group.status === 'garrison')) return state;
   const taskGroups = structuredClone(state.taskGroups);
-  const next = taskGroups[group.id];
-  next.status = next.status === 'garrison' ? 'ready' : 'garrison';
-  const updated = addEvent({ ...state, taskGroups }, `${group.name} ${next.status === 'garrison' ? 'assigned to occupation and defensive duties' : 'released from garrison duty'} in ${TERRITORIES[group.location].centre}.`, 'neutral');
-  return next.status === 'garrison' && group.location !== state.portalTerritory
+  taskGroups[group.id].status = shouldAssign ? 'garrison' : 'ready';
+  const updated = addEvent(
+    { ...state, taskGroups },
+    group.name + ' ' + (shouldAssign ? 'assigned to occupation and defensive duties' : 'released from garrison duty') + ' in ' + TERRITORIES[group.location].centre + '.',
+    'neutral'
+  );
+  return shouldAssign && group.location !== state.portalTerritory
     ? progressTutorial(updated, 'set-garrison')
     : updated;
+}
+
+export function setGarrison(state: GameState): GameState {
+  return setFormationGarrison(state, state.selectedTaskGroupId);
+}
+
+export function entrenchTerritory(state: GameState, territoryId: string, groupId = state.selectedTaskGroupId): GameState {
+  if (strategicCollapseDecisionPending(state) || state.status !== 'playing') return state;
+  const territory = state.territories[territoryId];
+  const group = state.taskGroups[groupId];
+  if (
+    !territory
+    || territory.controller !== 'player'
+    || !group
+    || group.location !== territoryId
+    || group.status !== 'garrison'
+    || group.order
+    || group.supply < 8
+    || territory.lastEntrenchTurn === state.turn
+    || territory.fortification >= 45
+  ) return state;
+  const territories = structuredClone(state.territories);
+  const taskGroups = structuredClone(state.taskGroups);
+  territories[territoryId].fortification = clamp(territories[territoryId].fortification + 6, 0, 45);
+  territories[territoryId].lastEntrenchTurn = state.turn;
+  taskGroups[groupId].supply = clamp(taskGroups[groupId].supply - 6, 0, 100);
+  return addEvent(
+    { ...state, territories, taskGroups },
+    group.name + ' improved field defences around ' + TERRITORIES[territoryId].centre + '. Fortification is now ' + Math.round(territories[territoryId].fortification) + '/45.',
+    'neutral'
+  );
+}
+
+export function prepareTerritoryDefence(state: GameState, territoryId: string): GameState {
+  if (strategicCollapseDecisionPending(state) || state.status !== 'playing') return state;
+  const territory = state.territories[territoryId];
+  if (!territory || territory.controller !== 'player' || (territory.defencePreparedUntil ?? 0) >= state.turn + 2) return state;
+  const participants = Object.values(state.taskGroups).filter(group => (
+    group.location === territoryId
+    && group.personnel > 0
+    && !group.order
+    && (group.status === 'ready' || group.status === 'garrison')
+    && group.supply >= 5
+  ));
+  if (!participants.length) return state;
+  const territories = structuredClone(state.territories);
+  const taskGroups = structuredClone(state.taskGroups);
+  territories[territoryId].defencePreparedUntil = state.turn + 2;
+  for (const group of participants) taskGroups[group.id].supply = clamp(taskGroups[group.id].supply - 4, 0, 100);
+  return addEvent(
+    { ...state, territories, taskGroups },
+    TERRITORIES[territoryId].centre + ' placed on prepared defence through day ' + (state.turn + 2) + '. ' + participants.length + ' local formation' + (participants.length === 1 ? '' : 's') + ' dispersed, rehearsed fallback positions and committed carried stocks.',
+    'warning'
+  );
+}
+
+export function reinforceTerritory(state: GameState, territoryId: string): GameState {
+  if (strategicCollapseDecisionPending(state) || state.status !== 'playing') return state;
+  const candidate = recommendedReinforcementForTerritory(state, territoryId);
+  if (!candidate) return state;
+  const route = chooseOperationalRoute(state.routeStates, candidate.location, territoryId, candidate);
+  if (!route) return state;
+  const taskGroups = structuredClone(state.taskGroups);
+  taskGroups[candidate.id].status = 'moving';
+  taskGroups[candidate.id].order = { type: 'move', target: territoryId, progress: 0, days: 0, routeId: route.id };
+  return progressTutorial(addEvent(
+    { ...state, taskGroups, selectedTaskGroupId: candidate.id, selectedTerritory: territoryId, targetTerritory: null },
+    candidate.name + ' ordered to reinforce ' + TERRITORIES[territoryId].centre + ' via ' + route.name + '.',
+    'warning'
+  ), 'issue-move');
 }
 
 export function enemyStrengthAt(state: GameState, territoryId: string): { formations: number; personnel: number; armour: number; power: number } {
@@ -726,6 +802,15 @@ function pruneOperations(state: GameState): GameState {
   return { ...state, operations };
 }
 
+export function counterattackDefencePower(state: GameState, territoryId: string): number {
+  const defenders = Object.values(state.taskGroups).filter(group => group.location === territoryId && group.personnel > 0);
+  const preparedBonus = (state.territories[territoryId]?.defencePreparedUntil ?? 0) >= state.turn ? 3.5 : 0;
+  return defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0)
+    + (state.territories[territoryId]?.fortification ?? 0) / 7
+    + 1.5
+    + preparedBonus;
+}
+
 function resolveCounterattack(state: GameState, forced = false): GameState {
   const plannedCounterattack = getPlannedCounterattack(state);
   if (state.turn < 4 && !plannedCounterattack) return state;
@@ -733,10 +818,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
   if (!forced && !plannedCounterattack && randomFor(state.seed, state.turn, 907) >= chance) return state;
   const frontier = SLICE_IDS.filter(id => state.territories[id].controller === 'player' && TERRITORIES[id].neighbours.some(neighbour => state.territories[neighbour].controller === 'enemy'));
   if (!frontier.length) return plannedCounterattack ? completeEnemyOrder(state, plannedCounterattack.id) : state;
-  frontier.sort((a, b) => {
-    const defence = (id: string) => Object.values(state.taskGroups).filter(group => group.location === id).reduce((sum, group) => sum + group.personnel + deployableArmour(group) * 0.25, 0) + state.territories[id].fortification * 80;
-    return defence(a) - defence(b);
-  });
+  frontier.sort((a, b) => counterattackDefencePower(state, a) - counterattackDefencePower(state, b));
   if (plannedCounterattack && !frontier.some(id => id === plannedCounterattack.target)) {
     return completeEnemyOrder(state, plannedCounterattack.id);
   }
@@ -759,7 +841,7 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     : [available[0]];
   const attackers = selectedAttackers.length ? selectedAttackers : [available[0]];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
-  const defenderPower = defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' && group.personnel > 0 ? 2.5 : 0), 0) + state.territories[target].fortification / 7 + 1.5;
+  const defenderPower = counterattackDefencePower(state, target);
   const attackerPower = attackers.reduce((sum, attacker) => (
     sum + (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150)
   ), 0) * difficultyRules[state.difficulty].enemy * Math.max(0.88, 1 - (attackers.length - 1) * 0.035);
