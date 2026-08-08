@@ -32,7 +32,8 @@ export function createRouteStates(): Record<string, StrategicRouteState> {
   return Object.fromEntries(STRATEGIC_ROUTES.map(route => [route.id, {
     status: 'open' as const,
     condition: 100,
-    capacityModifier: 1
+    capacityModifier: 1,
+    upgradeLevel: 0
   }]));
 }
 
@@ -55,7 +56,10 @@ export function normaliseRouteStates(value: unknown): Record<string, StrategicRo
     const capacityModifier = typeof record.capacityModifier === 'number' && Number.isFinite(record.capacityModifier)
       ? clamp(record.capacityModifier, 0, 1)
       : defaults[route.id].capacityModifier;
-    defaults[route.id] = { status, condition, capacityModifier };
+    const upgradeLevel = typeof record.upgradeLevel === 'number' && Number.isFinite(record.upgradeLevel)
+      ? clamp(Math.round(record.upgradeLevel), 0, 2)
+      : 0;
+    defaults[route.id] = { status, condition, capacityModifier, upgradeLevel };
   }
 
   return defaults;
@@ -86,8 +90,8 @@ export function routeEffectiveCapacity(
   state: StrategicRouteState | undefined
 ): number {
   if (!state || state.status === 'destroyed' || state.status === 'blocked') return 0;
-  const damageFactor = state.status === 'damaged' ? 0.55 : 1;
-  return Math.max(0, Math.round(route.capacity * state.capacityModifier * damageFactor * 10) / 10);
+  const upgradeFactor = 1 + (state.upgradeLevel ?? 0) * 0.15;
+  return Math.max(0, Math.round(route.capacity * state.capacityModifier * upgradeFactor * 10) / 10);
 }
 
 export function routeStatusLabel(state: StrategicRouteState | undefined): string {
