@@ -28,6 +28,8 @@ const { CURRENT_SAVE_KEY, inspectStoredCampaign } = require('../.test-dist/persi
 
 const read = file => fs.readFileSync(file, 'utf8');
 const ROUTE_ID = 'R-BRUSSELS-AMSTERDAM';
+const MOVE_ROUTE_ID = 'R-BRUSSELS-NAMUR';
+const ATTACK_ROUTE_ID = 'R-PARIS-BRUSSELS';
 
 function projectState(condition = 55) {
   let state = structuredClone(newGame(8126, 'standard'));
@@ -61,6 +63,28 @@ function storageWith(state) {
   };
 }
 
+function enablePlayerMoveTarget(state) {
+  state.territories['BE-02'].controller = 'player';
+  state.territories['BE-02'].occupation = 'controlled';
+  state.territories['BE-02'].supplied = true;
+  state.routeStates[MOVE_ROUTE_ID].status = 'open';
+  state.routeStates[MOVE_ROUTE_ID].condition = 100;
+  state.routeStates[MOVE_ROUTE_ID].capacityModifier = 1;
+  state.targetTerritory = 'BE-02';
+  return state;
+}
+
+function enableEnemyAttackTarget(state) {
+  state.territories['FR-02'].controller = 'enemy';
+  state.territories['FR-02'].occupation = 'enemy';
+  state.territories['FR-02'].supplied = false;
+  state.routeStates[ATTACK_ROUTE_ID].status = 'open';
+  state.routeStates[ATTACK_ROUTE_ID].condition = 100;
+  state.routeStates[ATTACK_ROUTE_ID].capacityModifier = 1;
+  state.targetTerritory = 'FR-02';
+  return state;
+}
+
 test('R2-WP2 civil projects progress without military support', () => {
   const started = startEngineeringProject(projectState(), ROUTE_ID);
   const project = started.engineeringProjects[0];
@@ -83,15 +107,15 @@ test('R2-WP2 25 percent support leaves a 2500-person parent formation operationa
 });
 
 test('R2-WP2 supporting formations can move and the support detachment proportionally slows movement', () => {
-  const base = projectState();
-  base.targetTerritory = 'NL-01';
-  const baselineOrdered = issueMove(base, ROUTE_ID);
+  const base = enablePlayerMoveTarget(projectState());
+  const baselineOrdered = issueMove(base, MOVE_ROUTE_ID);
+  assert.equal(baselineOrdered.taskGroups['TG-1'].status, 'moving');
   const baselineResolved = __testOnly.resolveMovement(baselineOrdered);
   const baselineProgress = baselineResolved.taskGroups['TG-1'].order?.progress ?? 100;
 
   let supported = startEngineeringProject(projectState(), ROUTE_ID, 'TG-1', 25);
-  supported.targetTerritory = 'NL-01';
-  const supportedOrdered = issueMove(supported, ROUTE_ID);
+  supported = enablePlayerMoveTarget(supported);
+  const supportedOrdered = issueMove(supported, MOVE_ROUTE_ID);
   assert.equal(supportedOrdered.taskGroups['TG-1'].status, 'moving');
   const supportedResolved = __testOnly.resolveMovement(supportedOrdered);
   const supportedProgress = supportedResolved.taskGroups['TG-1'].order?.progress ?? 100;
@@ -101,8 +125,8 @@ test('R2-WP2 supporting formations can move and the support detachment proportio
 
 test('R2-WP2 supporting formations can still launch combat operations', () => {
   let state = startEngineeringProject(projectState(), ROUTE_ID, 'TG-1', 25);
-  state.targetTerritory = 'FR-02';
-  const attacked = beginOperation(state);
+  state = enableEnemyAttackTarget(state);
+  const attacked = beginOperation(state, ATTACK_ROUTE_ID);
   assert.equal(attacked.taskGroups['TG-1'].status, 'attacking');
   assert.equal(attacked.engineeringProjects[0].status, 'active');
   assert.equal(attacked.engineeringProjects[0].allocation, 25);
@@ -125,8 +149,8 @@ test('R2-WP2 lower material throughput slows rather than binary-stalls secure ci
   const started = startEngineeringProject(projectState(), ROUTE_ID, 'TG-1', 50);
   const normalRate = engineeringDailyWork(started, started.engineeringProjects[0]);
   const starved = structuredClone(started);
-  starved.logistics.territoryAllocations['BE-01'].ratio = 0;
-  starved.logistics.territoryAllocations['NL-01'].ratio = 0;
+  starved.logistics.territoryAllocations['BE-01'] = { ratio: 0 };
+  starved.logistics.territoryAllocations['NL-01'] = { ratio: 0 };
   starved.logistics.formationAllocations['TG-1'].ratio = 0;
   const starvedRate = engineeringDailyWork(starved, starved.engineeringProjects[0]);
   assert.ok(starvedRate > 0);
