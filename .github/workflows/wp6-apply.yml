@@ -1,0 +1,51 @@
+name: WP6 logistics UI validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wp6:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout WP6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/wp6-logistics-ui-diagnostics
+          fetch-depth: 0
+
+      - name: Apply WP6 integration
+        run: python scripts/wp6-apply.py
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build game
+        run: npm run build
+
+      - name: Commit validated WP6 implementation
+        run: |
+          rm scripts/wp6-apply.py .github/workflows/wp6-apply.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/components/LogisticsCommand.tsx src/logistics-priorities.css tests/wp6-logistics-ui-diagnostics.test.cjs
+          git add -A scripts/wp6-apply.py .github/workflows/wp6-apply.yml
+          git status --short
+          git commit -m "WP6: make logistics readable and actionable"
+          git push origin HEAD:agent/wp6-logistics-ui-diagnostics
