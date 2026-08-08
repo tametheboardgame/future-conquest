@@ -7,6 +7,7 @@ const panel = readFileSync('src/components/ForceOrganisationPanel.tsx', 'utf8');
 const roster = readFileSync('src/components/FormationRoster.tsx', 'utf8');
 const main = readFileSync('src/main.tsx', 'utf8');
 const engine = readFileSync('src/game/engine.ts', 'utf8');
+const organisation = readFileSync('src/game/formation-organisation.ts', 'utf8');
 
 test('the campaign interface exposes force organisation and a scalable roster', () => {
   assert.match(app, /ForceOrganisationPanel/);
@@ -22,7 +23,26 @@ test('force organisation exposes the intended core actions', () => {
   assert.match(panel, />Merge</);
   assert.match(panel, />Rename</);
   assert.match(panel, /Dissolve empty formation/);
-  assert.match(panel, /two personnel is legal/);
+});
+
+test('split editor suggests unique numbered names and keeps armour allocation tied to personnel by default', () => {
+  assert.match(panel, /suggestSplitFormationName/);
+  assert.match(panel, /proportionalSplitArmour/);
+  assert.match(panel, /Use proportional armour/);
+  assert.match(panel, /Armour allocation follows the personnel split/);
+  assert.match(panel, /New formation/);
+  assert.match(panel, /remains/);
+  assert.match(organisation, /cannot be assigned more functional powered-armour suits than personnel/i);
+});
+
+test('formation organisation surfaces explicit commitment and validation reasons', () => {
+  assert.match(organisation, /assigned to an engineering project/);
+  assert.match(organisation, /assigned to an interdiction mission/);
+  assert.match(organisation, /already exists\. Use a unique name/);
+  assert.match(panel, /splitFormationValidation/);
+  assert.match(panel, /transferFormationValidation/);
+  assert.match(panel, /mergeFormationValidation/);
+  assert.match(panel, /renameFormationValidation/);
 });
 
 test('formation organisation styles load after the command-panel layout rules', () => {

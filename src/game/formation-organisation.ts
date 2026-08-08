@@ -26,7 +26,14 @@ export interface TransferFormationInput {
   damagedArmour: number;
 }
 
+export interface ArmourAllocation {
+  functionalArmour: number;
+  damagedArmour: number;
+}
+
 const whole = (value: number) => Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+const isWholeNonNegative = (value: number) => Number.isFinite(value) && Number.isInteger(value) && value >= 0;
+const normaliseName = (value: string) => value.trim().replace(/\s+/g, ' ');
 
 function addEvent(state: GameState, text: string, tone: GameEvent['tone'] = 'neutral'): GameState {
   const event = { id: (state.events[0]?.id ?? 0) + 1, turn: state.turn, text, tone };
@@ -85,10 +92,13 @@ export function canReorganiseFormation(group: TaskGroup | undefined): boolean {
 
 export function reorganisationBlockReason(group: TaskGroup | undefined): string | null {
   if (!group) return 'The formation no longer exists.';
-  if (group.order) return 'Complete or cancel the current order before reorganising this formation.';
-  if (group.status === 'moving') return 'A moving formation cannot be reorganised.';
-  if (group.status === 'attacking') return 'A formation committed to an operation cannot be reorganised.';
-  if (group.status === 'recovering') return 'A recovering formation cannot be reorganised until it is ready.';
+  if (group.order) return 'Complete or cancel the current movement or combat order before reorganising this formation.';
+  if (group.status === 'moving') return 'A moving formation cannot be reorganised until its movement order has resolved.';
+  if (group.status === 'attacking') return 'A formation committed to an operation cannot be reorganised until that operation ends.';
+  if (group.status === 'recovering') return 'A recovering formation cannot be reorganised until it completes a supplied recovery day.';
+  if (group.status === 'engineering') return 'This formation is assigned to an engineering project. Cancel the project before reorganising it.';
+  if (group.status === 'interdicting') return 'This formation is assigned to an interdiction mission. Cancel the mission before reorganising it.';
+  if (group.status !== 'ready' && group.status !== 'garrison') return `This formation cannot be reorganised while its status is ${group.status}.`;
   return null;
 }
 
@@ -97,6 +107,126 @@ function nextTaskGroupId(state: GameState): string {
   let number = 1;
   while (used.has(`TG-${number}`)) number += 1;
   return `TG-${number}`;
+}
+
+function baseFormationName(name: string): string {
+  return normaliseName(name).replace(/\s+\d+$/, '').trim() || 'Formation';
+}
+
+export function suggestSplitFormationName(state: GameState, sourceId: string): string {
+  const source = state.taskGroups[sourceId];
+  const base = baseFormationName(source?.name ?? 'Formation');
+  const baseLower = base.toLocaleLowerCase('en-GB');
+  let highest = 1;
+
+  for (const group of Object.values(state.taskGroups)) {
+    const candidate = normaliseName(group.name);
+    const lower = candidate.toLocaleLowerCase('en-GB');
+    if (lower === baseLower) {
+      highest = Math.max(highest, 1);
+      continue;
+    }
+    if (!lower.startsWith(`${baseLower} `)) continue;
+    const suffix = candidate.slice(base.length + 1);
+    if (/^\d+$/.test(suffix)) highest = Math.max(highest, Number(suffix));
+  }
+
+  return `${base} ${Math.max(2, highest + 1)}`.slice(0, 48);
+}
+
+export function formationNameExists(state: GameState, name: string, excludedIds: string[] = []): boolean {
+  const target = normaliseName(name).toLocaleLowerCase('en-GB');
+  if (!target) return false;
+  const excluded = new Set(excludedIds);
+  return Object.values(state.taskGroups).some(group => (
+    !excluded.has(group.id) && normaliseName(group.name).toLocaleLowerCase('en-GB') === target
+  ));
+}
+
+export function proportionalSplitArmour(source: TaskGroup, requestedPersonnel: number): ArmourAllocation {
+  const personnel = Math.min(Math.max(0, whole(requestedPersonnel)), source.personnel);
+  if (personnel <= 0 || source.personnel <= 0) return { functionalArmour: 0, damagedArmour: 0 };
+  const ratio = personnel / source.personnel;
+  return {
+    functionalArmour: Math.min(personnel, Math.round(source.functionalArmour * ratio)),
+    damagedArmour: Math.min(source.damagedArmour, Math.round(source.damagedArmour * ratio))
+  };
+}
+
+function resolvedSplitName(state: GameState, input: SplitFormationInput): string {
+  return normaliseName(input.name) || suggestSplitFormationName(state, input.sourceId);
+}
+
+export function splitFormationValidation(state: GameState, input: SplitFormationInput): string | null {
+  if (state.status !== 'playing') return 'Formations cannot be reorganised after the campaign has ended.';
+  const source = state.taskGroups[input.sourceId];
+  const blockReason = reorganisationBlockReason(source);
+  if (blockReason) return blockReason;
+  if (!source) return 'The source formation no longer exists.';
+
+  if (!isWholeNonNegative(input.personnel) || input.personnel < 1) return 'Personnel must be a whole number of at least 1.';
+  if (input.personnel >= source.personnel) return `Leave at least 1 person in ${source.name}, or transfer/merge the whole formation instead.`;
+  if (!isWholeNonNegative(input.functionalArmour)) return 'Functional armour must be a whole number of 0 or more.';
+  if (!isWholeNonNegative(input.damagedArmour)) return 'Damaged armour must be a whole number of 0 or more.';
+  if (input.functionalArmour > source.functionalArmour) return `${source.name} only has ${source.functionalArmour.toLocaleString('en-GB')} functional armour available.`;
+  if (input.damagedArmour > source.damagedArmour) return `${source.name} only has ${source.damagedArmour.toLocaleString('en-GB')} damaged armour available.`;
+  if (input.functionalArmour > input.personnel) return 'A newly split formation cannot be assigned more functional powered-armour suits than personnel. Extra serviceable suits remain with the parent formation.';
+
+  const name = resolvedSplitName(state, input);
+  if (!name) return 'Enter a formation name or leave the field blank to use the next automatic name.';
+  if (formationNameExists(state, name)) return `A formation named “${name}” already exists. Use a unique name.`;
+  return null;
+}
+
+export function transferFormationValidation(state: GameState, input: TransferFormationInput): string | null {
+  if (state.status !== 'playing') return 'Formation resources cannot be transferred after the campaign has ended.';
+  const source = state.taskGroups[input.sourceId];
+  const target = state.taskGroups[input.targetId];
+  if (!source) return 'The source formation no longer exists.';
+  if (!target) return 'Choose a valid destination formation.';
+  if (source.id === target.id) return 'Choose a different destination formation.';
+  const sourceReason = reorganisationBlockReason(source);
+  if (sourceReason) return `${source.name}: ${sourceReason}`;
+  const targetReason = reorganisationBlockReason(target);
+  if (targetReason) return `${target.name}: ${targetReason}`;
+  if (source.location !== target.location) return 'Personnel and armour can only be transferred between formations in the same territory.';
+  if (!isWholeNonNegative(input.personnel) || !isWholeNonNegative(input.functionalArmour) || !isWholeNonNegative(input.damagedArmour)) {
+    return 'Personnel and armour allocations must be whole numbers of 0 or more.';
+  }
+  if (input.personnel > source.personnel) return `${source.name} only has ${source.personnel.toLocaleString('en-GB')} personnel available.`;
+  if (input.functionalArmour > source.functionalArmour) return `${source.name} only has ${source.functionalArmour.toLocaleString('en-GB')} functional armour available.`;
+  if (input.damagedArmour > source.damagedArmour) return `${source.name} only has ${source.damagedArmour.toLocaleString('en-GB')} damaged armour available.`;
+  if (input.personnel + input.functionalArmour + input.damagedArmour === 0) return 'Allocate at least one person or one armour suit to transfer.';
+  return null;
+}
+
+export function mergeFormationValidation(state: GameState, targetId: string, sourceId: string, name?: string): string | null {
+  if (state.status !== 'playing') return 'Formations cannot be merged after the campaign has ended.';
+  const target = state.taskGroups[targetId];
+  const source = state.taskGroups[sourceId];
+  if (!source) return 'The source formation no longer exists.';
+  if (!target) return 'Choose a valid formation to merge into.';
+  if (source.id === target.id) return 'A formation cannot be merged into itself.';
+  const sourceReason = reorganisationBlockReason(source);
+  if (sourceReason) return `${source.name}: ${sourceReason}`;
+  const targetReason = reorganisationBlockReason(target);
+  if (targetReason) return `${target.name}: ${targetReason}`;
+  if (source.location !== target.location) return 'Only formations in the same territory can be merged.';
+  const resolvedName = normaliseName(name ?? target.name) || target.name;
+  if (formationNameExists(state, resolvedName, [target.id, source.id])) return `A formation named “${resolvedName}” already exists. Use a unique name.`;
+  return null;
+}
+
+export function renameFormationValidation(state: GameState, groupId: string, name: string): string | null {
+  if (state.status !== 'playing') return 'Formations cannot be renamed after the campaign has ended.';
+  const group = state.taskGroups[groupId];
+  const blockReason = reorganisationBlockReason(group);
+  if (blockReason) return blockReason;
+  if (!group) return 'The formation no longer exists.';
+  const trimmed = normaliseName(name);
+  if (!trimmed) return 'Enter a formation name.';
+  if (formationNameExists(state, trimmed, [group.id])) return `A formation named “${trimmed}” already exists. Use a unique name.`;
+  return null;
 }
 
 function weightedAverage(aValue: number, aWeight: number, bValue: number, bWeight: number): number {
@@ -114,16 +244,12 @@ function sameLocationAndAvailable(state: GameState, firstId: string, secondId: s
 }
 
 export function splitFormation(state: GameState, input: SplitFormationInput): GameState {
-  if (state.status !== 'playing') return state;
+  if (splitFormationValidation(state, input)) return state;
   const source = state.taskGroups[input.sourceId];
-  if (!canReorganiseFormation(source)) return state;
-
   const personnel = whole(input.personnel);
   const functionalArmour = whole(input.functionalArmour);
   const damagedArmour = whole(input.damagedArmour);
-  const name = input.name.trim();
-  if (!name || personnel < 1 || personnel >= source.personnel) return state;
-  if (functionalArmour > source.functionalArmour || damagedArmour > source.damagedArmour) return state;
+  const name = resolvedSplitName(state, input);
 
   const taskGroups = structuredClone(state.taskGroups);
   const parent = taskGroups[source.id];
@@ -161,7 +287,8 @@ export function splitFormation(state: GameState, input: SplitFormationInput): Ga
 }
 
 export function mergeFormations(state: GameState, targetId: string, sourceId: string, name?: string): GameState {
-  if (state.status !== 'playing' || !sameLocationAndAvailable(state, targetId, sourceId)) return state;
+  if (mergeFormationValidation(state, targetId, sourceId, name)) return state;
+  if (!sameLocationAndAvailable(state, targetId, sourceId)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const target = taskGroups[targetId];
   const source = taskGroups[sourceId];
@@ -175,7 +302,7 @@ export function mergeFormations(state: GameState, targetId: string, sourceId: st
   target.functionalArmour += source.functionalArmour;
   target.damagedArmour += source.damagedArmour;
   target.status = 'ready';
-  if (name?.trim()) target.name = name.trim().slice(0, 48);
+  if (name?.trim()) target.name = normaliseName(name).slice(0, 48);
   delete taskGroups[sourceId];
 
   return addEvent({
@@ -188,16 +315,14 @@ export function mergeFormations(state: GameState, targetId: string, sourceId: st
 }
 
 export function transferFormationResources(state: GameState, input: TransferFormationInput): GameState {
-  if (state.status !== 'playing' || !sameLocationAndAvailable(state, input.sourceId, input.targetId)) return state;
+  if (transferFormationValidation(state, input)) return state;
+  if (!sameLocationAndAvailable(state, input.sourceId, input.targetId)) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const source = taskGroups[input.sourceId];
   const target = taskGroups[input.targetId];
   const personnel = whole(input.personnel);
   const functionalArmour = whole(input.functionalArmour);
   const damagedArmour = whole(input.damagedArmour);
-
-  if (personnel > source.personnel || functionalArmour > source.functionalArmour || damagedArmour > source.damagedArmour) return state;
-  if (personnel + functionalArmour + damagedArmour === 0) return state;
 
   const sourcePersonnelBefore = source.personnel;
   const sourceMissingCapacity = Math.max(0, source.maxPersonnel - source.personnel);
@@ -223,13 +348,11 @@ export function transferFormationResources(state: GameState, input: TransferForm
 }
 
 export function renameFormation(state: GameState, groupId: string, name: string): GameState {
-  if (state.status !== 'playing') return state;
+  if (renameFormationValidation(state, groupId, name)) return state;
   const group = state.taskGroups[groupId];
-  const trimmed = name.trim();
-  if (!canReorganiseFormation(group) || !trimmed) return state;
   const taskGroups = structuredClone(state.taskGroups);
   const previous = taskGroups[groupId].name;
-  taskGroups[groupId].name = trimmed.slice(0, 48);
+  taskGroups[groupId].name = normaliseName(name).slice(0, 48);
   return addEvent({ ...state, taskGroups }, `${previous} redesignated ${taskGroups[groupId].name}.`, 'neutral');
 }
 
