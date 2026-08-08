@@ -30,6 +30,7 @@ export function routeIsTraversable(
   return Boolean(
     routeState
     && (routeState.status === 'open' || routeState.status === 'damaged')
+    && routeState.condition > 0
     && routeEffectiveCapacity(route, routeState) > 0
   );
 }
@@ -50,20 +51,22 @@ export function movementProgressForDay(
 ): number {
   if (!routeIsTraversable(route, routeState)) return 0;
 
-  const conditionFactor = clamp(0.45 + (routeState!.condition / 100) * 0.55, 0.45, 1);
-  const capacityFactor = clamp(0.55 + routeState!.capacityModifier * 0.45, 0.55, 1);
-  const statusFactor = routeState!.status === 'damaged' ? 0.72 : 1;
+  const conditionFactor = clamp(0.38 + (routeState!.condition / 100) * 0.62, 0.38, 1);
+  const capacityFactor = clamp(0.45 + routeState!.capacityModifier * 0.55, 0.45, 1);
+  const statusFactor = routeState!.status === 'damaged' ? 0.82 : 1;
   const supplyFactor = group.supply < 40 ? 0.65 : group.supply < 70 ? 0.85 : 1;
   const heavyEquipmentFactor = !route.heavyArmour && group.functionalArmour > 0 ? 0.78 : 1;
+  const upgradeFactor = 1 + (routeState!.upgradeLevel ?? 0) * 0.08;
   const baseProgress = 100 / Math.max(1, route.movementDays);
 
-  return Math.max(5, Math.round(
+  return Math.max(3, Math.round(
     baseProgress
     * conditionFactor
     * capacityFactor
     * statusFactor
     * supplyFactor
     * heavyEquipmentFactor
+    * upgradeFactor
   ));
 }
 
