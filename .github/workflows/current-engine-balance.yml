@@ -7,8 +7,12 @@ on:
       - 'scripts/simulate-current-engine-balance.mjs'
       - 'scripts/trace-current-engine-balance.mjs'
       - 'scripts/wp2-apply.mjs'
+      - 'scripts/wp2-fix-tests.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'
       - 'tests/wp2-logistics-resilience.test.cjs'
+      - 'tests/engine.test.cjs'
+      - 'tests/logistics-priorities-viii-b4d.test.cjs'
+      - 'tests/supply-throughput-viii-b3.test.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/current-engine-balance.yml'
@@ -31,6 +35,10 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
+
+      - name: Restore and align affected regression tests
+        if: hashFiles('scripts/wp2-fix-tests.mjs') != ''
+        run: node scripts/wp2-fix-tests.mjs
 
       - name: Apply WP2 logistics model
         if: hashFiles('scripts/wp2-apply.mjs') != ''
