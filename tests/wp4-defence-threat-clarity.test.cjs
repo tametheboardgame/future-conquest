@@ -155,6 +155,7 @@ test('WP4 interface uses compact counterattack alerts and scale-stable enemy ope
   const css = fs.readFileSync('src/defence.css', 'utf8');
   assert.match(app, /<DefencePanel state=\{state\} territoryId=\{selected\.id\}/);
   assert.match(app, /COUNTERATTACK DETECTED/);
+  assert.match(app, /aria-label="ENEMY ACTION DETECTED"/);
   assert.match(app, /enemy-action-alert/);
   assert.doesNotMatch(app, /enemy-threat-list/);
   assert.match(panel, /attack risk/);
