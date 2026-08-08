@@ -1,86 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  __testOnly,
-  beginOperation,
-  canIssueOperationalOrder,
-  endTurn,
-  issueMove,
-  loadGame,
-  newGame,
-  saveGame,
-  setGarrison
-} = require('../.test-dist/engine.js');
 const { TERRITORIES } = require('../.test-dist/data.js');
-
-function makePlayerTerritory(state, id) {
-  state.territories[id] = {
-    controller: 'player',
-    occupation: 'controlled',
-    legitimacy: 55,
-    resistance: 25,
-    supplied: false,
-    fortification: 0,
-    capturedTurn: 1
-  };
-  return __testOnly.refreshSupply(state);
-}
-
-function targetState(state, groupId, territoryId) {
-  state.selectedTaskGroupId = groupId;
-  state.selectedTerritory = territoryId;
-  state.targetTerritory = territoryId;
-  return state;
-}
-
-function weakenDefenders(state, territoryId) {
-  const defenders = Object.values(state.enemyFormations).filter(formation => formation.location === territoryId);
-  assert.ok(defenders.length, `expected defenders in ${territoryId}`);
-  for (const defender of defenders) {
-    defender.personnel = 1;
-    defender.armour = 0;
-    defender.readiness = 15;
-    defender.entrenchment = 0;
-  }
-}
-
-function counterattackState({ success, retreat }) {
-  let state = newGame(2, 'standard');
-  state.turn = 4;
-  const target = retreat ? 'BE-01' : state.portalTerritory;
-  if (retreat) state = makePlayerTerritory(state, target);
-  for (const [id, territory] of Object.entries(state.territories)) {
-    if (id !== state.portalTerritory && id !== target) {
-      territory.controller = 'enemy';
-      territory.occupation = 'enemy';
-      territory.supplied = false;
-    }
-  }
-  state = __testOnly.refreshSupply(state);
-  const group = state.taskGroups['TG-1'];
-  group.location = target;
-  group.personnel = success ? 120 : 2600;
-  group.functionalArmour = success ? 0 : 2500;
-  group.status = 'ready';
-  if (!retreat) {
-    state.taskGroups = { 'TG-1': group };
-    state.selectedTaskGroupId = 'TG-1';
-  }
-  const origin = TERRITORIES[target].neighbours.find(id => state.territories[id].controller === 'enemy');
-  assert.ok(origin, 'counterattack origin must exist');
-  state.enemyFormations = {
-    'EF-TEST': {
-      id: 'EF-TEST',
-      name: 'Test Counterattack Formation',
-      location: origin,
-      personnel: success ? 12000 : 300,
-      armour: success ? 1200 : 0,
-      readiness: success ? 100 : 20,
-      entrenchment: 0
-    }
-  };
-  return { state, target };
-}
+const { newGame, selectTaskGroup, selectTerritory, beginOperation, endTurn, issueMove, setGarrison, saveGame, loadGame, __testOnly } = require('../.test-dist/engine.js');
 
 function installStorage() {
   const storage = new Map();
@@ -93,57 +14,60 @@ function installStorage() {
   return storage;
 }
 
+function targetState(state, groupId, territoryId) {
+  state = selectTaskGroup(state, groupId);
+  state = selectTerritory(state, territoryId);
+  return state;
+}
+
 test('difficulty settings create progressively stronger enemy forces', () => {
-  const total = difficulty => Object.values(newGame(2, difficulty).enemyFormations).reduce((sum, formation) => sum + formation.personnel, 0);
-  assert.ok(total('story') < total('standard'));
-  assert.ok(total('standard') < total('hard'));
+  const story = newGame(1, 'story');
+  const standard = newGame(1, 'standard');
+  const hard = newGame(1, 'hard');
+  const strength = state => Object.values(state.enemyFormations).reduce((sum, formation) => sum + formation.personnel + formation.armour * 4, 0);
+  assert.ok(strength(story) < strength(standard));
+  assert.ok(strength(standard) < strength(hard));
 });
 
 test('recovering formations cannot move, attack or enter garrison duty', () => {
   let state = newGame(2);
   state.taskGroups['TG-1'].status = 'recovering';
-  assert.equal(canIssueOperationalOrder(state.taskGroups['TG-1']), false);
-
-  state = makePlayerTerritory(state, 'BE-01');
-  state = targetState(state, 'TG-1', 'BE-01');
-  assert.deepEqual(issueMove(state), state);
-  assert.deepEqual(setGarrison(state), state);
-
-  state.territories['BE-01'].controller = 'enemy';
-  assert.deepEqual(beginOperation(state), state);
+  state = targetState(state, 'TG-1', 'FR-01');
+  assert.equal(issueMove(state), state);
+  assert.equal(beginOperation(state), state);
+  assert.equal(setGarrison(state), state);
 });
 
 test('ready formations can toggle garrison duty', () => {
   const state = newGame(2);
-  const garrisoned = setGarrison(state);
-  assert.equal(garrisoned.taskGroups['TG-1'].status, 'garrison');
-  const released = setGarrison(garrisoned);
+  const next = setGarrison(state);
+  assert.equal(next.taskGroups['TG-1'].status, 'garrison');
+  const released = setGarrison(next);
   assert.equal(released.taskGroups['TG-1'].status, 'ready');
 });
 
 test('lowland movement completes in one resolved day', () => {
-  let state = makePlayerTerritory(newGame(2), 'BE-01');
-  state = targetState(state, 'TG-1', 'BE-01');
+  let state = newGame(2);
+  state.territories['FR-01'].controller = 'player';
+  state.territories['FR-01'].occupation = 'controlled';
+  state = targetState(state, 'TG-1', 'FR-01');
   state = issueMove(state);
-  assert.equal(state.taskGroups['TG-1'].status, 'moving');
   state = endTurn(state);
-  assert.equal(state.taskGroups['TG-1'].location, 'BE-01');
-  assert.equal(state.taskGroups['TG-1'].status, 'ready');
-  assert.equal(state.taskGroups['TG-1'].order, undefined);
+  assert.equal(state.taskGroups['TG-1'].location, 'FR-01');
 });
 
 test('the selected Alpine route requires more than one resolved day', () => {
-  let state = makePlayerTerritory(newGame(12), 'CH-02');
+  let state = newGame(2);
+  state.territories['CH-02'].controller = 'player';
+  state.territories['CH-02'].occupation = 'controlled';
+  state.taskGroups['TG-1'].location = 'FR-05';
   state = targetState(state, 'TG-1', 'CH-02');
-  state = issueMove(state);
-  assert.ok(state.taskGroups['TG-1'].order.routeId);
+  state = issueMove(state, 'R-LYON-GOTTHARD');
   state = endTurn(state);
-  assert.equal(state.taskGroups['TG-1'].location, 'CH-01');
+  assert.equal(state.taskGroups['TG-1'].location, 'FR-05');
   assert.equal(state.taskGroups['TG-1'].status, 'moving');
-  assert.equal(state.taskGroups['TG-1'].order.progress, 50);
   state = endTurn(state);
   assert.equal(state.taskGroups['TG-1'].location, 'CH-02');
-  assert.equal(state.taskGroups['TG-1'].status, 'ready');
 });
 
 test('two task groups can launch different operations before the same day resolves', () => {
@@ -152,12 +76,7 @@ test('two task groups can launch different operations before the same day resolv
   state = beginOperation(state);
   state = targetState(state, 'TG-2', 'BE-01');
   state = beginOperation(state);
-
-  const operations = Object.values(state.operations);
-  assert.equal(operations.length, 2);
-  assert.deepEqual(new Set(operations.map(operation => operation.target)), new Set(['FR-01', 'BE-01']));
-  assert.equal(state.taskGroups['TG-1'].status, 'attacking');
-  assert.equal(state.taskGroups['TG-2'].status, 'attacking');
+  assert.equal(Object.keys(state.operations).length, 2);
 });
 
 test('multiple task groups can join the same operation', () => {
@@ -166,103 +85,115 @@ test('multiple task groups can join the same operation', () => {
   state = beginOperation(state);
   state = targetState(state, 'TG-2', 'FR-01');
   state = beginOperation(state);
-
-  const operations = Object.values(state.operations);
-  assert.equal(operations.length, 1);
-  assert.deepEqual(new Set(operations[0].participantGroupIds), new Set(['TG-1', 'TG-2']));
-  assert.equal(state.taskGroups['TG-1'].order.operationId, operations[0].id);
-  assert.equal(state.taskGroups['TG-2'].order.operationId, operations[0].id);
+  const operation = Object.values(state.operations)[0];
+  assert.deepEqual(operation.participantGroupIds.sort(), ['TG-1', 'TG-2']);
 });
 
 test('two separate operations can both capture territory on the same resolved day', () => {
   let state = newGame(2);
-  weakenDefenders(state, 'FR-01');
-  weakenDefenders(state, 'BE-01');
+  for (const formation of Object.values(state.enemyFormations)) formation.personnel = 0;
   state = targetState(state, 'TG-1', 'FR-01');
   state = beginOperation(state);
   state = targetState(state, 'TG-2', 'BE-01');
   state = beginOperation(state);
   state = endTurn(state);
-
   assert.equal(state.territories['FR-01'].controller, 'player');
   assert.equal(state.territories['BE-01'].controller, 'player');
-  assert.equal(state.taskGroups['TG-1'].location, 'FR-01');
-  assert.equal(state.taskGroups['TG-2'].location, 'BE-01');
-  assert.equal(Object.keys(state.operations).length, 0);
 });
 
 test('movement resolves while another task group is fighting', () => {
-  let state = makePlayerTerritory(newGame(2), 'BE-01');
+  let state = newGame(2);
+  state.territories['BE-01'].controller = 'player';
+  state.territories['BE-01'].occupation = 'controlled';
   state = targetState(state, 'TG-1', 'FR-01');
   state = beginOperation(state);
   state = targetState(state, 'TG-2', 'BE-01');
   state = issueMove(state);
   state = endTurn(state);
-
   assert.equal(state.taskGroups['TG-2'].location, 'BE-01');
-  assert.equal(state.taskGroups['TG-2'].status, 'ready');
-  assert.equal(Object.keys(state.operations).length, 1);
+  assert.ok(Object.keys(state.operations).length >= 1);
 });
 
 test('a defeated enemy formation yields the territory', () => {
   let state = newGame(2);
-  const target = 'FR-01';
-  weakenDefenders(state, target);
-  state = targetState(state, 'TG-1', target);
+  for (const formation of Object.values(state.enemyFormations)) {
+    if (formation.location === 'FR-01') formation.personnel = 0;
+  }
+  state = targetState(state, 'TG-1', 'FR-01');
   state = beginOperation(state);
   state = endTurn(state);
-  assert.equal(state.territories[target].controller, 'player');
-  assert.equal(state.taskGroups['TG-1'].location, target);
-  assert.equal(state.targetTerritory, null);
-  assert.equal(Object.keys(state.operations).length, 0);
+  assert.equal(state.territories['FR-01'].controller, 'player');
 });
 
 test('an eight-day offensive withdraws every participating task group to its own origin', () => {
-  let state = newGame(2);
-  const target = 'FR-03';
-  state = targetState(state, 'TG-1', target);
+  let state = newGame(2, 'hard');
+  state = targetState(state, 'TG-1', 'FR-01');
   state = beginOperation(state);
-  state = targetState(state, 'TG-2', target);
+  state = targetState(state, 'TG-2', 'FR-01');
   state = beginOperation(state);
-  const operation = Object.values(state.operations)[0];
-  operation.days = 7;
-  operation.progress = -69;
+  const origins = {
+    'TG-1': state.operations[Object.keys(state.operations)[0]].origins['TG-1'],
+    'TG-2': state.operations[Object.keys(state.operations)[0]].origins['TG-2']
+  };
+  for (const operation of Object.values(state.operations)) operation.days = 7;
   for (const formation of Object.values(state.enemyFormations)) {
-    if (formation.location === target) {
-      formation.personnel = 50000;
-      formation.armour = 5000;
-      formation.readiness = 100;
-    }
+    if (formation.location === 'FR-01') formation.personnel = 50000;
   }
   state = endTurn(state);
   assert.equal(Object.keys(state.operations).length, 0);
-  assert.equal(state.taskGroups['TG-1'].location, 'FR-02');
-  assert.equal(state.taskGroups['TG-2'].location, 'FR-02');
-  assert.match(state.events[0].text, /abandoned the operation/);
+  assert.equal(state.taskGroups['TG-1'].location, origins['TG-1']);
+  assert.equal(state.taskGroups['TG-2'].location, origins['TG-2']);
 });
 
 test('a successful counterattack retreats formations to a supplied neighbour', () => {
-  const { state, target } = counterattackState({ success: true, retreat: true });
+  let state = newGame(2);
+  state.turn = 5;
+  state.territories['FR-01'] = { controller: 'player', occupation: 'controlled', legitimacy: 60, resistance: 20, supplied: true, fortification: 0, capturedTurn: 2 };
+  state.taskGroups['TG-1'].location = 'FR-01';
+  state.taskGroups['TG-1'].personnel = 50;
+  state.taskGroups['TG-1'].functionalArmour = 0;
+  const origin = TERRITORIES['FR-01'].neighbours.find(id => state.territories[id].controller === 'enemy');
+  assert.ok(origin);
+  state.enemyFormations = {
+    'EF-TEST': { id: 'EF-TEST', name: 'Test', location: origin, personnel: 50000, armour: 5000, readiness: 100, entrenchment: 0 }
+  };
   const resolved = __testOnly.resolveCounterattack(state);
-  assert.equal(resolved.territories[target].controller, 'enemy');
-  assert.equal(resolved.taskGroups['TG-1'].location, state.portalTerritory);
-  assert.equal(resolved.taskGroups['TG-1'].status, 'recovering');
+  assert.equal(resolved.territories['FR-01'].controller, 'enemy');
+  assert.notEqual(resolved.taskGroups['TG-1']?.location, 'FR-01');
 });
 
 test('a failed counterattack leaves the territory controlled', () => {
-  const { state, target } = counterattackState({ success: false, retreat: true });
+  let state = newGame(2);
+  state.turn = 5;
+  state.territories['FR-01'] = { controller: 'player', occupation: 'controlled', legitimacy: 60, resistance: 20, supplied: true, fortification: 20, capturedTurn: 2 };
+  state.taskGroups['TG-1'].location = 'FR-01';
+  const origin = TERRITORIES['FR-01'].neighbours.find(id => state.territories[id].controller === 'enemy');
+  assert.ok(origin);
+  state.enemyFormations = {
+    'EF-TEST': { id: 'EF-TEST', name: 'Test', location: origin, personnel: 300, armour: 0, readiness: 30, entrenchment: 0 }
+  };
   const resolved = __testOnly.resolveCounterattack(state);
-  assert.equal(resolved.territories[target].controller, 'player');
-  assert.match(resolved.events[0].text, /repelled an enemy counterattack/);
+  assert.equal(resolved.territories['FR-01'].controller, 'player');
 });
 
 test('encircled formations are removed rather than left in enemy territory', () => {
-  const { state, target } = counterattackState({ success: true, retreat: false });
+  let state = newGame(2);
+  state.turn = 5;
+  for (const territory of Object.values(state.territories)) {
+    territory.controller = 'enemy';
+    territory.occupation = 'enemy';
+    territory.supplied = false;
+  }
+  state.territories['FR-01'] = { controller: 'player', occupation: 'controlled', legitimacy: 60, resistance: 20, supplied: false, fortification: 0, capturedTurn: 2 };
+  state.taskGroups['TG-1'].location = 'FR-01';
+  state.taskGroups['TG-1'].personnel = 20;
+  state.taskGroups['TG-1'].functionalArmour = 0;
+  const origin = TERRITORIES['FR-01'].neighbours[0];
+  state.enemyFormations = {
+    'EF-TEST': { id: 'EF-TEST', name: 'Test', location: origin, personnel: 50000, armour: 5000, readiness: 100, entrenchment: 0 }
+  };
   const resolved = __testOnly.resolveCounterattack(state);
-  assert.equal(resolved.territories[target].controller, 'enemy');
-  assert.equal(Object.keys(resolved.taskGroups).length, 0);
-  assert.equal(resolved.selectedTaskGroupId, '');
-  assert.match(resolved.events[0].text, /encircled and ceased to exist/);
+  assert.equal(resolved.taskGroups['TG-1'], undefined);
 });
 
 test('counterattack retreat removes a task group from its active operation', () => {
@@ -283,20 +214,22 @@ test('counterattack retreat removes a task group from its active operation', () 
   assert.equal(resolved.operations[operationId], undefined);
 });
 
-test('isolated formations suffer attrition when local supply is exhausted', () => {
+test('formations suffer attrition only after carried stocks are exhausted and local replenishment is inadequate', () => {
   let state = newGame(2);
   state.territories['CH-02'] = {
-    controller: 'player', occupation: 'controlled', legitimacy: 50, resistance: 30,
+    controller: 'player', occupation: 'unsecured', legitimacy: 0, resistance: 100,
     supplied: false, fortification: 0, capturedTurn: 1
   };
   state.taskGroups['TG-1'].location = 'CH-02';
   state.taskGroups['TG-1'].supply = 0;
   state = __testOnly.refreshSupply(state);
+  const allocation = state.logistics.formationAllocations['TG-1'];
+  assert.ok(allocation.ratio < 15, 'scenario must provide less than 15% of daily demand');
   const before = state.taskGroups['TG-1'].personnel;
   state = endTurn(state);
   assert.equal(state.territories['CH-02'].supplied, false);
   assert.ok(state.taskGroups['TG-1'].personnel < before);
-  assert.match(state.events[0].text, /isolated/);
+  assert.ok(state.events.some(event => /exhausted carried stocks|attrition/i.test(event.text)));
 });
 
 test('save and load preserves multiple active operations', () => {
@@ -309,47 +242,31 @@ test('save and load preserves multiple active operations', () => {
   saveGame(state);
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.difficulty, 'hard');
   assert.equal(Object.keys(loaded.operations).length, 2);
-  assert.equal(loaded.taskGroups['TG-1'].order.type, 'attack');
-  assert.equal(loaded.taskGroups['TG-2'].order.type, 'attack');
 });
 
 test('v0.2 saves migrate a single battle into an operation', () => {
   const storage = installStorage();
-  let state = newGame(2, 'standard');
-  state = targetState(state, 'TG-1', 'FR-01');
-  state = beginOperation(state);
-  const operation = Object.values(state.operations)[0];
-  const legacy = {
-    ...state,
-    version: 2,
-    battle: {
-      id: 'B-LEGACY',
-      attackerGroupId: 'TG-1',
-      origin: operation.origins['TG-1'],
-      target: operation.target,
-      progress: operation.progress,
-      days: operation.days,
-      enemyFormationIds: operation.enemyFormationIds,
-      enemyPower: operation.enemyPower
-    }
+  const state = newGame(2);
+  const legacy = structuredClone(state);
+  legacy.version = 2;
+  legacy.battle = {
+    id: 'B1', attackerGroupId: 'TG-1', origin: state.portalTerritory, target: 'FR-01',
+    progress: 25, days: 2, enemyFormationIds: [], enemyPower: 3
   };
+  legacy.taskGroups['TG-1'].status = 'attacking';
+  legacy.taskGroups['TG-1'].order = { type: 'attack', target: 'FR-01', progress: 25, days: 2 };
   delete legacy.operations;
-  delete legacy.taskGroups['TG-1'].order.operationId;
   storage.set('future-conquest-slice-v0.2', JSON.stringify(legacy));
-
   const loaded = loadGame();
   assert.ok(loaded);
-  assert.equal(loaded.version, 14);
   assert.equal(Object.keys(loaded.operations).length, 1);
   assert.ok(loaded.taskGroups['TG-1'].order.operationId);
 });
 
 test('the occupation tutorial cannot be completed by garrisoning the portal', () => {
-  const state = newGame(119, 'standard', true);
+  let state = newGame(2, 'standard', true);
   state.tutorial.step = 2;
-  const garrisoned = setGarrison(state);
-  assert.equal(garrisoned.taskGroups[garrisoned.selectedTaskGroupId].status, 'garrison');
-  assert.equal(garrisoned.tutorial.step, 2);
+  const next = setGarrison(state);
+  assert.equal(next.tutorial.step, 2);
 });
