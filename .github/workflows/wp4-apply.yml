@@ -21,6 +21,9 @@ jobs:
           ref: agent/wp4-defence-threat-clarity
           fetch-depth: 0
 
+      - name: Repair integration patcher
+        run: node scripts/wp4-repair.mjs
+
       - name: Validate integration script
         run: node --check scripts/wp4-apply.mjs
 
@@ -44,11 +47,11 @@ jobs:
 
       - name: Commit validated WP4 implementation
         run: |
-          rm scripts/wp4-apply.mjs .github/workflows/wp4-apply.yml
+          rm scripts/wp4-apply.mjs scripts/wp4-repair.mjs .github/workflows/wp4-apply.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/App.tsx src/main.tsx src/components/MapView.tsx src/components/DefencePanel.tsx src/game/types.ts src/game/engine.ts src/game/defence.ts src/defence.css tests/wp4-defence-threat-clarity.test.cjs
-          git add -A scripts/wp4-apply.mjs .github/workflows/wp4-apply.yml
+          git add -A scripts/wp4-apply.mjs scripts/wp4-repair.mjs .github/workflows/wp4-apply.yml
           git status --short
           git commit -m "WP4: make territory defence and enemy threats actionable"
           git push origin HEAD:agent/wp4-defence-threat-clarity
