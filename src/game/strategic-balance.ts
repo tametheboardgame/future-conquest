@@ -9,7 +9,7 @@ export interface StrategicBalanceProfile {
   unsecuredDailyPressure: number;
 }
 
-// Selected from the deterministic campaign tuning sweep; Hard preserves baseline strategic pressure.
+// Selected from the deterministic campaign tuning sweep after regression and production-build validation; Hard preserves baseline strategic pressure.
 export const STRATEGIC_BALANCE: Record<Difficulty, StrategicBalanceProfile> = {
   story: {
     mobilisationScale: 0.76,
