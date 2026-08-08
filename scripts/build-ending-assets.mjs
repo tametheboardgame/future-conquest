@@ -1,15 +1,14 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const partsDirectory = path.join(repositoryRoot, 'src', 'assets', 'endings', 'v1', 'bundle-parts');
+const sourceBundlePath = path.join(repositoryRoot, 'src', 'assets', 'endings', 'v1', 'ending-art.bundle');
 const outputDirectory = path.join(repositoryRoot, 'public', 'generated', 'endings', 'v1');
 
 const BUNDLE_LENGTH = 988_260;
 const BUNDLE_SHA256 = '4be5786ead501ed2dcfc0e6192242e25a24bbd1e55f4f4e4253e3455ce1b541a';
-const PART_COUNT = 13;
 const ASSETS = [
   { fileName: 'victory-01-europe-secured.webp', offset: 0, length: 139_794, sha256: '386f23118bdb297b02868ad9601ae003a1bbd1cbe4301f0f7804895209f7b7d3' },
   { fileName: 'victory-02-occupation.webp', offset: 139_794, length: 131_134, sha256: '2e6faf950a37fe6abc23e072f77cbfed4019e4ae09230f5ba565676cd2efbcfc' },
@@ -22,17 +21,8 @@ const ASSETS = [
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const isWebP = bytes => bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
-const partNumber = fileName => Number.parseInt(fileName.match(/^part-(\d+)\.txt$/)?.[1] ?? '9999', 10);
 
-const partFiles = (await readdir(partsDirectory))
-  .filter(fileName => /^part-\d+\.txt$/.test(fileName))
-  .sort((left, right) => partNumber(left) - partNumber(right));
-if (partFiles.length !== PART_COUNT) throw new Error(`Expected ${PART_COUNT} ending bundle parts, found ${partFiles.length}.`);
-
-const encoded = (await Promise.all(partFiles.map(fileName => readFile(path.join(partsDirectory, fileName), 'utf8'))))
-  .map(value => value.trim())
-  .join('');
-const bundle = Buffer.from(encoded, 'base64');
+const bundle = await readFile(sourceBundlePath);
 if (bundle.length !== BUNDLE_LENGTH) throw new Error(`Ending artwork bundle has ${bundle.length} bytes; expected ${BUNDLE_LENGTH}.`);
 if (sha256(bundle) !== BUNDLE_SHA256) throw new Error('Ending artwork bundle checksum mismatch.');
 
@@ -45,4 +35,4 @@ for (const asset of ASSETS) {
 }
 
 await writeFile(path.join(outputDirectory, 'manifest.json'), `${JSON.stringify({ version: 1, width: 1672, height: 941, assets: ASSETS.map(({ fileName, length, sha256 }) => ({ fileName, length, sha256 })) }, null, 2)}\n`, 'utf8');
-console.log(`Built ${ASSETS.length} high-resolution campaign ending assets from ${PART_COUNT} encoded source parts.`);
+console.log(`Built ${ASSETS.length} high-resolution campaign ending assets from verified binary source bundle.`);
