@@ -8,6 +8,7 @@ on:
       - 'scripts/trace-current-engine-balance.mjs'
       - 'scripts/wp2-apply.mjs'
       - 'scripts/wp2-fix-tests.mjs'
+      - 'scripts/wp2-refine.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'
       - 'tests/wp2-logistics-resilience.test.cjs'
       - 'tests/engine.test.cjs'
@@ -43,6 +44,10 @@ jobs:
       - name: Apply WP2 logistics model
         if: hashFiles('scripts/wp2-apply.mjs') != ''
         run: node scripts/wp2-apply.mjs
+
+      - name: Refine shortage and crisis semantics
+        if: hashFiles('scripts/wp2-refine.mjs') != ''
+        run: node scripts/wp2-refine.mjs
 
       - name: Set up Node
         uses: actions/setup-node@v4
