@@ -6,7 +6,7 @@ import { STRATEGIC_ROUTE_BY_ID } from './strategic-network-data';
 import { createRouteStates } from './strategic-network';
 import { createEmptyLogisticsPriorities, createEmptyLogisticsState, refreshSupplyNetwork } from './supply-network';
 import { resolveInfrastructureDisruption, resolveInfrastructureRecovery } from './infrastructure-disruption';
-import { resolveEngineeringProjects } from './engineering-projects';
+import { engineeringMovementFactor, engineeringOperationalPersonnel, resolveEngineeringProjects } from './engineering-projects';
 import { resolveInterdictionMissions, resolveOperationCombatDamage } from './interdiction-missions';
 import {
   chooseOperationalRoute,
@@ -166,7 +166,7 @@ function resolveCampaignOutcome(state: GameState): GameState {
   return next;
 }
 
-const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);
+const deployableArmour = (state: GameState, group: TaskGroup) => Math.min(group.functionalArmour, engineeringOperationalPersonnel(state, group));
 
 export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
   return Boolean(group && group.personnel > 0 && !group.order && (group.status === 'ready' || group.status === 'garrison'));
@@ -480,7 +480,7 @@ function resolveMovement(state: GameState): GameState {
 
     order.routeId = route.id;
     order.days += 1;
-    order.progress += movementProgressForDay(route, state.routeStates[route.id], group);
+    order.progress += Math.max(1, Math.round(movementProgressForDay(route, state.routeStates[route.id], group) * engineeringMovementFactor(state, group.id)));
     if (order.progress >= 100) {
       group.location = order.target;
       group.status = 'ready';
@@ -580,7 +580,7 @@ function resolveOperations(state: GameState): GameState {
     const defender = enemyStrengthAt(next, operation.target);
     operation.enemyPower = defender.power;
     const individualPowers = participants.map((group, index) => (
-      (group.personnel / 1000 * 4.1 + deployableArmour(group) / 1000 * 1.9)
+      (engineeringOperationalPersonnel(next, group) / 1000 * 4.1 + deployableArmour(next, group) / 1000 * 1.9)
       * (0.58 + group.morale / 150)
       * (0.55 + group.supply / 190)
       * (0.9 + randomFor(next.seed, next.turn, saltFor(operation.id) + index * 17) * 0.22)
@@ -611,7 +611,7 @@ function resolveOperations(state: GameState): GameState {
       totalKilled += killed;
       totalWounded += wounded;
 
-      const exposedArmour = deployableArmour(group);
+      const exposedArmour = deployableArmour(next, group);
       const armourDamage = Math.min(
         group.functionalArmour,
         Math.max(exposedArmour > 0 ? 1 : 0, Math.round(exposedArmour * (ratio < 1 ? 0.018 : 0.009)))
@@ -620,7 +620,7 @@ function resolveOperations(state: GameState): GameState {
       group.damagedArmour += armourDamage;
       totalArmourDamage += armourDamage;
       remainingPersonnel += group.personnel;
-      remainingArmour += deployableArmour(group);
+      remainingArmour += deployableArmour(next, group);
       if (group.order) group.order.progress = operation.progress;
     }
 
@@ -837,7 +837,7 @@ function pruneOperations(state: GameState): GameState {
 export function counterattackDefencePower(state: GameState, territoryId: string): number {
   const defenders = Object.values(state.taskGroups).filter(group => group.location === territoryId && group.personnel > 0);
   const preparedBonus = (state.territories[territoryId]?.defencePreparedUntil ?? 0) >= state.turn ? 3.5 : 0;
-  return defenders.reduce((sum, group) => sum + group.personnel / 1000 * 4 + deployableArmour(group) / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0)
+  return defenders.reduce((sum, group) => sum + engineeringOperationalPersonnel(state, group) / 1000 * 4 + deployableArmour(state, group) / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0)
     + (state.territories[territoryId]?.fortification ?? 0) / 7
     + 1.5
     + preparedBonus;

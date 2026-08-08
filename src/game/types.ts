@@ -12,7 +12,8 @@ export type SupplyCondition = 'sustained' | 'strained' | 'undersupplied' | 'crit
 export type LogisticsPriority = 'critical' | 'high' | 'standard' | 'restricted';
 export type RouteSupplyCondition = 'idle' | 'active' | 'strained' | 'overloaded';
 export type InfrastructureIncidentCause = 'resistance' | 'enemy-interdiction' | 'player-interdiction' | 'combat';
-export type EngineeringAllocation = 25 | 50 | 75 | 100;
+export type EngineeringAllocation = number;
+export type EngineeringProjectKind = 'repair' | 'upgrade';
 export type EngineeringProjectStatus = 'active' | 'completed' | 'cancelled';
 export type InterdictionIntensity = 25 | 50 | 75 | 100;
 export type InterdictionMissionStatus = 'active' | 'succeeded' | 'failed' | 'cancelled';
@@ -218,6 +219,7 @@ export interface StrategicRouteState {
   status: StrategicRouteStatus;
   condition: number;
   capacityModifier: number;
+  upgradeLevel: number;
 }
 
 export interface SupplyPath {
@@ -276,7 +278,8 @@ export interface LogisticsState {
 export interface EngineeringProject {
   id: string;
   routeId: string;
-  assignedTaskGroupId: string;
+  kind: EngineeringProjectKind;
+  assignedTaskGroupId?: string;
   createdTurn: number;
   startingCondition: number;
   targetCondition: number;
@@ -285,6 +288,10 @@ export interface EngineeringProject {
   supplySpent: number;
   status: EngineeringProjectStatus;
   returnStatus: 'ready' | 'garrison';
+  workCompleted: number;
+  workRequired: number;
+  materialCost: number;
+  materialSpent: number;
 }
 
 export interface InterdictionMission {
