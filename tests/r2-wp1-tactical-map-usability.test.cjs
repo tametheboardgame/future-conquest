@@ -35,6 +35,7 @@ test('R2-WP1 separates geographic route anchors from display anchors', () => {
   assert.match(mapView, /geographicAnchors\[operation\.target\]/);
   assert.match(mapView, /const anchor = displayAnchors\[territoryId\]/);
   assert.match(mapView, /const anchor = displayAnchors\[contact\.territoryId\]/);
+  assert.doesNotMatch(mapView, /\banchors\[/, 'retired unspecialised anchor table must not survive the split');
 });
 
 test('R2-WP1 explicitly corrects the crowded Belgian display anchors', () => {
