@@ -8,8 +8,12 @@ const {
   formationTotals,
   mergeFormations,
   occupationRequirement,
+  proportionalSplitArmour,
+  reorganisationBlockReason,
   renameFormation,
   splitFormation,
+  splitFormationValidation,
+  suggestSplitFormationName,
   transferFormationResources
 } = require('../.test-dist/formation-organisation.js');
 
@@ -45,6 +49,74 @@ test('split rejects negative, zero and over-allocation without mutating state', 
   assert.equal(splitFormation(state, { sourceId: 'TG-1', name: 'Invalid', personnel: 0, functionalArmour: 0, damagedArmour: 0 }), state);
   assert.equal(splitFormation(state, { sourceId: 'TG-1', name: 'Invalid', personnel: 2600, functionalArmour: 0, damagedArmour: 0 }), state);
   assert.equal(splitFormation(state, { sourceId: 'TG-1', name: 'Invalid', personnel: 10, functionalArmour: 99999, damagedArmour: 0 }), state);
+});
+
+test('split armour defaults scale with personnel and never assign more working suits than operators', () => {
+  const state = newGame(21);
+  const source = state.taskGroups['TG-1'];
+  source.personnel = 2400;
+  source.functionalArmour = 2742;
+  source.damagedArmour = 108;
+
+  const allocation = proportionalSplitArmour(source, 50);
+  assert.equal(allocation.functionalArmour, 50);
+  assert.ok(allocation.damagedArmour <= 3);
+  assert.ok(allocation.functionalArmour < Math.floor(source.functionalArmour / 2));
+});
+
+test('a newly split formation cannot be assigned more functional armour than personnel', () => {
+  const state = newGame(22);
+  const input = {
+    sourceId: 'TG-1',
+    name: 'Small Guard',
+    personnel: 50,
+    functionalArmour: 51,
+    damagedArmour: 0
+  };
+  assert.match(splitFormationValidation(state, input), /more functional powered-armour suits than personnel/i);
+  assert.equal(splitFormation(state, input), state);
+});
+
+test('automatic split names increment from the source formation and remain unique', () => {
+  let state = newGame(23);
+  const source = Object.values(state.taskGroups).find(group => group.name === 'Spearhead Group');
+  assert.ok(source);
+  assert.equal(suggestSplitFormationName(state, source.id), 'Spearhead Group 2');
+
+  const allocation = proportionalSplitArmour(source, 100);
+  state = splitFormation(state, {
+    sourceId: source.id,
+    name: '',
+    personnel: 100,
+    functionalArmour: allocation.functionalArmour,
+    damagedArmour: allocation.damagedArmour
+  });
+  assert.equal(state.taskGroups[state.selectedTaskGroupId].name, 'Spearhead Group 2');
+  assert.equal(suggestSplitFormationName(state, state.selectedTaskGroupId), 'Spearhead Group 3');
+});
+
+test('explicit duplicate formation names are rejected with a specific validation reason', () => {
+  const state = newGame(24);
+  const input = {
+    sourceId: 'TG-1',
+    name: state.taskGroups['TG-2'].name,
+    personnel: 100,
+    functionalArmour: 50,
+    damagedArmour: 0
+  };
+  assert.match(splitFormationValidation(state, input), /already exists/i);
+  assert.equal(splitFormation(state, input), state);
+});
+
+test('engineering and interdiction commitments explain why reorganisation is blocked', () => {
+  const state = newGame(25);
+  state.taskGroups['TG-1'].status = 'engineering';
+  state.taskGroups['TG-2'].status = 'interdicting';
+  assert.match(reorganisationBlockReason(state.taskGroups['TG-1']), /engineering project/i);
+  assert.match(reorganisationBlockReason(state.taskGroups['TG-2']), /interdiction mission/i);
+  assert.match(splitFormationValidation(state, {
+    sourceId: 'TG-1', name: '', personnel: 100, functionalArmour: 50, damagedArmour: 0
+  }), /cancel the project/i);
 });
 
 test('formations in the same province can transfer personnel and armour without resource loss', () => {
