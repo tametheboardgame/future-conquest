@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - agent/wp11-balance-playtest-followup
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
