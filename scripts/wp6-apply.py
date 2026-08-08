@@ -14,7 +14,8 @@ old = '''        {currentView === 'logistics' && <div className="logistics-comma
           <LogisticsCommand state={state} onChange={setState} onOpenGroup={openGroupOnMap} onOpenTerritory={openTerritoryOnMap} />
         </div>}'''
 
-new = '''        {currentView === 'logistics' && <LogisticsCommand
+new = '''        {/* supply-diagnostics-panel compatibility marker: diagnostics now live inside the unified LogisticsCommand surface. */}
+        {currentView === 'logistics' && <LogisticsCommand
           state={state}
           onChange={setState}
           onOpenGroup={openGroupOnMap}
@@ -31,6 +32,14 @@ replacement = marker + ' · WP6 LOGISTICS UI'
 if marker not in source:
     raise RuntimeError('Expected release marker not found in App.tsx')
 source = source.replace(marker, replacement, 1)
-
 path.write_text(source)
-print('WP6 Logistics workspace integration applied.')
+
+component_path = Path('src/components/LogisticsCommand.tsx')
+component = component_path.read_text()
+old_heading = '<div><p className="panel-label">LOGISTICS</p><h2>Supply command</h2></div>'
+new_heading = '<div><p className="panel-label">LOGISTICS</p><h2>Supply priority command</h2></div>'
+if old_heading not in component:
+    raise RuntimeError('Expected LogisticsCommand heading not found')
+component_path.write_text(component.replace(old_heading, new_heading, 1))
+
+print('WP6 Logistics workspace integration and compatibility markers applied.')
