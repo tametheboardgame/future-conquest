@@ -146,11 +146,16 @@ replace_once(
     'PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY · WP8 GUIDED HELP'
 )
 
-# 4. Existing tutorial regression now reflects the expanded current-system curriculum.
+# 4. Existing tutorial regressions now reflect the expanded current-system curriculum/cache format.
 replace_once(
     'tests/tutorial-explanation-phases.test.cjs',
     'assert.match(overlay, /EXPANDED_TOTAL_STEPS = 14/);',
     'assert.match(overlay, /EXPANDED_TOTAL_STEPS = 19/);'
+)
+replace_once(
+    'tests/tutorial-explanation-phases.test.cjs',
+    'assert.match(overlay, /future-conquest-tutorial-explanation-v1/);',
+    'assert.match(overlay, /future-conquest-tutorial-explanation-v2/);'
 )
 
 print('WP8 guided-help integration applied.')
