@@ -1,0 +1,53 @@
+name: WP4 defence and threat validation
+
+on:
+  push:
+    branches:
+      - agent/wp4-defence-threat-clarity
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wp4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout WP4 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/wp4-defence-threat-clarity
+          fetch-depth: 0
+
+      - name: Validate integration script
+        run: node --check scripts/wp4-apply.mjs
+
+      - name: Apply WP4 integration
+        run: node scripts/wp4-apply.mjs
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Build game
+        run: npm run build
+
+      - name: Commit validated WP4 implementation
+        run: |
+          rm scripts/wp4-apply.mjs .github/workflows/wp4-apply.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/main.tsx src/components/MapView.tsx src/components/DefencePanel.tsx src/game/types.ts src/game/engine.ts src/game/defence.ts src/defence.css tests/wp4-defence-threat-clarity.test.cjs
+          git add -A scripts/wp4-apply.mjs .github/workflows/wp4-apply.yml
+          git status --short
+          git commit -m "WP4: make territory defence and enemy threats actionable"
+          git push origin HEAD:agent/wp4-defence-threat-clarity
