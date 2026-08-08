@@ -42,7 +42,7 @@ export function StrategicCollapseDecision({ state, onContinue, onSurrender }: Pr
         </article>
         <article>
           <h3>Surrender campaign</h3>
-          <p>Accept the strategic assessment and end the campaign as a defeat. The normal campaign-failed ending and reload options will follow.</p>
+          <p>Accept the strategic assessment and end the campaign as a defeat. The normal defeat ending and reload options will follow.</p>
         </article>
       </div>
 
