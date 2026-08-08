@@ -10,8 +10,8 @@ interface Props {
   onSkip: () => void;
 }
 
-type TutorialPlacement = 'above' | 'below' | 'left' | 'right' | 'floating';
-type ExplanationTopic = 'forces' | 'logistics' | 'intelligence';
+type TutorialPlacement = 'above' | 'below' | 'left' | 'right' | 'floating' | 'docked-top' | 'docked-bottom';
+type ExplanationTopic = 'forces' | 'operations' | 'defence' | 'logistics' | 'intelligence' | 'infrastructure';
 
 interface TargetBox {
   top: number;
@@ -46,32 +46,50 @@ const EXPLANATION_PHASES: Record<ExplanationTopic, ExplanationPhase[]> = {
     {
       id: 'forces-organisation',
       title: 'Understand force organisation',
-      instruction: 'The Forces page is where you inspect and reorganise the expedition. Split creates a new independent formation, Transfer moves personnel or armour between formations in the same location, Merge combines compatible formations, and Rename changes a formation label. These tools are optional and are unavailable while a formation is committed to operations, movement or recovery.',
+      instruction: 'The Forces page is where you inspect and reorganise the expedition. Split creates a new independent formation, Transfer moves personnel or armour between formations in the same location, Merge combines compatible formations, and Rename changes a formation label. These tools are optional and are unavailable while a formation is committed to movement, combat, recovery, engineering or interdiction.',
       focusSelector: '.force-organisation',
-      hint: 'You do not need to reorganise anything now. This step is only explaining the tools available for later campaign decisions.'
+      hint: 'You do not need to reorganise anything now. The purpose is to know where these controls live before you need them.'
+    }
+  ],
+  operations: [
+    {
+      id: 'operations-tempo',
+      title: 'Operations take time',
+      instruction: 'An attack is a multi-day operation, not an instant territory flip. The formation remains committed while progress, casualties, armour damage and defender strength change each day. You may still issue orders to other available formations before resolving the day.',
+      focusSelector: '[data-tutorial="formation-orders"]',
+      hint: 'Resolve all orders advances every active movement and operation by one campaign day. Later, Operations stores the resulting after-action report.'
+    }
+  ],
+  defence: [
+    {
+      id: 'defence-command',
+      title: 'Holding ground is a separate job',
+      instruction: 'Capturing a territory does not automatically make it safe. A garrison establishes local control; the Defence assessment then shows attack risk, local strength, fortification and nearby assessed enemy mass. Entrench, Prepare defence, Reinforce and Prioritise supply are deliberate defensive tools rather than automatic bonuses.',
+      focusSelector: '.territory-defence-section',
+      hint: 'You do not need to use every defence action now. The important distinction is between taking ground and making it defensible.'
     }
   ],
   logistics: [
     {
       id: 'logistics-network',
-      title: 'Read network health',
-      instruction: 'Demand served compares required throughput with what actually arrived. Source use shows pressure on the portal, while diagnostics identify disconnected territory, starved formations and damaged or saturated routes.',
-      focusSelector: '.supply-diagnostics-panel',
-      hint: 'Read the headline and diagnostics together: a healthy overall percentage can still conceal a local failure.'
+      title: 'Supply has three layers',
+      instruction: 'Controlled territories generate distributed source capacity. Strategic routes deliver that capacity across the controlled network, and formations carry their own operational stocks as a buffer. Source use therefore describes how much territorial supply capacity is committed, not pressure on the closed insertion portal.',
+      focusSelector: '[data-tutorial="logistics-flow"]',
+      hint: 'A formation can temporarily survive poor delivery by consuming carried stock, but prolonged shortage still matters.'
     },
     {
       id: 'logistics-priorities',
-      title: 'Understand supply priorities',
+      title: 'Priority allocates scarcity',
       instruction: 'Critical requests receive throughput first, followed by High, Standard and Restricted. Automatic priorities normally make attacks Critical; movement, recovery, engineering and interdiction High; ready formations Standard; and stable administration Restricted.',
-      focusSelector: '.logistics-doctrine-panel',
-      hint: 'Manual overrides are optional. Use them only when limited throughput requires a deliberate trade-off.'
+      focusSelector: '[data-tutorial="logistics-doctrine"]',
+      hint: 'Priority cannot repair a destroyed route or create source capacity. It only decides who receives scarce throughput first.'
     },
     {
       id: 'logistics-consequences',
-      title: 'Recognise supply consequences',
-      instruction: 'Compare requested and delivered throughput for each formation. Severe shortages reduce movement and combat effectiveness, block recovery and armour repair, damage morale and can undermine territorial administration.',
-      focusSelector: '.formation-priority-panel',
-      hint: 'You do not need to change a priority. The lesson is to recognise which formations and territories are at risk.'
+      title: 'Read delivery and carried stock together',
+      instruction: 'Daily delivery tells you whether the network is meeting current demand. Carried stock tells you how much resilience remains if it is not. Diagnostics should be used before changing priorities because the real problem may be a broken corridor, a bottleneck or exhausted source capacity.',
+      focusSelector: '[data-tutorial="logistics-reserves"]',
+      hint: 'You do not need to change a priority now. Learn to distinguish a prioritisation problem from a physical network problem.'
     }
   ],
   intelligence: [
@@ -92,21 +110,44 @@ const EXPLANATION_PHASES: Record<ExplanationTopic, ExplanationPhase[]> = {
     {
       id: 'intelligence-decisions',
       title: 'Turn intelligence into orders',
-      instruction: 'Use frontline threats, enemy intent and mobilisation timings to decide where to attack, reinforce or garrison. Protect supply corridors when enemy pressure or interdiction threatens the route network.',
+      instruction: 'Use frontline threats, counterattack warnings, enemy intent and mobilisation timings to decide where to attack, reinforce or garrison. Protect supply corridors when enemy pressure or interdiction threatens the route network.',
       focusSelector: '.frontline-panel',
       hint: 'Intelligence supports decisions; it does not issue orders automatically.'
+    }
+  ],
+  infrastructure: [
+    {
+      id: 'infrastructure-repair',
+      title: 'Repair the friendly network',
+      instruction: 'Repair commits an eligible formation at a secured endpoint to restore a damaged controlled corridor towards 100% condition. The order preview shows its current logistics delivery, repair rate, network demand and estimated completion before you commit.',
+      focusSelector: '[data-tutorial="infrastructure-repair"]',
+      hint: 'A repair project can stall if its assigned formation receives less than 15% of daily logistics demand.'
+    },
+    {
+      id: 'infrastructure-interdict',
+      title: 'Disrupt the enemy network',
+      instruction: 'Interdiction is an offensive frontier mission. Higher intensity can damage enemy infrastructure faster, but it consumes more supply, exposes the assigned formation to greater risk and raises escalation. Enemy security remains deliberately uncertain.',
+      focusSelector: '[data-tutorial="infrastructure-interdict"]',
+      hint: 'Interdiction is an option, not a prerequisite for basic campaign survival.'
+    },
+    {
+      id: 'infrastructure-eligibility',
+      title: 'Know why an order is unavailable',
+      instruction: 'Infrastructure actions depend on route control, security, frontier geometry, formation position and logistics. The Infrastructure Overview states those rules explicitly, and unavailable-order panels tell you what must change before the action becomes possible.',
+      focusSelector: '[data-tutorial="infrastructure-rules"]',
+      hint: 'This is the final guided step. Continue returns you to full command; the tutorial can be replayed later from Campaign.'
     }
   ]
 };
 
-const EXPLANATION_STORAGE_KEY = 'future-conquest-tutorial-explanation-v1';
+const EXPLANATION_STORAGE_KEY = 'future-conquest-tutorial-explanation-v2';
 const TUTORIAL_SEEN_STORAGE_KEY = 'future-conquest-tutorial-seen-v1';
 const TUTORIAL_REPLAY_STORAGE_KEY = 'future-conquest-tutorial-replay-v1';
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const CARD_GAP = 14;
 const VIEWPORT_MARGIN = 10;
 const MOBILE_BREAKPOINT = 760;
-const EXPANDED_TOTAL_STEPS = 14;
+const EXPANDED_TOTAL_STEPS = 19;
 
 function readFlag(key: string) {
   try {
@@ -125,12 +166,16 @@ function writeFlag(key: string, value: boolean) {
   }
 }
 
+function isExplanationTopic(value: unknown): value is ExplanationTopic {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(EXPLANATION_PHASES, value);
+}
+
 function readStoredExplanation(): ExplanationProgress | null {
   try {
     const stored = window.localStorage.getItem(EXPLANATION_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as Partial<ExplanationProgress>;
-    if ((parsed.topic !== 'forces' && parsed.topic !== 'logistics' && parsed.topic !== 'intelligence') || typeof parsed.phase !== 'number') return null;
+    if (!isExplanationTopic(parsed.topic) || typeof parsed.phase !== 'number') return null;
     const maximumPhase = EXPLANATION_PHASES[parsed.topic].length - 1;
     return { topic: parsed.topic, phase: clamp(Math.round(parsed.phase), 0, maximumPhase) };
   } catch {
@@ -142,13 +187,22 @@ function expandedStepNumber(step: TutorialStep, fallback: number) {
   const mapping: Record<string, number> = {
     formation: 1,
     operation: 3,
-    occupation: 4,
-    movement: 5,
-    logistics: 6,
-    intelligence: 10,
-    engineering: 14
+    occupation: 5,
+    movement: 7,
+    logistics: 8,
+    intelligence: 12,
+    engineering: 16
   };
   return mapping[step.id] ?? fallback;
+}
+
+function explanationStepNumber(topic: ExplanationTopic, phase: number): number {
+  if (topic === 'forces') return 2;
+  if (topic === 'operations') return 4;
+  if (topic === 'defence') return 6;
+  if (topic === 'logistics') return 9 + phase;
+  if (topic === 'intelligence') return 13 + phase;
+  return 17 + phase;
 }
 
 export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, onSkip }: Props) {
@@ -208,6 +262,12 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     if (previous === 'formation' && current === 'operation') {
       setExplanation({ topic: 'forces', phase: 0 });
       setReviewPhase(null);
+    } else if (previous === 'operation' && current === 'occupation') {
+      setExplanation({ topic: 'operations', phase: 0 });
+      setReviewPhase(null);
+    } else if (previous === 'occupation' && current === 'movement') {
+      setExplanation({ topic: 'defence', phase: 0 });
+      setReviewPhase(null);
     } else if (previous === 'logistics' && current === 'intelligence') {
       setExplanation({ topic: 'logistics', phase: 0 });
       setReviewPhase(null);
@@ -215,14 +275,15 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       setExplanation({ topic: 'intelligence', phase: 0 });
       setReviewPhase(null);
     } else if (previous === 'engineering' && current === undefined) {
-      finishTutorialExperience();
+      setExplanation({ topic: 'infrastructure', phase: 0 });
+      setReviewPhase(null);
     } else if (current === 'formation') {
       setExplanation(null);
       setReviewPhase(null);
     }
 
     previousStepId.current = current;
-  }, [finishTutorialExperience, step?.id]);
+  }, [step?.id]);
 
   useEffect(() => {
     try {
@@ -259,13 +320,13 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     const viewportRight = viewportLeft + viewportWidth;
     const viewportBottom = viewportTop + viewportHeight - safeBottom;
     const cardRect = card.getBoundingClientRect();
-    const cardWidth = Math.min(cardRect.width || 380, viewportWidth - VIEWPORT_MARGIN * 2);
-    const cardHeight = Math.min(cardRect.height || 210, viewportHeight - safeBottom - VIEWPORT_MARGIN * 2);
+    const cardWidth = Math.min(cardRect.width || 390, viewportWidth - VIEWPORT_MARGIN * 2);
+    const cardHeight = Math.min(cardRect.height || 230, viewportHeight - safeBottom - VIEWPORT_MARGIN * 2);
     const target = findTarget();
 
     if (!target) {
       setPosition({
-        top: clamp(viewportBottom - cardHeight, viewportTop + VIEWPORT_MARGIN, viewportBottom - cardHeight),
+        top: Math.max(viewportTop + VIEWPORT_MARGIN, viewportBottom - cardHeight),
         left: clamp(viewportLeft + (viewportWidth - cardWidth) / 2, viewportLeft + VIEWPORT_MARGIN, viewportRight - cardWidth - VIEWPORT_MARGIN),
         placement: 'floating',
         ready: true
@@ -274,21 +335,43 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     }
 
     const rect = target.getBoundingClientRect();
-    const spaces: Record<Exclude<TutorialPlacement, 'floating'>, number> = {
+    const targetBox = {
+      top: rect.top - 6,
+      left: rect.left - 6,
+      width: rect.width + 12,
+      height: rect.height + 12
+    };
+
+    if (mobile) {
+      const targetCentre = rect.top + rect.height / 2;
+      const viewportCentre = viewportTop + (viewportBottom - viewportTop) / 2;
+      const dockTop = viewportTop + VIEWPORT_MARGIN;
+      const dockBottom = Math.max(dockTop, viewportBottom - cardHeight);
+      const dockAboveTarget = targetCentre >= viewportCentre;
+      setPosition({
+        top: dockAboveTarget ? dockTop : dockBottom,
+        left: clamp(viewportLeft + (viewportWidth - cardWidth) / 2, viewportLeft + VIEWPORT_MARGIN, viewportRight - cardWidth - VIEWPORT_MARGIN),
+        placement: dockAboveTarget ? 'docked-top' : 'docked-bottom',
+        ready: true,
+        target: targetBox
+      });
+      return;
+    }
+
+    type DirectionalPlacement = 'above' | 'below' | 'left' | 'right';
+    const spaces: Record<DirectionalPlacement, number> = {
       above: rect.top - viewportTop - VIEWPORT_MARGIN,
       below: viewportBottom - rect.bottom - VIEWPORT_MARGIN,
       left: rect.left - viewportLeft - VIEWPORT_MARGIN,
       right: viewportRight - rect.right - VIEWPORT_MARGIN
     };
-    const required: Record<Exclude<TutorialPlacement, 'floating'>, number> = {
+    const required: Record<DirectionalPlacement, number> = {
       above: cardHeight + CARD_GAP,
       below: cardHeight + CARD_GAP,
       left: cardWidth + CARD_GAP,
       right: cardWidth + CARD_GAP
     };
-    const preferred: Array<Exclude<TutorialPlacement, 'floating'>> = mobile
-      ? ['above', 'below', 'right', 'left']
-      : ['right', 'left', 'below', 'above'];
+    const preferred: DirectionalPlacement[] = ['right', 'left', 'below', 'above'];
     const placement = preferred.find(candidate => spaces[candidate] >= required[candidate])
       ?? preferred.reduce((best, candidate) => spaces[candidate] > spaces[best] ? candidate : best, preferred[0]);
 
@@ -313,12 +396,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       left: clamp(left, viewportLeft + VIEWPORT_MARGIN, Math.max(viewportLeft + VIEWPORT_MARGIN, viewportRight - cardWidth - VIEWPORT_MARGIN)),
       placement,
       ready: true,
-      target: {
-        top: rect.top - 6,
-        left: rect.left - 6,
-        width: rect.width + 12,
-        height: rect.height + 12
-      }
+      target: targetBox
     });
   }, [findTarget]);
 
@@ -374,8 +452,10 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       setReviewPhase(null);
       return;
     }
+    const finishedTopic = explanation.topic;
     setExplanation(null);
     setReviewPhase(null);
+    if (finishedTopic === 'infrastructure') finishTutorialExperience();
   };
 
   const reviewPreviousExplanation = () => {
@@ -391,12 +471,10 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
 
   const title = currentExplanationPhase?.title ?? step?.title ?? 'Guided campaign';
   const instruction = currentExplanationPhase?.instruction ?? step?.instruction ?? '';
-  const hint = currentExplanationPhase?.hint ?? 'The highlighted control is your next action.';
+  const hint = currentExplanationPhase?.hint ?? 'Waiting for the highlighted action. The tutorial advances only after the game confirms it.';
   const visibleExplanationPhase = explanation ? (reviewPhase ?? explanation.phase) : 0;
   const visibleStepNumber = explanation
-    ? explanation.topic === 'forces'
-      ? 2
-      : (explanation.topic === 'logistics' ? 7 : 11) + visibleExplanationPhase
+    ? explanationStepNumber(explanation.topic, visibleExplanationPhase)
     : step ? expandedStepNumber(step, stepNumber) : stepNumber;
   const visibleTotalSteps = Math.max(EXPANDED_TOTAL_STEPS, totalSteps);
 
@@ -421,10 +499,14 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       <div className="tutorial-progress"><span>GUIDED CAMPAIGN</span><strong>{visibleStepNumber} / {visibleTotalSteps}</strong></div>
       <h2>{title}</h2>
       <p>{instruction}</p>
+      {!explanationMode && step && <div className="tutorial-action-brief" data-wp8-action-context="true">
+        <div><span>WHY IT MATTERS</span><p>{step.why}</p></div>
+        <div><span>COMPLETE WHEN</span><p>{step.completion}</p></div>
+      </div>}
       <div className="tutorial-hint"><span aria-hidden="true">◎</span><strong>{hint}</strong></div>
       <div className="tutorial-actions">
         {explanationMode && visibleExplanationPhase > 0 && <button type="button" onClick={reviewPreviousExplanation}>Back</button>}
-        {explanationMode && <button type="button" className="primary" onClick={advanceExplanation}>Continue</button>}
+        {explanationMode && <button type="button" className="primary" onClick={advanceExplanation}>{explanation?.topic === 'infrastructure' && visibleExplanationPhase === EXPLANATION_PHASES.infrastructure.length - 1 ? 'Finish tutorial' : 'Continue'}</button>}
         <button type="button" onClick={skip}>Skip tutorial</button>
       </div>
     </aside>

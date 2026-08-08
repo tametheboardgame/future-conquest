@@ -122,7 +122,7 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
         </div>
       </section>
 
-      <section className="view-panel logistics-flow-explainer">
+      <section className="view-panel logistics-flow-explainer" data-tutorial="logistics-flow">
         <div className="view-panel-heading"><p className="panel-label">HOW SUPPLY WORKS</p><strong>3 layers</strong></div>
         <div className="logistics-flow-steps">
           <article><b>1</b><div><strong>Territorial sources</strong><p>Controlled territory generates food, industrial, energy and captured-store capacity. The former portal is not a permanent supply source.</p></div></article>
@@ -131,13 +131,13 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
         </div>
       </section>
 
-      <section className="view-panel logistics-doctrine-panel">
+      <section className="view-panel logistics-doctrine-panel" data-tutorial="logistics-doctrine">
         <div><p className="panel-label">ALLOCATION DOCTRINE</p><h3>Critical → High → Standard → Restricted</h3></div>
         <p>Priority decides who receives scarce throughput first. It cannot repair a destroyed route or create source capacity. Automatic defaults make attacks Critical; movement, recovery, engineering and interdiction High; normal formations Standard; and stable administered territory Restricted.</p>
       </section>
 
       <div className="logistics-overview-grid">
-        <section className="view-panel logistics-reserve-panel">
+        <section className="view-panel logistics-reserve-panel" data-tutorial="logistics-reserves">
           <div className="view-panel-heading"><p className="panel-label">FORMATION RESERVES</p><strong>{localStockAverage}% avg</strong></div>
           <p className="panel-copy">Carried stock is the buffer between a formation and immediate logistics failure.</p>
           <div className="logistics-overview-list">{weakestGroups.map(group => {

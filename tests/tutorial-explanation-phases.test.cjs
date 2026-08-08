@@ -20,17 +20,17 @@ test('Forces, Logistics and Intelligence retain readable explanation phases afte
   assert.match(overlay, /id: 'intelligence-situation'/);
   assert.match(overlay, /id: 'intelligence-confidence'/);
   assert.match(overlay, /id: 'intelligence-decisions'/);
-  assert.match(overlay, /EXPANDED_TOTAL_STEPS = 14/);
+  assert.match(overlay, /EXPANDED_TOTAL_STEPS = 19/);
 });
 
 test('explanation progress survives reloads and action steps no longer need a recovery button', () => {
   const overlay = fs.readFileSync('src/components/TutorialOverlay.tsx', 'utf8');
 
-  assert.match(overlay, /future-conquest-tutorial-explanation-v1/);
+  assert.match(overlay, /future-conquest-tutorial-explanation-v2/);
   assert.match(overlay, /window\.localStorage\.setItem/);
   assert.match(overlay, /window\.localStorage\.removeItem/);
   assert.match(overlay, />Back<\/button>/);
-  assert.match(overlay, />Continue<\/button>/);
+  assert.match(overlay, /'Finish tutorial' : 'Continue'/);
   assert.doesNotMatch(overlay, /Find highlighted control/);
   assert.doesNotMatch(overlay, /focusControl/);
 });

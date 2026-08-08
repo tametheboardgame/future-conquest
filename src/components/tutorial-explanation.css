@@ -1,4 +1,4 @@
-/* Explanation phases keep the command page readable. */
+/* Guided explanation phases keep the underlying command page readable. */
 .tutorial-guide.explanation .tutorial-spotlight {
   border-width: 2px;
   border-color: #8adfff;
@@ -27,6 +27,45 @@
   flex-wrap: wrap;
 }
 
+.tutorial-action-brief {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tutorial-action-brief > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 7px 8px;
+  border: 1px solid rgba(126, 217, 255, .16);
+  background: rgba(126, 217, 255, .04);
+}
+
+.tutorial-action-brief span {
+  color: #7ed9ff;
+  font: 600 8px IBM Plex Mono, monospace;
+  letter-spacing: .06em;
+}
+
+.tutorial-action-brief p {
+  margin: 0;
+  color: #b7c8d4;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.tutorial-overlay[data-placement='docked-top']::after,
+.tutorial-overlay[data-placement='docked-bottom']::after {
+  display: none;
+}
+
+.tutorial-overlay[data-placement='docked-top'],
+.tutorial-overlay[data-placement='docked-bottom'] {
+  box-shadow: 0 14px 50px rgba(0,0,0,.62), 0 0 0 1px rgba(118,215,255,.12);
+}
+
 /* Once the guided tutorial has been completed or skipped, replay is deliberate
    through the existing SYS/Campaign replay control rather than every new campaign. */
 .tutorial-seen .tutorial-toggle {
@@ -34,7 +73,22 @@
 }
 
 @media (max-width: 760px) {
-  .tutorial-overlay[data-mode='explanation'] {
-    max-height: 48vh;
+  .tutorial-overlay[data-mode='explanation'],
+  .tutorial-overlay[data-mode='action'] {
+    max-height: 44vh;
+  }
+
+  .tutorial-action-brief > div {
+    grid-template-columns: 78px minmax(0, 1fr);
+    padding: 6px 7px;
+  }
+
+  .tutorial-action-brief p {
+    font-size: 9px;
+  }
+
+  .tutorial-overlay[data-placement='docked-top'],
+  .tutorial-overlay[data-placement='docked-bottom'] {
+    width: min(390px, calc(100vw - 16px));
   }
 }
