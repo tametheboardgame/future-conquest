@@ -20,6 +20,7 @@ import './supply-network.css';
 import './persistence-feedback';
 import './engineering.css';
 import './interdiction.css';
+import './infrastructure-command.css';
 import './logistics-priorities.css';
 import './defence.css';
 import './combat-reports.css';
