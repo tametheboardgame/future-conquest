@@ -4,22 +4,41 @@ on:
   pull_request:
     paths:
       - 'src/game/**'
-      - 'tests/**'
-      - 'scripts/**'
+      - 'scripts/simulate-current-engine-balance.mjs'
+      - 'scripts/trace-current-engine-balance.mjs'
+      - 'tests/current-engine-balance-harness.test.cjs'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/current-engine-balance.yml'
+  workflow_dispatch:
+    inputs:
+      runs_per_start:
+        description: 'Seed variants per portal start, difficulty and doctrine'
+        required: true
+        default: '20'
+      max_turns:
+        description: 'Maximum campaign day before timeout'
+        required: true
+        default: '120'
+      seed_offset:
+        description: 'Deterministic seed block offset'
+        required: true
+        default: '1'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair-balance-integration:
+  balance:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FC_BALANCE_RUNS_PER_START: ${{ inputs.runs_per_start || '4' }}
+      FC_BALANCE_MAX_TURNS: ${{ inputs.max_turns || '120' }}
+      FC_BALANCE_SEED_OFFSET: ${{ inputs.seed_offset || '1' }}
     steps:
-      - name: Checkout tuning branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: agent/current-engine-balance-tuning
-          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -27,30 +46,33 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Restore known-good strategic response baseline
-        run: |
-          git fetch origin main
-          git checkout origin/main -- src/game/strategic-response.ts tests/strategic-response-viii-a.test.cjs
-
-      - name: Apply intended balance delta
-        run: node scripts/rebuild-strategic-response-balance.mjs
-
       - name: Install dependencies
         run: npm ci
 
       - name: Run regression suite
         run: npm test
 
-      - name: Build game
-        run: npm run build
+      - name: Run current-engine balance simulation
+        run: npm run simulate:current-balance
 
-      - name: Commit repaired implementation and restore normal workflow
+      - name: Trace representative stalled campaigns
+        run: node scripts/trace-current-engine-balance.mjs
+
+      - name: Publish balance summary
+        if: always()
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout origin/main -- .github/workflows/current-engine-balance.yml
-          git rm -f .github/workflows/rebuild-strategic-response-balance.yml || true
-          git rm -f scripts/rebuild-strategic-response-balance.mjs || true
-          git add src/game/strategic-response.ts tests/strategic-response-viii-a.test.cjs .github/workflows/current-engine-balance.yml
-          git commit -m "Repair strategic response balance integration"
-          git push origin HEAD:agent/current-engine-balance-tuning
+          if [ -f balance-output/current-engine-balance.md ]; then
+            cat balance-output/current-engine-balance.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f balance-output/current-engine-traces.md ]; then
+            printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
+            cat balance-output/current-engine-traces.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload balance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-engine-balance-report
+          path: balance-output/
+          if-no-files-found: warn
