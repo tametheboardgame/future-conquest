@@ -105,7 +105,7 @@ test('map overlays retain a stable screen size and reveal detail as the player z
   assert.match(source, /showMarkerDetails = zoomPercent >= 220/);
   assert.match(source, /showMarkerStatus = zoomPercent >= 600/);
   assert.match(source, /scale\(\$\{overlayScale\}\)/);
-  assert.match(source, /29 \* overlayScale/);
+  assert.match(source, /40 \* overlayScale/);
   assert.match(source, /const offset = .* \* 4 \* overlayScale/);
   assert.match(source, /territory-name-label/);
   assert.match(source, /territory-hit-target/);

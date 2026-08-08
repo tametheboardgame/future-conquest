@@ -5,6 +5,7 @@ const path = require('node:path');
 const {
   FULL_THEATRE_VIEW,
   MAP_WIDTH,
+  MAX_ZOOM_PERCENT,
   MIN_VIEW_WIDTH,
   mapZoomPercent,
   zoomMapView
@@ -12,11 +13,12 @@ const {
 
 const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
 
-test('the European map supports a 2000 percent tactical zoom', () => {
-  assert.equal(MIN_VIEW_WIDTH, MAP_WIDTH / 20);
+test('the European map supports a 5000 percent tactical zoom', () => {
+  assert.equal(MAX_ZOOM_PERCENT, 5000);
+  assert.equal(MIN_VIEW_WIDTH, MAP_WIDTH / 50);
   const maximum = zoomMapView(FULL_THEATRE_VIEW, 100, { x: MAP_WIDTH / 2, y: 450 });
   assert.equal(maximum.width, MIN_VIEW_WIDTH);
-  assert.equal(mapZoomPercent(maximum), 2000);
+  assert.equal(mapZoomPercent(maximum), 5000);
 });
 
 test('the mobile layer menu opens below its control inside the map', () => {

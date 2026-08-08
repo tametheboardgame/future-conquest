@@ -39,8 +39,8 @@ test('WP10 friendly counters expose identity, strength and stable multi-formatio
   assert.match(mapView, /className="marker-id"/);
   assert.match(mapView, /className="marker-strength"/);
   assert.match(mapView, /className="marker-status"/);
-  assert.match(mapView, /const columns = territoryGroups\.length <= 2 \? Math\.max\(1, territoryGroups\.length\) : 3/);
-  assert.match(mapView, /\* 39 \* overlayScale/);
+  assert.match(mapView, /const columns = territoryGroups\.length <= 4 \? Math\.min\(2, territoryGroups\.length\) : 3/);
+  assert.match(mapView, /\* 72 \* overlayScale/);
   assert.match(mapView, /Number\(a\.group\.id === state\.selectedTaskGroupId\) - Number\(b\.group\.id === state\.selectedTaskGroupId\)/);
   assert.match(mapView, /role="button"[\s\S]*?aria-label=\{`\$\{group\.name\}/);
 });

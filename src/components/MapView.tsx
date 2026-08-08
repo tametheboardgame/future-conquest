@@ -41,7 +41,7 @@ interface Props {
 
 interface GeoFeature {
   id?: string | number;
-  properties?: { name?: string; territory_id?: string; label_anchor?: [number, number] };
+  properties?: { name?: string; territory_id?: string; centre?: [number, number]; label_anchor?: [number, number] };
   geometry: unknown;
 }
 
@@ -205,12 +205,30 @@ const activePaths = activeFeatures.map(active => ({
   id: active.properties?.territory_id ?? '',
   path: pathGenerator(active) ?? ''
 }));
-const anchors = Object.fromEntries(activeFeatures.flatMap(active => {
+const DISPLAY_ANCHOR_OVERRIDES: Record<string, [number, number]> = {
+  // Brussels is geographically close to the Wallonia boundary. Keep real route
+  // geometry at Brussels while placing command labels/counters safely inside
+  // the Flanders/Brussels display area.
+  'BE-01': [4.45, 51.05],
+  // Give Wallonia its own visual centre so adjacent Belgian marker stacks do not
+  // overlap at tactical zoom.
+  'BE-02': [4.95, 50.35]
+};
+
+const projectTerritoryAnchors = (sourceFor: (active: GeoFeature) => [number, number] | undefined) => Object.fromEntries(
+  activeFeatures.flatMap(active => {
+    const id = active.properties?.territory_id;
+    const source = sourceFor(active);
+    const projected = source ? projection(source) : null;
+    return id && projected ? [[id, projected]] : [];
+  })
+) as Record<string, [number, number]>;
+
+const geographicAnchors = projectTerritoryAnchors(active => active.properties?.centre ?? active.properties?.label_anchor);
+const displayAnchors = projectTerritoryAnchors(active => {
   const id = active.properties?.territory_id;
-  const source = active.properties?.label_anchor;
-  const projected = source ? projection(source) : null;
-  return id && projected ? [[id, projected]] : [];
-})) as Record<string, [number, number]>;
+  return (id ? DISPLAY_ANCHOR_OVERRIDES[id] : undefined) ?? active.properties?.label_anchor ?? active.properties?.centre;
+});
 const CAMPAIGN_VIEW = fitMapBounds(pathGenerator.bounds(activeCollection), 54);
 const projectedTheatreLabels = THEATRE_LABELS.flatMap(label => {
   const projected = projection(label.position);
@@ -295,7 +313,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
   const enemyContacts = getEnemyContacts(state);
   const threatenedTerritories = getThreatenedTerritories(state);
   const threatByTerritory = new Map(threatenedTerritories.map(threat => [threat.territoryId, threat]));
-  const enemyMovementOrders = state.enemyOrders.filter(order => (order.status !== 'completed' || state.turn - order.turn <= 1) && order.origin && anchors[order.origin] && anchors[order.target] && (order.type === 'counterattack' || order.type === 'concentrate' || order.type === 'reposition'));
+  const enemyMovementOrders = state.enemyOrders.filter(order => (order.status !== 'completed' || state.turn - order.turn <= 1) && order.origin && geographicAnchors[order.origin] && geographicAnchors[order.target] && (order.type === 'counterattack' || order.type === 'concentrate' || order.type === 'reposition'));
   const adjacentTargets = new Set(getAdjacentOrderTargets(state));
   const activeTargets = new Set(Object.values(state.operations).map(operation => operation.target));
   const zoomPercent = mapZoomPercent(view);
@@ -306,8 +324,8 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
   const showTerritoryLabels = zoomPercent >= 135;
   const showTerritoryNames = zoomPercent >= 285;
   const showTerritoryOverlay = showTerritoryLabels && (layers.territories || layers.orderPrompts);
-  const selectedAnchor = state.selectedTerritory ? anchors[state.selectedTerritory] : undefined;
-  const operationConfirmationAnchor = operationConfirmation ? anchors[operationConfirmation.territoryId] : undefined;
+  const selectedAnchor = state.selectedTerritory ? displayAnchors[state.selectedTerritory] : undefined;
+  const operationConfirmationAnchor = operationConfirmation ? displayAnchors[operationConfirmation.territoryId] : undefined;
   const activeLayerCount = Object.values(layers).filter(Boolean).length;
   const showStrategicNodes = zoomPercent >= 150;
   const showStrategicNodeNames = zoomPercent >= 285;
@@ -330,7 +348,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
 
   const focusCampaign = () => setView(CAMPAIGN_VIEW);
   const focusSelection = () => {
-    if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 7));
+    if (selectedAnchor) setView(focusMapView({ x: selectedAnchor[0], y: selectedAnchor[1] }, 25));
     else focusCampaign();
   };
   const zoomAtCentre = (factor: number) => setView(current => zoomMapView(current, factor, {
@@ -557,16 +575,16 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
         {layers.operations && Object.values(state.operations).flatMap(operation => operation.participantGroupIds.map((groupId, index) => {
           const group = state.taskGroups[groupId];
           const originId = operation.origins[groupId] ?? group?.location;
-          if (!originId || !anchors[originId] || !anchors[operation.target]) return null;
-          const [x1, y1] = anchors[originId];
-          const [x2, y2] = anchors[operation.target];
+          if (!originId || !geographicAnchors[originId] || !geographicAnchors[operation.target]) return null;
+          const [x1, y1] = geographicAnchors[originId];
+          const [x2, y2] = geographicAnchors[operation.target];
           const offset = (index - (operation.participantGroupIds.length - 1) / 2) * 4 * overlayScale;
           return <line key={`${operation.id}-${groupId}`} className="operation-route" x1={x1 + offset} y1={y1 + offset} x2={x2 + offset} y2={y2 + offset} markerEnd="url(#operationArrow)" />;
         }))}
 
         {layers.enemyUnits && enemyMovementOrders.map(order => {
-          const origin = order.origin ? anchors[order.origin] : undefined;
-          const target = anchors[order.target];
+          const origin = order.origin ? geographicAnchors[order.origin] : undefined;
+          const target = geographicAnchors[order.target];
           if (!origin || !target) return null;
           const formationCount = 1 + (order.supportFormationIds?.length ?? 0);
           const operationWidth = 1.25 + Math.min(1.75, Math.max(0, formationCount - 1) * 0.45);
@@ -583,7 +601,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
         })}
 
         {showTerritoryLabels && activePaths.map(({ id }) => {
-          const anchor = anchors[id];
+          const anchor = displayAnchors[id];
           const territory = state.territories[id];
           if (!anchor || !territory) return null;
           const [x, y] = anchor;
@@ -593,7 +611,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
         })}
 
         {showTerritoryOverlay && activePaths.map(({ id }) => {
-          const anchor = anchors[id];
+          const anchor = displayAnchors[id];
           const territory = state.territories[id];
           if (!anchor || !territory) return null;
           const [x, y] = anchor;
@@ -612,14 +630,14 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
         })}
 
         {layers.operations && Object.values(state.operations).map(operation => {
-          const anchor = anchors[operation.target];
+          const anchor = displayAnchors[operation.target];
           if (!anchor) return null;
           const [x, y] = anchor;
           return <g key={`${operation.id}-marker`} className="operation-marker" transform={`translate(${x - 28 * overlayScale} ${y - 34 * overlayScale}) scale(${overlayScale})`}><rect x="-20" y="-9" width="40" height="18" rx="3" /><text x="0" y="3">OP {operation.participantGroupIds.length}×</text></g>;
         })}
 
         {layers.enemyUnits && enemyContacts.map(contact => {
-          const anchor = anchors[contact.territoryId];
+          const anchor = displayAnchors[contact.territoryId];
           if (!anchor) return null;
           const [x, y] = anchor;
           const symbol = contact.confidence === 'confirmed' ? String(contact.formationCount ?? 1) : contact.confidence === 'estimated' ? '~' : contact.confidence === 'stale' ? 'S' : '?';
@@ -628,7 +646,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           return <g
             key={`enemy-${contact.territoryId}`}
             className={`enemy-contact-marker ${contact.confidence}`}
-            transform={`translate(${x + 29 * overlayScale} ${y - 28 * overlayScale}) scale(${overlayScale})`}
+            transform={`translate(${x + 40 * overlayScale} ${y - 40 * overlayScale}) scale(${overlayScale})`}
             role="button"
             tabIndex={0}
             aria-label={`${contact.label}, ${contactConfidenceLabel(contact.confidence)} confidence, assessed ${contact.estimatedMin} to ${contact.estimatedMax} personnel`}
@@ -641,23 +659,23 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
               }
             }}
           >
-            <path className="contact-body" d="M0 -15 L15 11 L-15 11 Z" />
-            <text x="0" y="4">{symbol}</text>
-            <text className="contact-confidence" x="0" y="20">{contactConfidenceLabel(contact.confidence)}</text>
-            {showMarkerDetails && <text className="contact-strength" x="0" y="30">{assessedStrength}</text>}
+            <path className="contact-body" d="M0 -21 L20 15 L-20 15 Z" />
+            <text x="0" y="5">{symbol}</text>
+            <text className="contact-confidence" x="0" y="30">{contactConfidenceLabel(contact.confidence)}</text>
+            {showMarkerDetails && <text className="contact-strength" x="0" y="45">{assessedStrength}</text>}
             <title>{contact.label} · {TERRITORIES[contact.territoryId].centre} · estimated {contact.estimatedMin}–{contact.estimatedMax} personnel</title>
           </g>;
         })}
 
         {layers.enemyUnits && threatenedTerritories.map(threat => {
-          const anchor = anchors[threat.territoryId];
+          const anchor = displayAnchors[threat.territoryId];
           if (!anchor) return null;
           const [x, y] = anchor;
           const activateThreat = () => selectTerritory(threat.territoryId);
           return <g
             key={`threat-${threat.territoryId}`}
             className={`threat-marker ${threat.stage}`}
-            transform={`translate(${x} ${y - 47 * overlayScale}) scale(${overlayScale})`}
+            transform={`translate(${x} ${y - 64 * overlayScale}) scale(${overlayScale})`}
             role="button"
             tabIndex={0}
             aria-label={threat.summary}
@@ -670,24 +688,24 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
               }
             }}
           >
-            <circle cx="0" cy="0" r="15" />
-            <text x="0" y="4">!</text>
-            {showMarkerDetails && threat.stage !== 'recent-combat' && <text className="threat-timing" x="0" y="25">D{threat.executeTurn}</text>}
+            <circle cx="0" cy="0" r="20" />
+            <text x="0" y="5">!</text>
+            {showMarkerDetails && threat.stage !== 'recent-combat' && <text className="threat-timing" x="0" y="34">D{threat.executeTurn}</text>}
             <title>{threat.summary} · expected day {threat.executeTurn}</title>
           </g>;
         })}
 
         {layers.friendlyUnits && Object.entries(groupsByTerritory).flatMap(([territoryId, territoryGroups]) => {
-          const anchor = anchors[territoryId];
+          const anchor = displayAnchors[territoryId];
           if (!anchor) return [];
           const [x, y] = anchor;
           const markerEntries = territoryGroups
             .map((group, index) => ({ group, index }))
             .sort((a, b) => Number(a.group.id === state.selectedTaskGroupId) - Number(b.group.id === state.selectedTaskGroupId));
-          const columns = territoryGroups.length <= 2 ? Math.max(1, territoryGroups.length) : 3;
+          const columns = territoryGroups.length <= 4 ? Math.min(2, territoryGroups.length) : 3;
           return markerEntries.map(({ group, index }) => {
-            const dx = ((index % columns) - (columns - 1) / 2) * 39 * overlayScale;
-            const dy = (30 + Math.floor(index / columns) * 31) * overlayScale;
+            const dx = ((index % columns) - (columns - 1) / 2) * 72 * overlayScale;
+            const dy = (46 + Math.floor(index / columns) * 58) * overlayScale;
             const selected = group.id === state.selectedTaskGroupId;
             const activateGroup = () => { if (!suppressClick.current) onSelectGroup(group.id); };
             return <g
@@ -706,17 +724,18 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
                 }
               }}
             >
-              <rect x="-18" y="-13" width="36" height="26" rx="4" />
-              <text className="marker-id" x="0" y="-1">{group.id.replace('TG-', '')}</text>
-              {showMarkerDetails && <text className="marker-strength" x="0" y="10">{compactStrength(group.personnel)}</text>}
-              {showMarkerStatus && group.status !== 'ready' && <text className="marker-status" x="0" y="22">{group.status.toUpperCase()}</text>}
+              {selected && <rect className="marker-selection-halo" x="-36" y="-29" width="72" height="58" rx="7" />}
+              <rect className="marker-body" x="-30" y="-22" width="60" height="44" rx="6" />
+              <text className="marker-id" x="0" y="-5">TG {group.id.replace('TG-', '')}</text>
+              {showMarkerDetails && <text className="marker-strength" x="0" y="13">{compactStrength(group.personnel)}</text>}
+              {showMarkerStatus && group.status !== 'ready' && <text className="marker-status" x="0" y="34">{group.status.toUpperCase()}</text>}
               <title>{group.name} · {group.personnel} active personnel · {group.status}</title>
             </g>;
           });
         })}
 
-        {state.portalTerritory && anchors[state.portalTerritory] && (() => {
-          const [x, y] = anchors[state.portalTerritory];
+        {state.portalTerritory && geographicAnchors[state.portalTerritory] && (() => {
+          const [x, y] = geographicAnchors[state.portalTerritory];
           return <g className="portal" transform={`translate(${x} ${y}) scale(${overlayScale})`} filter="url(#glow)"><circle cx="0" cy="-8" r="12" /><circle cx="0" cy="-8" r="5" /></g>;
         })()}
 
