@@ -24,6 +24,9 @@ jobs:
           ref: agent/wp3-strategic-collapse-choice
           fetch-depth: 0
 
+      - name: Repair WP3 generator
+        run: node scripts/wp3-fix-generator.mjs
+
       - name: Apply WP3 implementation
         run: node scripts/wp3-apply.mjs
 
@@ -44,11 +47,11 @@ jobs:
 
       - name: Commit validated WP3 implementation
         run: |
-          rm scripts/wp3-apply.mjs .github/workflows/wp3-apply.yml
+          rm scripts/wp3-apply.mjs scripts/wp3-fix-generator.mjs .github/workflows/wp3-apply.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/game/types.ts src/game/engine.ts src/App.tsx src/components/StrategicCollapseDecision.tsx src/components/strategic-collapse.css tests/wp3-strategic-collapse.test.cjs
-          git add -A scripts/wp3-apply.mjs .github/workflows/wp3-apply.yml
+          git add -A scripts/wp3-apply.mjs scripts/wp3-fix-generator.mjs .github/workflows/wp3-apply.yml
           git status --short
           git commit -m "WP3: make strategic collapse a command decision"
           git push origin HEAD:agent/wp3-strategic-collapse-choice
