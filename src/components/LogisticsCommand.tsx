@@ -88,7 +88,7 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
 
   return <section className="command-view logistics-priority-view" data-wp6-logistics="true">
     <header className="command-view-header logistics-command-header">
-      <div><p className="panel-label">LOGISTICS</p><h2>Supply command</h2></div>
+      <div><p className="panel-label">LOGISTICS</p><h2>Supply priority command</h2></div>
       <p>See what is available locally, what the network is delivering and why a formation or territory is short before changing priorities.</p>
     </header>
 
