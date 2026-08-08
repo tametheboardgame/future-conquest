@@ -1,0 +1,42 @@
+name: R2-WP1 legacy anchor cleanup
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/r2-wp1-tactical-map-usability
+          fetch-depth: 0
+
+      - name: Replace retired anchor reference
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/MapView.tsx')
+          text = path.read_text()
+          old = "order.origin && anchors[order.origin] && anchors[order.target]"
+          new = "order.origin && geographicAnchors[order.origin] && geographicAnchors[order.target]"
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one legacy anchor reference, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/MapView.tsx
+          git commit -m "R2-WP1: remove retired map anchor reference"
+          git push origin HEAD:agent/r2-wp1-tactical-map-usability
