@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/wp3-strategic-collapse-choice
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,6 +14,7 @@ permissions:
 
 jobs:
   wp3:
+    if: github.head_ref == 'agent/wp3-strategic-collapse-choice' || github.ref_name == 'agent/wp3-strategic-collapse-choice'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
