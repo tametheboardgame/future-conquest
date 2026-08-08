@@ -2,11 +2,15 @@
   min-height: 754px;
 }
 
+.logistics-command-header {
+  margin-bottom: 0;
+}
+
 .logistics-priority-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   border: 1px solid #294552;
   background: #294552;
 }
@@ -14,7 +18,7 @@
 .logistics-priority-summary > div {
   display: grid;
   gap: 5px;
-  padding: 13px 15px;
+  padding: 12px 14px;
   background: #0d222c;
 }
 
@@ -33,16 +37,173 @@
   font: 600 24px Barlow Condensed, sans-serif;
 }
 
-.logistics-priority-summary .warning strong {
+.logistics-priority-summary .warning strong,
+.logistics-priority-summary .network-danger strong,
+.logistics-priority-summary .network-critical strong {
   color: #ff998f;
 }
 
-.logistics-doctrine-panel {
+.logistics-priority-summary .network-warning strong {
+  color: #f0d37f;
+}
+
+.logistics-tabs {
+  position: sticky;
+  z-index: 4;
+  top: -18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 12px;
+  border: 1px solid #294552;
+  background: #294552;
+  box-shadow: 0 8px 20px rgba(0,0,0,.18);
+}
+
+.logistics-tabs button {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 14px;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  border: 0;
+  background: #0c2029;
+  color: #8098a3;
+  font: 600 9px IBM Plex Mono, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.logistics-tabs button:hover,
+.logistics-tabs button:focus-visible {
+  background: #12313b;
+  color: #e7faf8;
+  outline: none;
+}
+
+.logistics-tabs button.active {
+  background: #17433f;
+  color: #effffc;
+  box-shadow: inset 0 -3px #70d7d0;
+}
+
+.logistics-tabs button b {
+  min-width: 17px;
+  padding: 2px 4px;
+  border: 1px solid #48656e;
+  background: #0a1b23;
+  color: #ffb89d;
+  font-size: 8px;
+}
+
+.logistics-tab-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logistics-overview-tab {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.logistics-health-panel,
+.logistics-flow-explainer,
+.logistics-doctrine-panel {
+  min-width: 0;
+}
+
+.logistics-health-panel {
+  border-left: 4px solid #70d7d0;
+}
+
+.logistics-health-panel.warning { border-left-color: #e6ae43; }
+.logistics-health-panel.danger,
+.logistics-health-panel.critical { border-left-color: #e65d52; }
+
+.logistics-health-panel h3 {
+  margin-top: 8px;
+}
+
+.logistics-health-panel > p,
+.logistics-doctrine-panel > p,
+.logistics-flow-steps p,
+.logistics-healthy-state p,
+.logistics-diagnostic-list p {
+  color: #9db1b9;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.logistics-health-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.logistics-health-actions button,
+.logistics-healthy-state button,
+.text-action,
+.logistics-diagnostic-list article > button {
+  border: 1px solid #35515e;
+  background: #112630;
+  color: #bcd0d6;
+  padding: 8px 10px;
+  font: 500 9px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.logistics-health-actions button.primary {
+  border-color: #55bfb2;
+  background: #17433f;
+  color: #eafffb;
+}
+
+.logistics-flow-explainer {
+  grid-row: span 2;
+}
+
+.logistics-flow-steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.logistics-flow-steps article {
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr);
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid #28444f;
+  background: #0d222c;
+}
+
+.logistics-flow-steps article > b {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #477078;
+  color: #8ff9ed;
+  font: 700 13px Barlow Condensed, sans-serif;
+}
+
+.logistics-flow-steps strong {
+  color: #effffc;
+  font: 600 15px Barlow Condensed, sans-serif;
+}
+
+.logistics-flow-steps p {
+  margin: 3px 0 0;
+}
+
+.logistics-doctrine-panel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
 }
 
 .logistics-doctrine-panel h3 {
@@ -53,22 +214,60 @@
 }
 
 .logistics-doctrine-panel > p {
-  max-width: 760px;
   margin: 0;
-  color: #9db1b9;
-  font-size: 12px;
-  line-height: 1.55;
 }
 
-.logistics-priority-grid {
-  display: grid;
-  grid-template-columns: minmax(440px, 1.15fr) minmax(360px, .85fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.logistics-bottleneck-panel {
+.logistics-overview-grid {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+
+.logistics-overview-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.logistics-overview-list button,
+.logistics-bottleneck-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #294552;
+  background: #0d222c;
+  color: #dbe8ee;
+  text-align: left;
+  cursor: pointer;
+}
+
+.logistics-overview-list button span,
+.logistics-bottleneck-list button span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.logistics-overview-list small,
+.logistics-bottleneck-list small {
+  color: #78919c;
+  font: 500 8px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+}
+
+.logistics-overview-list b,
+.logistics-bottleneck-list b {
+  color: #f0ad62;
+  font: 600 11px IBM Plex Mono, monospace;
+  white-space: nowrap;
+}
+
+.text-action {
+  margin-top: 8px;
 }
 
 .logistics-priority-list {
@@ -77,9 +276,11 @@
   margin-top: 10px;
 }
 
+/* WP6 deliberately has no max-height/overflow on priority lists.
+   The command-view is the single scrolling surface. */
 .logistics-priority-list.compact {
-  max-height: 700px;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .logistics-priority-card {
@@ -106,6 +307,7 @@
 .logistics-priority-card header > button {
   display: grid;
   gap: 3px;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -129,6 +331,7 @@
 .logistics-priority-card header > b {
   color: #8ff9ed;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .logistics-throughput-row {
@@ -180,38 +383,93 @@
 
 .logistics-bottleneck-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
 }
 
-.logistics-bottleneck-list button {
-  display: flex;
+.logistics-diagnostics-panel {
+  border-left: 4px solid #70d7d0;
+}
+
+.logistics-diagnostics-panel.warning { border-left-color: #e6ae43; }
+.logistics-diagnostics-panel.danger,
+.logistics-diagnostics-panel.critical { border-left-color: #e65d52; }
+
+.logistics-diagnostic-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.logistics-diagnostic-list article {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 12px;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   padding: 10px;
   border: 1px solid #294552;
+  border-left: 3px solid #e6ae43;
   background: #0d222c;
-  color: #dbe8ee;
-  text-align: left;
-  cursor: pointer;
 }
 
-.logistics-bottleneck-list button span {
-  display: grid;
-  gap: 3px;
+.logistics-diagnostic-list article.danger,
+.logistics-diagnostic-list article.critical {
+  border-left-color: #e65d52;
 }
 
-.logistics-bottleneck-list small {
-  color: #78919c;
-  font: 500 8px IBM Plex Mono, monospace;
+.diagnostic-copy header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.diagnostic-copy header strong {
+  color: #effffc;
+  font: 600 16px Barlow Condensed, sans-serif;
+}
+
+.diagnostic-copy header b {
+  color: #ffac91;
+  font: 600 8px IBM Plex Mono, monospace;
   text-transform: uppercase;
 }
 
-.logistics-bottleneck-list b {
-  color: #f0ad62;
-  font: 600 14px IBM Plex Mono, monospace;
+.diagnostic-copy p {
+  margin: 4px 0 5px;
+}
+
+.diagnostic-copy > small {
+  color: #8fa3ad;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.diagnostic-copy > small b {
+  color: #b7d3d3;
+}
+
+.logistics-healthy-state {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid #31564f;
+  background: rgba(28,72,63,.25);
+}
+
+.logistics-healthy-state strong {
+  color: #9cf1d4;
+  font: 600 18px Barlow Condensed, sans-serif;
+}
+
+.logistics-healthy-state p {
+  margin: 0;
+}
+
+.diagnostics-routes {
+  margin-top: 0;
 }
 
 @media (min-width: 901px) {
@@ -219,19 +477,24 @@
   .command-navigation { overflow-y: auto; }
 }
 
-@media (max-width: 900px) {
-  .logistics-priority-grid,
-  .logistics-priority-summary {
+@media (max-width: 1100px) {
+  .logistics-overview-tab,
+  .logistics-overview-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .logistics-doctrine-panel {
-    align-items: flex-start;
-    flex-direction: column;
+  .logistics-flow-explainer {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .logistics-priority-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .logistics-bottleneck-panel {
-    grid-column: auto;
+  .logistics-tabs {
+    position: static;
   }
 
   .logistics-bottleneck-list {
@@ -240,7 +503,21 @@
 }
 
 @media (max-width: 540px) {
-  .logistics-priority-select {
+  .logistics-priority-summary,
+  .logistics-tabs {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .logistics-priority-select,
+  .logistics-diagnostic-list article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .logistics-diagnostic-list article > button {
+    width: 100%;
+  }
+
+  .logistics-priority-card header {
+    align-items: flex-start;
   }
 }
