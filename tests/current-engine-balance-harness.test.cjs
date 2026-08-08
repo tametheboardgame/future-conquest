@@ -13,7 +13,7 @@ test('current-engine balance campaigns are deterministic for the same seed and d
   assert.deepEqual(second, first);
 });
 
-test('one run per start covers every active portal territory exactly once', () => {
+test('one run per start covers every active insertion territory exactly once', () => {
   const report = runCurrentEngineBalanceSimulation({
     runsPerStart: 1,
     maxTurns: 20,
@@ -24,9 +24,10 @@ test('one run per start covers every active portal territory exactly once', () =
 
   assert.equal(report.campaigns, SLICE_IDS.length);
   assert.deepEqual(
-    [...new Set(report.results.map(result => result.portalTerritory))].sort(),
+    [...new Set(report.results.map(result => result.startTerritory))].sort(),
     [...SLICE_IDS].sort()
   );
+  assert.equal(report.startSummaries.length, SLICE_IDS.length);
 });
 
 test('all four player doctrines produce bounded current-engine telemetry', () => {
@@ -41,5 +42,6 @@ test('all four player doctrines produce bounded current-engine telemetry', () =>
     assert.ok(result.operationsStarted >= 0);
     assert.ok(result.movesIssued >= 0);
     assert.ok(result.engineeringProjectsStarted >= 0);
+    assert.ok(result.reserveTurns >= 0);
   }
 });
