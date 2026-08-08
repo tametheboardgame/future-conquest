@@ -1,0 +1,540 @@
+/* WP9 — final responsive command-shell contract.
+   This file intentionally loads after every feature stylesheet so later workspaces
+   cannot reintroduce fixed minimums that break compact desktop/laptop layouts. */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+html {
+  text-size-adjust: 100%;
+}
+
+body {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.command-app-shell,
+.command-workspace,
+.command-stage,
+.command-map-workspace,
+.command-view,
+.map-panel,
+.map-context-panel,
+.infrastructure-command-stack,
+.logistics-command-stack {
+  min-width: 0;
+}
+
+.command-app-shell {
+  width: 100%;
+  margin-inline: auto;
+}
+
+.command-topbar,
+.topbar-command-actions,
+.command-metrics,
+.command-workspace,
+.command-stage {
+  min-width: 0;
+}
+
+.command-topbar h1,
+.command-view-header h2,
+.priority-order-copy strong,
+.command-nav-label {
+  overflow-wrap: anywhere;
+}
+
+/* Fluid desktop geometry. The old 620px + 330px map split was too rigid for
+   compact laptops and 1024–1180px browser windows. */
+@media (min-width: 901px) {
+  .command-app-shell {
+    padding-inline: clamp(12px, 2vw, 28px);
+  }
+
+  .command-workspace {
+    grid-template-columns: clamp(82px, 7vw, 96px) minmax(0, 1fr);
+    gap: clamp(10px, 1.15vw, 14px);
+  }
+
+  .command-map-workspace {
+    grid-template-columns: minmax(0, 1fr) clamp(292px, 26vw, 360px);
+    gap: clamp(10px, 1.15vw, 14px);
+  }
+
+  .command-metrics {
+    grid-template-columns: repeat(5, minmax(88px, 1fr)) minmax(170px, 1.45fr);
+  }
+
+  .command-navigation {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* There are eight persistent command views. Keep all eight inside the
+     available rail instead of overflowing a six-row desktop template. */
+  .command-nav-items {
+    grid-template-rows: repeat(8, minmax(42px, 1fr));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .command-nav-items button {
+    min-height: 42px;
+  }
+
+  .command-view,
+  .infrastructure-view,
+  .logistics-priority-view,
+  .infrastructure-command-stack,
+  .logistics-command-stack {
+    min-height: 0;
+  }
+
+  .forces-command-grid,
+  .operations-command-grid,
+  .intelligence-command-grid,
+  .campaign-command-grid,
+  .territory-command-grid,
+  .infrastructure-overview-grid,
+  .infrastructure-work-grid,
+  .logistics-overview-tab,
+  .logistics-overview-grid {
+    min-width: 0;
+  }
+}
+
+/* A laptop browser commonly exposes less than 720px of usable height even on a
+   nominal 768/800/900px display. Use the fitted shell down to 560px instead of
+   falling back to a 754px-tall document simply because browser chrome is open. */
+@media (min-width: 901px) and (min-height: 560px) {
+  html,
+  body,
+  #root {
+    height: 100%;
+    min-height: 0;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  .command-app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    padding-top: clamp(8px, 1.2vh, 12px);
+    padding-bottom: clamp(8px, 1.5vh, 14px);
+    overflow: hidden;
+  }
+
+  .command-topbar {
+    flex: 0 0 clamp(48px, 7vh, 58px);
+    height: auto;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .command-topbar h1 {
+    font-size: clamp(24px, 3.2vh, 32px);
+  }
+
+  .topbar-command-actions {
+    gap: clamp(8px, 1.4vw, 18px);
+  }
+
+  .global-resolve {
+    padding: clamp(8px, 1.2vh, 11px) clamp(11px, 1.4vw, 17px);
+  }
+
+  .command-metrics {
+    flex: 0 0 auto;
+    min-height: 0;
+    margin: clamp(6px, 1.25vh, 10px) 0;
+  }
+
+  .command-metrics > div {
+    min-width: 0;
+    padding: clamp(6px, 1vh, 8px) clamp(9px, 1vw, 13px);
+  }
+
+  .command-metrics strong {
+    font-size: clamp(17px, 2.5vh, 21px);
+  }
+
+  .command-workspace {
+    flex: 1 1 auto;
+    align-items: stretch;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .command-navigation,
+  .command-stage,
+  .command-map-workspace,
+  .map-panel,
+  .map-context-panel,
+  .command-view,
+  .infrastructure-command-stack,
+  .logistics-command-stack {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .command-brand {
+    min-height: clamp(44px, 7vh, 58px);
+  }
+
+  .command-brand strong {
+    font-size: clamp(22px, 3.3vh, 28px);
+  }
+
+  .command-nav-items {
+    flex: 1 1 auto;
+  }
+
+  .command-nav-footer {
+    min-height: clamp(26px, 4vh, 34px);
+  }
+
+  .command-stage,
+  .map-panel {
+    overflow: hidden;
+  }
+
+  .map-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .map-heading {
+    min-height: clamp(40px, 6.3vh, 48px);
+    padding-block: 6px;
+  }
+
+  .europe-map-frame {
+    height: auto;
+    min-height: 0;
+  }
+
+  .map-context-panel,
+  .command-view,
+  .infrastructure-command-stack,
+  .logistics-command-stack {
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .command-view {
+    padding: clamp(11px, 1.6vh, 18px);
+  }
+
+  .command-view-header {
+    min-height: 0;
+  }
+
+  .command-view .formation-roster .task-group-list,
+  .enemy-formation-table,
+  .vertical-event-list,
+  .campaign-events {
+    max-height: none;
+  }
+}
+
+/* Short-height desktop/laptop density. Keep labels and controls usable while
+   reclaiming vertical space from chrome rather than hiding whole command areas. */
+@media (min-width: 901px) and (min-height: 560px) and (max-height: 719px) {
+  .command-app-shell {
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .command-topbar {
+    flex-basis: 46px;
+  }
+
+  .eyebrow,
+  .panel-label {
+    font-size: 9px;
+  }
+
+  .command-topbar h1 {
+    font-size: 24px;
+  }
+
+  .turn-block strong {
+    font-size: 22px;
+  }
+
+  .turn-block em {
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+
+  .global-resolve {
+    padding: 7px 10px;
+    font-size: 9px;
+  }
+
+  .command-metrics {
+    margin: 5px 0;
+  }
+
+  .command-metrics > div {
+    gap: 2px;
+    padding: 5px 8px;
+  }
+
+  .command-metrics span {
+    font-size: 8px;
+  }
+
+  .command-metrics strong {
+    font-size: 16px;
+  }
+
+  .command-brand {
+    min-height: 42px;
+  }
+
+  .command-brand strong {
+    font-size: 21px;
+  }
+
+  .command-brand span,
+  .command-nav-footer {
+    font-size: 6px;
+  }
+
+  .command-nav-items {
+    grid-template-rows: repeat(8, minmax(34px, 1fr));
+  }
+
+  .command-nav-items button {
+    min-height: 34px;
+    gap: 1px;
+    padding: 4px 3px;
+  }
+
+  .command-nav-code {
+    font-size: 12px;
+  }
+
+  .command-nav-label {
+    max-width: 72px;
+    font-size: 6px;
+    line-height: 1.1;
+  }
+
+  .command-nav-items b {
+    top: 3px;
+    right: 3px;
+    min-width: 14px;
+    padding: 1px 3px;
+    font-size: 6px;
+  }
+
+  .command-nav-footer {
+    min-height: 22px;
+  }
+
+  .map-heading {
+    min-height: 36px;
+    padding: 5px 10px;
+  }
+
+  .map-heading p {
+    font-size: 10px;
+  }
+
+  .legend {
+    font-size: 8px;
+  }
+
+  .command-view {
+    padding: 10px;
+  }
+
+  .command-view-header {
+    gap: 14px;
+    margin: -10px -10px 9px;
+    padding: 8px 10px;
+  }
+
+  .command-view-header h2 {
+    font-size: 22px;
+  }
+
+  .command-view-header > p {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .view-panel,
+  .command-view .formation-roster,
+  .command-view .selected-formation-card,
+  .command-view .force-organisation {
+    padding: 10px 11px;
+  }
+
+  .logistics-tabs button,
+  .infrastructure-tabs button {
+    min-height: 34px;
+    font-size: 8px;
+  }
+
+  .logistics-priority-summary > div,
+  .infrastructure-summary-strip > div {
+    padding: 8px 10px;
+  }
+
+  .logistics-priority-summary strong,
+  .infrastructure-summary-strip strong {
+    font-size: 19px;
+  }
+}
+
+/* Compact desktop/tablet width before the bottom-navigation breakpoint. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .command-app-shell {
+    padding-inline: 10px;
+  }
+
+  .command-workspace {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .command-map-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 31vw);
+    gap: 9px;
+  }
+
+  .command-nav-label {
+    max-width: 68px;
+    font-size: 7px;
+  }
+
+  .command-metrics {
+    grid-template-columns: repeat(3, minmax(92px, 1fr));
+  }
+
+  .command-metrics .escalation {
+    grid-column: span 1;
+  }
+
+  .forces-command-grid,
+  .operations-command-grid,
+  .intelligence-command-grid,
+  .campaign-command-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operations-board,
+  .enemy-order-panel,
+  .command-reference-panel {
+    grid-row: auto;
+    grid-column: auto;
+  }
+
+  .territory-command-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Bottom-navigation layouts should never inherit the old 1240px document floor. */
+@media (max-width: 900px) {
+  .command-app-shell,
+  .app-shell {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .command-app-shell {
+    padding: 10px 10px 82px;
+  }
+
+  .command-topbar {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .topbar-command-actions {
+    min-width: 0;
+    margin-left: auto;
+  }
+
+  .command-metrics {
+    min-width: 0;
+  }
+
+  .command-view-header h2,
+  .command-view-header > p,
+  .territory-command-heading,
+  .operation-card-heading,
+  .forecast-heading,
+  .infrastructure-active-card header,
+  .logistics-priority-card header {
+    min-width: 0;
+  }
+
+  .infrastructure-view,
+  .logistics-priority-view {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .command-topbar {
+    align-items: stretch;
+  }
+
+  .command-topbar > div:first-child {
+    min-width: 0;
+  }
+
+  .topbar-command-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .global-resolve {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .turn-block {
+    flex: 0 0 auto;
+  }
+
+  .command-view-header h2 {
+    font-size: 23px;
+  }
+
+  .quick-links,
+  .campaign-file-actions,
+  .territory-summary-strip,
+  .intelligence-kpis,
+  .logistics-priority-summary,
+  .infrastructure-summary-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .infrastructure-tabs,
+  .logistics-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
