@@ -1,0 +1,35 @@
+name: R2-WP2 core integration patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/r2-wp2-engineering-infrastructure
+          fetch-depth: 0
+
+      - name: Apply R2-WP2 core patch
+        run: python3 scripts/r2-wp2-core-patch.py
+
+      - name: Commit core integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game/types.ts src/game/supply-network.ts src/game/engine.ts
+          if git diff --cached --quiet; then
+            echo "No core patch required"
+            exit 0
+          fi
+          git commit -m "R2-WP2: integrate engineering support into engine and logistics"
+          git push origin HEAD:agent/r2-wp2-engineering-infrastructure
