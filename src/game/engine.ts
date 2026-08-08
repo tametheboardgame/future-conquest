@@ -1,6 +1,7 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { occupationRequirement } from './formation-organisation';
 import { recommendedReinforcementForTerritory } from './defence';
+import { addCommittedFormationToLedger, appendCombatReport, buildOffensiveCombatReport, ensureOperationCombatLedger, recordOperationCombatDay } from './combat-reports';
 import { STRATEGIC_ROUTE_BY_ID } from './strategic-network-data';
 import { createRouteStates } from './strategic-network';
 import { createEmptyLogisticsPriorities, createEmptyLogisticsState, refreshSupplyNetwork } from './supply-network';
@@ -18,6 +19,7 @@ import { crisisLimitForDifficulty, resolveEnemyStrategy } from './enemy-strategy
 import { createOperationalAwarenessState, createTutorialState, progressTutorial } from './operational-clarity';
 import { territoryMedicalCapability, territoryRepairCapability } from './territory-resources';
 import type {
+  CombatReport,
   Difficulty,
   EnemyFormation,
   GameEvent,
@@ -256,6 +258,7 @@ export function newGame(seed = Math.floor(Math.random() * 999999), difficulty: D
     supply: 100,
     woundedPool: 0,
     operations: {},
+    combatReports: [],
     status: 'playing',
     events: [{ id: 1, turn: 1, text: `The portal has opened near ${TERRITORIES[portalTerritory].centre}. Four task groups crossed with ten thousand soldiers.`, tone: 'warning' }]
   };
@@ -431,8 +434,12 @@ export function beginOperation(state: GameState, requestedRouteId?: string): Gam
         enemyPower: strength.power
       };
   operations[operationId] = operation;
+  ensureOperationCombatLedger(state, operation);
 
-  if (!operation.participantGroupIds.includes(group.id)) operation.participantGroupIds.push(group.id);
+  if (!operation.participantGroupIds.includes(group.id)) {
+    addCommittedFormationToLedger(state, operation, group);
+    operation.participantGroupIds.push(group.id);
+  }
   operation.origins[group.id] = group.location;
   taskGroups[group.id].status = 'attacking';
   taskGroups[group.id].order = {
@@ -585,6 +592,7 @@ function resolveOperations(state: GameState): GameState {
 
     let totalKilled = 0;
     let totalWounded = 0;
+    let totalArmourDamage = 0;
     let remainingPersonnel = 0;
     let remainingArmour = 0;
     for (const [index, group] of participants.entries()) {
@@ -610,6 +618,7 @@ function resolveOperations(state: GameState): GameState {
       );
       group.functionalArmour -= armourDamage;
       group.damagedArmour += armourDamage;
+      totalArmourDamage += armourDamage;
       remainingPersonnel += group.personnel;
       remainingArmour += deployableArmour(group);
       if (group.order) group.order.progress = operation.progress;
@@ -618,6 +627,13 @@ function resolveOperations(state: GameState): GameState {
     const enemyPersonnelLosses = Math.round(remainingPersonnel * clamp(0.009 * ratio, 0.005, 0.04));
     const enemyArmourLosses = Math.round(Math.max(1, remainingArmour * 0.004 * ratio));
     distributeEnemyLosses(enemyFormations, operation.enemyFormationIds, enemyPersonnelLosses, enemyArmourLosses);
+    recordOperationCombatDay(next, operation, {
+      playerKilled: totalKilled,
+      playerWounded: totalWounded,
+      armourDamaged: totalArmourDamage,
+      enemyPersonnelLosses,
+      enemyArmourLosses
+    });
 
     next = resolveOperationCombatDamage(next, operation, participants, defender.personnel);
     const remainingDefenders = operation.enemyFormationIds.reduce((sum, id) => sum + (enemyFormations[id]?.personnel ?? 0), 0);
@@ -641,6 +657,15 @@ function resolveOperations(state: GameState): GameState {
       next.selectedTerritory = operation.target;
       next.targetTerritory = null;
       victories.push({ target: operation.target, enemyFormationIds: [...operation.enemyFormationIds] });
+      next = appendCombatReport(next, buildOffensiveCombatReport(
+        next,
+        operation,
+        participants,
+        'victory',
+        secured
+          ? `${TERRITORIES[operation.target].centre} was secured and surviving defenders withdrew.`
+          : `${TERRITORIES[operation.target].centre} was seized, but the surviving force is below the occupation requirement and the territory remains unsecured.`
+      ));
       delete operations[operationId];
       next = addEvent(
         next,
@@ -655,6 +680,13 @@ function resolveOperations(state: GameState): GameState {
         group.status = 'recovering';
         group.order = undefined;
       }
+      next = appendCombatReport(next, buildOffensiveCombatReport(
+        next,
+        operation,
+        participants,
+        'withdrawal',
+        `${participants.map(group => group.name).join(' and ')} broke contact and withdrew after ${operation.days} days without securing the objective.`
+      ));
       delete operations[operationId];
       next = addEvent(
         next,
@@ -664,7 +696,7 @@ function resolveOperations(state: GameState): GameState {
     } else {
       next = addEvent(
         next,
-        `Operation ${TERRITORIES[operation.target].centre}: ${operation.progress}% progress after ${operation.days} day${operation.days === 1 ? '' : 's'}. ${totalKilled} killed, ${totalWounded} wounded; defenders lost about ${enemyPersonnelLosses}.`,
+        `Operation ${TERRITORIES[operation.target].centre}: ${operation.progress}% progress after ${operation.days} day${operation.days === 1 ? '' : 's'}. Friendly active strength ${remainingPersonnel} from ${operation.combat?.committedPersonnel ?? remainingPersonnel} committed. Today: ${totalKilled} killed and ${totalWounded} wounded (${totalKilled + totalWounded} removed from active strength; wounded enter the recovery pool). Defenders lost about ${enemyPersonnelLosses}.`,
         ratio >= 1 ? 'neutral' : 'warning'
       );
     }
@@ -841,6 +873,16 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
     : [available[0]];
   const attackers = selectedAttackers.length ? selectedAttackers : [available[0]];
   const defenders = Object.values(state.taskGroups).filter(group => group.location === target);
+  const defenderIds = defenders.map(group => group.id);
+  const defenderStartingPersonnel = defenders.reduce((sum, group) => sum + group.personnel, 0);
+  const defenderStartingArmour = defenders.reduce((sum, group) => sum + group.functionalArmour, 0);
+  const attackerStartingPersonnel = attackers.reduce((sum, formation) => sum + formation.personnel, 0);
+  const attackerStartingArmour = attackers.reduce((sum, formation) => sum + formation.armour, 0);
+  let counterPlayerKilled = 0;
+  let counterPlayerWounded = 0;
+  let counterEnemyPersonnelLosses = 0;
+  let counterOutcome: CombatReport['outcome'] = 'repelled';
+  let counterNote = '';
   const defenderPower = counterattackDefencePower(state, target);
   const attackerPower = attackers.reduce((sum, attacker) => (
     sum + (attacker.personnel / 1000 * 3.6 + attacker.armour / 100 * 0.8) * (0.7 + attacker.readiness / 150)
@@ -859,7 +901,11 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
       const group = taskGroups[defender.id];
       const combatLosses = Math.min(group.personnel, Math.max(20, Math.round(group.personnel * (0.05 + attackers.length * 0.008))));
       group.personnel -= combatLosses;
-      next.woundedPool += Math.round(combatLosses * 0.55);
+      const wounded = Math.round(combatLosses * 0.55);
+      const killed = combatLosses - wounded;
+      next.woundedPool += wounded;
+      counterPlayerKilled += killed;
+      counterPlayerWounded += wounded;
       if (retreatOptions.length) {
         group.location = retreatOptions[0];
         group.morale = clamp(group.morale - 12 - attackers.length, 5, 100);
@@ -887,6 +933,8 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
       : retreatOptions.length
         ? 'Local task groups withdrew under pressure.'
         : `${destroyed.join(', ')} became encircled and ceased to exist as coherent formations.`;
+    counterOutcome = 'territory-lost';
+    counterNote = retreatText;
     next = addEvent(next, `${attackers.length} enemy formation${attackers.length === 1 ? '' : 's'} retook ${TERRITORIES[target].centre}. ${retreatText}`, 'danger');
   } else {
     let totalLosses = 0;
@@ -896,14 +944,52 @@ function resolveCounterattack(state: GameState, forced = false): GameState {
       enemyFormations[attacker.id].readiness = clamp(enemyFormations[attacker.id].readiness - 6, 15, 100);
       totalLosses += losses;
     }
+    counterEnemyPersonnelLosses = totalLosses;
     for (const defender of defenders) {
       const group = taskGroups[defender.id];
       const defenderLosses = Math.max(4, Math.round(group.personnel * 0.009 * Math.max(1, attackers.length * 0.8)));
       group.personnel -= defenderLosses;
-      next.woundedPool += Math.round(defenderLosses * 0.6);
+      const wounded = Math.round(defenderLosses * 0.6);
+      const killed = defenderLosses - wounded;
+      next.woundedPool += wounded;
+      counterPlayerKilled += killed;
+      counterPlayerWounded += wounded;
     }
+    counterNote = `${TERRITORIES[target].centre} held against ${attackers.length} attacking formation${attackers.length === 1 ? '' : 's'}.`;
     next = addEvent(next, `${TERRITORIES[target].centre} repelled an enemy counterattack coordinated by ${attackers.length} formation${attackers.length === 1 ? '' : 's'}. The attacking force lost roughly ${totalLosses} personnel.`, 'good');
   }
+  const endingDefenders = defenderIds.flatMap(id => taskGroups[id] ? [taskGroups[id]] : []);
+  const defenderEndingPersonnel = endingDefenders.reduce((sum, group) => sum + group.personnel, 0);
+  const defenderEndingArmour = endingDefenders.reduce((sum, group) => sum + group.functionalArmour, 0);
+  const otherPersonnelLosses = Math.max(0, defenderStartingPersonnel - defenderEndingPersonnel - counterPlayerKilled - counterPlayerWounded);
+  const counterReport: CombatReport = {
+    id: `AAR-${state.turn}-COUNTER-${target}`,
+    turn: state.turn,
+    kind: 'counterattack',
+    outcome: counterOutcome,
+    territoryId: target,
+    startedTurn: state.turn,
+    durationDays: 1,
+    participantNames: defenders.map(group => group.name),
+    playerStartingPersonnel: defenderStartingPersonnel,
+    playerEndingPersonnel: defenderEndingPersonnel,
+    playerKilled: counterPlayerKilled,
+    playerWounded: counterPlayerWounded,
+    playerReturnedToDuty: 0,
+    playerOtherLosses: otherPersonnelLosses,
+    playerStartingFunctionalArmour: defenderStartingArmour,
+    playerEndingFunctionalArmour: defenderEndingArmour,
+    playerArmourDamaged: 0,
+    playerArmourRepaired: 0,
+    enemyStartingPersonnel: attackerStartingPersonnel,
+    enemyEndingPersonnel: Math.max(0, attackerStartingPersonnel - counterEnemyPersonnelLosses),
+    enemyPersonnelLosses: counterEnemyPersonnelLosses,
+    enemyStartingArmour: attackerStartingArmour,
+    enemyEndingArmour: attackerStartingArmour,
+    enemyArmourLosses: 0,
+    note: counterNote
+  };
+  next = appendCombatReport(next, counterReport);
   if (plannedCounterattack) next = completeEnemyOrder(next, plannedCounterattack.id);
   return pruneOperations(refreshSupply(next));
 }
@@ -918,6 +1004,7 @@ export function endTurn(state: GameState): GameState {
     taskGroups: structuredClone(state.taskGroups),
     enemyFormations: structuredClone(state.enemyFormations),
     operations: structuredClone(state.operations),
+    combatReports: structuredClone(state.combatReports ?? []),
     routeStates: structuredClone(state.routeStates),
     logistics: structuredClone(state.logistics),
     logisticsPriorities: structuredClone(state.logisticsPriorities),

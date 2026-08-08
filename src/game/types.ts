@@ -98,6 +98,19 @@ export interface EnemyFormation {
   entrenchment: number;
 }
 
+export interface OperationCombatLedger {
+  startedTurn: number;
+  committedPersonnel: number;
+  committedFunctionalArmour: number;
+  playerKilled: number;
+  playerWounded: number;
+  armourDamaged: number;
+  enemyStartingPersonnel: number;
+  enemyStartingArmour: number;
+  enemyPersonnelLosses: number;
+  enemyArmourLosses: number;
+}
+
 export interface Operation {
   id: string;
   target: string;
@@ -107,6 +120,35 @@ export interface Operation {
   days: number;
   enemyFormationIds: string[];
   enemyPower: number;
+  combat?: OperationCombatLedger;
+}
+
+export interface CombatReport {
+  id: string;
+  turn: number;
+  kind: 'offensive' | 'counterattack';
+  outcome: 'victory' | 'withdrawal' | 'repelled' | 'territory-lost';
+  territoryId: string;
+  startedTurn: number;
+  durationDays: number;
+  participantNames: string[];
+  playerStartingPersonnel: number;
+  playerEndingPersonnel: number;
+  playerKilled: number;
+  playerWounded: number;
+  playerReturnedToDuty: number;
+  playerOtherLosses: number;
+  playerStartingFunctionalArmour: number;
+  playerEndingFunctionalArmour: number;
+  playerArmourDamaged: number;
+  playerArmourRepaired: number;
+  enemyStartingPersonnel: number;
+  enemyEndingPersonnel: number;
+  enemyPersonnelLosses: number;
+  enemyStartingArmour: number;
+  enemyEndingArmour: number;
+  enemyArmourLosses: number;
+  note: string;
 }
 
 export interface MobilisationProject {
@@ -316,6 +358,7 @@ export interface GameState {
   supply: number;
   woundedPool: number;
   operations: Record<string, Operation>;
+  combatReports?: CombatReport[];
   events: GameEvent[];
   status: 'playing' | 'victory' | 'defeat';
 }

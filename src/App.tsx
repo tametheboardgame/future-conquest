@@ -6,6 +6,7 @@ import { EngineeringCommand } from './components/EngineeringCommand';
 import { InterdictionCommand } from './components/InterdictionCommand';
 import { LogisticsCommand } from './components/LogisticsCommand';
 import { DefencePanel } from './components/DefencePanel';
+import { CombatAfterActionAlert, CombatReportsPanel } from './components/CombatReports';
 import { StrategicCollapseDecision } from './components/StrategicCollapseDecision';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { MapView } from './components/MapView';
@@ -61,6 +62,8 @@ export default function App() {
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
+  const combatReports = state.combatReports ?? [];
+  const latestCombatReport = combatReports[0];
   const territoryDefinitions = Object.values(TERRITORIES).sort((a, b) => a.centre.localeCompare(b.centre));
   const enemyContacts = getEnemyContacts(state);
   const confirmedEnemyContacts = enemyContacts.filter(contact => contact.confidence === 'confirmed').length;
@@ -368,7 +371,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -407,6 +410,8 @@ export default function App() {
         <button type="button" onClick={() => openThreatOnMap(threat.territoryId)}>Review</button>
       </section>;
     })()}
+
+    {latestCombatReport?.turn === state.turn && <CombatAfterActionAlert report={latestCombatReport} onReview={() => setCurrentView('operations')} />}
 
     {state.status !== 'playing' && <div className={`command-outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong><span>Review the campaign log or begin a new campaign.</span></div>}
 
@@ -494,6 +499,8 @@ export default function App() {
                 <b>{formatNumber(group.personnel)}</b>
               </button>)}</div>
             </section>
+
+            <CombatReportsPanel state={state} onOpenTerritory={openTerritoryOnMap} />
 
             <section className="view-panel operational-reports">
               <div className="view-panel-heading"><p className="panel-label">RECENT REPORTS</p><strong>{state.events.length}</strong></div>
@@ -663,6 +670,7 @@ export default function App() {
               <dl>
                 <div><dt>Status</dt><dd>{collapseDecisionPending ? 'strategic collapse decision' : state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
+                <div><dt>After-action reports</dt><dd>{combatReports.length}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
                 <div><dt>Assessed enemy personnel</dt><dd>~{formatNumber(enemyPersonnel)}</dd></div>
                 <div><dt>Unsecured territories</dt><dd>{unsecured}</dd></div>
