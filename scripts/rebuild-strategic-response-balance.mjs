@@ -135,6 +135,25 @@ replaceTest(
   'counterattack authority contract'
 );
 
+replaceTest(
+`test('counterattack intelligence provides a full-day warning before combat resolves', () => {
+  let state = newGame(73, 'hard');
+  state.escalation = 55;
+  state = endTurn(state);
+  const plan = state.enemyOrders.find(order => order.type === 'counterattack' && order.status === 'planned');
+  assert.ok(plan);
+  assert.equal(plan.executeTurn, state.turn + 1);
+  const next = endTurn(state);
+  const completed = next.enemyOrders.find(order => order.id === plan.id);
+  assert.ok(completed);
+  assert.equal(completed.status, 'completed');
+});
+
+`,
+  '',
+  'obsolete VIII-A counterattack integration assumption'
+);
+
 writeFileSync(sourcePath, source);
 writeFileSync(testPath, test);
 rmSync('scripts/rebuild-strategic-response-balance.mjs');
