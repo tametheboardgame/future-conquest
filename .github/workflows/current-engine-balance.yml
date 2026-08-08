@@ -1,61 +1,78 @@
-name: WP2 clean generated validation outputs
+name: Current engine balance simulation
 
 on:
   pull_request:
     paths:
-      - '.github/workflows/current-engine-balance.yml'
-      - 'public/**'
-      - 'src/generated/**'
-      - 'src/assets/**'
       - 'src/game/**'
-      - 'tests/**'
+      - 'scripts/simulate-current-engine-balance.mjs'
+      - 'scripts/trace-current-engine-balance.mjs'
+      - 'tests/current-engine-balance-harness.test.cjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/current-engine-balance.yml'
   workflow_dispatch:
+    inputs:
+      runs_per_start:
+        description: 'Seed variants per portal start, difficulty and doctrine'
+        required: true
+        default: '20'
+      max_turns:
+        description: 'Maximum campaign day before timeout'
+        required: true
+        default: '120'
+      seed_offset:
+        description: 'Deterministic seed block offset'
+        required: true
+        default: '1'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  clean:
-    if: github.head_ref == 'agent/wp2-logistics-defeat-model' || github.ref_name == 'agent/wp2-logistics-defeat-model'
+  balance:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FC_BALANCE_RUNS_PER_START: ${{ inputs.runs_per_start || '4' }}
+      FC_BALANCE_MAX_TURNS: ${{ inputs.max_turns || '120' }}
+      FC_BALANCE_SEED_OFFSET: ${{ inputs.seed_offset || '1' }}
     steps:
-      - name: Checkout WP2 branch
+      - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          ref: agent/wp2-logistics-defeat-model
-          fetch-depth: 0
+          node-version: 22
+          cache: npm
 
-      - name: Restore everything outside the WP2 allowlist
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run regression suite
+        run: npm test
+
+      - name: Run current-engine balance simulation
+        run: npm run simulate:current-balance
+
+      - name: Trace representative stalled campaigns
+        run: node scripts/trace-current-engine-balance.mjs
+
+      - name: Publish balance summary
+        if: always()
         run: |
-          git fetch origin main
-          while IFS= read -r path; do
-            case "$path" in
-              src/game/enemy-strategy.ts|\
-              src/game/engine.ts|\
-              src/game/operational-clarity.ts|\
-              src/game/supply-network.ts|\
-              src/game/territory-resources.ts|\
-              tests/enemy-strategy-viii-c.test.cjs|\
-              tests/engine.test.cjs|\
-              tests/logistics-priorities-viii-b4d.test.cjs|\
-              tests/supply-throughput-viii-b3.test.cjs|\
-              tests/wp2-logistics-resilience.test.cjs)
-                continue
-                ;;
-            esac
-            if git cat-file -e "origin/main:$path" 2>/dev/null; then
-              git checkout origin/main -- "$path"
-            else
-              git rm -f --ignore-unmatch "$path"
-            fi
-          done < <(git diff --name-only origin/main...HEAD)
+          if [ -f balance-output/current-engine-balance.md ]; then
+            cat balance-output/current-engine-balance.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f balance-output/current-engine-traces.md ]; then
+            printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
+            cat balance-output/current-engine-traces.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-          git checkout origin/main -- .github/workflows/current-engine-balance.yml
-
-      - name: Commit clean WP2 diff
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "WP2: keep only logistics model changes"
-          git push origin HEAD:agent/wp2-logistics-defeat-model
+      - name: Upload balance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-engine-balance-report
+          path: balance-output/
+          if-no-files-found: warn
