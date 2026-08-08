@@ -22,6 +22,16 @@ export interface OperationalAwarenessState {
   lastAcknowledgedSupplyTurn: number;
 }
 
+export interface StrategicCollapseState {
+  pending: boolean;
+  acknowledgedEpisode: boolean;
+  triggeredTurn?: number;
+  triggerCrisisTurns?: number;
+  lastDecision?: 'continue' | 'surrender';
+  lastDecisionTurn?: number;
+  lastRecoveryTurn?: number;
+}
+
 export interface TutorialState {
   enabled: boolean;
   step: number;
@@ -292,6 +302,7 @@ export interface GameState {
   enemyOrders: EnemyOrder[];
   intelligenceReports: IntelligenceReport[];
   enemyStrategy: EnemyStrategyState;
+  strategicCollapse?: StrategicCollapseState;
   operationalAwareness: OperationalAwarenessState;
   tutorial: TutorialState;
   routeStates: Record<string, StrategicRouteState>;

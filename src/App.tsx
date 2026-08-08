@@ -5,6 +5,7 @@ import { FormationRoster } from './components/FormationRoster';
 import { EngineeringCommand } from './components/EngineeringCommand';
 import { InterdictionCommand } from './components/InterdictionCommand';
 import { LogisticsCommand } from './components/LogisticsCommand';
+import { StrategicCollapseDecision } from './components/StrategicCollapseDecision';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
@@ -27,6 +28,7 @@ import {
 import {
   beginOperation,
   canIssueOperationalOrder,
+  continueCampaignAfterCollapse,
   endTurn,
   getOperationAtTarget,
   getOperationForGroup,
@@ -36,7 +38,9 @@ import {
   saveGame,
   selectTaskGroup,
   selectTerritory,
-  setGarrison
+  setGarrison,
+  strategicCollapseDecisionPending,
+  surrenderCampaign
 } from './game/engine';
 import { occupationRequirement } from './game/formation-organisation';
 import { getEscalationStage } from './game/strategic-response';
@@ -104,7 +108,8 @@ export default function App() {
   const pendingMobilisations = [...state.mobilisations].filter(project => project.status === 'preparing').sort((a, b) => a.arrivalTurn - b.arrivalTurn);
   const activeEnemyOrders = state.enemyOrders.filter(order => order.status !== 'completed').slice(0, 8);
   const intelligenceReports = state.intelligenceReports.slice(0, 10);
-  const canOrderSelected = canIssueOperationalOrder(selectedGroup ?? undefined);
+  const collapseDecisionPending = strategicCollapseDecisionPending(state);
+  const canOrderSelected = !collapseDecisionPending && canIssueOperationalOrder(selectedGroup ?? undefined);
   const canMove = Boolean(selectedGroup && targetInfo?.kind === 'move' && canOrderSelected && state.status === 'playing');
   const canAttack = Boolean(selectedGroup && targetInfo?.kind === 'attack' && canOrderSelected && state.status === 'playing');
 
@@ -210,6 +215,7 @@ export default function App() {
   };
 
   const resolveDay = () => {
+    if (collapseDecisionPending) return;
     if (requiresSupplyAcknowledgement(state)) {
       setShowSupplyWarning(true);
       return;
@@ -218,6 +224,7 @@ export default function App() {
   };
 
   const resolveDayAnyway = () => {
+    if (collapseDecisionPending) return;
     setShowSupplyWarning(false);
     setState(current => endTurn(markSupplyWarningAcknowledged(current)));
   };
@@ -361,7 +368,7 @@ export default function App() {
     <header className="topbar command-topbar">
       <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
-        <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing'}>Resolve all orders · day {state.turn}</button>
+        <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
       </div>
     </header>
@@ -556,7 +563,7 @@ export default function App() {
                 <div><dt>Threatened corridors</dt><dd>{state.enemyStrategy.threatenedRouteIds.length}</dd></div>
                 <div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns} / {state.difficulty === 'story' ? 5 : state.difficulty === 'hard' ? 3 : 4} days</dd></div>
               </dl>
-              <p>Doctrine reacts to frontline strength, logistics weakness, portal exposure and campaign momentum. Stabilising those conditions reduces pressure and crisis risk.</p>
+              <p>Doctrine reacts to frontline strength, logistics weakness, vulnerable supply regions and campaign momentum. Stabilising those conditions reduces pressure and crisis risk.</p>
             </section>
             <section className="view-panel enemy-summary-panel">
               <p className="panel-label">ASSESSED ENEMY STRENGTH</p>
@@ -642,7 +649,7 @@ export default function App() {
             <section className="view-panel campaign-overview-panel">
               <p className="panel-label">CAMPAIGN SUMMARY</p>
               <dl>
-                <div><dt>Status</dt><dd>{state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
+                <div><dt>Status</dt><dd>{collapseDecisionPending ? 'strategic collapse decision' : state.status}</dd></div><div><dt>Enemy doctrine</dt><dd>{state.enemyStrategy.doctrine}</dd></div><div><dt>Operational crisis</dt><dd>{state.enemyStrategy.operationalCrisisTurns}</dd></div><div><dt>Escalation stage</dt><dd>{escalationStage.id} · {escalationLabel}</dd></div><div><dt>Mobilisation reserve</dt><dd>{formatNumber(state.mobilisationPool)}</dd></div>
                 <div><dt>Wounded pool</dt><dd>{formatNumber(state.woundedPool)}</dd></div>
                 <div><dt>Active personnel</dt><dd>{formatNumber(totalPersonnel)}</dd></div>
                 <div><dt>Assessed enemy personnel</dt><dd>~{formatNumber(enemyPersonnel)}</dd></div>
@@ -668,6 +675,12 @@ export default function App() {
     </section>
 
     <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} anchorSelector={tutorialAnchorSelector} onSkip={() => setState(skipTutorial)} />
+
+    {collapseDecisionPending && <StrategicCollapseDecision
+      state={state}
+      onContinue={() => setState(continueCampaignAfterCollapse)}
+      onSurrender={() => setState(surrenderCampaign)}
+    />}
 
     {showSupplyWarning && <div className="supply-warning-backdrop" role="presentation">
       <section className="supply-warning-dialog" role="dialog" aria-modal="true" aria-label="Critical supply warning">
