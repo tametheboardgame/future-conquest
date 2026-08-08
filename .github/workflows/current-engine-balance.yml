@@ -9,9 +9,11 @@ on:
       - 'scripts/wp2-apply.mjs'
       - 'scripts/wp2-fix-tests.mjs'
       - 'scripts/wp2-refine.mjs'
+      - 'scripts/wp2-finalise-tests.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'
       - 'tests/wp2-logistics-resilience.test.cjs'
       - 'tests/engine.test.cjs'
+      - 'tests/enemy-strategy-viii-c.test.cjs'
       - 'tests/logistics-priorities-viii-b4d.test.cjs'
       - 'tests/supply-throughput-viii-b3.test.cjs'
       - 'package.json'
@@ -48,6 +50,10 @@ jobs:
       - name: Refine shortage and crisis semantics
         if: hashFiles('scripts/wp2-refine.mjs') != ''
         run: node scripts/wp2-refine.mjs
+
+      - name: Finalise stock-aware regression semantics
+        if: hashFiles('scripts/wp2-finalise-tests.mjs') != ''
+        run: node scripts/wp2-finalise-tests.mjs
 
       - name: Set up Node
         uses: actions/setup-node@v4
