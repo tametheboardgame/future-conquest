@@ -47,9 +47,10 @@ test('settings includes temporary ending preview triggers', () => {
   assert.match(settings, /Preview defeat screen/);
 });
 
-test('ending artwork uses verified high-resolution build reconstruction', () => {
+test('ending artwork uses verified high-resolution binary reconstruction', () => {
+  assert.match(builder, /ending-art\.bundle/);
   assert.match(builder, /BUNDLE_LENGTH = 988_260/);
-  assert.match(builder, /PART_COUNT = 13/);
+  assert.match(builder, /4be5786ead501ed2dcfc0e6192242e25a24bbd1e55f4f4e4253e3455ce1b541a/);
   assert.match(builder, /width: 1672, height: 941/);
   assert.match(verifier, /Verified .* campaign ending assets/);
   assert.match(packageJson, /"build:endings": "node scripts\/build-ending-assets\.mjs"/);
