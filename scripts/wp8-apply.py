@@ -157,5 +157,10 @@ replace_once(
     'assert.match(overlay, /future-conquest-tutorial-explanation-v1/);',
     'assert.match(overlay, /future-conquest-tutorial-explanation-v2/);'
 )
+replace_once(
+    'tests/tutorial-explanation-phases.test.cjs',
+    r'assert.match(overlay, />Continue<\/button>/);',
+    r"assert.match(overlay, /'Finish tutorial' : 'Continue'/);"
+)
 
 print('WP8 guided-help integration applied.')
