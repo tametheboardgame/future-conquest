@@ -7,7 +7,6 @@ const { newGame, endTurn } = require('../.test-dist/engine.js');
 const {
   ESCALATION_STAGES,
   getEscalationStage,
-  getPlannedCounterattack,
   resolveStrategicResponse,
   upgradeStrategicState
 } = require('../.test-dist/strategic-response.js');
@@ -51,30 +50,13 @@ test('mobilisation projects deploy persistent enemy formations on arrival', () =
   assert.ok(Object.keys(deployed.enemyFormations).some(id => id.startsWith('EF-M-')));
 });
 
-test('enemy command creates operational intent and intelligence reports', () => {
+test('legacy strategic response creates defensive intent without independently authoring counterattacks', () => {
   const state = newGame(73, 'hard');
   state.escalation = 55;
   const next = resolveStrategicResponse(state);
   assert.ok(next.enemyOrders.length >= 1);
   assert.ok(next.intelligenceReports.some(report => report.kind === 'order'));
-  const counterattack = next.enemyOrders.find(order => order.type === 'counterattack');
-  assert.ok(counterattack);
-  assert.equal(counterattack.executeTurn, next.turn + 1);
-  assert.equal(getPlannedCounterattack(next), undefined);
-  assert.equal(getPlannedCounterattack({ ...next, turn: counterattack.executeTurn }).id, counterattack.id);
-});
-
-test('counterattack intelligence provides a full-day warning before combat resolves', () => {
-  let state = newGame(73, 'hard');
-  state.escalation = 55;
-  state = endTurn(state);
-  const plan = state.enemyOrders.find(order => order.type === 'counterattack' && order.status === 'planned');
-  assert.ok(plan);
-  assert.equal(plan.executeTurn, state.turn + 1);
-  const next = endTurn(state);
-  const completed = next.enemyOrders.find(order => order.id === plan.id);
-  assert.ok(completed);
-  assert.equal(completed.status, 'completed');
+  assert.equal(next.enemyOrders.some(order => order.type === 'counterattack'), false);
 });
 
 test('version 4 campaigns upgrade through the strategic network to version 8', () => {

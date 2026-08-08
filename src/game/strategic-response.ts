@@ -6,6 +6,7 @@ import { normaliseInfrastructureIncidents } from './infrastructure-disruption';
 import { normaliseEngineeringState } from './engineering-projects';
 import { normaliseInterdictionState } from './interdiction-missions';
 import { createEnemyStrategyState, normaliseEnemyStrategyState } from './enemy-strategy';
+import { strategicBalanceFor } from './strategic-balance';
 import { normaliseOperationalAwarenessState, normaliseTutorialState } from './operational-clarity';
 import type {
   Difficulty,
@@ -131,18 +132,6 @@ const MOBILISATION_TEMPLATES: MobilisationTemplate[] = [
     delay: 3
   }
 ];
-
-const difficultyScale: Record<Difficulty, number> = {
-  story: 0.82,
-  standard: 1,
-  hard: 1.18
-};
-
-const mobilisationDelay: Record<Difficulty, number> = {
-  story: 1,
-  standard: 0,
-  hard: -1
-};
 
 const initialPool: Record<Difficulty, number> = {
   story: 9000,
@@ -289,12 +278,13 @@ function calculateEscalation(state: GameState): number {
   const strategicCaptures = SLICE_IDS.filter(id => (
     state.territories[id]?.controller === 'player' && TERRITORIES[id].supply >= 7
   )).length;
-  const floor = 3 + Math.max(0, controlled - 1) * 3.35 + Math.max(0, state.turn - 1) * 0.42;
-  const dailyPressure = 0.22
+  const balance = strategicBalanceFor(state.difficulty);
+  const floor = 3 + Math.max(0, controlled - 1) * 3.35 + Math.max(0, state.turn - 1) * balance.escalationTurnGrowth;
+  const dailyPressure = balance.escalationDailyBase
     + Object.keys(state.operations).length * 0.38
     + recentCaptures * 1.35
-    + strategicCaptures * 0.08
-    + unsecured * 0.06;
+    + strategicCaptures * balance.strategicCaptureDailyPressure
+    + unsecured * balance.unsecuredDailyPressure;
   return clamp(Math.max(floor, state.escalation + dailyPressure), 0, 100);
 }
 
@@ -305,7 +295,8 @@ function scheduleMobilisations(state: GameState): GameState {
 
   for (const template of MOBILISATION_TEMPLATES) {
     if (state.escalationStage < template.stage || mobilisations.some(project => project.id === template.id)) continue;
-    const scale = difficultyScale[state.difficulty];
+    const balance = strategicBalanceFor(state.difficulty);
+    const scale = balance.mobilisationScale;
     const personnel = Math.min(mobilisationPool, Math.round(template.personnel * scale));
     if (personnel < 400) continue;
     const project: MobilisationProject = {
@@ -316,7 +307,7 @@ function scheduleMobilisations(state: GameState): GameState {
       personnel,
       armour: Math.round(template.armour * scale),
       readiness: template.readiness,
-      arrivalTurn: state.turn + Math.max(2, template.delay + mobilisationDelay[state.difficulty]),
+      arrivalTurn: state.turn + Math.max(2, template.delay + balance.mobilisationDelay),
       status: 'preparing',
       entryTerritory: chooseEntryTerritory(state)
     };
@@ -485,28 +476,6 @@ function planEnemyOrders(state: GameState): GameState {
         status: 'completed',
         priority: 90,
         summary: `${weakFormation.name} withdrew towards ${TERRITORIES[retreat].centre}`
-      });
-    }
-  }
-
-  const pendingCounterattack = retainedOrders.some(order => order.type === 'counterattack' && order.status !== 'completed');
-  if (next.escalationStage >= 2 && playerFront.length && !pendingCounterattack && planned.length < availableOrderSlots) {
-    const target = [...playerFront].sort((first, second) => playerPowerAt(next, first) - playerPowerAt(next, second))[0];
-    const formation = Object.values(enemyFormations)
-      .filter(candidate => candidate.personnel > 250 && TERRITORIES[target].neighbours.includes(candidate.location))
-      .sort((first, second) => (second.personnel + second.armour * 4) - (first.personnel + first.armour * 4))[0];
-    if (formation) {
-      planned.push({
-        id: `EO-${next.turn}-COUNTER-${formation.id}-${target}`,
-        turn: next.turn,
-        type: 'counterattack',
-        formationId: formation.id,
-        origin: formation.location,
-        target,
-        executeTurn: next.turn + 1,
-        status: 'planned',
-        priority: 100,
-        summary: `Counterattack preparations detected against ${TERRITORIES[target].centre}`
       });
     }
   }
