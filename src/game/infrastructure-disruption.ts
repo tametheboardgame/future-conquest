@@ -22,14 +22,13 @@ const saltFor = (value: string) => [...value].reduce(
 
 export function routeStatusForCondition(condition: number): StrategicRouteState['status'] {
   if (condition <= 0) return 'destroyed';
-  if (condition < 35) return 'blocked';
   if (condition < 75) return 'damaged';
   return 'open';
 }
 
 export function routeCapacityModifierForCondition(condition: number): number {
   if (condition <= 0) return 0;
-  return Math.round(clamp(0.2 + condition / 125, 0.2, 1) * 100) / 100;
+  return Math.round(clamp(0.08 + condition * 0.0092, 0.08, 1) * 100) / 100;
 }
 
 export function normaliseInfrastructureIncidents(value: unknown): InfrastructureIncident[] {
@@ -93,7 +92,11 @@ export function applyInfrastructureDamage(
   const statusChange = beforeStatus !== routeStates[routeId].status
     ? ` The corridor is now ${routeStates[routeId].status}.`
     : '';
-  return appendEvent({ ...state, routeStates, infrastructureIncidents: incidents }, `${description}${statusChange}`, condition < 35 ? 'danger' : 'warning');
+  return appendEvent(
+    { ...state, routeStates, infrastructureIncidents: incidents },
+    `${description}${statusChange}`,
+    condition <= 0 ? 'danger' : 'warning'
+  );
 }
 
 export function resolveInfrastructureRecovery(state: GameState): GameState {
@@ -117,7 +120,7 @@ export function resolveInfrastructureRecovery(state: GameState): GameState {
     ) continue;
 
     const beforeStatus = current.status;
-    current.condition = clamp(current.condition + 1, 0, 100);
+    current.condition = clamp(current.condition + 0.5, 0, 100);
     current.status = routeStatusForCondition(current.condition);
     current.capacityModifier = routeCapacityModifierForCondition(current.condition);
     if (beforeStatus !== current.status || current.condition === 100) repaired.push(route.name);
@@ -126,7 +129,7 @@ export function resolveInfrastructureRecovery(state: GameState): GameState {
   if (!repaired.length) return { ...state, routeStates };
   return appendEvent(
     { ...state, routeStates },
-    `Routine maintenance restored ${repaired.slice(0, 3).join(', ')}${repaired.length > 3 ? ` and ${repaired.length - 3} other corridor${repaired.length - 3 === 1 ? '' : 's'}` : ''}.`,
+    `Routine civil maintenance restored ${repaired.slice(0, 3).join(', ')}${repaired.length > 3 ? ` and ${repaired.length - 3} other corridor${repaired.length - 3 === 1 ? '' : 's'}` : ''}.`,
     'good'
   );
 }
