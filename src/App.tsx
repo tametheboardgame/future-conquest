@@ -309,7 +309,7 @@ export default function App() {
     </>}
   </section>;
 
-  const renderOrdersPanel = () => <section className="operation-card">
+  const renderOrdersPanel = () => <section className="operation-card" data-tutorial="formation-orders">
     <p className="panel-label">FORMATION ORDERS</p>
     {!selectedGroup ? <p>No task group is available to receive orders.</p> : selectedOperation ? <>
       <h3>{selectedGroup.name} → {TERRITORIES[selectedOperation.target].centre}</h3>
@@ -370,7 +370,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY · WP8 GUIDED HELP</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>

@@ -53,6 +53,8 @@ export interface TutorialStep {
   id: string;
   title: string;
   instruction: string;
+  why: string;
+  completion: string;
   target: 'forces' | 'map' | 'operations' | 'logistics' | 'intelligence' | 'engineering';
   trigger: TutorialTrigger;
 }
@@ -61,49 +63,63 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'formation',
     title: 'Inspect a formation',
-    instruction: 'Select any friendly formation and review its personnel, armour, morale and logistics condition.',
+    instruction: 'Open Forces and select any friendly formation. Read its personnel, powered armour, morale, carried supply stock and current logistics condition.',
+    why: 'Every movement, attack, garrison and specialist task is assigned to a formation. Its current state determines what it can safely do next.',
+    completion: 'The tutorial advances when a friendly formation is selected.',
     target: 'forces',
     trigger: 'select-formation'
   },
   {
     id: 'operation',
     title: 'Begin the first offensive',
-    instruction: 'On the map, select an adjacent enemy territory marked ATTACK, review the corridor and begin an operation.',
+    instruction: 'Return to the command map, select an adjacent enemy territory marked ATTACK, review the route and defender estimate, then begin an operation.',
+    why: 'Territories are taken through route-connected multi-day operations. Defender estimates are intelligence ranges, not guaranteed exact strength.',
+    completion: 'The tutorial advances when an attack operation is successfully launched.',
     target: 'map',
     trigger: 'begin-operation'
   },
   {
     id: 'occupation',
     title: 'Secure captured ground',
-    instruction: 'Resolve campaign days until the territory is captured, then select a formation there and assign it to garrison duty.',
+    instruction: 'Resolve campaign days until the operation captures its target. Then use the local formation’s Assign as garrison action.',
+    why: 'Taking a province and controlling it are different problems. Unsecured ground threatens administration, resistance control and the wider supply network.',
+    completion: 'The tutorial advances after a formation in the captured territory enters garrison duty.',
     target: 'map',
     trigger: 'set-garrison'
   },
   {
     id: 'movement',
     title: 'Reinforce the new position',
-    instruction: 'Select another ready formation, choose the captured controlled territory marked MOVE and issue a movement order.',
+    instruction: 'Select another ready formation, choose a route-connected controlled territory marked MOVE and issue a movement order.',
+    why: 'Formations act independently. Repositioning reserves is how you reinforce threatened ground without cancelling other simultaneous orders.',
+    completion: 'The tutorial advances when a valid movement order is issued.',
     target: 'map',
     trigger: 'issue-move'
   },
   {
     id: 'logistics',
     title: 'Read the supply network',
-    instruction: 'Open Logistics. Review network efficiency, route bottlenecks and which formations are receiving inadequate throughput.',
+    instruction: 'Open Logistics. A short guided walkthrough will explain distributed sources, route delivery, carried stocks and priority doctrine before you continue.',
+    why: 'A strong formation can still become ineffective if the network cannot replenish it. Diagnosing the cause matters more than blindly raising priority.',
+    completion: 'Opening Logistics starts its guided walkthrough; no supply setting has to be changed.',
     target: 'logistics',
     trigger: 'open-logistics'
   },
   {
     id: 'intelligence',
     title: 'Review enemy activity',
-    instruction: 'Open Intelligence or select a threat warning. Confirm where enemy activity is forming and which territory may need reinforcement.',
+    instruction: 'Open Intelligence. The walkthrough will cover escalation, reconnaissance confidence, frontline pressure and how those signals should influence orders.',
+    why: 'Enemy information is deliberately incomplete. Good decisions depend on recognising the difference between confirmed, estimated, activity and stale contacts.',
+    completion: 'Opening Intelligence starts its guided walkthrough; no order is issued automatically.',
     target: 'intelligence',
     trigger: 'review-intelligence'
   },
   {
     id: 'engineering',
-    title: 'Protect the network',
-    instruction: 'Open Infrastructure to review route damage, repair projects and interdiction options. The guided campaign then ends.',
+    title: 'Understand Infrastructure',
+    instruction: 'Open Infrastructure. The final walkthrough will explain friendly-route repair, enemy-route interdiction and the eligibility rules for both.',
+    why: 'Strategic routes are physical assets. Damage, bottlenecks and enemy interdiction can change which plans are sustainable even when your formations remain strong.',
+    completion: 'Opening Infrastructure starts the final walkthrough. The tutorial completes after that walkthrough, not merely when the page opens.',
     target: 'engineering',
     trigger: 'open-engineering'
   }

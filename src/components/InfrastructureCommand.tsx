@@ -162,7 +162,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
     </nav>
 
     {activeTab === 'overview' && <div className="infrastructure-tab-panel infrastructure-overview-grid">
-      <section className="view-panel infrastructure-choice-card repair-choice">
+      <section className="view-panel infrastructure-choice-card repair-choice" data-tutorial="infrastructure-repair">
         <div className="view-panel-heading"><p className="panel-label">FRIENDLY NETWORK</p><strong>{repairRoutes.length} available</strong></div>
         <h3>Repair a controlled corridor</h3>
         <p>Use a ready or garrison formation at either secured endpoint. Repair restores route condition towards 100%, which recovers movement reliability and logistics capacity.</p>
@@ -173,7 +173,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
         <button type="button" className="primary" onClick={() => setActiveTab('repair')}>Open repair command</button>
       </section>
 
-      <section className="view-panel infrastructure-choice-card interdict-choice">
+      <section className="view-panel infrastructure-choice-card interdict-choice" data-tutorial="infrastructure-interdict">
         <div className="view-panel-heading"><p className="panel-label">ENEMY NETWORK</p><strong>{interdictionRoutes.length} available</strong></div>
         <h3>Interdict a frontier corridor</h3>
         <p>Commit a formation at the friendly end of an enemy frontier route. Higher intensity can inflict more damage faster, but costs more supply, raises escalation and increases casualty exposure.</p>
@@ -184,7 +184,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
         <button type="button" className="primary danger-action" onClick={() => setActiveTab('interdict')}>Open interdiction command</button>
       </section>
 
-      <section className="view-panel infrastructure-rules-panel">
+      <section className="view-panel infrastructure-rules-panel" data-tutorial="infrastructure-rules">
         <div className="view-panel-heading"><p className="panel-label">WHEN ACTIONS ARE AVAILABLE</p><strong>Eligibility</strong></div>
         <div className="infrastructure-rule-list">
           <article><b>REPAIR</b><p>The route must be damaged, both endpoints must be controlled and secured, and a ready/garrison formation must be physically present at an endpoint.</p></article>
