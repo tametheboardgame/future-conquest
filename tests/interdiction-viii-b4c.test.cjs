@@ -90,11 +90,15 @@ test('version 10 campaigns migrate to version 11 with an empty interdiction ledg
 
 test('the interface exposes the Phase VIII-B4C infrastructure warfare controls', () => {
   const app = fs.readFileSync('src/App.tsx', 'utf8');
-  const component = fs.readFileSync('src/components/InterdictionCommand.tsx', 'utf8');
+  const component = fs.readFileSync('src/components/InfrastructureCommand.tsx', 'utf8');
   const main = fs.readFileSync('src/main.tsx', 'utf8');
   assert.match(app, /PHASE VIII-D \/ OPERATIONAL CLARITY AND ONBOARDING/);
-  assert.match(app, /<InterdictionCommand/);
+  assert.match(app, /<InfrastructureCommand/);
+  assert.match(component, /startInterdictionMission/);
+  assert.match(component, /setInterdictionIntensity/);
+  assert.match(component, /cancelInterdictionMission/);
   assert.match(component, /Launch interdiction mission/);
   assert.match(component, /Mission intensity/);
   assert.match(main, /interdiction\.css/);
+  assert.match(main, /infrastructure-command\.css/);
 });

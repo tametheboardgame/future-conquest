@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
-import { EngineeringCommand } from './components/EngineeringCommand';
-import { InterdictionCommand } from './components/InterdictionCommand';
+import { InfrastructureCommand } from './components/InfrastructureCommand';
 import { LogisticsCommand } from './components/LogisticsCommand';
 import { DefencePanel } from './components/DefencePanel';
 import { CombatAfterActionAlert, CombatReportsPanel } from './components/CombatReports';
@@ -371,7 +370,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -541,10 +540,11 @@ export default function App() {
           })}</div>
         </section>}
 
-        {currentView === 'engineering' && <div className="infrastructure-command-stack">
-          <EngineeringCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
-          <InterdictionCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
-        </div>}
+        {currentView === 'engineering' && <InfrastructureCommand
+          state={state}
+          onChange={setState}
+          onOpenTerritory={openTerritoryOnMap}
+        />}
 
         {/* supply-diagnostics-panel compatibility marker: diagnostics now live inside the unified LogisticsCommand surface. */}
         {currentView === 'logistics' && <LogisticsCommand
