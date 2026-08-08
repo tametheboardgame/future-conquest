@@ -14,11 +14,13 @@ test('the command map retains its viewport and layer state between command views
   assert.match(source, /retainedMapLayers = layers/);
 });
 
-test('mobile map overlays receive a responsive readability boost', () => {
+test('mobile and laptop map overlays receive a responsive readability boost', () => {
   const source = read('src/components/MapView.tsx');
   const css = read('src/mobile-map-corrections.css');
-  assert.match(source, /max-width: 540px/);
-  assert.match(source, /return 2\.7/);
+  assert.match(source, /max-width: 540px[\s\S]*?return 2\.4/);
+  assert.match(source, /max-width: 900px[\s\S]*?return 1\.7/);
+  assert.match(source, /max-width: 1180px[\s\S]*?return 1\.35/);
+  assert.match(source, /max-width: 1450px[\s\S]*?return 1\.15/);
   assert.match(source, /view\.width \/ MAP_WIDTH \* overlayBoost/);
   assert.match(source, /window\.addEventListener\('resize', refreshOverlayBoost\)/);
   assert.match(source, /window\.removeEventListener\('resize', refreshOverlayBoost\)/);
