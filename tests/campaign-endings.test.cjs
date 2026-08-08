@@ -6,6 +6,7 @@ const story = fs.readFileSync('src/game/ending-story.ts', 'utf8');
 const component = fs.readFileSync('src/components/CampaignEndingExperience.tsx', 'utf8');
 const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
 const settings = fs.readFileSync('src/components/GlobalSettingsPanel.tsx', 'utf8');
+const endingCss = fs.readFileSync('src/components/campaign-ending.css', 'utf8');
 const builder = fs.readFileSync('scripts/build-ending-assets.mjs', 'utf8');
 const verifier = fs.readFileSync('scripts/verify-ending-assets.mjs', 'utf8');
 const packageJson = fs.readFileSync('package.json', 'utf8');
@@ -55,4 +56,17 @@ test('ending artwork uses verified high-resolution binary reconstruction', () =>
   assert.match(verifier, /Verified .* campaign ending assets/);
   assert.match(packageJson, /"build:endings": "node scripts\/build-ending-assets\.mjs"/);
   assert.match(packageJson, /verify-ending-assets\.mjs/);
+});
+
+test('victory layout keeps stage, timeline and controls in separate grid rows', () => {
+  assert.match(endingCss, /\.campaign-ending\s*\{[\s\S]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+4px\s+auto/);
+  assert.match(endingCss, /\.campaign-ending-stage\s*\{[\s\S]*position:\s*relative;[\s\S]*grid-row:\s*1/);
+  assert.match(endingCss, /\.campaign-ending\s*>\s*\.motion-comic-progress\s*\{[\s\S]*grid-row:\s*2;[\s\S]*height:\s*4px/);
+  assert.match(endingCss, /\.campaign-ending-controls\s*\{[\s\S]*grid-row:\s*3/);
+  assert.doesNotMatch(endingCss, /\.campaign-ending-stage\s*\{[^}]*position:\s*absolute/);
+});
+
+test('defeat actions have explicit readable button sizing and colours', () => {
+  assert.match(endingCss, /\.campaign-defeat-actions button\s*\{[\s\S]*min-width:\s*164px;[\s\S]*min-height:\s*48px/);
+  assert.match(endingCss, /\.campaign-defeat-actions \.launcher-primary\s*\{[\s\S]*color:\s*#f4fdff;[\s\S]*linear-gradient/);
 });
