@@ -11,6 +11,7 @@ const {
   selectTaskGroup,
   selectTerritory
 } = require('../.test-dist/engine.js');
+const { estimateCombatFigure } = require('../.test-dist/combat-reports.js');
 const { getAdjacentOrderTargets } = require('../.test-dist/order-targeting.js');
 
 function memoryStorage() {
@@ -88,6 +89,12 @@ test('forced enemy counterattack records either a defended or lost-territory aft
   assert.ok(report.playerStartingPersonnel >= report.playerEndingPersonnel);
   assert.ok(report.playerKilled + report.playerWounded + report.playerOtherLosses >= 0);
   assert.equal(report.durationDays, 1);
+});
+
+test('enemy after-action figures are rounded assessments rather than exact values', () => {
+  assert.equal(estimateCombatFigure(1237), 1225);
+  assert.equal(estimateCombatFigure(247), 250);
+  assert.equal(estimateCombatFigure(0), 0);
 });
 
 test('after-action archive survives normal save and load', () => {
