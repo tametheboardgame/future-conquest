@@ -1,9 +1,10 @@
 name: WP4 defence and threat validation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/wp4-defence-threat-clarity
+      - main
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
