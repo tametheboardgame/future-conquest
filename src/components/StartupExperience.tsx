@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { audioManager } from '../audio/audio-manager';
 import { BUILD_LABEL, BUILD_TIME } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import { loadGlobalSettings, saveGlobalSettings, type GlobalSettings } from '../game/global-settings';
 import { INTRO_STORAGE_KEY } from '../game/intro-story';
 import { formatSaveTime, inspectStoredCampaign, type SaveInspection } from '../game/persistence';
+import { CampaignDefeatScreen, VictoryEndingComic } from './CampaignEndingExperience';
 import { GlobalSettingsPanel } from './GlobalSettingsPanel';
 import { MotionComicIntro, type ArtworkStatus } from './MotionComicIntro';
 import './prologue-build-stamp.css';
@@ -14,7 +15,8 @@ interface Props {
   children: ReactNode;
 }
 
-type StartupMode = 'launcher' | 'intro' | 'game';
+type CampaignEndingKind = 'victory' | 'defeat';
+type StartupMode = 'launcher' | 'intro' | 'game' | CampaignEndingKind;
 type SuccessfulInspection = Extract<SaveInspection, { ok: true }>;
 type IntroDestination = 'launcher' | 'campaign-setup';
 
@@ -24,6 +26,12 @@ function detectPortalTerritory(): string | undefined {
     pageText.includes(`portal has opened near ${territory.centre}`)
     || pageText.includes(`Portal has opened near ${territory.centre}`)
   ))?.id;
+}
+
+function detectCampaignEnding(): CampaignEndingKind | undefined {
+  if (document.querySelector('.command-outcome.victory')) return 'victory';
+  if (document.querySelector('.command-outcome.defeat')) return 'defeat';
+  return undefined;
 }
 
 function artworkStatusLabel(status: ArtworkStatus): string {
@@ -62,6 +70,7 @@ export function StartupExperience({ children }: Props) {
       : { ok: false, code: 'storage-unavailable', message: 'Browser storage is unavailable.' };
   });
   const [settings, setSettings] = useState<GlobalSettings>(() => loadGlobalSettings());
+  const suppressedEndingRef = useRef<CampaignEndingKind | null>(null);
 
   const refreshSaveInspection = useCallback(() => {
     const storage = browserStorage();
@@ -108,6 +117,28 @@ export function StartupExperience({ children }: Props) {
       observer.disconnect();
     };
   }, [refreshPortalTerritory]);
+
+  useEffect(() => {
+    if (mode !== 'game') return;
+    const detect = () => {
+      const ending = detectCampaignEnding();
+      if (!ending) {
+        suppressedEndingRef.current = null;
+        return;
+      }
+      if (suppressedEndingRef.current === ending) return;
+      refreshSaveInspection();
+      setShowSettings(false);
+      setMode(ending);
+    };
+    const initialDetection = window.setTimeout(detect, 40);
+    const observer = new MutationObserver(detect);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => {
+      window.clearTimeout(initialDetection);
+      observer.disconnect();
+    };
+  }, [mode, refreshSaveInspection]);
 
   const openCampaignSetup = useCallback(() => {
     setMode('game');
@@ -160,6 +191,45 @@ export function StartupExperience({ children }: Props) {
     applySettings({ ...settings, muted });
   }, [applySettings, settings]);
 
+  const previewEnding = useCallback((ending: CampaignEndingKind) => {
+    void audioManager.unlock();
+    setShowSettings(false);
+    setMode(ending);
+  }, []);
+
+  const reviewCampaign = useCallback((ending: CampaignEndingKind) => {
+    suppressedEndingRef.current = ending;
+    setShowSettings(false);
+    setMode('game');
+  }, []);
+
+  const returnToTitle = useCallback(() => {
+    setShowSettings(false);
+    setMode('launcher');
+  }, []);
+
+  const reloadLastSave = useCallback(() => {
+    const inspection = refreshSaveInspection();
+    if (!inspection.ok) return;
+    suppressedEndingRef.current = 'defeat';
+    setShowSettings(false);
+    setMode('game');
+    window.setTimeout(() => {
+      openCommandView('campaign');
+      window.setTimeout(() => findButton('Load')?.click(), 70);
+    }, 50);
+  }, [refreshSaveInspection]);
+
+  const startNewCampaignFromDefeat = useCallback(() => {
+    suppressedEndingRef.current = 'defeat';
+    setShowSettings(false);
+    setMode('game');
+    window.setTimeout(() => {
+      openCommandView('campaign');
+      window.setTimeout(() => findButton('New campaign')?.click(), 80);
+    }, 50);
+  }, []);
+
   const saved = saveInspection.ok ? saveInspection as SuccessfulInspection : null;
   const saveFailure = !saveInspection.ok ? saveInspection : null;
   const saveSummary = saved
@@ -207,6 +277,30 @@ export function StartupExperience({ children }: Props) {
       </div>
     </>}
 
-    {showSettings && <GlobalSettingsPanel settings={settings} onChange={applySettings} onClose={() => setShowSettings(false)} />}
+    {mode === 'victory' && <VictoryEndingComic
+      muted={settings.muted}
+      onMutedChange={setMuted}
+      onOpenSettings={openSettings}
+      onReviewCampaign={() => reviewCampaign('victory')}
+      onReturnToTitle={returnToTitle}
+    />}
+
+    {mode === 'defeat' && <CampaignDefeatScreen
+      muted={settings.muted}
+      onMutedChange={setMuted}
+      onOpenSettings={openSettings}
+      canReload={saveInspection.ok}
+      onReloadSave={reloadLastSave}
+      onNewCampaign={startNewCampaignFromDefeat}
+      onReturnToTitle={returnToTitle}
+    />}
+
+    {showSettings && <GlobalSettingsPanel
+      settings={settings}
+      onChange={applySettings}
+      onClose={() => setShowSettings(false)}
+      onPreviewVictory={() => previewEnding('victory')}
+      onPreviewDefeat={() => previewEnding('defeat')}
+    />}
   </>;
 }
