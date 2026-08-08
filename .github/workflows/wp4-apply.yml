@@ -43,7 +43,18 @@ jobs:
         run: npm ci
 
       - name: Run regression suite
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > wp4-test.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "=== WP4 REGRESSION FAILURE CONTEXT ==="
+            grep -n -A20 -B8 -E "not ok|AssertionError|ERR_ASSERTION|error TS|failed|FAIL" wp4-test.log | tail -n 240 || true
+            echo "=== END FAILURE CONTEXT ==="
+            exit "$status"
+          fi
+          tail -n 35 wp4-test.log
 
       - name: Build game
         run: npm run build
