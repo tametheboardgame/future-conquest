@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+
+const path = 'scripts/wp4-apply.mjs';
+const source = fs.readFileSync(path, 'utf8');
+const original = `function replaceOnce(path, search, replacement) {\n  const source = fs.readFileSync(path, 'utf8');\n  if (!source.includes(search)) throw new Error(\`Expected source block not found in \${path}: \${search.slice(0, 140)}\`);\n  fs.writeFileSync(path, source.replace(search, replacement));\n}`;
+const replacement = `function replaceOnce(path, search, replacement) {\n  const source = fs.readFileSync(path, 'utf8');\n  if (source.includes(search)) {\n    fs.writeFileSync(path, source.replace(search, replacement));\n    return;\n  }\n\n  let startMarker;\n  let endMarker;\n  if (path === 'src/game/engine.ts' && search.startsWith('export function setGarrison')) {\n    startMarker = 'export function setGarrison';\n    endMarker = '\\n\\nexport function enemyStrengthAt';\n  } else if (path === 'src/App.tsx' && search.startsWith('    {threatenedTerritories.length > 0')) {\n    startMarker = '    {threatenedTerritories.length > 0';\n    endMarker = '\\n\\n    {state.status !==';\n  } else if (path === 'src/components/MapView.tsx' && search.startsWith('        {layers.enemyUnits && enemyMovementOrders.map')) {\n    startMarker = '        {layers.enemyUnits && enemyMovementOrders.map';\n    endMarker = '\\n\\n        {showTerritoryLabels';\n  }\n\n  if (!startMarker || !endMarker) throw new Error(\`Expected source block not found in \${path}: \${search.slice(0, 140)}\`);\n  const start = source.indexOf(startMarker);\n  const end = source.indexOf(endMarker, start);\n  if (start < 0 || end < 0) throw new Error(\`Marker replacement failed in \${path}: \${startMarker}\`);\n  fs.writeFileSync(path, source.slice(0, start) + replacement + source.slice(end));\n}`;
+
+if (!source.includes(original)) throw new Error('WP4 replaceOnce helper was not found.');
+fs.writeFileSync(path, source.replace(original, replacement));
+console.log('WP4 integration patcher repaired.');
