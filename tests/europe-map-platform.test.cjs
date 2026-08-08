@@ -98,12 +98,14 @@ test('map overlays retain a stable screen size and reveal detail as the player z
   const css = read('src/europe-map.css');
 
   assert.match(source, /const overlayScale = view\.width \/ MAP_WIDTH \* overlayBoost/);
-  assert.match(source, /layers\.countries && <g className="future-theatre-labels"/);
+  assert.match(source, /layers\.countries && <g className=\{`future-theatre-labels \$\{zoomPercent >= 220 \? 'faded' : ''\}`\}/);
   assert.match(source, /country-name-label/);
   assert.match(source, /showTerritoryLabels = zoomPercent >= 135/);
   assert.match(source, /showTerritoryNames = zoomPercent >= 285/);
+  assert.match(source, /showMarkerDetails = zoomPercent >= 220/);
+  assert.match(source, /showMarkerStatus = zoomPercent >= 600/);
   assert.match(source, /scale\(\$\{overlayScale\}\)/);
-  assert.match(source, /24 \* overlayScale/);
+  assert.match(source, /29 \* overlayScale/);
   assert.match(source, /const offset = .* \* 4 \* overlayScale/);
   assert.match(source, /territory-name-label/);
   assert.match(source, /territory-hit-target/);
