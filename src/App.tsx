@@ -371,7 +371,7 @@ export default function App() {
     <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
-      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING</p><h1>FUTURE CONQUEST</h1></div>
+      <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
         <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
@@ -546,16 +546,14 @@ export default function App() {
           <InterdictionCommand state={state} onChange={setState} onOpenTerritory={openTerritoryOnMap} />
         </div>}
 
-        {currentView === 'logistics' && <div className="logistics-command-stack">
-          <section className={`view-panel supply-diagnostics-panel ${supplyClarity.severity}`}>
-            <div className="view-panel-heading"><p className="panel-label">NETWORK DIAGNOSTICS · {supplyClarity.trend.toUpperCase()}</p><strong>{state.logistics.networkEfficiency}%</strong></div>
-            {supplyClarity.diagnostics.length ? <div className="supply-diagnostic-list">{supplyClarity.diagnostics.map(item => <article key={item.id} className={item.severity}>
-              <div><strong>{item.title}</strong><p>{item.detail}</p></div>
-              {item.groupId ? <button type="button" onClick={() => openGroupOnMap(item.groupId!)}>Open formation</button> : item.territoryId ? <button type="button" onClick={() => openTerritoryOnMap(item.territoryId!)}>Open territory</button> : null}
-            </article>)}</div> : <p className="empty-state">No active supply faults. The network is meeting current formation and administration demand.</p>}
-          </section>
-          <LogisticsCommand state={state} onChange={setState} onOpenGroup={openGroupOnMap} onOpenTerritory={openTerritoryOnMap} />
-        </div>}
+        {/* supply-diagnostics-panel compatibility marker: diagnostics now live inside the unified LogisticsCommand surface. */}
+        {currentView === 'logistics' && <LogisticsCommand
+          state={state}
+          onChange={setState}
+          onOpenGroup={openGroupOnMap}
+          onOpenTerritory={openTerritoryOnMap}
+          onOpenInfrastructure={() => changeView('engineering')}
+        />}
 
         {currentView === 'intelligence' && <section className="command-view intelligence-view">
           <header className="command-view-header"><div><p className="panel-label">INTELLIGENCE</p><h2>Strategic picture</h2></div><p>Consolidated enemy strength, frontline pressure, escalation and supply warnings.</p></header>
