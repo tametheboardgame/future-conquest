@@ -1,0 +1,354 @@
+/* WP10 — command-map marker and zoom hierarchy.
+   Operational information must win the visual hierarchy; network detail remains
+   available through Layers without competing with formations and threats by default. */
+
+.europe-map .future-theatre-labels {
+  transition: opacity .18s ease;
+}
+
+.europe-map.map-detail-local .future-theatre-labels,
+.europe-map.map-detail-tactical .future-theatre-labels {
+  opacity: .22;
+}
+
+.europe-map.map-detail-tactical .future-theatre-labels .country-name-label.compact {
+  opacity: 0;
+}
+
+.europe-map .territory-centre-label {
+  fill: #f2fbfc;
+  stroke: #061018;
+  stroke-width: 4.2px;
+  paint-order: stroke;
+  font: 700 15px Barlow Condensed, sans-serif;
+  letter-spacing: .02em;
+}
+
+.europe-map .territory-name-label {
+  fill: #a9bec6;
+  stroke: #061018;
+  stroke-width: 3.4px;
+  paint-order: stroke;
+  font: 600 10px IBM Plex Mono, monospace;
+  letter-spacing: .025em;
+}
+
+.europe-map .map-label.selected-label .territory-centre-label {
+  fill: #ffffff;
+  stroke: #0b6d68;
+  stroke-width: 5px;
+}
+
+.europe-map .order-label {
+  fill: #e9fffb;
+  stroke: #07131c;
+  stroke-width: 4px;
+  paint-order: stroke;
+  font: 800 11px IBM Plex Mono, monospace;
+  letter-spacing: .06em;
+}
+
+.europe-map .order-label.enemy {
+  fill: #ffc5ad;
+}
+
+.europe-map .map-label .isolated-label {
+  fill: #ffd986;
+  stroke: #07131c;
+  stroke-width: 3.5px;
+  paint-order: stroke;
+  font: 800 9px IBM Plex Mono, monospace;
+  letter-spacing: .06em;
+}
+
+/* Friendly formations: larger, stable screen-space command counters with a clear
+   selected state. Strength is shown only once MapView enters a detailed zoom. */
+.europe-map .task-group-marker {
+  cursor: pointer;
+  filter: drop-shadow(0 4px 5px rgba(0,0,0,.62));
+}
+
+.europe-map .task-group-marker rect {
+  fill: #0d454a;
+  stroke: #99fff2;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .task-group-marker:hover rect,
+.europe-map .task-group-marker:focus-visible rect {
+  fill: #17645f;
+  stroke: #ffffff;
+  stroke-width: 2.8px;
+}
+
+.europe-map .task-group-marker.selected {
+  filter: drop-shadow(0 0 8px rgba(130,255,241,.92)) drop-shadow(0 5px 6px rgba(0,0,0,.7));
+}
+
+.europe-map .task-group-marker.selected rect {
+  fill: #19776d;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.europe-map .task-group-marker.garrison rect {
+  fill: #3b5137;
+  stroke: #d6ec75;
+}
+
+.europe-map .task-group-marker.attacking rect {
+  fill: #6f332d;
+  stroke: #ff9e81;
+}
+
+.europe-map .task-group-marker.moving rect {
+  stroke-dasharray: 4 2;
+}
+
+.europe-map .task-group-marker.recovering rect,
+.europe-map .task-group-marker.engineering rect,
+.europe-map .task-group-marker.interdicting rect {
+  fill: #323c47;
+  stroke: #b2c4cc;
+}
+
+.europe-map .task-group-marker .marker-id {
+  fill: #ffffff;
+  stroke: #07131c;
+  stroke-width: 2.5px;
+  paint-order: stroke;
+  font: 800 12px IBM Plex Mono, monospace;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.europe-map .task-group-marker .marker-strength,
+.europe-map .task-group-marker .marker-status {
+  fill: #bffbf4;
+  stroke: #07131c;
+  stroke-width: 2.4px;
+  paint-order: stroke;
+  font: 700 7.5px IBM Plex Mono, monospace;
+  letter-spacing: .02em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.europe-map .task-group-marker .marker-status {
+  fill: #d7e3e7;
+  font-size: 6.5px;
+  letter-spacing: .04em;
+}
+
+/* Enemy contacts deliberately retain intelligence uncertainty. Their assessed
+   strength label uses the same player-visible range already shown in Intelligence. */
+.europe-map .enemy-contact-marker {
+  cursor: pointer;
+  filter: drop-shadow(0 4px 5px rgba(0,0,0,.7));
+}
+
+.europe-map .enemy-contact-marker .contact-body {
+  fill: #7d2932;
+  stroke: #ffd2c7;
+  stroke-width: 2.2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .enemy-contact-marker.estimated .contact-body {
+  fill: #745023;
+  stroke: #ffd58a;
+  stroke-dasharray: 4 2;
+}
+
+.europe-map .enemy-contact-marker.activity .contact-body {
+  fill: #554065;
+  stroke: #d8b4ff;
+  stroke-dasharray: 2 2;
+}
+
+.europe-map .enemy-contact-marker.stale {
+  opacity: .64;
+}
+
+.europe-map .enemy-contact-marker:hover .contact-body,
+.europe-map .enemy-contact-marker:focus-visible .contact-body {
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.europe-map .enemy-contact-marker > text:not(.contact-confidence):not(.contact-strength) {
+  fill: #ffffff;
+  stroke: #07131c;
+  stroke-width: 2.5px;
+  paint-order: stroke;
+  font: 900 11px IBM Plex Mono, monospace;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.europe-map .enemy-contact-marker .contact-confidence,
+.europe-map .enemy-contact-marker .contact-strength {
+  fill: #ffe9e3;
+  stroke: #07131c;
+  stroke-width: 2.6px;
+  paint-order: stroke;
+  font: 800 7.5px IBM Plex Mono, monospace;
+  letter-spacing: .03em;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.europe-map .enemy-contact-marker .contact-strength {
+  fill: #ffd8a3;
+  font-size: 8px;
+}
+
+/* Threat markers outrank ordinary contacts. */
+.europe-map .threat-marker {
+  cursor: pointer;
+  filter: drop-shadow(0 0 6px rgba(255,74,81,.68));
+}
+
+.europe-map .threat-marker circle {
+  fill: rgba(116,24,31,.82);
+  stroke: #ff6570;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .threat-marker text {
+  fill: #ffffff;
+  stroke: #07131c;
+  stroke-width: 2px;
+  paint-order: stroke;
+  font: 900 11px IBM Plex Mono, monospace;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.europe-map .threat-marker .threat-timing {
+  fill: #ffc2b5;
+  font-size: 7px;
+  letter-spacing: .03em;
+}
+
+.europe-map .threat-marker.under-attack circle {
+  fill: rgba(151,20,31,.92);
+  stroke: #ffffff;
+}
+
+.europe-map .threat-marker.recent-combat {
+  opacity: .8;
+  filter: drop-shadow(0 0 4px rgba(224,91,103,.5));
+}
+
+/* Operation markers read as operation markers rather than another anonymous
+   count badge. */
+.europe-map .operation-marker rect {
+  fill: rgba(73,43,31,.95);
+  stroke: #ffb77a;
+  stroke-width: 1.8px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .operation-marker text {
+  fill: #fff4e8;
+  stroke: #07131c;
+  stroke-width: 2px;
+  paint-order: stroke;
+  font: 800 9px IBM Plex Mono, monospace;
+  letter-spacing: .03em;
+  text-anchor: middle;
+}
+
+.europe-map .operation-route {
+  stroke-width: 2.2px;
+  opacity: .9;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .enemy-concentration-route {
+  opacity: .9;
+}
+
+/* Network information becomes secondary when it is deliberately enabled. */
+.europe-map .strategic-route {
+  opacity: .48;
+}
+
+.europe-map .strategic-route.supply-critical,
+.europe-map .supply-route-flow.selected-path,
+.europe-map .supply-route-flow.bottleneck,
+.europe-map .supply-route-flow.broken {
+  opacity: 1;
+}
+
+.europe-map .strategic-node .node-marker {
+  stroke-width: 1.8px;
+}
+
+.europe-map .strategic-node .node-symbol {
+  font-size: 7px;
+}
+
+.europe-map .strategic-node .node-name {
+  stroke-width: 3.4px;
+  font-size: 9px;
+}
+
+.europe-map .strategic-node.capital .node-name {
+  font-size: 11px;
+}
+
+@media (min-width: 901px) and (max-width: 1450px) {
+  .europe-map .territory-centre-label {
+    font-size: 16px;
+  }
+
+  .europe-map .task-group-marker .marker-id,
+  .europe-map .enemy-contact-marker > text:not(.contact-confidence):not(.contact-strength) {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 900px) {
+  .europe-map .territory-centre-label {
+    font-size: 15px;
+  }
+
+  .europe-map .territory-name-label {
+    font-size: 10px;
+  }
+
+  .europe-map .order-label {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 540px) {
+  .europe-map .territory-centre-label {
+    font-size: 14px;
+    stroke-width: 4px;
+  }
+
+  .europe-map .territory-name-label {
+    font-size: 10px;
+  }
+
+  .europe-map .order-label {
+    font-size: 11px;
+  }
+
+  .europe-map .task-group-marker .marker-id,
+  .europe-map .enemy-contact-marker > text:not(.contact-confidence):not(.contact-strength) {
+    font-size: 11px;
+  }
+
+  .europe-map .task-group-marker .marker-strength,
+  .europe-map .enemy-contact-marker .contact-confidence,
+  .europe-map .enemy-contact-marker .contact-strength,
+  .europe-map .threat-marker .threat-timing {
+    font-size: 7px;
+  }
+}

@@ -24,6 +24,7 @@ import './infrastructure-command.css';
 import './logistics-priorities.css';
 import './defence.css';
 import './combat-reports.css';
+import './map-readability.css';
 import './responsive-command-fit.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 
