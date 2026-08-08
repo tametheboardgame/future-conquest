@@ -13,7 +13,7 @@ export interface TerritoryResourceProfile {
 }
 
 // Strategic abstractions for the current 15-territory playable slice.
-// Ratings express relative campaign usefulness rather than literal economic output.
+// Ratings are relative campaign values, not literal contemporary economic statistics.
 export const TERRITORY_RESOURCES: Record<string, TerritoryResourceProfile> = {
   'GB-04': { food: 4, industry: 5, energy: 3, transport: 5, medical: 5, militaryStores: 4 },
   'FR-01': { food: 5, industry: 2, energy: 3, transport: 3, medical: 3, militaryStores: 2 },
