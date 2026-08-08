@@ -38,7 +38,7 @@ export function StrategicCollapseDecision({ state, onContinue, onSurrender }: Pr
       <div className="strategic-collapse-options">
         <article>
           <h3>Continue anyway</h3>
-          <p>The campaign remains active with the current losses, pressure and logistics state intact. This crisis episode will not ask again unless you first recover fully and later collapse again.</p>
+          <p>The campaign remains active with the current losses, pressure and logistics state intact. This crisis episode will not ask again unless you first recover fully, then later collapse again.</p>
         </article>
         <article>
           <h3>Surrender campaign</h3>
