@@ -100,18 +100,26 @@ test('coordinated counterattack resolution uses supporting formations', () => {
   assert.equal(next.enemyFormations[adjacent[1].id].location, target);
 });
 
-test('operational crisis rises only under several simultaneous failures and can recover', () => {
+test('operational crisis requires depleted carried stocks as well as network failure and can recover', () => {
   let state = newGame(305, 'standard');
   exposeFront(state);
   state.enemyStrategy.pressure = 90;
   state.logistics.networkEfficiency = 20;
   state.logistics.starvedFormationIds = Object.keys(state.taskGroups);
   for (const group of Object.values(state.taskGroups)) group.personnel = 600;
+
+  const buffered = __testOnly.updateOperationalCrisis(state);
+  assert.equal(buffered.enemyStrategy.operationalCrisisTurns, 0, 'healthy carried stocks should buffer a temporary network collapse');
+
+  for (const group of Object.values(state.taskGroups)) group.supply = 10;
   const crisis = __testOnly.updateOperationalCrisis(state);
   assert.equal(crisis.enemyStrategy.operationalCrisisTurns, 1);
   crisis.logistics.networkEfficiency = 100;
   crisis.logistics.starvedFormationIds = [];
-  for (const group of Object.values(crisis.taskGroups)) group.personnel = 2500;
+  for (const group of Object.values(crisis.taskGroups)) {
+    group.personnel = 2500;
+    group.supply = 100;
+  }
   const recovered = __testOnly.updateOperationalCrisis(crisis);
   assert.equal(recovered.enemyStrategy.operationalCrisisTurns, 0);
 });

@@ -319,7 +319,7 @@ export function getSupplyClarity(state: GameState): SupplyClarity {
       id: `formation-${group.id}`,
       severity: allocation?.condition === 'cut-off' || allocation?.condition === 'critical' ? 'critical' : 'danger',
       title: `${group.name} is ${allocation?.condition ?? 'cut off'}`,
-      detail: `${TERRITORIES[group.location].centre}: ${allocation?.delivered ?? 0}/${allocation?.demand ?? 0} daily throughput delivered.`,
+      detail: `${TERRITORIES[group.location].centre}: ${allocation?.delivered ?? 0}/${allocation?.demand ?? 0} daily throughput delivered; carried stock ${Math.round(group.supply)}%.`,
       groupId: group.id,
       territoryId: group.location
     });
@@ -328,9 +328,9 @@ export function getSupplyClarity(state: GameState): SupplyClarity {
   for (const territoryId of isolated.slice(0, 4)) {
     diagnostics.push({
       id: `territory-${territoryId}`,
-      severity: territoryId === state.portalTerritory ? 'critical' : 'danger',
-      title: `${TERRITORIES[territoryId].centre} is disconnected`,
-      detail: 'No traversable route currently connects this controlled territory to the portal supply network.',
+      severity: 'danger',
+      title: `${TERRITORIES[territoryId].centre} is disconnected from the wider network`,
+      detail: 'No traversable route currently connects this territory to another controlled supply area. Local sources and carried formation stocks may continue to sustain forces temporarily.',
       territoryId
     });
   }
@@ -364,8 +364,8 @@ export function getSupplyClarity(state: GameState): SupplyClarity {
     diagnostics.push({
       id: 'source-capacity',
       severity: state.logistics.sourceUsed >= state.logistics.sourceCapacity ? 'danger' : 'warning',
-      title: 'Portal source capacity is nearly exhausted',
-      detail: `${state.logistics.sourceUsed}/${state.logistics.sourceCapacity} source throughput is committed.`
+      title: 'Territorial source capacity is nearly exhausted',
+      detail: `${state.logistics.sourceUsed}/${state.logistics.sourceCapacity} locally generated source throughput is committed across controlled territory.`
     });
   }
 

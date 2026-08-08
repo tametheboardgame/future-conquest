@@ -15,6 +15,7 @@ import {
 import { completeEnemyOrder, createStrategicState, getPlannedCounterattack, resolveStrategicResponse, upgradeStrategicState } from './strategic-response';
 import { crisisLimitForDifficulty, resolveEnemyStrategy } from './enemy-strategy';
 import { createOperationalAwarenessState, createTutorialState, progressTutorial } from './operational-clarity';
+import { territoryMedicalCapability, territoryRepairCapability } from './territory-resources';
 import type {
   Difficulty,
   EnemyFormation,
@@ -546,37 +547,38 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
     const condition = allocation?.condition ?? 'cut-off';
     const deliveryRatio = (allocation?.ratio ?? 0) / 100;
     const stockChange = condition === 'sustained'
-      ? 7
+      ? 4
       : condition === 'strained'
         ? 1
         : condition === 'undersupplied'
-          ? -7
+          ? -5
           : condition === 'critical'
-            ? -13
-            : -19;
+            ? -11
+            : -17;
     group.supply = clamp(group.supply + stockChange, 0, 100);
+    const stockMorale = group.supply <= 0
+      ? -4
+      : group.supply < 20
+        ? -2
+        : group.supply < 40
+          ? -1
+          : 0;
     group.morale = clamp(
-      group.morale + (
-        (condition === 'sustained' || condition === 'strained') && group.status !== 'attacking'
-          ? 1
-          : condition === 'critical'
-            ? -2
-            : condition === 'cut-off'
-              ? -4
-              : 0
-      ),
+      group.morale + ((condition === 'sustained' || condition === 'strained') && group.status !== 'attacking' ? 1 : stockMorale),
       5,
       100
     );
     if (condition === 'undersupplied' || condition === 'critical' || condition === 'cut-off') stressedGroups.push(group.name);
-    if (condition === 'cut-off' && group.supply < 20) {
-      const attrition = Math.max(2, Math.round(group.personnel * 0.0025));
+    if ((condition === 'critical' || condition === 'cut-off') && group.supply <= 0) {
+      const attritionRate = condition === 'cut-off' ? 0.0025 : 0.0015;
+      const attrition = Math.max(2, Math.round(group.personnel * attritionRate));
       group.personnel = Math.max(0, group.personnel - attrition);
-      next = addEvent(next, `${group.name} is cut off in ${TERRITORIES[group.location].centre}; ${attrition} personnel lost to attrition and desertion.`, 'danger');
+      next = addEvent(next, `${group.name} has exhausted carried stocks in ${TERRITORIES[group.location].centre} and local replenishment is inadequate; ${attrition} personnel lost to attrition and desertion.`, 'danger');
     }
-    if (group.status === 'recovering' && deliveryRatio >= 0.65) group.status = 'ready';
+    if (group.status === 'recovering' && (deliveryRatio >= 0.65 || group.supply >= 65)) group.status = 'ready';
+    const repairCapability = territoryRepairCapability(next, group.location);
     const repair = deliveryRatio >= 0.4
-      ? Math.min(group.damagedArmour, Math.max(1, Math.round((deliveryRatio * 10 + TERRITORIES[group.location].supply * 2.5) * difficultyRules[next.difficulty].recovery)))
+      ? Math.min(group.damagedArmour, Math.max(1, Math.round((deliveryRatio * 9 + TERRITORIES[group.location].supply * 1.5) * repairCapability * difficultyRules[next.difficulty].recovery)))
       : 0;
     group.damagedArmour -= repair;
     group.functionalArmour += repair;
@@ -586,11 +588,12 @@ function resolveOccupationAndLogistics(state: GameState): GameState {
     const names = next.logistics.bottleneckRouteIds.slice(0, 3).map(id => STRATEGIC_ROUTE_BY_ID[id]?.name ?? id).join(', ');
     next = addEvent(next, `Supply throughput is constrained by ${names}. Network delivery is ${next.logistics.networkEfficiency}% of demand.`, next.logistics.networkEfficiency < 55 ? 'danger' : 'warning');
   } else if (stressedGroups.length) {
-    next = addEvent(next, `${stressedGroups.join(', ')} are isolated from adequate supply and received less than their daily logistics demand.`, 'warning');
+    next = addEvent(next, `${stressedGroups.join(', ')} received less than their daily logistics requirement and are drawing on carried stocks or local sources.`, 'warning');
   }
 
   const administered = Object.values(next.territories).filter(territory => territory.occupation === 'administered').length;
-  const recovery = Math.min(next.woundedPool, Math.round((18 + administered * 7 + next.supply * 0.22) * difficultyRules[next.difficulty].recovery));
+  const medicalCapacity = Object.keys(next.territories).reduce((sum, id) => sum + territoryMedicalCapability(next, id), 0);
+  const recovery = Math.min(next.woundedPool, Math.round((12 + administered * 4 + medicalCapacity * 2.2 + next.supply * 0.12) * difficultyRules[next.difficulty].recovery));
   if (recovery > 0) {
     const candidates = Object.values(next.taskGroups).filter(group => (next.logistics.formationAllocations[group.id]?.ratio ?? 0) >= 65 && group.personnel < group.maxPersonnel);
     candidates.sort((a, b) => a.personnel / a.maxPersonnel - b.personnel / b.maxPersonnel);
@@ -760,7 +763,13 @@ export function endTurn(state: GameState): GameState {
   const unsecured = Object.values(next.territories).filter(territory => territory.occupation === 'unsecured').length;
   const personnel = Object.values(next.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
   if (controlled === SLICE_IDS.length && unsecured === 0) next = addEvent({ ...next, status: 'victory' }, 'All fifteen territories are occupied and under future control. Regional victory achieved.', 'good');
-  else if (personnel < 1200 || next.territories[next.portalTerritory].controller !== 'player' || next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)) next = addEvent({ ...next, status: 'defeat' }, next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty) ? 'The expedition has remained in operational crisis too long. Command cohesion and portal access can no longer be sustained.' : 'The expedition has lost operational cohesion or access to the portal.', 'danger');
+  else if (personnel < 1200 || next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)) next = addEvent(
+    { ...next, status: 'defeat' },
+    next.enemyStrategy.operationalCrisisTurns >= crisisLimitForDifficulty(next.difficulty)
+      ? 'The expedition has remained in operational crisis too long. Command cohesion can no longer be sustained.'
+      : 'The expedition has fallen below the minimum force needed to continue organised operations.',
+    'danger'
+  );
   return next;
 }
 

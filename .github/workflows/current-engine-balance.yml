@@ -6,54 +6,39 @@ on:
       - 'src/game/**'
       - 'scripts/simulate-current-engine-balance.mjs'
       - 'scripts/trace-current-engine-balance.mjs'
-      - 'scripts/wp2-apply.mjs'
-      - 'scripts/wp2-fix-tests.mjs'
-      - 'scripts/wp2-refine.mjs'
-      - 'scripts/wp2-finalise-tests.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'
-      - 'tests/wp2-logistics-resilience.test.cjs'
-      - 'tests/engine.test.cjs'
-      - 'tests/enemy-strategy-viii-c.test.cjs'
-      - 'tests/logistics-priorities-viii-b4d.test.cjs'
-      - 'tests/supply-throughput-viii-b3.test.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/current-engine-balance.yml'
   workflow_dispatch:
+    inputs:
+      runs_per_start:
+        description: 'Seed variants per portal start, difficulty and doctrine'
+        required: true
+        default: '20'
+      max_turns:
+        description: 'Maximum campaign day before timeout'
+        required: true
+        default: '120'
+      seed_offset:
+        description: 'Deterministic seed block offset'
+        required: true
+        default: '1'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   balance:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      FC_BALANCE_RUNS_PER_START: '4'
-      FC_BALANCE_MAX_TURNS: '120'
-      FC_BALANCE_SEED_OFFSET: '1'
+      FC_BALANCE_RUNS_PER_START: ${{ inputs.runs_per_start || '4' }}
+      FC_BALANCE_MAX_TURNS: ${{ inputs.max_turns || '120' }}
+      FC_BALANCE_SEED_OFFSET: ${{ inputs.seed_offset || '1' }}
     steps:
-      - name: Checkout WP2 branch
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      - name: Restore and align affected regression tests
-        if: hashFiles('scripts/wp2-fix-tests.mjs') != ''
-        run: node scripts/wp2-fix-tests.mjs
-
-      - name: Apply WP2 logistics model
-        if: hashFiles('scripts/wp2-apply.mjs') != ''
-        run: node scripts/wp2-apply.mjs
-
-      - name: Refine shortage and crisis semantics
-        if: hashFiles('scripts/wp2-refine.mjs') != ''
-        run: node scripts/wp2-refine.mjs
-
-      - name: Finalise stock-aware regression semantics
-        if: hashFiles('scripts/wp2-finalise-tests.mjs') != ''
-        run: node scripts/wp2-finalise-tests.mjs
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -67,25 +52,11 @@ jobs:
       - name: Run regression suite
         run: npm test
 
-      - name: Build game
-        run: npm run build
-
       - name: Run current-engine balance simulation
         run: npm run simulate:current-balance
 
       - name: Trace representative stalled campaigns
         run: node scripts/trace-current-engine-balance.mjs
-
-      - name: Commit validated WP2 implementation
-        if: github.event_name == 'pull_request' && github.head_ref == 'agent/wp2-logistics-defeat-model'
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "WP2: rebuild logistics around territorial supply"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
 
       - name: Publish balance summary
         if: always()

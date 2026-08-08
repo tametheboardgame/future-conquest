@@ -35,8 +35,10 @@ test('new campaigns calculate a finite version 8 logistics network', () => {
   assert.ok(state.logistics.totalDemand > 0);
   assert.equal(state.supply, state.logistics.networkEfficiency);
   for (const group of Object.values(state.taskGroups)) {
-    assert.ok(state.logistics.formationAllocations[group.id]);
-    assert.equal(state.logistics.formationAllocations[group.id].condition, 'sustained');
+    const allocation = state.logistics.formationAllocations[group.id];
+    assert.ok(allocation);
+    assert.ok(['sustained', 'strained', 'undersupplied'].includes(allocation.condition));
+    assert.equal(group.supply, 100, 'the expedition begins with full carried operational stocks');
   }
 });
 
@@ -103,11 +105,15 @@ test('supply condition thresholds are stable and explicit', () => {
 
 test('daily logistics consequences use delivered demand rather than connectivity alone', () => {
   let state = controlledCorridorState('FR-05', ['FR-05', 'CH-02']);
+  state.territories['CH-02'].occupation = 'unsecured';
+  state.territories['CH-02'].legitimacy = 0;
+  state.territories['CH-02'].resistance = 100;
   for (const group of Object.values(state.taskGroups)) {
     group.location = 'CH-02';
     group.supply = 45;
   }
   state = refreshSupplyNetwork(state);
+  assert.ok(state.logistics.formationAllocations['TG-1'].ratio < 65, 'scenario must be genuinely undersupplied');
   const before = state.taskGroups['TG-1'].supply;
   state = __testOnly.resolveOccupationAndLogistics(state);
   assert.ok(state.taskGroups['TG-1'].supply < before);

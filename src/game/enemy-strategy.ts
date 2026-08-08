@@ -1,6 +1,7 @@
 import { SLICE_IDS, TERRITORIES } from './data';
 import { applyInfrastructureDamage } from './infrastructure-disruption';
 import { STRATEGIC_ROUTES } from './strategic-network-data';
+import { territorySupplySourceCapacity } from './territory-resources';
 import type {
   Difficulty,
   EnemyDoctrine,
@@ -176,7 +177,10 @@ function routeThreatScore(state: GameState, routeId: string, focusTerritory?: st
   if (!playerEndpoints) return -Infinity;
   const flow = state.logistics.routeFlows[route.id];
   const focusBonus = focusTerritory && (route.fromTerritoryId === focusTerritory || route.toTerritoryId === focusTerritory) ? 28 : 0;
-  const portalBonus = route.fromTerritoryId === state.portalTerritory || route.toTerritoryId === state.portalTerritory ? 34 : 0;
+  const sourceBonus = Math.max(
+    territorySupplySourceCapacity(state, route.fromTerritoryId),
+    territorySupplySourceCapacity(state, route.toTerritoryId)
+  ) * 0.45;
   const bottleneckBonus = state.logistics.bottleneckRouteIds.includes(route.id) ? 24 : 0;
   const frontierBonus = [route.fromTerritoryId, route.toTerritoryId].some(id => (
     state.territories[id]?.controller === 'player'
@@ -186,7 +190,7 @@ function routeThreatScore(state: GameState, routeId: string, focusTerritory?: st
     + (flow?.utilisation ?? 0) * 0.45
     + route.supplyCapacity * 0.65
     + focusBonus
-    + portalBonus
+    + sourceBonus
     + bottleneckBonus
     + frontierBonus
     - (100 - routeState.condition) * 0.2;
@@ -209,7 +213,7 @@ function focusScore(state: GameState, territoryId: string): number {
   return enemyPower * 0.0016
     - defenders * 0.0013
     + TERRITORIES[territoryId].supply * 8
-    + (territoryId === state.portalTerritory ? 36 : 0)
+    + territorySupplySourceCapacity(state, territoryId) * 0.55
     + (territory.occupation === 'unsecured' ? 25 : territory.occupation === 'contested' ? 14 : 0)
     + Math.max(0, 70 - (allocation?.ratio ?? 100)) * 0.55
     + territory.resistance * 0.18;
@@ -244,7 +248,7 @@ export function assessEnemyStrategy(state: GameState): EnemyStrategyState {
   const focusTerritory = selectFocusTerritory(state);
   const pressure = pressureFor(state);
   const controlled = Object.values(state.territories).filter(territory => territory.controller === 'player').length;
-  const portalFrontline = TERRITORIES[state.portalTerritory].neighbours.some(id => state.territories[id]?.controller === 'enemy');
+  const criticalSourceFrontline = frontlinePlayerTerritories(state).some(id => territorySupplySourceCapacity(state, id) >= 28);
   const networkThreat = Math.max(0, 70 - state.logistics.networkEfficiency)
     + state.logistics.bottleneckRouteIds.length * 8
     + state.logistics.starvedFormationIds.length * 10;
@@ -254,7 +258,7 @@ export function assessEnemyStrategy(state: GameState): EnemyStrategyState {
   const focusDefence = focusTerritory ? playerDefenceAt(state, focusTerritory) : Infinity;
 
   let doctrine: EnemyDoctrine = 'containment';
-  if (pressure >= 79 || (portalFrontline && state.escalationStage >= 4)) doctrine = 'strategic-emergency';
+  if (pressure >= 79 || (criticalSourceFrontline && state.escalationStage >= 4)) doctrine = 'strategic-emergency';
   else if (state.escalationStage >= 2 && networkThreat >= 38) doctrine = 'logistics-war';
   else if (state.escalationStage >= 2 && focusTerritory && adjacentPower >= focusDefence * (0.88 - difficultyAggression[state.difficulty])) doctrine = 'counteroffensive';
 
@@ -449,11 +453,15 @@ function updateOperationalCrisis(state: GameState): GameState {
   const strategy = normaliseEnemyStrategyState(state.enemyStrategy, state.difficulty);
   const activePersonnel = Object.values(state.taskGroups).reduce((sum, group) => sum + group.personnel, 0);
   const activeGroups = Object.values(state.taskGroups).filter(group => group.personnel > 0).length;
-  const portalFrontline = TERRITORIES[state.portalTerritory].neighbours.some(id => state.territories[id]?.controller === 'enemy');
+  const activeFormations = Object.values(state.taskGroups).filter(group => group.personnel > 0);
+  const averageSupplyStock = activeFormations.length
+    ? activeFormations.reduce((sum, group) => sum + group.supply, 0) / activeFormations.length
+    : 0;
+  const criticalSourceFrontline = frontlinePlayerTerritories(state).some(id => territorySupplySourceCapacity(state, id) >= 28);
   const indicators = [
-    portalFrontline,
-    state.logistics.networkEfficiency < 45,
-    state.logistics.starvedFormationIds.length >= Math.max(2, Math.ceil(activeGroups / 2)),
+    criticalSourceFrontline,
+    state.logistics.networkEfficiency < 45 && averageSupplyStock < 35,
+    state.logistics.starvedFormationIds.length >= Math.max(2, Math.ceil(activeGroups / 2)) && averageSupplyStock < 50,
     activePersonnel < 4500,
     Object.values(state.territories).filter(territory => territory.controller === 'player').length <= 2 && state.escalationStage >= 4
   ].filter(Boolean).length;
@@ -464,7 +472,7 @@ function updateOperationalCrisis(state: GameState): GameState {
   if (operationalCrisisTurns === strategy.operationalCrisisTurns) return state;
   let next: GameState = { ...state, enemyStrategy: { ...strategy, operationalCrisisTurns } };
   if (operationalCrisisTurns === 1) {
-    next = appendEvent(next, 'Operational crisis declared: the portal, supply network and remaining formations are under simultaneous pressure.', 'danger');
+    next = appendEvent(next, 'Operational crisis declared: key supply areas, the logistics network and remaining formations are under simultaneous pressure.', 'danger');
   } else if (operationalCrisisTurns === 0 && strategy.operationalCrisisTurns > 0) {
     next = appendEvent(next, 'Operational crisis conditions have eased. Campaign cohesion is recovering.', 'good');
   } else if (inCrisis) {
