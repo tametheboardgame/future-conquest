@@ -1,0 +1,35 @@
+name: WP10 apply map patch
+
+on:
+  push:
+    branches:
+      - agent/wp10-map-marker-readability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[wp10-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/wp10-map-marker-readability
+          fetch-depth: 0
+
+      - name: Apply renderer patch
+        run: python3 scripts/wp10-patch-map.py
+
+      - name: Commit patched renderer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/MapView.tsx
+          if git diff --cached --quiet; then
+            echo "No renderer patch required"
+            exit 0
+          fi
+          git commit -m "WP10: improve operational map markers [wp10-patched]"
+          git push origin HEAD:agent/wp10-map-marker-readability
