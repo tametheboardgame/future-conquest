@@ -1,0 +1,35 @@
+name: R2-WP1 tactical map patch
+
+on:
+  push:
+    branches:
+      - agent/r2-wp1-tactical-map-usability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[r2-wp1-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/r2-wp1-tactical-map-usability
+          fetch-depth: 0
+
+      - name: Apply tactical renderer patch
+        run: python3 scripts/r2-wp1-map-patch.py
+
+      - name: Commit renderer changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/MapView.tsx
+          if git diff --cached --quiet; then
+            echo "No renderer patch required"
+            exit 0
+          fi
+          git commit -m "R2-WP1: fix tactical map renderer [r2-wp1-patched]"
+          git push origin HEAD:agent/r2-wp1-tactical-map-usability
