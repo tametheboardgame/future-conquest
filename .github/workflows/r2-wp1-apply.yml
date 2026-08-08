@@ -1,16 +1,17 @@
 name: R2-WP1 tactical map patch
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/r2-wp1-tactical-map-usability
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, '[r2-wp1-patched]') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
