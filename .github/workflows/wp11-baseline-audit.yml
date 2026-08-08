@@ -1,0 +1,86 @@
+name: WP11 baseline audit
+
+on:
+  push:
+    branches:
+      - agent/wp11-balance-playtest-followup
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      FC_BALANCE_RUNS_PER_START: '4'
+      FC_BALANCE_MAX_TURNS: '120'
+      FC_BALANCE_SEED_OFFSET: '1'
+    steps:
+      - name: Checkout WP11 baseline
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Confirm WP1-WP10 regression coverage is present
+        run: |
+          test -f tests/formation-organisation.test.cjs
+          test -f tests/wp2-logistics-resilience.test.cjs
+          test -f tests/wp3-strategic-collapse.test.cjs
+          test -f tests/wp4-defence-threat-clarity.test.cjs
+          test -f tests/wp5-combat-after-action-clarity.test.cjs
+          test -f tests/wp6-logistics-ui-diagnostics.test.cjs
+          test -f tests/wp7-infrastructure-command-clarity.test.cjs
+          test -f tests/wp8-guided-help-remediation.test.cjs
+          test -f tests/wp9-responsive-command-fit.test.cjs
+          test -f tests/wp10-map-readability.test.cjs
+
+      - name: Run full regression suite
+        run: npm test
+
+      - name: Build playable release
+        run: npm run build
+
+      - name: Verify current main is live on GitHub Pages
+        env:
+          DEPLOY_VERIFY_ATTEMPTS: '6'
+          DEPLOY_VERIFY_DELAY_MS: '10000'
+        run: node scripts/verify-pages-deployment.mjs https://tametheboardgame.github.io/future-conquest/ 83bf7fa8fbfa0c402699039f431980c34c29ce92
+
+      - name: Run 720-campaign post-remediation baseline
+        run: npm run simulate:current-balance
+
+      - name: Trace representative campaigns
+        run: node scripts/trace-current-engine-balance.mjs | tee balance-output/representative-traces.txt
+
+      - name: Record release baseline
+        run: |
+          cat > balance-output/wp11-baseline.txt <<'EOF'
+          WP1-WP10 main baseline
+          Main merge SHA: 83bf7fa8fbfa0c402699039f431980c34c29ce92
+          WP1 PR #91
+          WP2 PR #92
+          WP3 PR #93
+          WP4 PR #94
+          WP5 PR #95
+          WP6 PR #99
+          WP7 PR #100
+          WP8 PR #101
+          WP9 PR #102
+          WP10 PR #103
+          EOF
+
+      - name: Upload balance baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp11-post-remediation-baseline
+          path: balance-output/
+          if-no-files-found: error
