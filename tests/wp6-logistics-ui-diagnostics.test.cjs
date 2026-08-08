@@ -18,6 +18,8 @@ test('WP6 Logistics uses one command surface with internal tabs', () => {
   const component = fs.readFileSync('src/components/LogisticsCommand.tsx', 'utf8');
   assert.doesNotMatch(app, /currentView === 'logistics' && <div className="logistics-command-stack"/);
   assert.match(app, /onOpenInfrastructure=\{\(\) => changeView\('engineering'\)\}/);
+  assert.match(app, /supply-diagnostics-panel compatibility marker/);
+  assert.match(component, /Supply priority command/);
   assert.match(component, /type LogisticsTab = 'overview' \| 'formations' \| 'administration' \| 'diagnostics'/);
   assert.match(component, /Review diagnostics/);
   assert.match(component, /Diagnostics are always available/);
