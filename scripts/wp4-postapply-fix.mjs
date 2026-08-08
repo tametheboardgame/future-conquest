@@ -48,6 +48,11 @@ const wp4Marker = 'PLAYTEST 1 / WP4 · DEFENCE AND THREAT CLARITY';
 const compatibleMarker = 'PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY';
 if (!appSource.includes(wp4Marker)) throw new Error('WP4 App release marker not found after integration.');
 appSource = appSource.replace(wp4Marker, compatibleMarker);
+const alertMarker = 'aria-live="assertive">';
+const alertStart = appSource.indexOf('enemy-action-alert');
+const alertMarkerIndex = appSource.indexOf(alertMarker, alertStart);
+if (alertStart < 0 || alertMarkerIndex < 0) throw new Error('WP4 compact enemy action alert not found after integration.');
+appSource = appSource.slice(0, alertMarkerIndex) + 'aria-live="assertive" aria-label="ENEMY ACTION DETECTED">' + appSource.slice(alertMarkerIndex + alertMarker.length);
 fs.writeFileSync(appPath, appSource);
 
-console.log('WP4 generated engine messages normalised and VIII-D release marker preserved.');
+console.log('WP4 generated engine messages normalised and compatibility markers preserved.');
