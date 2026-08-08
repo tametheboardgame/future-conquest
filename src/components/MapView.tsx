@@ -456,7 +456,7 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
       <defs>
         <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker><marker id="enemyMovementArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
+        <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker><marker id="enemyMovementArrow" markerWidth="5" markerHeight="5" refX="4.4" refY="2.5" orient="auto"><path className="enemy-movement-arrowhead" d="M0,0 L5,2.5 L0,5 Z" /></marker>
       </defs>
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="sea" />
       <path d={graticulePath} className="map-graticule" />
@@ -547,7 +547,18 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
           const origin = order.origin ? anchors[order.origin] : undefined;
           const target = anchors[order.target];
           if (!origin || !target) return null;
-          return <line key={`enemy-move-${order.id}`} className="enemy-concentration-route" x1={origin[0]} y1={origin[1]} x2={target[0]} y2={target[1]}><title>{order.summary}</title></line>;
+          const formationCount = 1 + (order.supportFormationIds?.length ?? 0);
+          const operationWidth = 1.25 + Math.min(1.75, Math.max(0, formationCount - 1) * 0.45);
+          const timing = order.status === 'completed' ? 'recently resolved' : order.executeTurn ? `expected day ${order.executeTurn}` : 'movement detected';
+          return <line
+            key={`enemy-move-${order.id}`}
+            className={`enemy-concentration-route ${order.type} ${order.status}`}
+            x1={origin[0]} y1={origin[1]} x2={target[0]} y2={target[1]}
+            style={{ strokeWidth: operationWidth }}
+            vectorEffect="non-scaling-stroke"
+            markerEnd="url(#enemyMovementArrow)"
+            onClick={event => { event.stopPropagation(); selectTerritory(order.target); }}
+          ><title>{order.summary} · {formationCount} formation{formationCount === 1 ? '' : 's'} · {timing}</title></line>;
         })}
 
         {showTerritoryLabels && activePaths.map(({ id }) => {

@@ -1,0 +1,89 @@
+.territory-defence-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-left: 4px solid #78b9d9;
+  background: rgba(10,18,26,.72);
+}
+.territory-defence-section.fortified { border-left-color: #7ed7a5; }
+.territory-defence-section.holding { border-left-color: #78b9d9; }
+.territory-defence-section.exposed { border-left-color: #e7b85c; }
+.territory-defence-section.critical { border-left-color: #ff5d63; box-shadow: inset 0 0 24px rgba(255,70,80,.06); }
+.defence-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.defence-heading h4 { margin: 3px 0 0; font-size: 1.05rem; letter-spacing: .04em; }
+.attack-probability { align-self: center; padding: 5px 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 4px; font-size: .7rem; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
+.attack-probability.low { color: #9bd4b3; }
+.attack-probability.guarded { color: #e0c27c; }
+.attack-probability.high { color: #ff9a67; border-color: rgba(255,154,103,.4); }
+.attack-probability.critical { color: #ff6a70; border-color: rgba(255,90,98,.5); }
+.defence-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.defence-metrics > div { min-width: 0; padding: 8px 9px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
+.defence-metrics span, .defence-metrics strong, .defence-metrics small { display: block; }
+.defence-metrics span { color: #91a4b7; font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; }
+.defence-metrics strong { margin-top: 2px; font-size: .96rem; }
+.defence-metrics small { margin-top: 2px; color: #aebdca; font-size: .68rem; line-height: 1.25; }
+.defence-assessment-copy { padding: 10px 11px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.14); }
+.defence-assessment-copy > strong { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+.defence-assessment-copy ul { margin: 7px 0 0; padding-left: 17px; color: #b9c8d6; font-size: .78rem; line-height: 1.4; }
+.defence-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+.defence-actions button { min-height: 38px; padding: 7px 8px; font-size: .73rem; line-height: 1.15; }
+.defence-subheading { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+.defence-subheading strong { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.defence-subheading span { color: #91a4b7; font-size: .68rem; text-align: right; }
+.defence-garrison-list { display: grid; gap: 6px; }
+.defence-garrison-list article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 8px 9px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.02); }
+.defence-garrison-list article.garrisoned { border-left: 3px solid #7ed7a5; }
+.defence-garrison-list article strong, .defence-garrison-list article span { display: block; }
+.defence-garrison-list article strong { font-size: .78rem; }
+.defence-garrison-list article span { margin-top: 2px; color: #9fb0c0; font-size: .68rem; }
+.defence-garrison-list article button { padding: 5px 7px; font-size: .68rem; white-space: nowrap; }
+.defence-empty { margin: 0; color: #ff8b8b; font-size: .76rem; }
+
+.enemy-action-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 11px;
+  align-items: center;
+  margin: 0 18px 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255,111,94,.38);
+  border-left: 4px solid #ff7968;
+  background: linear-gradient(90deg, rgba(73,25,28,.9), rgba(18,18,23,.94));
+}
+.enemy-action-alert.imminent, .enemy-action-alert.under-attack { border-left-color: #ff4f59; }
+.enemy-action-alert.under-attack { box-shadow: 0 0 18px rgba(255,67,78,.12); }
+.enemy-action-symbol { font-size: 1.05rem; color: #ff8a72; }
+.enemy-action-copy { min-width: 0; }
+.enemy-action-copy strong, .enemy-action-copy span, .enemy-action-copy small { display: block; }
+.enemy-action-copy strong { font-size: .75rem; letter-spacing: .08em; }
+.enemy-action-copy span { margin-top: 2px; color: #e2e8ee; font-size: .82rem; }
+.enemy-action-copy small { margin-top: 2px; color: #9eafbf; font-size: .68rem; }
+.enemy-action-alert button { min-width: 78px; white-space: nowrap; }
+
+.enemy-concentration-route {
+  stroke: #ff7a6b;
+  stroke-width: 1.4;
+  stroke-dasharray: 4 6;
+  stroke-linecap: round;
+  opacity: .76;
+  cursor: pointer;
+  animation: enemyRouteFlow 1.7s linear infinite;
+}
+.enemy-concentration-route.counterattack { stroke: #ff5d63; }
+.enemy-concentration-route.concentrate { stroke: #f4a35d; }
+.enemy-concentration-route.reposition { stroke: #d78c70; opacity: .58; }
+.enemy-concentration-route:hover { opacity: 1; stroke: #ffd2c8; }
+.enemy-movement-arrowhead { fill: #ff7968; }
+@keyframes enemyRouteFlow { to { stroke-dashoffset: -20; } }
+
+@media (max-width: 760px) {
+  .enemy-action-alert { grid-template-columns: auto minmax(0,1fr); margin-inline: 8px; }
+  .enemy-action-alert button { grid-column: 1 / -1; width: 100%; }
+  .defence-heading { display: grid; }
+  .attack-probability { justify-self: start; }
+  .defence-metrics, .defence-actions { grid-template-columns: 1fr; }
+  .defence-garrison-list article { grid-template-columns: 1fr; }
+  .defence-garrison-list article button { width: 100%; }
+}

@@ -60,6 +60,8 @@ export interface TerritoryState {
   resistance: number;
   supplied: boolean;
   fortification: number;
+  defencePreparedUntil?: number;
+  lastEntrenchTurn?: number;
   capturedTurn?: number;
 }
 
