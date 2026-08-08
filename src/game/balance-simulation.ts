@@ -2,6 +2,7 @@ import { SLICE_IDS, TERRITORIES } from './data';
 import {
   beginOperation,
   canIssueOperationalOrder,
+  continueCampaignAfterCollapse,
   endTurn,
   enemyStrengthAt,
   getOperationAtTarget,
@@ -662,6 +663,7 @@ export function simulateCurrentEngineCampaign(
   };
 
   while (state.status === 'playing' && state.turn < maxTurns) {
+    if (state.strategicCollapse?.pending) state = continueCampaignAfterCollapse(state);
     state = issueOrders(state, policy, telemetry);
     const controllers = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
     state = endTurn(state);
