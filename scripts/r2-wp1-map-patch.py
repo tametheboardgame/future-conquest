@@ -95,8 +95,8 @@ text = text.replace('state.portalTerritory && anchors[state.portalTerritory]', '
 text = text.replace('const [x, y] = anchors[state.portalTerritory];', 'const [x, y] = geographicAnchors[state.portalTerritory];')
 
 replace_once(
-"""            transform={`translate(${x + 29 * overlayScale} ${y - 28 * overlayScale}) scale(${overlayScale})`} """,
-"""            transform={`translate(${x + 40 * overlayScale} ${y - 40 * overlayScale}) scale(${overlayScale})`} """,
+    "transform={`translate(${x + 29 * overlayScale} ${y - 28 * overlayScale}) scale(${overlayScale})`}",
+    "transform={`translate(${x + 40 * overlayScale} ${y - 40 * overlayScale}) scale(${overlayScale})`}",
     'enemy marker displacement'
 )
 replace_once(
