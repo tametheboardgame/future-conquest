@@ -166,7 +166,8 @@ function resolveCampaignOutcome(state: GameState): GameState {
   return next;
 }
 
-const deployableArmour = (state: GameState, group: TaskGroup) => Math.min(group.functionalArmour, engineeringOperationalPersonnel(state, group));
+const deployableArmour = (group: TaskGroup) => Math.min(group.functionalArmour, group.personnel);
+const operationalDeployableArmour = (state: GameState, group: TaskGroup) => Math.min(deployableArmour(group), engineeringOperationalPersonnel(state, group));
 
 export function canIssueOperationalOrder(group: TaskGroup | undefined): boolean {
   return Boolean(group && group.personnel > 0 && !group.order && (group.status === 'ready' || group.status === 'garrison'));
@@ -580,7 +581,7 @@ function resolveOperations(state: GameState): GameState {
     const defender = enemyStrengthAt(next, operation.target);
     operation.enemyPower = defender.power;
     const individualPowers = participants.map((group, index) => (
-      (engineeringOperationalPersonnel(next, group) / 1000 * 4.1 + deployableArmour(next, group) / 1000 * 1.9)
+      (engineeringOperationalPersonnel(next, group) / 1000 * 4.1 + operationalDeployableArmour(next, group) / 1000 * 1.9)
       * (0.58 + group.morale / 150)
       * (0.55 + group.supply / 190)
       * (0.9 + randomFor(next.seed, next.turn, saltFor(operation.id) + index * 17) * 0.22)
@@ -611,7 +612,7 @@ function resolveOperations(state: GameState): GameState {
       totalKilled += killed;
       totalWounded += wounded;
 
-      const exposedArmour = deployableArmour(next, group);
+      const exposedArmour = operationalDeployableArmour(next, group);
       const armourDamage = Math.min(
         group.functionalArmour,
         Math.max(exposedArmour > 0 ? 1 : 0, Math.round(exposedArmour * (ratio < 1 ? 0.018 : 0.009)))
@@ -620,7 +621,7 @@ function resolveOperations(state: GameState): GameState {
       group.damagedArmour += armourDamage;
       totalArmourDamage += armourDamage;
       remainingPersonnel += group.personnel;
-      remainingArmour += deployableArmour(next, group);
+      remainingArmour += operationalDeployableArmour(next, group);
       if (group.order) group.order.progress = operation.progress;
     }
 
@@ -837,7 +838,7 @@ function pruneOperations(state: GameState): GameState {
 export function counterattackDefencePower(state: GameState, territoryId: string): number {
   const defenders = Object.values(state.taskGroups).filter(group => group.location === territoryId && group.personnel > 0);
   const preparedBonus = (state.territories[territoryId]?.defencePreparedUntil ?? 0) >= state.turn ? 3.5 : 0;
-  return defenders.reduce((sum, group) => sum + engineeringOperationalPersonnel(state, group) / 1000 * 4 + deployableArmour(state, group) / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0)
+  return defenders.reduce((sum, group) => sum + engineeringOperationalPersonnel(state, group) / 1000 * 4 + operationalDeployableArmour(state, group) / 1000 * 1.5 + (group.status === 'garrison' ? 2.5 : 0), 0)
     + (state.territories[territoryId]?.fortification ?? 0) / 7
     + 1.5
     + preparedBonus;
