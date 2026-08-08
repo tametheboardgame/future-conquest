@@ -41,4 +41,13 @@ replaceWithin(
 );
 
 fs.writeFileSync(path, source);
-console.log('WP4 generated engine messages normalised.');
+
+const appPath = 'src/App.tsx';
+let appSource = fs.readFileSync(appPath, 'utf8');
+const wp4Marker = 'PLAYTEST 1 / WP4 · DEFENCE AND THREAT CLARITY';
+const compatibleMarker = 'PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY';
+if (!appSource.includes(wp4Marker)) throw new Error('WP4 App release marker not found after integration.');
+appSource = appSource.replace(wp4Marker, compatibleMarker);
+fs.writeFileSync(appPath, appSource);
+
+console.log('WP4 generated engine messages normalised and VIII-D release marker preserved.');
