@@ -80,14 +80,11 @@ source = source.replace(
   const occupation = occupationSourceFactor[territory.occupation] ?? 0;
   const governance = 0.72 + territory.legitimacy * 0.003;
   const resistance = Math.max(0.55, 1 - territory.resistance * 0.0045);
-  const reserveCapacity = Math.max(1,
-    stockCapacity(profile, 'food', resource.hubLevel)
-    + stockCapacity(profile, 'energy', resource.hubLevel) * 0.5
-    + stockCapacity(profile, 'militaryStores', resource.hubLevel));
-  const reserveAvailable = resource.stocks.food
-    + resource.stocks.energy * 0.5
-    + resource.stocks.militaryStores;
-  const reserveReadiness = clamp(reserveAvailable / reserveCapacity, 0.12, 1);
+  const reserveBaseline = Math.max(1,
+    initialStock(profile, 'food', 'player')
+    + initialStock(profile, 'militaryStores', 'player'));
+  const reserveAvailable = resource.stocks.food + resource.stocks.militaryStores;
+  const reserveReadiness = clamp(reserveAvailable / reserveBaseline, 0.12, 1);
   const hub = 1 + resource.hubLevel * 0.15;
   return Math.max(0, Math.floor(base * occupation * governance * resistance * reserveReadiness * hub));`);
 
