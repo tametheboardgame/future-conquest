@@ -62,10 +62,12 @@ jobs:
         with:
           ref: agent/r2-wp3-territory-resources
           fetch-depth: 0
-      - name: Restore non-WP3 generated files
+      - name: Remove generated build noise while preserving main versions
         run: |
           git fetch origin main
-          git checkout origin/main -- public/generated src/generated src/assets/motion-comic-v3/page2/bundle-parts-q12/part-08.txt src/assets/motion-comic-v3/page2/bundle-parts-q12/part-09.txt src/assets/motion-comic-v3/page2/bundle-parts-q12/part-10.txt
+          git diff --name-only --diff-filter=A origin/main...HEAD | grep -E '^(public/generated|src/generated)/' | xargs -r git rm -f --
+          git diff --name-only --diff-filter=M origin/main...HEAD | grep -E '^(public/generated|src/generated)/' | xargs -r git checkout origin/main --
+          git checkout origin/main -- src/assets/motion-comic-v3/page2/bundle-parts-q12/part-08.txt src/assets/motion-comic-v3/page2/bundle-parts-q12/part-09.txt src/assets/motion-comic-v3/page2/bundle-parts-q12/part-10.txt
           git checkout origin/main -- .github/workflows/deploy-pages.yml
           rm -f .github/workflows/wp3-cleanup.yml
       - name: Publish clean diff
