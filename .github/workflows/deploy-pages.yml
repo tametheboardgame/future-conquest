@@ -40,6 +40,14 @@ jobs:
         run: node --check scripts/verify-pages-deployment.mjs
       - name: Build game
         run: npm run build
+      - name: Upload verified soundtrack recovery artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp2-black-protocol-dawn
+          path: public/audio/black-protocol-dawn.mp3
+          if-no-files-found: error
+          retention-days: 1
       - name: Write deployment metadata
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
