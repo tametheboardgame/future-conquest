@@ -1,6 +1,6 @@
 # R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
 
-Status: ACTIVE
+Status: ACTIVE / VALIDATION CANDIDATE PUBLISHED
 
 Objective: make territory-level resources and logistics meaningfully visible and strategically consequential, including local resilience when formations are disconnected from the main network.
 
@@ -23,3 +23,9 @@ Validation expectations:
 - save/load migration coverage;
 - full repository tests and production build;
 - deterministic campaign simulations and representative traces sufficient to show disconnected-force behaviour, hub value and hub-loss consequences are functioning as intended.
+
+Current validation state:
+
+- the canonical implementation is now published on PR #108;
+- direct pre-publication validation passed the full repository tests, production build, persistence/save-load checks and clean diff checks;
+- final GitHub CI, deterministic campaign evidence and representative trace inspection are required against the published canonical head before merge.
