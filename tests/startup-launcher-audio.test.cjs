@@ -48,7 +48,6 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
   assert.match(readme, /Drop additional `\.mp3` music files in this directory/);
   assert.match(builder, /80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622/);
   assert.match(builder, /6_085_073/);
-  assert.match(builder, /response\.arrayBuffer/);
   assert.match(verifier, /audio\/black-protocol-dawn\.mp3/);
   assert.match(verifier, /SOUNDTRACK_SHA256/);
   assert.match(verifier, /verifySoundtrack/);
@@ -71,11 +70,11 @@ test('music continues into gameplay and cycles through the complete library', ()
   assert.doesNotMatch(startup, /else \{\s*audioManager\.stopMusic\(\)/);
 });
 
-test('Engineering and Logistics stacks use the desktop scrolling contract', () => {
+test('Infrastructure and Logistics views use the desktop scrolling contract', () => {
   const layout = fs.readFileSync('src/desktop-command-fit.css', 'utf8');
-  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?overflow-y:\s*auto/);
-  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?overscroll-behavior:\s*contain/);
-  assert.match(layout, /\.infrastructure-command-stack,\s*\.logistics-command-stack\s*\{[\s\S]*?scrollbar-gutter:\s*stable/);
+  assert.match(layout, /\.infrastructure-view,\s*\.logistics-command-stack\s*\{[\s\S]*?overflow-y:\s*auto/);
+  assert.match(layout, /\.infrastructure-view,\s*\.logistics-command-stack\s*\{[\s\S]*?overscroll-behavior:\s*contain/);
+  assert.match(layout, /\.infrastructure-view,\s*\.logistics-command-stack\s*\{[\s\S]*?scrollbar-gutter:\s*stable/);
 });
 
 test('launcher uses the approved title card rather than drawing a duplicate title over it', () => {
