@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 
 test('startup experience always opens on the title launcher and inspects saved campaigns', () => {
   const source = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
@@ -36,6 +37,7 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
   const library = fs.readFileSync('src/audio/music-library.ts', 'utf8');
   const readme = fs.readFileSync('src/assets/music/README.md', 'utf8');
   const builder = fs.readFileSync('scripts/build-audio-assets.mjs', 'utf8');
+  const soundtrack = fs.readFileSync('public/audio/black-protocol-dawn.mp3');
   const verifier = fs.readFileSync('scripts/verify-pages-deployment.mjs', 'utf8');
   const packageJson = fs.readFileSync('package.json', 'utf8');
 
@@ -48,6 +50,12 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
   assert.match(readme, /Drop additional `\.mp3` music files in this directory/);
   assert.match(builder, /80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622/);
   assert.match(builder, /6_085_073/);
+  assert.match(builder, /readFile\(assetPath\)/);
+  assert.doesNotMatch(builder, /https?:\/\//);
+  assert.doesNotMatch(builder, /\bfetch\s*\(/);
+  assert.equal(soundtrack.length, 6_085_073);
+  assert.equal(soundtrack.subarray(0, 3).toString('ascii'), 'ID3');
+  assert.equal(createHash('sha256').update(soundtrack).digest('hex'), '80e691ed4c4e99f7e09f7b2cc9641e479acd1bdd0d51c5f504d2b0222257b622');
   assert.match(verifier, /audio\/black-protocol-dawn\.mp3/);
   assert.match(verifier, /SOUNDTRACK_SHA256/);
   assert.match(verifier, /verifySoundtrack/);
