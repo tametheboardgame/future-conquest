@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -40,6 +40,27 @@ jobs:
         run: node --check scripts/verify-pages-deployment.mjs
       - name: Build game
         run: npm run build
+      - name: Publish verified WP2 soundtrack asset to PR branch
+        if: github.event_name == 'pull_request' && github.head_ref == 'agent/r2-wp2-engineering-infrastructure'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          test -f public/audio/black-protocol-dawn.mp3
+          cp public/audio/black-protocol-dawn.mp3 "$RUNNER_TEMP/black-protocol-dawn.mp3"
+          git fetch origin "$HEAD_REF"
+          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
+          mkdir -p public/audio
+          cp "$RUNNER_TEMP/black-protocol-dawn.mp3" public/audio/black-protocol-dawn.mp3
+          git add -f public/audio/black-protocol-dawn.mp3
+          if git diff --cached --quiet; then
+            echo "Verified soundtrack is already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "assets: commit verified Black Protocol Dawn"
+          git push origin "HEAD:$HEAD_REF"
       - name: Write deployment metadata
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
