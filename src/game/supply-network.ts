@@ -27,7 +27,7 @@ export const SUPPLY_CONDITION_LABELS: Record<SupplyCondition, string> = {
 
 const routeStatusFactor: Record<string, number> = {
   open: 1,
-  damaged: 0.62,
+  damaged: 0.82,
   blocked: 0,
   destroyed: 0
 };
@@ -178,10 +178,12 @@ export function effectiveRouteSupplyCapacity(state: GameState, routeId: string):
   const routeState = state.routeStates[route.id];
   const statusFactor = routeStatusFactor[routeState?.status ?? 'open'] ?? 0;
   if (statusFactor <= 0) return 0;
-  const conditionFactor = clamp((routeState?.condition ?? 100) / 100, 0.2, 1);
+  const condition = clamp((routeState?.condition ?? 100) / 100, 0, 1);
+  const conditionFactor = clamp(0.38 + condition * 0.62, 0.38, 1);
   const capacityModifier = clamp(routeState?.capacityModifier ?? 1, 0, 1.5);
+  const upgradeFactor = 1 + (routeState?.upgradeLevel ?? 0) * 0.15;
   const endpointBonus = Math.min(nodeSupplyById[route.fromNodeId] ?? 0, nodeSupplyById[route.toNodeId] ?? 0) * 2;
-  return Math.max(0, Math.floor((route.supplyCapacity * 18 + endpointBonus) * statusFactor * conditionFactor * capacityModifier));
+  return Math.max(0, Math.floor((route.supplyCapacity * 18 + endpointBonus) * statusFactor * conditionFactor * capacityModifier * upgradeFactor));
 }
 
 export function effectiveTerritoryThroughput(state: GameState, territoryId: string): number {
@@ -284,7 +286,17 @@ function findCandidatePath(
 function createRequests(state: GameState): SupplyRequest[] {
   const requests: SupplyRequest[] = [];
   for (const territoryId of Object.keys(state.territories).sort()) {
-    const demand = administrationSupplyDemand(state, territoryId);
+    const projectDemand = state.engineeringProjects
+      .filter(project => project.status === 'active')
+      .reduce((sum, project) => {
+        const route = STRATEGIC_ROUTES.find(candidate => candidate.id === project.routeId);
+        if (!route || (route.fromTerritoryId !== territoryId && route.toTerritoryId !== territoryId)) return sum;
+        const civilDemand = project.kind === 'upgrade'
+          ? 9
+          : Math.max(3, Math.min(8, 3 + Math.ceil(Math.max(0, 100 - project.startingCondition) / 25)));
+        return sum + Math.ceil(civilDemand / 2);
+      }, 0);
+    const demand = administrationSupplyDemand(state, territoryId) + projectDemand;
     if (demand > 0) {
       const priority = effectiveTerritoryLogisticsPriority(state, territoryId);
       requests.push({
@@ -301,8 +313,8 @@ function createRequests(state: GameState): SupplyRequest[] {
   }
   for (const group of Object.values(state.taskGroups).sort((a, b) => a.id.localeCompare(b.id))) {
     if (group.personnel <= 0) continue;
-    const engineeringProject = state.engineeringProjects.find(project => project.status === 'active' && project.assignedTaskGroupId === group.id);
-    const engineeringDemand = engineeringProject ? Math.max(3, Math.ceil(engineeringProject.allocation / 8)) : 0;
+    const engineeringProject = state.engineeringProjects.find(project => project.status === 'active' && project.assignedTaskGroupId === group.id && project.allocation > 0);
+    const engineeringDemand = engineeringProject ? Math.max(1, Math.ceil(engineeringProject.allocation / 20)) : 0;
     const interdictionMission = state.interdictionMissions.find(mission => mission.status === 'active' && mission.assignedTaskGroupId === group.id);
     const interdictionDemand = interdictionMission ? Math.max(5, Math.ceil(interdictionMission.intensity / 8)) : 0;
     const priority = effectiveFormationLogisticsPriority(state, group.id);
