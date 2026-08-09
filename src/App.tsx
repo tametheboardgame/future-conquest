@@ -44,6 +44,7 @@ import {
   surrenderCampaign
 } from './game/engine';
 import { occupationRequirement } from './game/formation-organisation';
+import { getTerritoryResourceState, logisticsHubUpgradeQuote, TERRITORY_RESOURCES, upgradeLogisticsHub } from './game/territory-resources';
 import { getEscalationStage } from './game/strategic-response';
 import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-targeting';
 import type { Difficulty, GameState, Operation } from './game/types';
@@ -76,6 +77,9 @@ export default function App() {
   const selectedInterdictionMission = selectedGroup ? state.interdictionMissions.find(mission => mission.status === 'active' && mission.assignedTaskGroupId === selectedGroup.id) : undefined;
   const selected = state.selectedTerritory ? TERRITORIES[state.selectedTerritory] : null;
   const selectedTerritorySupply = selected ? state.logistics.territoryAllocations[selected.id] : undefined;
+  const selectedTerritoryResources = selected ? getTerritoryResourceState(state, selected.id) : undefined;
+  const selectedTerritoryProfile = selected ? TERRITORY_RESOURCES[selected.id] : undefined;
+  const selectedHubQuote = selected ? logisticsHubUpgradeQuote(state, selected.id) : undefined;
   const selectedNetworkNodes = selected ? nodesForTerritory(selected.id) : [];
   const selectedNetworkRoutes = selected ? routesForTerritory(selected.id) : [];
   const selectedOpenRouteCount = selectedNetworkRoutes.filter(route => state.routeStates[route.id]?.status === 'open').length;
@@ -296,11 +300,25 @@ export default function App() {
         <div><dt>Fortification</dt><dd>{Math.round(state.territories[selected.id].fortification)}</dd></div>
         <div><dt>Infrastructure</dt><dd>{selectedNetworkNodes.length} nodes</dd></div>
         <div><dt>Route connections</dt><dd>{selectedOpenRouteCount} / {selectedNetworkRoutes.length} open</dd></div>
+        {selectedTerritoryProfile && selectedTerritoryResources && <>
+          <div><dt>Logistics hub</dt><dd>Level {selectedTerritoryResources.hubLevel} / 3</dd></div>
+          <div><dt>Food</dt><dd>{selectedTerritoryProfile.food}/5 · {Math.round(selectedTerritoryResources.stocks.food)} reserve</dd></div>
+          <div><dt>Industry</dt><dd>{selectedTerritoryProfile.industry}/5 · {Math.round(selectedTerritoryResources.stocks.industry)} reserve</dd></div>
+          <div><dt>Energy</dt><dd>{selectedTerritoryProfile.energy}/5 · {Math.round(selectedTerritoryResources.stocks.energy)} reserve</dd></div>
+          <div><dt>Transport</dt><dd>{selectedTerritoryProfile.transport}/5 · {Math.round(selectedTerritoryResources.stocks.transport)} reserve</dd></div>
+          <div><dt>Medical</dt><dd>{selectedTerritoryProfile.medical}/5 · {Math.round(selectedTerritoryResources.stocks.medical)} reserve</dd></div>
+          <div><dt>Military Stores</dt><dd>{selectedTerritoryProfile.militaryStores}/5 · {Math.round(selectedTerritoryResources.stocks.militaryStores)} reserve</dd></div>
+        </>}
         {state.territories[selected.id].controller === 'player' && <>
           <div><dt>Legitimacy</dt><dd>{Math.round(state.territories[selected.id].legitimacy)}</dd></div>
           <div><dt>Resistance</dt><dd>{Math.round(state.territories[selected.id].resistance)}</dd></div>
         </>}
       </dl>
+      {state.territories[selected.id].controller === 'player' && selectedHubQuote && <section className="hub-upgrade-control">
+        <p className="network-section-heading">LOGISTICS HUB</p>
+        <p>{selectedHubQuote.eligible ? `Upgrade to level ${selectedHubQuote.nextLevel}: ${selectedHubQuote.industry} Industry, ${selectedHubQuote.transport} Transport, ${selectedHubQuote.energy} Energy.` : selectedHubQuote.reason}</p>
+        <button type="button" disabled={!selectedHubQuote.eligible || !selectedHubQuote.affordable} onClick={() => setState(current => upgradeLogisticsHub(current, selected.id))}>{selectedTerritoryResources?.hubLevel ? 'Upgrade logistics hub' : 'Construct logistics hub'}</button>
+      </section>}
       {state.territories[selected.id].controller === 'player' && <DefencePanel state={state} territoryId={selected.id} onChange={setState} />}
       <p className="network-section-heading">STRATEGIC INFRASTRUCTURE</p>
       <div className="network-node-list">{selectedNetworkNodes.map(node => <article key={node.id}><strong>{node.name}</strong><span>{NODE_TYPE_LABELS[node.type]}</span></article>)}</div>

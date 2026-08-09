@@ -11,12 +11,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
   group: pages-${{ github.ref }}
+  # Queue runs on each ref rather than allowing a later push to cancel an active
+  # production release containing newly generated artwork.
   cancel-in-progress: false
 
 jobs:
@@ -50,43 +52,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-
-  publish-wp3-direct:
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 108
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout WP3 head branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/r2-wp3-territory-resources
-          fetch-depth: 0
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Apply direct WP3 implementation
-        run: |
-          node scripts/apply-wp3-direct.mjs
-          node scripts/fix-wp3-direct.mjs
-      - name: Validate implementation before publication
-        run: |
-          npm test
-          npm run build
-          node --test tests/persistence.test.cjs tests/persistence-ui.test.cjs
-          git diff --check
-      - name: Publish canonical WP3 implementation
-        run: |
-          git config user.name "future-conquest-supervisor[bot]"
-          git config user.email "future-conquest-supervisor[bot]@users.noreply.github.com"
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/deploy-pages.yml
-          rm -f .github/workflows/wp3-direct-publish.yml .github/workflows/wp3-apply-fast.yml scripts/apply-wp3-direct.mjs scripts/fix-wp3-direct.mjs
-          git add -A
-          git commit -m "feat: implement R2-WP3 territory logistics"
-          git push origin HEAD:agent/r2-wp3-territory-resources
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
