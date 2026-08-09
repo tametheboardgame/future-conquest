@@ -12,19 +12,27 @@ Approved autonomous sequence:
 
 R2-WP2 -> R2-WP3 -> R2-WP4 -> R2-WP5 -> R2-WP6 -> R2-WP7 -> whole-game audit -> hardening -> balance programme -> adversarial/exploit testing -> UX/clarity validation -> final integrated validation -> surface results to David.
 
-The development supervisor is authorised to progress through this sequence without requiring David to manually say "do the next thing", provided the documented acceptance/validation gates are satisfied and no product-owner stop condition is triggered.
+The development supervisor is authorised to progress through this sequence when the documented acceptance and validation gates are satisfied.
 
-## Current active work
+## Completed work
 
 ### R2-WP2 - Engineering & Infrastructure Mechanics
 
-Status: ACTIVE
+Status: COMPLETE / MERGED
 
 PR: #106
 
-Branch: `agent/r2-wp2-engineering-infrastructure`
+Merge commit: `f6011f9b1512f29620ae84a7d3c922bb94741daa`
 
-Current supervisory objective: finish the documented WP2 acceptance/validation gate on the canonical GitHub PR branch, including removal of the unnecessary runtime Suno CDN dependency from the reproducible production build, then review/merge/deploy/verify before advancing.
+WP2 completed its focused regressions, full repository tests, reproducible production build, persistence/save-load compatibility, deterministic 720-campaign validation across all insertion starts, representative traces and GitHub CI before merge.
+
+## Current active work
+
+### R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
+
+Status: APPROVED / NEXT
+
+Current objective: implement WP3 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
 
 ## Next approved work
 
@@ -37,17 +45,9 @@ Current supervisory objective: finish the documented WP2 acceptance/validation g
 
 ## Product-owner stop conditions
 
-Do not interrupt David for routine engineering, tests, CI, save compatibility, deployment, technical architecture, exploit fixes, performance work or evidence-based balance tuning that remains inside approved design.
+Product-owner input is required for fundamental mechanic changes, materially different design directions, narrative or art-direction choices, unresolved subjective gameplay decisions, conflicts with intentional design, permissions/tooling blockers, or a stable deployed build that materially benefits from human playtesting.
 
-Stop and request input when:
-
-- a fundamental mechanic must be added, removed or materially redesigned;
-- multiple materially different design directions are equally plausible;
-- narrative/lore or art direction requires a subjective choice;
-- automated evidence cannot resolve a material gameplay decision;
-- validation conflicts with an intentional design decision;
-- permissions/tooling prevent safe progress;
-- or the current stable deployed build materially benefits from human playtesting/feedback.
+Routine engineering, testing, CI, save compatibility, deployment, technical architecture, exploit fixes, performance work and evidence-based balance tuning within approved design remain autonomous.
 
 ## Source-of-truth rule
 
