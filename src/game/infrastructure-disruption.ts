@@ -28,7 +28,7 @@ export function routeStatusForCondition(condition: number): StrategicRouteState[
 
 export function routeCapacityModifierForCondition(condition: number): number {
   if (condition <= 0) return 0;
-  return Math.round(clamp(0.08 + condition * 0.0092, 0.08, 1) * 100) / 100;
+  return clamp(0.08 + condition * 0.0092, 0.08, 1);
 }
 
 export function normaliseInfrastructureIncidents(value: unknown): InfrastructureIncident[] {
