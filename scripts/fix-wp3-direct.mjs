@@ -84,7 +84,9 @@ source = source.replace(
     initialStock(profile, 'food', 'player')
     + initialStock(profile, 'militaryStores', 'player'));
   const reserveAvailable = resource.stocks.food + resource.stocks.militaryStores;
-  const reserveReadiness = clamp(reserveAvailable / reserveBaseline, 0.12, 1);
+  const reserveReadiness = territory.supplied
+    ? 1
+    : clamp(reserveAvailable / reserveBaseline, 0.12, 1);
   const hub = 1 + resource.hubLevel * 0.15;
   return Math.max(0, Math.floor(base * occupation * governance * resistance * reserveReadiness * hub));`);
 
