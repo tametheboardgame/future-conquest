@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
@@ -54,7 +54,7 @@ import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-target
 import type { Difficulty, GameState, Operation } from './game/types';
 import { inspectCampaignSlot, writeCampaignSlot } from './game/persistence';
 import { getBrowserStorage, showPersistenceFailure } from './persistence-feedback';
-import { resolveContextualTarget, type ContextualTarget, type ResolvedContextualTarget } from './game/contextual-navigation';
+import { resolveContextualTarget, revalidateNavigationContext, type ContextualTarget, type ResolvedContextualTarget } from './game/contextual-navigation';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
@@ -68,6 +68,10 @@ export default function App() {
   const [showSupplyWarning, setShowSupplyWarning] = useState(false);
   const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
   const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
+
+  useEffect(() => {
+    setNavigationContext(current => revalidateNavigationContext(state, current));
+  }, [state]);
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));

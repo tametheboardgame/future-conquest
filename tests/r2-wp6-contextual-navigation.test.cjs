@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { newGame, selectTaskGroupForNavigation } = require('../.test-dist/engine.js');
+const { revalidateNavigationContext } = require('../.test-dist/contextual-navigation.js');
 
 const app = fs.readFileSync('src/App.tsx', 'utf8');
 const logistics = fs.readFileSync('src/components/LogisticsCommand.tsx', 'utf8');
@@ -47,6 +48,47 @@ test('stale and wrong target IDs fall back to a useful workspace without unrelat
   assert.match(navigation, /referenced formation is no longer available/);
   assert.match(navigation, /referenced territory is no longer available/);
   assert.match(navigation, /referenced operation has ended/);
+});
+
+test('campaign mutation clears context for a completed or removed operation', () => {
+  const state = newGame(6606);
+  const groupId = state.selectedTaskGroupId;
+  const operation = { id: 'operation-review', target: 'FR-ARA', participantGroupIds: [groupId], days: 1, progress: 20 };
+  const withOperation = { ...state, operations: { [operation.id]: operation } };
+  const context = { valid: true, target: { kind: 'operation', id: operation.id, reason: 'Review risk' }, message: 'Review risk' };
+
+  assert.equal(revalidateNavigationContext(withOperation, context), context);
+  assert.equal(revalidateNavigationContext({ ...withOperation, operations: {} }, context), null);
+});
+
+test('formation replacement or changed exact selection clears formation context', () => {
+  const state = newGame(6607);
+  const formationId = state.selectedTaskGroupId;
+  const context = { valid: true, target: { kind: 'formation', id: formationId, reason: 'Review formation' }, message: 'Review formation' };
+  assert.equal(revalidateNavigationContext(state, context), context);
+
+  const replacementId = `${formationId}-split`;
+  const { [formationId]: replaced, ...remainingGroups } = state.taskGroups;
+  const replacedState = {
+    ...state,
+    selectedTaskGroupId: replacementId,
+    taskGroups: { ...remainingGroups, [replacementId]: { ...replaced, id: replacementId } }
+  };
+  assert.equal(revalidateNavigationContext(replacedState, context), null);
+
+  const otherId = Object.keys(state.taskGroups).find(id => id !== formationId);
+  assert.equal(revalidateNavigationContext({ ...state, selectedTaskGroupId: otherId }, context), null);
+});
+
+test('generic exact targets are revalidated after campaign state changes', () => {
+  const state = newGame(6608);
+  const routeId = Object.keys(state.routeStates)[0];
+  const context = { valid: true, target: { kind: 'route', id: routeId, reason: 'Review corridor' }, message: 'Review corridor' };
+  const { [routeId]: removed, ...routeStates } = state.routeStates;
+
+  assert.equal(revalidateNavigationContext(state, context), context);
+  assert.equal(revalidateNavigationContext({ ...state, routeStates }, context), null);
+  assert.ok(removed);
 });
 
 test('resolution is pure and simulation snapshot explicitly excludes UI selection only', () => {
