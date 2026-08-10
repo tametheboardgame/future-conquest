@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { newGame } = require('../.test-dist/engine.js');
 const {
   CURRENT_SAVE_KEY,
+  AUTOSAVE_KEY,
   LEGACY_V2_SAVE_KEY,
   LEGACY_V3_SAVE_KEY,
   LEGACY_V4_SAVE_KEY,
@@ -11,8 +12,10 @@ const {
   SAVE_METADATA_KEY,
   createSaveMetadata,
   inspectStoredCampaign,
+  inspectCampaignSlot,
   storageIsWritable,
-  writeMetadataForCurrentSave
+  writeMetadataForCurrentSave,
+  writeCampaignSlot
 } = require('../.test-dist/persistence.js');
 
 function installStorage(entries = []) {
@@ -144,4 +147,60 @@ test('blocked browser storage is detected without throwing', () => {
     removeItem: () => {}
   };
   assert.equal(storageIsWritable(blocked), false);
+});
+
+test('manual and autosave slots overwrite and load independently', () => {
+  const setup = installStorage();
+  const manual = newGame(11);
+  const firstAutosave = newGame(22);
+  firstAutosave.turn = 3;
+  const latestAutosave = newGame(33);
+  latestAutosave.turn = 7;
+
+  assert.equal(writeCampaignSlot(setup.storage, manual, 'manual').ok, true);
+  assert.equal(writeCampaignSlot(setup.storage, firstAutosave, 'autosave').ok, true);
+  assert.equal(writeCampaignSlot(setup.storage, latestAutosave, 'autosave').ok, true);
+
+  assert.equal(inspectCampaignSlot(setup.storage, 'manual').state.seed, 11);
+  assert.equal(inspectCampaignSlot(setup.storage, 'autosave').state.seed, 33);
+  assert.equal(inspectCampaignSlot(setup.storage, 'autosave').metadata.campaignDay, 7);
+  assert.notEqual(setup.values.get(CURRENT_SAVE_KEY), setup.values.get(AUTOSAVE_KEY));
+});
+
+test('autosave loading never falls back to a manual or legacy campaign', () => {
+  const manual = newGame(44);
+  const setup = installStorage([[CURRENT_SAVE_KEY, JSON.stringify(manual)]]);
+  assert.equal(inspectCampaignSlot(setup.storage, 'autosave').code, 'missing');
+});
+
+test('autosave write rejection returns a user-facing persistence failure', () => {
+  const setup = installStorage();
+  const state = newGame(44);
+  const rejectingStorage = {
+    getItem: key => setup.storage.getItem(key),
+    setItem: () => { throw new Error('quota exceeded'); },
+    removeItem: key => setup.storage.removeItem(key)
+  };
+
+  const result = writeCampaignSlot(rejectingStorage, state, 'autosave');
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'storage-unavailable');
+  assert.match(result.message, /autosave campaign slot could not be saved/i);
+});
+
+test('missing and invalid autosaves return explicit failures without manual fallback', () => {
+  const setup = installStorage();
+  const state = newGame(55);
+  assert.equal(writeCampaignSlot(setup.storage, state, 'manual').ok, true);
+
+  const missing = inspectCampaignSlot(setup.storage, 'autosave');
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, 'missing');
+  assert.match(missing.message, /No autosaved campaign/);
+
+  setup.storage.setItem(AUTOSAVE_KEY, '{not json');
+  const invalid = inspectCampaignSlot(setup.storage, 'autosave');
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.code, 'corrupt');
+  assert.match(invalid.message, /corrupted and could not be loaded/i);
 });

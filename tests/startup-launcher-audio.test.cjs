@@ -30,6 +30,18 @@ test('global settings persist independently and expose audio, track and display 
   assert.match(panel, /Mute all/);
   assert.match(panel, /Toggle fullscreen/);
   assert.match(launcher, /global-settings-toggle/);
+  assert.match(panel, /ASSISTANCE_LEVELS/);
+  assert.match(panel, /Autosave after each resolved day/);
+});
+
+test('return to title only changes navigation and is available during active and concluded campaigns', () => {
+  const launcher = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
+  const panel = fs.readFileSync('src/components/GlobalSettingsPanel.tsx', 'utf8');
+  const endings = fs.readFileSync('src/components/CampaignEndingExperience.tsx', 'utf8');
+  assert.match(launcher, /const returnToTitle = useCallback\(\(\) => \{[\s\S]*setMode\('launcher'\)/);
+  assert.doesNotMatch(launcher.match(/const returnToTitle[\s\S]*?\}, \[\]\);/)?.[0] ?? '', /saveGame|setState|localStorage/);
+  assert.match(panel, /Return to Title/);
+  assert.match(endings, /onReturnToTitle/);
 });
 
 test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tracks', () => {

@@ -165,7 +165,7 @@ export function StartupExperience({ children }: Props) {
     setMode('game');
     window.setTimeout(() => {
       openCommandView('campaign');
-      window.setTimeout(() => findButton('Load')?.click(), 60);
+      window.setTimeout(() => findButton('Load Manual Save')?.click(), 60);
     }, 40);
   }, [saveInspection]);
 
@@ -216,7 +216,7 @@ export function StartupExperience({ children }: Props) {
     setMode('game');
     window.setTimeout(() => {
       openCommandView('campaign');
-      window.setTimeout(() => findButton('Load')?.click(), 70);
+      window.setTimeout(() => findButton('Load Manual Save')?.click(), 70);
     }, 50);
   }, [refreshSaveInspection]);
 
@@ -301,6 +301,7 @@ export function StartupExperience({ children }: Props) {
       onClose={() => setShowSettings(false)}
       onPreviewVictory={() => previewEnding('victory')}
       onPreviewDefeat={() => previewEnding('defeat')}
+      onReturnToTitle={mode === 'game' ? returnToTitle : undefined}
     />}
   </>;
 }

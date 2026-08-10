@@ -1,5 +1,5 @@
 import { MUSIC_TRACK_OPTIONS, resolveMusicTrackId } from '../audio/music-library';
-import type { GlobalSettings } from '../game/global-settings';
+import { ASSISTANCE_LEVELS, type AssistanceLevel, type GlobalSettings } from '../game/global-settings';
 
 interface Props {
   settings: GlobalSettings;
@@ -7,11 +7,12 @@ interface Props {
   onClose: () => void;
   onPreviewVictory?: () => void;
   onPreviewDefeat?: () => void;
+  onReturnToTitle?: () => void;
 }
 
 const percentage = (value: number) => `${Math.round(value * 100)}%`;
 
-export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVictory, onPreviewDefeat }: Props) {
+export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVictory, onPreviewDefeat, onReturnToTitle }: Props) {
   const updateVolume = (key: 'masterVolume' | 'musicVolume' | 'sfxVolume', value: string) => {
     onChange({ ...settings, [key]: Number(value) });
   };
@@ -45,6 +46,13 @@ export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVict
       </div>
 
       <div className="settings-section">
+        <div className="settings-section-heading"><div><p className="launcher-kicker">PLAYER PREFERENCES</p><h3>Saves &amp; assistance</h3></div></div>
+        <p className="settings-future-copy">These preferences persist on this device and are not stored in campaign save files.</p>
+        <label className="settings-mute"><input type="checkbox" checked={settings.autosaveEnabled} onChange={event => onChange({ ...settings, autosaveEnabled: event.target.checked })} />Autosave after each resolved day</label>
+        <label className="settings-track-picker"><span><b>Assistance</b><small>Player preference</small></span><select value={settings.assistanceLevel} onChange={event => onChange({ ...settings, assistanceLevel: event.target.value as AssistanceLevel })}>{ASSISTANCE_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}</select></label>
+      </div>
+
+      <div className="settings-section">
         <div className="settings-section-heading"><div><p className="launcher-kicker">DISPLAY</p><h3>Screen</h3></div></div>
         <button type="button" className="settings-secondary" onClick={toggleFullscreen}>Toggle fullscreen</button>
         <p className="settings-future-copy">Graphics quality, UI scale, animation controls and additional accessibility options will live here as those systems are added.</p>
@@ -59,7 +67,7 @@ export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVict
         </div>
       </div>}
 
-      <footer><button type="button" className="launcher-primary" onClick={onClose}>Done</button></footer>
+      <footer>{onReturnToTitle && <button type="button" className="settings-secondary" onClick={onReturnToTitle}>Return to Title</button>}<button type="button" className="launcher-primary" onClick={onClose}>Done</button></footer>
     </section>
   </div>;
 }

@@ -31,14 +31,14 @@ test('the map keeps operational controls while specialist tools move into dedica
   assert.match(app, /Campaign control/);
 });
 
-test('resolve day remains globally available and autosave retains an always-mounted Save control', () => {
+test('resolve day remains globally available and writes only the dedicated autosave slot', () => {
   const app = read('src/App.tsx');
 
   assert.match(app, /className="global-resolve"/);
   assert.match(app, /Resolve all orders · day \{state\.turn\}/);
-  assert.match(app, /className="persistence-save-proxy"/);
-  assert.match(app, />Save<\/button>/);
-  assert.match(app, /setState\(endTurn\)/);
+  assert.match(app, /writeCampaignSlot\(storage, next, 'autosave'\)/);
+  assert.match(app, /setState\(advanceDay\(state\)\)/);
+  assert.doesNotMatch(app, /persistence-save-proxy/);
 });
 
 test('command interface styles load last and switch from left navigation to mobile bottom navigation', () => {

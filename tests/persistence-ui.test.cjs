@@ -17,7 +17,7 @@ test('the persistence controller and styles load after the existing interface st
 });
 
 test('manual save and load actions provide visible success and error feedback', () => {
-  assert.match(controller, /Game saved/);
+  assert.match(controller, /Manual campaign saved/);
   assert.match(controller, /Game loaded/);
   assert.match(controller, /inspectStoredCampaign/);
   assert.match(controller, /stopImmediatePropagation/);
@@ -25,11 +25,19 @@ test('manual save and load actions provide visible success and error feedback', 
   assert.match(controller, /aria-live/);
 });
 
-test('resolving a day triggers the existing save control as an autosave', () => {
-  assert.match(controller, /Resolve all orders/);
-  assert.match(controller, /triggerAutosave/);
-  assert.match(controller, /saveButton\.click\(\)/);
-  assert.match(controller, /Autosaved/);
+test('manual persistence feedback cannot route autosaves through the manual slot', () => {
+  assert.match(controller, /Manual Save/);
+  assert.match(controller, /Load Manual Save/);
+  assert.doesNotMatch(controller, /triggerAutosave/);
+  assert.doesNotMatch(controller, /Resolve all orders/);
+});
+
+test('autosave write and load failures use visible persistence feedback', () => {
+  const app = fs.readFileSync('src/App.tsx', 'utf8');
+
+  assert.match(controller, /export function showPersistenceFailure/);
+  assert.match(app, /if \(!saved\.ok\) showPersistenceFailure\(saved\.message\)/);
+  assert.match(app, /else \{\s*showPersistenceFailure\(saved\.message\);\s*\}/);
 });
 
 test('save notifications remain visible above the game and adapt to mobile screens', () => {
