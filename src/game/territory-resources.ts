@@ -1,5 +1,6 @@
 import { TERRITORIES } from './data';
 import { STRATEGIC_NODES, STRATEGIC_ROUTES } from './strategic-network-data';
+import { refreshSupplyNetwork } from './supply-network';
 import type { Controller, GameEvent, GameState } from './types';
 
 export type ResourceRating = 1 | 2 | 3 | 4 | 5;
@@ -142,7 +143,7 @@ function localProduction(profile: TerritoryResourceProfile, key: StockKey, facto
 
 function localFormationDelivery(state: GameState, territoryId: string): number {
   return Object.values(state.taskGroups).reduce((sum, group) => {
-    if (group.location !== territoryId || group.personnel <= 0) return sum;
+    if (group.personnel <= 0) return sum;
     const allocation = state.logistics?.formationAllocations?.[group.id];
     if (!allocation || allocation.path.sourceTerritoryId !== territoryId) return sum;
     return sum + allocation.delivered;
@@ -254,7 +255,8 @@ export function logisticsHubUpgradeQuote(state: GameState, territoryId: string):
 
   let reason = 'Eligible strategic location';
   let eligible = true;
-  if (!territory || territory.controller !== 'player') { eligible = false; reason = 'Territory is not controlled'; }
+  if (state.status !== 'playing') { eligible = false; reason = 'Campaign has concluded'; }
+  else if (!territory || territory.controller !== 'player') { eligible = false; reason = 'Territory is not controlled'; }
   else if (territory.occupation === 'unsecured') { eligible = false; reason = 'Occupation must be stabilised first'; }
   else if (resource.hubLevel >= 3) { eligible = false; reason = 'Hub is already at maximum level'; }
   else if (!profile || profile.industry < 3 || profile.transport < 3) { eligible = false; reason = 'Insufficient local industry or transport base'; }
@@ -271,6 +273,7 @@ function appendEvent(state: GameState, text: string, tone: GameEvent['tone']): G
 }
 
 export function upgradeLogisticsHub(state: GameState, territoryId: string): GameState {
+  if (state.status !== 'playing') return state;
   resolveResourceTurn(state);
   const quote = logisticsHubUpgradeQuote(state, territoryId);
   if (!quote.eligible || !quote.affordable) return state;
@@ -282,7 +285,7 @@ export function upgradeLogisticsHub(state: GameState, territoryId: string): Game
   resource.stocks.energy = round1(resource.stocks.energy - quote.energy);
   resource.hubLevel = quote.nextLevel;
   const next = { ...state, territoryResources, territoryResourceTurn: state.turn } as GameState;
-  return appendEvent(next,     `Logistics hub at ${TERRITORIES[territoryId].centre} upgraded to level ${quote.nextLevel}. Local reserves now provide greater supply resilience and source capacity.`,
+  return refreshSupplyNetwork(appendEvent(next, `Logistics hub at ${TERRITORIES[territoryId].centre} upgraded to level ${quote.nextLevel}. Local reserves now provide greater supply resilience and source capacity.`,
     'good'
-  );
+  ));
 }

@@ -317,7 +317,7 @@ export default function App() {
       {state.territories[selected.id].controller === 'player' && selectedHubQuote && <section className="hub-upgrade-control">
         <p className="network-section-heading">LOGISTICS HUB</p>
         <p>{selectedHubQuote.eligible ? `Upgrade to level ${selectedHubQuote.nextLevel}: ${selectedHubQuote.industry} Industry, ${selectedHubQuote.transport} Transport, ${selectedHubQuote.energy} Energy.` : selectedHubQuote.reason}</p>
-        <button type="button" disabled={!selectedHubQuote.eligible || !selectedHubQuote.affordable} onClick={() => setState(current => upgradeLogisticsHub(current, selected.id))}>{selectedTerritoryResources?.hubLevel ? 'Upgrade logistics hub' : 'Construct logistics hub'}</button>
+        <button type="button" disabled={state.status !== 'playing' || !selectedHubQuote.eligible || !selectedHubQuote.affordable} onClick={() => setState(current => upgradeLogisticsHub(current, selected.id))}>{selectedTerritoryResources?.hubLevel ? 'Upgrade logistics hub' : 'Construct logistics hub'}</button>
       </section>}
       {state.territories[selected.id].controller === 'player' && <DefencePanel state={state} territoryId={selected.id} onChange={setState} />}
       <p className="network-section-heading">STRATEGIC INFRASTRUCTURE</p>

@@ -19,7 +19,13 @@ import {
 } from './engineering-projects';
 import { crisisLimitForDifficulty } from './enemy-strategy';
 import { occupationRequirement, splitFormation } from './formation-organisation';
-import { TERRITORY_RESOURCES } from './territory-resources';
+import {
+  getTerritoryResourceState,
+  logisticsHubUpgradeQuote,
+  TERRITORY_RESOURCES,
+  territorySupplySourceCapacity,
+  upgradeLogisticsHub
+} from './territory-resources';
 import { getAdjacentOrderTargets } from './order-targeting';
 import { setFormationLogisticsPriority, setTerritoryLogisticsPriority } from './supply-network';
 import type { Difficulty, GameState, TaskGroup } from './types';
@@ -71,6 +77,11 @@ export interface CampaignBalanceResult {
   reserveTurns: number;
   engineeringProjectsStarted: number;
   formationsSplit: number;
+  hubUpgrades: number;
+  hubCapacityGain: number;
+  hubValueTurns: number;
+  hubLosses: number;
+  personnelAfterHubLoss: number;
 }
 
 export interface BalanceGroupSummary {
@@ -152,6 +163,11 @@ interface ActionTelemetry {
   reserveTurns: number;
   engineeringProjectsStarted: number;
   formationsSplit: number;
+  hubUpgrades: number;
+  hubCapacityGain: number;
+  hubValueTurns: number;
+  hubLosses: number;
+  personnelAfterHubLoss: number;
 }
 
 interface AttackPlan {
@@ -687,17 +703,41 @@ export function simulateCurrentEngineCampaign(
     garrisonsReleased: 0,
     reserveTurns: 0,
     engineeringProjectsStarted: 0,
-    formationsSplit: 0
+    formationsSplit: 0,
+    hubUpgrades: 0,
+    hubCapacityGain: 0,
+    hubValueTurns: 0,
+    hubLosses: 0,
+    personnelAfterHubLoss: 0
   };
 
   while (state.status === 'playing' && state.turn < maxTurns) {
     if (state.strategicCollapse?.pending) state = continueCampaignAfterCollapse(state);
+    if (telemetry.hubUpgrades === 0) {
+      const hubTerritory = Object.keys(state.territories).sort().find(id => {
+        const quote = logisticsHubUpgradeQuote(state, id);
+        return quote.eligible && quote.affordable;
+      });
+      if (hubTerritory) {
+        const before = territorySupplySourceCapacity(state, hubTerritory);
+        state = upgradeLogisticsHub(state, hubTerritory);
+        telemetry.hubUpgrades += 1;
+        telemetry.hubCapacityGain += Math.max(0, territorySupplySourceCapacity(state, hubTerritory) - before);
+      }
+    }
+    telemetry.hubValueTurns += Object.keys(state.territories).filter(id =>
+      state.territories[id].controller === 'player' && getTerritoryResourceState(state, id).hubLevel > 0
+    ).length;
     state = issueOrders(state, policy, telemetry);
     const controllers = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
     state = endTurn(state);
     for (const [id, territory] of Object.entries(state.territories)) {
       if (controllers[id] === 'enemy' && territory.controller === 'player') captures += 1;
       if (controllers[id] === 'player' && territory.controller === 'enemy') enemyRecaptures += 1;
+      if (controllers[id] === 'player' && territory.controller === 'enemy' && getTerritoryResourceState(state, id).hubLevel > 0) {
+        telemetry.hubLosses += 1;
+        telemetry.personnelAfterHubLoss = totalPersonnel(state);
+      }
     }
     const exposure = supplyExposure(state);
     cutOffFormationDays += exposure.cutOff;

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { newGame } = require('../.test-dist/engine.js');
 const { refreshSupplyNetwork } = require('../.test-dist/supply-network.js');
+const { simulateCurrentEngineCampaign } = require('../.test-dist/balance-simulation.js');
 const {
   TERRITORY_RESOURCES,
   getTerritoryResourceState,
@@ -69,6 +70,41 @@ test('logistics hubs consume local resources and increase persistent source capa
   assert.equal(upgraded.hubLevel, 1);
   assert.ok(upgraded.stocks.industry < beforeIndustry);
   assert.ok(territorySupplySourceCapacity(state, 'BE-01') > beforeCapacity);
+  assert.ok(state.logistics.sourceCapacity > beforeCapacity, 'upgrade result must contain the refreshed integrated snapshot');
+});
+
+test('hub actions cannot mutate concluded campaigns', () => {
+  for (const status of ['victory', 'defeat']) {
+    const state = controlledBrussels();
+    const resource = getTerritoryResourceState(state, 'BE-01');
+    resource.stocks.industry = resource.stocks.transport = resource.stocks.energy = 120;
+    state.status = status;
+    const before = structuredClone(state);
+    assert.equal(logisticsHubUpgradeQuote(state, 'BE-01').eligible, false);
+    assert.strictEqual(upgradeLogisticsHub(state, 'BE-01'), state);
+    assert.deepEqual(state, before);
+  }
+});
+
+test('exported deliveries deplete the source territory rather than the receiver', () => {
+  const state = controlledBrussels();
+  const group = Object.values(state.taskGroups)[0];
+  group.location = 'NL-01';
+  state.territories['NL-01'].controller = 'player';
+  getTerritoryResourceState(state, 'NL-01');
+  const sourceBefore = getTerritoryResourceState(state, 'BE-01').stocks.food;
+  const receiverBefore = getTerritoryResourceState(state, 'NL-01').stocks.food;
+  state.logistics.formationAllocations[group.id] = {
+    ...state.logistics.formationAllocations[group.id],
+    demand: 10,
+    delivered: 10,
+    path: { ...state.logistics.formationAllocations[group.id].path, sourceTerritoryId: 'BE-01' }
+  };
+  state.turn += 1;
+  const sourceAfter = getTerritoryResourceState(state, 'BE-01').stocks.food;
+  const receiverAfter = getTerritoryResourceState(state, 'NL-01').stocks.food;
+  assert.ok(sourceAfter < sourceBefore, 'export source must pay for delivery after production');
+  assert.ok(receiverAfter >= receiverBefore, 'receiving territory must not be charged for another source allocation');
 });
 
 test('hub survives territorial loss while reserves are captured and player benefit disappears', () => {
@@ -87,4 +123,14 @@ test('hub survives territorial loss while reserves are captured and player benef
   assert.equal(lost.hubLevel, 1);
   assert.ok(lost.stocks.food < before);
   assert.equal(territorySupplySourceCapacity(state, 'BE-01'), 0);
+});
+
+test('deterministic campaign validation exercises hub construction, value, loss, and continued play', () => {
+  const result = simulateCurrentEngineCampaign(18, 'story', 'managed', 20);
+  assert.equal(result.hubUpgrades, 1);
+  assert.ok(result.hubCapacityGain > 0);
+  assert.ok(result.hubValueTurns > 0);
+  assert.ok(result.hubLosses > 0);
+  assert.ok(result.personnelAfterHubLoss > 0);
+  assert.equal(result.outcome, 'timeout', 'campaign should continue after a hub loss');
 });
