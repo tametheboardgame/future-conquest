@@ -17,7 +17,7 @@ interface Props {
   onChange: (state: GameState) => void;
   onOpenGroup: (groupId: string) => void;
   onOpenTerritory: (territoryId: string) => void;
-  onOpenInfrastructure: () => void;
+  onOpenInfrastructure: (routeId?: string, reason?: string) => void;
 }
 
 type LogisticsTab = 'overview' | 'formations' | 'administration' | 'diagnostics';
@@ -50,11 +50,11 @@ function DiagnosticAction({ item, onOpenGroup, onOpenTerritory, onOpenInfrastruc
   item: SupplyDiagnostic;
   onOpenGroup: (groupId: string) => void;
   onOpenTerritory: (territoryId: string) => void;
-  onOpenInfrastructure: () => void;
+  onOpenInfrastructure: (routeId?: string, reason?: string) => void;
   onReviewPriorities: () => void;
 }) {
   if (item.groupId) return <button type="button" onClick={() => onOpenGroup(item.groupId!)}>Open formation</button>;
-  if (item.routeId) return <button type="button" onClick={onOpenInfrastructure}>Open Infrastructure</button>;
+  if (item.routeId) return <button type="button" onClick={() => onOpenInfrastructure(item.routeId, item.detail)}>Open Infrastructure · exact route</button>;
   if (item.territoryId) return <button type="button" onClick={() => onOpenTerritory(item.territoryId!)}>Open territory</button>;
   return <button type="button" onClick={onReviewPriorities}>Review priorities</button>;
 }
@@ -118,7 +118,7 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
         <p>{clarity.diagnostics[0]?.detail ?? 'No active supply fault requires command intervention. You can still inspect every allocation and route from the tabs above.'}</p>
         <div className="logistics-health-actions">
           <button type="button" className="primary" onClick={() => setActiveTab('diagnostics')}>Review diagnostics</button>
-          {bottlenecks.length > 0 && <button type="button" onClick={onOpenInfrastructure}>Review infrastructure</button>}
+          {bottlenecks.length > 0 && <button type="button" onClick={() => onOpenInfrastructure(bottlenecks[0].id, `Logistics identified ${bottlenecks[0].name} as the highest-priority bottleneck.`)}>Review exact bottleneck</button>}
         </div>
       </section>
 
@@ -154,7 +154,7 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
           <div className="view-panel-heading"><p className="panel-label">ROUTE PRESSURE</p><strong>{bottlenecks.length}</strong></div>
           {bottlenecks.length ? <div className="logistics-bottleneck-list">{bottlenecks.slice(0, 4).map(route => {
             const flow = state.logistics.routeFlows[route.id];
-            return <button type="button" key={route.id} onClick={onOpenInfrastructure}>
+            return <button type="button" key={route.id} onClick={() => onOpenInfrastructure(route.id, `Route pressure is ${Math.round(flow.utilisation)}% on ${route.name}.`)}>
               <span><strong>{route.name}</strong><small>{flow.used} / {flow.capacity} throughput · {flow.condition}</small></span>
               <b>{Math.round(flow.utilisation)}%</b>
             </button>;
@@ -252,7 +252,7 @@ export function LogisticsCommand({ state, onChange, onOpenGroup, onOpenTerritory
         <div className="view-panel-heading"><p className="panel-label">NETWORK BOTTLENECKS</p><strong>{bottlenecks.length}</strong></div>
         {bottlenecks.length ? <div className="logistics-bottleneck-list">{bottlenecks.map(route => {
           const flow = state.logistics.routeFlows[route.id];
-          return <button type="button" key={route.id} onClick={onOpenInfrastructure}>
+          return <button type="button" key={route.id} onClick={() => onOpenInfrastructure(route.id, `Network bottleneck on ${route.name}.`)}>
             <span><strong>{route.name}</strong><small>{flow.used} / {flow.capacity} throughput · {flow.condition}</small></span>
             <b>{Math.round(flow.utilisation)}%</b>
           </button>;

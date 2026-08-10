@@ -44,21 +44,30 @@ Merge commit: `a2d2323b7a051d6fcd975c3f8fe55c0f3883600e`
 
 WP4 passed focused persistence and slot-isolation regressions, backwards save compatibility, autosave failure-feedback review fixes, full repository tests/build, final Codex review and green GitHub workflows before merge.
 
+### R2-WP5 - Adviser & Tutorial Completion
+
+Status: COMPLETE / MERGED
+
+PR: #110
+
+Merge commit: `26eabaecb8ad4a7f4edae3a7aee454b6174c053e`
+
+WP5 passed 330 repository tests, focused adviser/tutorial regressions, TypeScript and production build validation, balance simulation, repeated merge-gate review fixes, and final clean Codex review before merge.
+
 ## Current active work
 
-### R2-WP5 - Adviser & Tutorial Completion
+### R2-WP6 - Contextual Navigation & Diagnostics
 
 Status: ACTIVE
 
-Branch: `agent/r2-wp5-adviser-tutorial`
+Branch: `agent/r2-wp6-contextual-navigation`
 
-Current objective: implement WP5 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
+Current objective: implement WP6 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap, covering exact contextual navigation and deep links among Intelligence, Operations, Logistics and Infrastructure, with safe fallbacks and no state mutation from navigation.
 
 ## Next approved work
 
-1. R2-WP6 - Contextual Navigation & Diagnostics
-2. R2-WP7 - Balance & Playtest Validation
-3. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
+1. R2-WP7 - Balance & Playtest Validation
+2. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
 
 ## Product-owner stop conditions
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TERRITORIES } from '../game/data';
 import {
   assignEngineeringSupport,
@@ -31,11 +31,14 @@ import {
 } from '../game/interdiction-missions';
 import { STRATEGIC_ROUTE_BY_ID } from '../game/strategic-network-data';
 import type { EngineeringAllocation, EngineeringProjectKind, GameState, InterdictionIntensity } from '../game/types';
+import type { ResolvedContextualTarget } from '../game/contextual-navigation';
 
 interface Props {
   state: GameState;
   onChange: (state: GameState | ((current: GameState) => GameState)) => void;
   onOpenTerritory: (territoryId: string) => void;
+  onClearContext?: () => void;
+  context?: ResolvedContextualTarget | null;
 }
 
 type InfrastructureTab = 'overview' | 'repair' | 'upgrade' | 'interdict' | 'history';
@@ -83,7 +86,7 @@ function engineeringPreview(
   } : null;
 }
 
-export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Props) {
+export function InfrastructureCommand({ state, onChange, onOpenTerritory, onClearContext = () => {}, context }: Props) {
   const [activeTab, setActiveTab] = useState<InfrastructureTab>('overview');
   const [repairRouteSelection, setRepairRouteSelection] = useState('');
   const [repairGroupSelection, setRepairGroupSelection] = useState('');
@@ -94,6 +97,24 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
   const [interdictionRouteSelection, setInterdictionRouteSelection] = useState('');
   const [interdictionGroupSelection, setInterdictionGroupSelection] = useState('');
   const [interdictionIntensity, setInterdictionIntensityState] = useState<InterdictionIntensity>(50);
+  const selectTab = (tab: InfrastructureTab) => {
+    onClearContext();
+    setActiveTab(tab);
+  };
+
+  useEffect(() => {
+    if (context?.target.kind !== 'route') return;
+    const routeId = context.target.id;
+    if (repairableEngineeringRoutes(state).some(route => route.id === routeId)) {
+      setRepairRouteSelection(routeId);
+      setActiveTab('repair');
+    } else if (upgradeableEngineeringRoutes(state).some(route => route.id === routeId)) {
+      setUpgradeRouteSelection(routeId);
+      setActiveTab('upgrade');
+    } else {
+      setActiveTab('overview');
+    }
+  }, [context, state]);
 
   const activeRepairs = state.engineeringProjects.filter(project => project.status === 'active' && project.kind === 'repair');
   const activeUpgrades = state.engineeringProjects.filter(project => project.status === 'active' && project.kind === 'upgrade');
@@ -228,6 +249,15 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
       <p>Controlled regions repair infrastructure through local civil capacity and supplied materials. Military formations may contribute part of their strength to accelerate work without becoming completely immobilised. Interdiction remains a separate military mission.</p>
     </header>
 
+    {context && <aside className={`contextual-navigation-banner ${context.valid ? '' : 'fallback'}`} role="status" data-context-target={context.target.kind === 'route' ? context.target.id : context.target.kind}>
+      <strong>{context.valid ? 'Opened from diagnostic' : 'Target unavailable'}</strong><span>{context.message}</span>
+    </aside>}
+
+    {context?.target.kind === 'route' && STRATEGIC_ROUTE_BY_ID[context.target.id] && <section className="view-panel contextual-route-focus" aria-label="Selected infrastructure route">
+      <p className="panel-label">SELECTED ROUTE</p><h3>{STRATEGIC_ROUTE_BY_ID[context.target.id].name}</h3>
+      <p>Status: {state.routeStates[context.target.id]?.status ?? 'unknown'} · condition {Math.round(state.routeStates[context.target.id]?.condition ?? 0)}%</p>
+    </section>}
+
     <div className="infrastructure-summary-strip">
       <div><span>Damaged routes</span><strong>{damagedRoutes.length}</strong></div>
       <div><span>Upgraded routes</span><strong>{upgradedRoutes}</strong></div>
@@ -236,7 +266,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
     </div>
 
     <nav className="infrastructure-tabs" aria-label="Infrastructure command modes">
-      {tabs.map(tab => <button type="button" key={tab.id} className={activeTab === tab.id ? 'active' : ''} aria-current={activeTab === tab.id ? 'page' : undefined} onClick={() => setActiveTab(tab.id)}>
+      {tabs.map(tab => <button type="button" key={tab.id} className={activeTab === tab.id ? 'active' : ''} aria-current={activeTab === tab.id ? 'page' : undefined} onClick={() => selectTab(tab.id)}>
         <span>{tab.label}</span>{tab.badge ? <b>{tab.badge}</b> : null}
       </button>)}
     </nav>
@@ -247,7 +277,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
         <h3>Restore a controlled corridor</h3>
         <p>Secured local authorities, contractors and captured industrial capacity carry routine repairs. A military engineering detachment is optional and only accelerates the project.</p>
         <dl><div><dt>Active now</dt><dd>{activeRepairs.length}</dd></div><div><dt>Military formation required</dt><dd>No</dd></div></dl>
-        <button type="button" className="primary" onClick={() => setActiveTab('repair')}>Open repair command</button>
+        <button type="button" className="primary" onClick={() => selectTab('repair')}>Open repair command</button>
       </section>
 
       <section className="view-panel infrastructure-choice-card build-choice">
@@ -255,7 +285,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
         <h3>Upgrade a strategic corridor</h3>
         <p>Invest materials and engineering time into a healthy secured route. Completed upgrades permanently increase route capacity and resilience for the campaign.</p>
         <dl><div><dt>Active now</dt><dd>{activeUpgrades.length}</dd></div><div><dt>Maximum level</dt><dd>2</dd></div></dl>
-        <button type="button" className="primary" onClick={() => setActiveTab('upgrade')}>Open upgrade command</button>
+        <button type="button" className="primary" onClick={() => selectTab('upgrade')}>Open upgrade command</button>
       </section>
 
       <section className="view-panel infrastructure-choice-card interdict-choice" data-tutorial="infrastructure-interdict">
@@ -263,7 +293,7 @@ export function InfrastructureCommand({ state, onChange, onOpenTerritory }: Prop
         <h3>Interdict a frontier corridor</h3>
         <p>Interdiction is still a military mission: the assigned formation is committed while it operates against enemy infrastructure.</p>
         <dl><div><dt>Active now</dt><dd>{activeInterdictions.length}</dd></div><div><dt>Daily cost</dt><dd>{activeInterdictions.reduce((sum, mission) => sum + interdictionMissionDemand(mission), 0)}</dd></div></dl>
-        <button type="button" className="primary danger-action" onClick={() => setActiveTab('interdict')}>Open interdiction command</button>
+        <button type="button" className="primary danger-action" onClick={() => selectTab('interdict')}>Open interdiction command</button>
       </section>
 
       <section className="view-panel infrastructure-rules-panel" data-tutorial="infrastructure-rules">

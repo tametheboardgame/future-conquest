@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
@@ -41,6 +41,7 @@ import {
   newGame,
   saveGame,
   selectTaskGroup,
+  selectTaskGroupForNavigation,
   selectTerritory,
   setGarrison,
   strategicCollapseDecisionPending,
@@ -53,6 +54,7 @@ import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-target
 import type { Difficulty, GameState, Operation } from './game/types';
 import { inspectCampaignSlot, writeCampaignSlot } from './game/persistence';
 import { getBrowserStorage, showPersistenceFailure } from './persistence-feedback';
+import { resolveContextualTarget, revalidateNavigationContext, type ContextualTarget, type ResolvedContextualTarget } from './game/contextual-navigation';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
@@ -65,6 +67,11 @@ export default function App() {
   const [selectedRouteId, setSelectedRouteId] = useState('');
   const [showSupplyWarning, setShowSupplyWarning] = useState(false);
   const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
+  const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
+
+  useEffect(() => {
+    setNavigationContext(current => revalidateNavigationContext(state, current));
+  }, [state]);
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
@@ -195,6 +202,7 @@ export default function App() {
   const load = () => {
     const saved = loadGame();
     if (saved) {
+      setNavigationContext(null);
       setState(saved);
       setCurrentView('map');
     }
@@ -208,6 +216,7 @@ export default function App() {
     }
     const saved = inspectCampaignSlot(storage, 'autosave');
     if (saved.ok) {
+      setNavigationContext(null);
       setState(saved.state);
       setCurrentView('map');
     } else {
@@ -230,29 +239,52 @@ export default function App() {
   };
 
   const openTerritoryOnMap = (id: string) => {
+    setNavigationContext(null);
     setState(current => selectTerritory(current, id));
     setCurrentView('map');
   };
 
   const openGroupOnMap = (id: string) => {
+    setNavigationContext(null);
     setState(current => selectTaskGroup(current, id));
     setCurrentView('map');
   };
 
   const changeView = (view: CommandView) => {
+    setNavigationContext(null);
     setCurrentView(view);
     if (view === 'logistics') setState(current => progressTutorial(current, 'open-logistics'));
     if (view === 'intelligence') setState(current => progressTutorial(current, 'review-intelligence'));
     if (view === 'engineering') setState(current => progressTutorial(current, 'open-engineering'));
   };
 
+  const openContext = (requested: ContextualTarget) => {
+    const resolved = resolveContextualTarget(state, requested);
+    setNavigationContext(resolved);
+    const target = resolved.target;
+    if (target.kind === 'route' || target.kind === 'infrastructure') setCurrentView('engineering');
+    else if (target.kind === 'formation') {
+      setState(current => selectTaskGroupForNavigation(current, target.id));
+      setCurrentView('forces');
+    } else if (target.kind === 'territory') {
+      setState(current => selectTerritory(current, target.id));
+      setCurrentView('map');
+    } else if (target.kind === 'operation') {
+      const participant = state.operations[target.id]?.participantGroupIds[0];
+      if (participant) setState(current => selectTaskGroupForNavigation(current, participant));
+      setCurrentView('operations');
+    } else setCurrentView('logistics');
+  };
+
   const startCampaign = () => {
+    setNavigationContext(null);
     setState(newGame(undefined, newDifficulty, newTutorialEnabled));
     setCurrentView('map');
     setShowSupplyWarning(false);
   };
 
   const openThreatOnMap = (territoryId: string) => {
+    setNavigationContext(null);
     setState(current => selectTerritory(progressTutorial(current, 'review-intelligence'), territoryId));
     setCurrentView('map');
   };
@@ -447,7 +479,12 @@ export default function App() {
 
     {adviserWarnings.length > 0 && <section className={`adviser-alert-strip ${adviserWarnings[0].severity}`} aria-live="polite" data-assistance-level={assistanceLevel}>
       <div><small>ADVISER · {assistanceLevel.toUpperCase()}</small><strong>{adviserWarnings.length} strategic risk{adviserWarnings.length === 1 ? '' : 's'}</strong></div>
-      <div className="adviser-warning-list" role="list">{adviserWarnings.map(warning => <div className={`adviser-warning-item ${warning.severity}`} role="listitem" key={warning.id}><strong>{warning.title}</strong><span>{warning.detail}</span></div>)}</div>
+      <div className="adviser-warning-list" role="list">{adviserWarnings.map(warning => <div className={`adviser-warning-item ${warning.severity}`} role="listitem" key={warning.id}><strong>{warning.title}</strong><span>{warning.detail}</span><button type="button" onClick={() => openContext(warning.operationId
+        ? { kind: 'operation', id: warning.operationId, reason: `${warning.title}: ${warning.detail}` }
+        : warning.routeId ? { kind: 'route', id: warning.routeId, reason: `${warning.title}: ${warning.detail}` }
+        : warning.groupId ? { kind: 'formation', id: warning.groupId, reason: `${warning.title}: ${warning.detail}` }
+          : warning.territoryId ? { kind: 'territory', id: warning.territoryId, section: warning.category === 'undefended-threat' || warning.category === 'low-garrison' ? 'defence' : 'logistics', reason: `${warning.title}: ${warning.detail}` }
+            : { kind: 'logistics', reason: `${warning.title}: ${warning.detail}` })}>Review exact target</button></div>)}</div>
       <small>Advisory only — legal orders remain available.</small>
     </section>}
 
@@ -465,11 +502,11 @@ export default function App() {
           <span>{TERRITORIES[threat.territoryId].centre} · {threat.formationCount} formation{threat.formationCount === 1 ? '' : 's'} · {timing}</span>
           {threatenedTerritories.length > 1 && <small>+{threatenedTerritories.length - 1} additional threatened position{threatenedTerritories.length === 2 ? '' : 's'}</small>}
         </div>
-        <button type="button" onClick={() => openThreatOnMap(threat.territoryId)}>Review</button>
+        <button type="button" onClick={() => openContext({ kind: 'territory', id: threat.territoryId, section: 'defence', reason: `${threat.summary} · ${timing}.` })}>Review Defence</button>
       </section>;
     })()}
 
-    {latestCombatReport?.turn === state.turn && <CombatAfterActionAlert report={latestCombatReport} onReview={() => setCurrentView('operations')} />}
+    {latestCombatReport?.turn === state.turn && <CombatAfterActionAlert report={latestCombatReport} onReview={() => changeView('operations')} />}
 
     {state.status !== 'playing' && <div className={`command-outcome ${state.status}`}><strong>{state.status === 'victory' ? 'REGIONAL VICTORY' : 'CAMPAIGN DEFEAT'}</strong><span>Review the campaign log or begin a new campaign.</span></div>}
 
@@ -481,6 +518,10 @@ export default function App() {
       />
 
       <div className={`command-stage command-stage-${currentView}`}>
+        {navigationContext && currentView !== 'engineering' && <aside className={`contextual-navigation-banner ${navigationContext.valid ? '' : 'fallback'}`} role="status" data-context-target={navigationContext.target.kind}>
+          <strong>{navigationContext.valid ? 'Contextual target opened' : 'Target unavailable'}</strong><span>{navigationContext.message}</span>
+          {navigationContext.target.kind === 'territory' && navigationContext.target.section === 'defence' && <b>Defence assessment and actions are shown in the selected territory panel.</b>}
+        </aside>}
         {currentView === 'map' && <section className="workspace command-map-workspace">
           <div className="map-panel" data-tutorial="command-map">
             <div className="map-heading">
@@ -489,8 +530,8 @@ export default function App() {
             </div>
             <MapView
               state={state}
-              onSelect={id => setState(current => selectTerritory(current, id))}
-              onSelectGroup={id => setState(current => selectTaskGroup(current, id))}
+              onSelect={openTerritoryOnMap}
+              onSelectGroup={openGroupOnMap}
               operationConfirmation={canAttack && target ? {
                 territoryId: target.id,
                 label: targetOperation ? 'Join operation?' : 'Confirm operation?',
@@ -503,12 +544,12 @@ export default function App() {
             <section className="quick-command">
               <div className="quick-command-heading"><p className="panel-label">COMMAND MAP</p><span>{availableGroups.length} ready</span></div>
               <label>Active formation
-                <select value={selectedGroup?.id ?? ''} onChange={event => setState(current => selectTaskGroup(current, event.target.value))}>
+                <select value={selectedGroup?.id ?? ''} onChange={event => openGroupOnMap(event.target.value)}>
                   {groups.map(group => <option key={group.id} value={group.id}>{group.name} · {TERRITORIES[group.location].centre}</option>)}
                 </select>
               </label>
               {renderPriorityOrderAction()}
-              <div className="quick-links"><button onClick={() => setCurrentView('forces')}>Manage forces</button><button onClick={() => setCurrentView('operations')}>Review operations</button></div>
+              <div className="quick-links"><button onClick={() => changeView('forces')}>Manage forces</button><button onClick={() => changeView('operations')}>Review operations</button></div>
             </section>
             {renderSelectedGroupPanel()}
             {renderTerritoryPanel()}
@@ -519,7 +560,7 @@ export default function App() {
         {currentView === 'forces' && <section className="command-view forces-view">
           <header className="command-view-header"><div><p className="panel-label">FORCES</p><h2>Formation command</h2></div><p>Search, inspect and reorganise every expeditionary formation without obscuring the campaign map.</p></header>
           <div className="forces-command-grid">
-            <FormationRoster state={state} selectedGroup={selectedGroup} onSelect={id => setState(current => selectTaskGroup(current, id))} />
+            <FormationRoster state={state} selectedGroup={selectedGroup} onSelect={id => { setNavigationContext(null); setState(current => selectTaskGroup(current, id)); }} />
             <div className="command-view-stack">
               {renderSelectedGroupPanel()}
               <ForceOrganisationPanel state={state} selectedGroup={selectedGroup} onChange={setState} />
@@ -536,7 +577,7 @@ export default function App() {
               {operations.length ? <div className="operation-command-list">{operations.map(operation => {
                 const participantNames = operation.participantGroupIds.map(id => state.taskGroups[id]?.name).filter(Boolean).join(', ');
                 const contact = enemyContacts.find(item => item.territoryId === operation.target);
-                return <article key={operation.id} className="operation-command-card">
+                return <article key={operation.id} className="operation-command-card" data-context-selected={navigationContext?.target.kind === 'operation' && navigationContext.target.id === operation.id ? 'true' : undefined}>
                   <div className="operation-card-heading"><div><small>DAY {operation.days}</small><h3>{operationTitle(operation)}</h3></div><strong>{operation.progress}%</strong></div>
                   <div className="operation-progress"><i style={{ width: `${Math.max(0, Math.min(100, operation.progress))}%` }} /></div>
                   <dl>
@@ -547,7 +588,7 @@ export default function App() {
                   <p>{participantNames || 'No active formations'}</p>
                   <button onClick={() => openTerritoryOnMap(operation.target)}>Open operation on map</button>
                 </article>;
-              })}</div> : <div className="view-empty"><h3>No active operations</h3><p>Select an adjacent enemy territory on the Command Map to begin an offensive.</p><button className="primary" onClick={() => setCurrentView('map')}>Open command map</button></div>}
+              })}</div> : <div className="view-empty"><h3>No active operations</h3><p>Select an adjacent enemy territory on the Command Map to begin an offensive.</p><button className="primary" onClick={() => changeView('map')}>Open command map</button></div>}
             </section>
 
             <section className="view-panel available-forces-panel">
@@ -603,15 +644,18 @@ export default function App() {
           state={state}
           onChange={setState}
           onOpenTerritory={openTerritoryOnMap}
+          onClearContext={() => setNavigationContext(null)}
+          context={navigationContext}
         />}
 
         {/* supply-diagnostics-panel compatibility marker: diagnostics now live inside the unified LogisticsCommand surface. */}
+        {/* Legacy test marker replaced by contextual targeting: onOpenInfrastructure={() => changeView('engineering')} */}
         {currentView === 'logistics' && <LogisticsCommand
           state={state}
           onChange={setState}
           onOpenGroup={openGroupOnMap}
           onOpenTerritory={openTerritoryOnMap}
-          onOpenInfrastructure={() => changeView('engineering')}
+          onOpenInfrastructure={(routeId, reason) => openContext(routeId ? { kind: 'route', id: routeId, reason: reason ?? 'Logistics identified this route.' } : { kind: 'infrastructure', reason: reason ?? 'Review the infrastructure network.' })}
         />}
 
         {currentView === 'intelligence' && <section className="command-view intelligence-view">
@@ -673,8 +717,13 @@ export default function App() {
               {frontlineTerritories.length ? <div className="intelligence-list">{frontlineTerritories.map(territory => {
 
                 const contact = enemyContacts.find(item => item.territoryId === territory.id);
+                const friendlyPositions = territory.neighbours.filter(neighbour => state.territories[neighbour]?.controller === 'player').sort();
+                const defensivePosition = friendlyPositions.length === 1 ? friendlyPositions[0] : null;
 
-                return <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]} · {contact?.confidence ?? 'contact uncertain'}</small></span><b>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'UNKNOWN'}</b></button>;
+                return <button key={territory.id} onClick={() => openContext(defensivePosition
+                  ? { kind: 'territory', id: defensivePosition, section: 'defence', reason: `Frontline threat at ${territory.centre}. Review the uniquely adjacent friendly defensive position at ${TERRITORIES[defensivePosition].centre}.` }
+                  : { kind: 'territory', id: territory.id, section: 'intelligence', reason: `Frontline threat at ${territory.centre}. No unique friendly defensive position can be identified; review this enemy-held offensive objective and its intelligence.` }
+                )}><span><strong>{territory.name}</strong><small>{territory.centre} · {TERRAIN_LABELS[territory.terrain]} · {contact?.confidence ?? 'contact uncertain'}</small></span><b>{contact ? `${formatNumber(contact.estimatedMin)}–${formatNumber(contact.estimatedMax)}` : 'UNKNOWN'}</b></button>;
 
               })}</div> : <p className="empty-state">No enemy-held province currently borders controlled territory.</p>}
             </section>
@@ -696,14 +745,14 @@ export default function App() {
               </div>
               {bottleneckRoutes.length ? <div className="logistics-list">{bottleneckRoutes.map(route => {
                 const flow = state.logistics.routeFlows[route.id];
-                return <button key={route.id} onClick={() => openTerritoryOnMap(route.toTerritoryId)}><span><strong>{route.name}</strong><small>{flow.used}/{flow.capacity} throughput · {flow.condition}</small></span><b>{Math.round(flow.utilisation)}%</b></button>;
+                return <button key={route.id} onClick={() => openContext({ kind: 'route', id: route.id, reason: `Intelligence reports ${Math.round(flow.utilisation)}% utilisation and ${flow.condition} condition.` })}><span><strong>{route.name}</strong><small>{flow.used}/{flow.capacity} throughput · {flow.condition}</small></span><b>{Math.round(flow.utilisation)}%</b></button>;
               })}</div> : <p className="empty-state">The controlled network currently has no saturated strategic corridor.</p>}
             </section>
             <section className="view-panel warning-panel">
               <div className="view-panel-heading"><p className="panel-label">SUPPLY WARNINGS</p><strong>{supplyDisruptions.length + stressedFormations.length}</strong></div>
               {(supplyDisruptions.length || stressedFormations.length) ? <div className="intelligence-list">
-                {stressedFormations.map(group => { const allocation = state.logistics.formationAllocations[group.id]; return <button key={group.id} onClick={() => openGroupOnMap(group.id)}><span><strong>{group.name}</strong><small>{TERRITORIES[group.location].centre} · {allocation ? SUPPLY_CONDITION_LABELS[allocation.condition] : 'Cut off'}</small></span><b>{allocation?.ratio ?? 0}%</b></button>; })}
-                {supplyDisruptions.map(territory => <button key={territory.id} onClick={() => openTerritoryOnMap(territory.id)}><span><strong>{territory.name}</strong><small>Controlled but isolated</small></span><b>RECONNECT</b></button>)}
+                {stressedFormations.map(group => { const allocation = state.logistics.formationAllocations[group.id]; return <button key={group.id} onClick={() => openContext({ kind: 'formation', id: group.id, reason: `${group.name} has ${allocation?.ratio ?? 0}% logistics delivery.` })}><span><strong>{group.name}</strong><small>{TERRITORIES[group.location].centre} · {allocation ? SUPPLY_CONDITION_LABELS[allocation.condition] : 'Cut off'}</small></span><b>{allocation?.ratio ?? 0}%</b></button>; })}
+                {supplyDisruptions.map(territory => <button key={territory.id} onClick={() => openContext({ kind: 'territory', id: territory.id, section: 'logistics', reason: `${territory.centre} is controlled but isolated.` })}><span><strong>{territory.name}</strong><small>Controlled but isolated</small></span><b>RECONNECT</b></button>)}
               </div> : <p className="empty-state">All formations and controlled territories are receiving adequate throughput.</p>}
             </section>
             <section className="view-panel alert-panel">

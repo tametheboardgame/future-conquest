@@ -271,6 +271,12 @@ export function selectTaskGroup(state: GameState, id: string): GameState {
   return progressTutorial({ ...state, selectedTaskGroupId: id, selectedTerritory: state.taskGroups[id].location, targetTerritory: null }, 'select-formation');
 }
 
+/** Selects a formation for navigation without satisfying tutorial action triggers. */
+export function selectTaskGroupForNavigation(state: GameState, id: string): GameState {
+  if (strategicCollapseDecisionPending(state) || !state.taskGroups[id]) return state;
+  return { ...state, selectedTaskGroupId: id, selectedTerritory: state.taskGroups[id].location, targetTerritory: null };
+}
+
 export function selectTerritory(state: GameState, id: string): GameState {
   if (state.status !== 'playing' || strategicCollapseDecisionPending(state)) return state;
   const group = state.taskGroups[state.selectedTaskGroupId];
