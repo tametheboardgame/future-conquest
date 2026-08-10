@@ -39,3 +39,17 @@ test('WP7 representative campaign exercises integrated strategic actions determi
   assert.ok(first.territoryStockDrawTurns > 0);
   assert.ok(first.reconcentrationMoves <= first.finalTurn, 'at most one defensive reinforcement may be ordered per day');
 });
+
+
+test('R2.5 strategic pacing remains strictly ordered by difficulty', () => {
+  const { strategicBalanceFor } = require('../.test-dist/strategic-balance.js');
+  const story = strategicBalanceFor('story');
+  const standard = strategicBalanceFor('standard');
+  const hard = strategicBalanceFor('hard');
+  assert.ok(story.mobilisationScale < standard.mobilisationScale);
+  assert.ok(standard.mobilisationScale < hard.mobilisationScale);
+  assert.ok(story.mobilisationDelay > standard.mobilisationDelay);
+  assert.ok(standard.mobilisationDelay > hard.mobilisationDelay);
+  assert.ok(story.escalationTurnGrowth < standard.escalationTurnGrowth);
+  assert.ok(standard.escalationTurnGrowth < hard.escalationTurnGrowth);
+});
