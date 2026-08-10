@@ -18,7 +18,6 @@ type NoticeTone = 'success' | 'info' | 'error';
 
 let noticeTimer: number | null = null;
 let pendingLoad: SuccessfulInspection | null = null;
-let autosavePending = false;
 
 function browserStorage(): Storage | null {
   try {
@@ -34,11 +33,6 @@ function buttonFromEvent(event: Event): HTMLButtonElement | null {
 
 function buttonLabel(button: HTMLButtonElement): string {
   return button.textContent?.trim() ?? '';
-}
-
-function findButton(label: string): HTMLButtonElement | undefined {
-  return [...document.querySelectorAll<HTMLButtonElement>('button')]
-    .find(button => buttonLabel(button) === label);
 }
 
 function formatMessage(prefix: string, metadata: SaveMetadata): string {
@@ -69,7 +63,6 @@ function preflightSave(event: Event): void {
   const storage = browserStorage();
   if (storage && storageIsWritable(storage)) return;
   stopButtonAction(event);
-  autosavePending = false;
   showNotice('error', 'The campaign could not be saved. Browser storage is unavailable.');
 }
 
@@ -92,19 +85,15 @@ function preflightLoad(event: Event): void {
 function finishSave(): void {
   const storage = browserStorage();
   if (!storage) {
-    autosavePending = false;
     showNotice('error', 'The campaign could not be saved. Browser storage is unavailable.');
     return;
   }
   const result = writeMetadataForCurrentSave(storage);
   if (!result.ok) {
-    autosavePending = false;
     showNotice('error', result.message);
     return;
   }
-  const prefix = autosavePending ? 'Autosaved' : 'Game saved';
-  autosavePending = false;
-  showNotice(prefix === 'Autosaved' ? 'info' : 'success', formatMessage(prefix, result.metadata));
+  showNotice('success', formatMessage('Manual campaign saved', result.metadata));
 }
 
 function finishLoad(): void {
@@ -115,31 +104,20 @@ function finishLoad(): void {
   showNotice('success', `${formatMessage('Game loaded', loaded.metadata)}${suffix}`);
 }
 
-function triggerAutosave(): void {
-  const saveButton = findButton('Save');
-  if (!saveButton || saveButton.disabled) {
-    showNotice('error', 'Day resolved, but the autosave control was unavailable.');
-    return;
-  }
-  autosavePending = true;
-  saveButton.click();
-}
-
 function onDocumentCapture(event: Event): void {
   const button = buttonFromEvent(event);
   if (!button || button.disabled) return;
   const label = buttonLabel(button);
-  if (label === 'Save') preflightSave(event);
-  else if (label === 'Load') preflightLoad(event);
+  if (label === 'Manual Save') preflightSave(event);
+  else if (label === 'Load Manual Save') preflightLoad(event);
 }
 
 function onDocumentBubble(event: Event): void {
   const button = buttonFromEvent(event);
   if (!button || button.disabled) return;
   const label = buttonLabel(button);
-  if (label === 'Save') window.setTimeout(finishSave, 0);
-  else if (label === 'Load') window.setTimeout(finishLoad, 0);
-  else if (label.startsWith('Resolve all orders')) window.setTimeout(triggerAutosave, 25);
+  if (label === 'Manual Save') window.setTimeout(finishSave, 0);
+  else if (label === 'Load Manual Save') window.setTimeout(finishLoad, 0);
 }
 
 export function installPersistenceFeedback(): void {

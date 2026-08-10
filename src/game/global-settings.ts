@@ -7,14 +7,21 @@ export interface GlobalSettings {
   sfxVolume: number;
   muted: boolean;
   musicTrackId: string;
+  autosaveEnabled: boolean;
+  assistanceLevel: AssistanceLevel;
 }
+
+export const ASSISTANCE_LEVELS = ['Full Guidance', 'Recommended', 'Critical Only', 'Off'] as const;
+export type AssistanceLevel = typeof ASSISTANCE_LEVELS[number];
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   masterVolume: 0.8,
   musicVolume: 0.72,
   sfxVolume: 0.8,
   muted: false,
-  musicTrackId: DEFAULT_MUSIC_TRACK_ID
+  musicTrackId: DEFAULT_MUSIC_TRACK_ID,
+  autosaveEnabled: true,
+  assistanceLevel: 'Recommended'
 };
 
 const clampVolume = (value: unknown, fallback: number) => (
@@ -31,7 +38,11 @@ export function normaliseGlobalSettings(value: Partial<GlobalSettings> | undefin
     muted: typeof value?.muted === 'boolean' ? value.muted : DEFAULT_GLOBAL_SETTINGS.muted,
     musicTrackId: typeof value?.musicTrackId === 'string' && value.musicTrackId.trim()
       ? value.musicTrackId
-      : DEFAULT_GLOBAL_SETTINGS.musicTrackId
+      : DEFAULT_GLOBAL_SETTINGS.musicTrackId,
+    autosaveEnabled: typeof value?.autosaveEnabled === 'boolean' ? value.autosaveEnabled : DEFAULT_GLOBAL_SETTINGS.autosaveEnabled,
+    assistanceLevel: ASSISTANCE_LEVELS.includes(value?.assistanceLevel as AssistanceLevel)
+      ? value?.assistanceLevel as AssistanceLevel
+      : DEFAULT_GLOBAL_SETTINGS.assistanceLevel
   };
 }
 

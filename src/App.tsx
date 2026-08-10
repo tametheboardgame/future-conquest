@@ -48,6 +48,8 @@ import { getTerritoryResourceState, logisticsHubUpgradeQuote, TERRITORY_RESOURCE
 import { getEscalationStage } from './game/strategic-response';
 import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-targeting';
 import type { Difficulty, GameState, Operation } from './game/types';
+import { loadGlobalSettings } from './game/global-settings';
+import { inspectCampaignSlot, writeCampaignSlot } from './game/persistence';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
@@ -193,6 +195,20 @@ export default function App() {
     }
   };
 
+  const loadAutosave = () => {
+    const saved = inspectCampaignSlot(localStorage, 'autosave');
+    if (saved.ok) {
+      setState(saved.state);
+      setCurrentView('map');
+    }
+  };
+
+  const advanceDay = (current: GameState) => {
+    const next = endTurn(current);
+    if (loadGlobalSettings().autosaveEnabled) writeCampaignSlot(localStorage, next, 'autosave');
+    return next;
+  };
+
   const openTerritoryOnMap = (id: string) => {
     setState(current => selectTerritory(current, id));
     setCurrentView('map');
@@ -227,13 +243,13 @@ export default function App() {
       setShowSupplyWarning(true);
       return;
     }
-    setState(endTurn);
+    setState(advanceDay(state));
   };
 
   const resolveDayAnyway = () => {
     if (collapseDecisionPending) return;
     setShowSupplyWarning(false);
-    setState(current => endTurn(markSupplyWarningAcknowledged(current)));
+    setState(advanceDay(markSupplyWarningAcknowledged(state)));
   };
 
   const renderPriorityOrderAction = () => {
@@ -385,7 +401,6 @@ export default function App() {
   </section>;
 
   return <main className={`app-shell command-app-shell ${tutorialStep ? `tutorial-step-${tutorialStep.target}` : ''}`}>
-    <button className="persistence-save-proxy" onClick={() => saveGame(state)} tabIndex={-1} aria-hidden="true">Save</button>
 
     <header className="topbar command-topbar">
       <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY · WP8 GUIDED HELP</p><h1>FUTURE CONQUEST</h1></div>
@@ -676,9 +691,10 @@ export default function App() {
           <header className="command-view-header"><div><p className="panel-label">CAMPAIGN</p><h2>Campaign control</h2></div><p>Save, restore or restart the campaign and review the complete command log.</p></header>
           <div className="campaign-command-grid">
             <section className="view-panel campaign-controls-panel">
-              <p className="panel-label">CAMPAIGN FILE</p>
+              <p className="panel-label">CAMPAIGN SAVE DATA</p>
               <div className="campaign-status-card"><span>Current campaign</span><strong>Day {String(state.turn).padStart(3, '0')}</strong><small>Seed {state.seed} · {state.difficulty} · {controlled}/{territoryDefinitions.length} territories</small></div>
-              <div className="campaign-file-actions"><button onClick={() => saveGame(state)}>Save</button><button onClick={load}>Load</button></div>
+              <div className="campaign-file-actions"><button onClick={() => saveGame(state)}>Manual Save</button><button onClick={load}>Load Manual Save</button><button onClick={loadAutosave}>Load Autosave</button></div>
+              <p className="settings-future-copy">Manual Save and Autosave are separate campaign slots. Autosave never overwrites your Manual Save.</p>
               <div className="new-campaign-controls"><label>New campaign difficulty<select value={newDifficulty} onChange={event => setNewDifficulty(event.target.value as Difficulty)}><option value="story">Story</option><option value="standard">Standard</option><option value="hard">Hard</option></select></label><label className="tutorial-toggle"><input type="checkbox" checked={newTutorialEnabled} onChange={event => setNewTutorialEnabled(event.target.checked)} /> Guided tutorial</label><button className="danger-action" onClick={startCampaign}>New campaign</button></div><div className="campaign-file-actions"><button onClick={() => setState(restartTutorial)}>Restart tutorial</button><button onClick={() => setState(skipTutorial)} disabled={!state.tutorial.enabled}>Skip tutorial</button></div>
             </section>
             <section className="view-panel campaign-overview-panel">

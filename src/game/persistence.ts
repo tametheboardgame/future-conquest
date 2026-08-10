@@ -3,6 +3,9 @@ import type { Difficulty, GameState } from './types';
 
 export const CURRENT_SAVE_KEY = 'future-conquest-slice-v0.14';
 export const SAVE_METADATA_KEY = 'future-conquest-slice-v0.14-metadata';
+export const AUTOSAVE_KEY = 'future-conquest-slice-v0.14-autosave';
+export const AUTOSAVE_METADATA_KEY = 'future-conquest-slice-v0.14-autosave-metadata';
+export type CampaignSaveSlot = 'manual' | 'autosave';
 export const LEGACY_V13_SAVE_KEY = 'future-conquest-slice-v0.13';
 export const LEGACY_V12_SAVE_KEY = 'future-conquest-slice-v0.12';
 export const LEGACY_V11_SAVE_KEY = 'future-conquest-slice-v0.11';
@@ -228,9 +231,9 @@ function metadataMatchesState(value: unknown, state: GameState): value is SaveMe
   );
 }
 
-function readMetadata(storage: StorageReader, state: GameState): SaveMetadata {
+function readMetadata(storage: StorageReader, state: GameState, key = SAVE_METADATA_KEY): SaveMetadata {
   try {
-    const raw = storage.getItem(SAVE_METADATA_KEY);
+    const raw = storage.getItem(key);
     if (!raw) return createSaveMetadata(state, null);
     const parsed = JSON.parse(raw) as unknown;
     return metadataMatchesState(parsed, state) ? parsed : createSaveMetadata(state, null);
@@ -368,6 +371,35 @@ export function inspectStoredCampaign(storage: StorageReader): SaveInspection {
   if (legacy) return inspectRaw(storage, legacy, 'v2');
 
   return { ok: false, code: 'missing', message: 'No saved campaign was found in this browser.' };
+}
+
+/** Autosaves deliberately have no legacy fallback: a load request can never cross slots. */
+export function inspectCampaignSlot(storage: StorageReader, slot: CampaignSaveSlot): SaveInspection {
+  if (slot === 'manual') return inspectStoredCampaign(storage);
+  const raw = readRaw(storage, AUTOSAVE_KEY);
+  if (typeof raw !== 'string' && raw !== null) return raw;
+  if (!raw) return { ok: false, code: 'missing', message: 'No autosaved campaign was found in this browser.' };
+  const inspected = inspectRaw(storage, raw, 'v14');
+  if (!inspected.ok) return inspected;
+  return { ...inspected, metadata: readMetadata(storage, inspected.state, AUTOSAVE_METADATA_KEY) };
+}
+
+export function writeCampaignSlot(
+  storage: StorageWriter,
+  state: GameState,
+  slot: CampaignSaveSlot,
+  savedAt = new Date().toISOString()
+): MetadataWriteResult {
+  const saveKey = slot === 'manual' ? CURRENT_SAVE_KEY : AUTOSAVE_KEY;
+  const metadataKey = slot === 'manual' ? SAVE_METADATA_KEY : AUTOSAVE_METADATA_KEY;
+  const metadata = createSaveMetadata(state, savedAt);
+  try {
+    storage.setItem(saveKey, JSON.stringify(state));
+    storage.setItem(metadataKey, JSON.stringify(metadata));
+    return { ok: true, metadata };
+  } catch {
+    return { ok: false, code: 'storage-unavailable', message: `The ${slot} campaign slot could not be saved.` };
+  }
 }
 
 export function storageIsWritable(storage: StorageWriter): boolean {
