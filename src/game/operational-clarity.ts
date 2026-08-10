@@ -82,8 +82,8 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   const add = (warning: AdviserWarning) => warnings.push(warning);
   const threats = getThreatenedTerritories(state);
   for (const threat of threats.filter(threat => threat.stage !== 'recent-combat')) {
-    const defenders = Object.values(state.taskGroups).filter(group => group.location === threat.territoryId && group.status === 'garrison');
-    if (!defenders.length) add({ id: `undefended-${threat.territoryId}`, category: 'undefended-threat', severity: threat.stage === 'under-attack' ? 'critical' : 'danger', title: `${TERRITORIES[threat.territoryId].centre} is threatened and undefended`, detail: 'No formation is assigned to garrison the threatened territory.', territoryId: threat.territoryId });
+    const defenders = Object.values(state.taskGroups).filter(group => group.location === threat.territoryId && group.personnel > 0);
+    if (!defenders.length) add({ id: `undefended-${threat.territoryId}`, category: 'undefended-threat', severity: threat.stage === 'under-attack' ? 'critical' : 'danger', title: `${TERRITORIES[threat.territoryId].centre} is threatened and undefended`, detail: 'No combat-capable formation is present to defend the threatened territory.', territoryId: threat.territoryId });
   }
   for (const [territoryId, territory] of Object.entries(state.territories)) {
     if (territory.controller !== 'player') continue;
@@ -104,7 +104,7 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   }
   for (const operation of Object.values(state.operations)) {
     const friendlyPower = operationFriendlyPower(state, operation.participantGroupIds);
-    if (operation.enemyPower > friendlyPower * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > friendlyPower * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: `Assessed enemy combat power (${operation.enemyPower.toFixed(1)}) substantially exceeds friendly combat power (${friendlyPower.toFixed(1)}).`, territoryId: operation.target });
+    if (operation.enemyPower > friendlyPower * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > friendlyPower * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: 'The planned assault is assessed as severely overmatched. Reconsider the commitment or gather better intelligence before proceeding.', territoryId: operation.target });
   }
   return warnings
     .filter(warning => adviserSeverityRank[warning.severity] >= assistanceThreshold[assistance])

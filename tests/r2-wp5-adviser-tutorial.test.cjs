@@ -18,6 +18,9 @@ test('WP5 adviser detects every approved strategic warning without mutating camp
   const lowTerritory = TERRITORIES[territoryId].neighbours[0];
   state.territories[lowTerritory].controller = 'player'; state.territories[lowTerritory].occupation = 'controlled';
   group.location = lowTerritory;
+  for (const other of Object.values(state.taskGroups)) {
+    if (other.id !== group.id && other.location === territoryId) other.location = lowTerritory;
+  }
   const routeId = Object.keys(state.logistics.routeFlows)[0];
   state.logistics.routeFlows[routeId] = { ...state.logistics.routeFlows[routeId], used:100, capacity:50, utilisation:200, condition:'overloaded' };
   state.logistics.bottleneckRouteIds = [routeId];
@@ -40,6 +43,45 @@ test('WP5 suicidal-assault advice compares engine-scale combat power', () => {
   assert.ok(getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'suicidal-assault'));
   operation.enemyPower = 5;
   assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'suicidal-assault'));
+});
+
+test('WP5 suicidal-assault advice never exposes exact hidden combat power', () => {
+  const state = newGame(5518, 'standard', false);
+  const group = Object.values(state.taskGroups)[0];
+  const target = TERRITORIES[group.location].neighbours[0];
+  const hiddenEnemyPower = 83.7;
+  state.operations['hidden-power-operation'] = { id:'hidden-power-operation', target, participantGroupIds:[group.id], origins:{[group.id]:group.location}, progress:0, days:1, enemyFormationIds:[], enemyPower:hiddenEnemyPower };
+
+  for (const report of [
+    undefined,
+    { id:'stale-contact', turn:state.turn - 5, title:'Stale contact', detail:'Old report', territoryId:target, estimatedMin:1200, estimatedMax:2800, confidence:'low' },
+    { id:'confirmed-contact', turn:state.turn, title:'Recent contact', detail:'Current report', territoryId:target, estimatedMin:4200, estimatedMax:6100, confidence:'high' }
+  ]) {
+    state.intelligenceReports = report ? [report] : [];
+    const warning = getAdviserWarnings(state, 'Full Guidance').find(candidate => candidate.category === 'suicidal-assault');
+    assert.ok(warning, 'internally outmatched assaults must still trigger across intelligence states');
+    assert.doesNotMatch(`${warning.title} ${warning.detail}`, /83(?:\.7|\.70|\.700)?/, 'exact simulation enemy power must remain hidden');
+    assert.doesNotMatch(warning.detail, /enemy combat power\s*\(/i, 'advice must not present exact combat-power figures');
+  }
+});
+
+test('WP5 threatened-territory advice follows counterattack defender eligibility', () => {
+  const state = newGame(5519, 'standard', false);
+  const target = state.portalTerritory;
+  const origin = TERRITORIES[target].neighbours[0];
+  const defender = Object.values(state.taskGroups)[0];
+  for (const group of Object.values(state.taskGroups)) group.location = origin;
+  defender.location = target;
+  defender.personnel = 1000;
+  state.enemyOrders = [{ id:'eligibility-threat', turn:state.turn, type:'counterattack', origin, target, executeTurn:state.turn, status:'executing', priority:100, summary:'attack' }];
+
+  for (const status of ['ready', 'engineering']) {
+    defender.status = status;
+    assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'undefended-threat'), `${status} formations participate in counterattack defence`);
+  }
+
+  defender.personnel = 0;
+  assert.ok(getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'undefended-threat'), 'a territory without a combat-capable local formation is genuinely undefended');
 });
 
 test('WP5 adviser orders severe warnings first while preserving every visible warning', () => {
@@ -70,6 +112,9 @@ test('WP5 adviser excludes resolved counterattacks while retaining active threat
   const state = newGame(5513, 'standard', false);
   const target = state.portalTerritory;
   const origin = TERRITORIES[target].neighbours[0];
+  for (const group of Object.values(state.taskGroups)) {
+    if (group.location === target) group.location = origin;
+  }
   state.enemyOrders = [{ id:'resolved-threat', turn:state.turn, type:'counterattack', origin, target, executeTurn:state.turn, status:'completed', priority:100, summary:'resolved attack' }];
   assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'undefended-threat'));
 
