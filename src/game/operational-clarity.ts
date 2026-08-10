@@ -81,7 +81,7 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   const warnings: AdviserWarning[] = [];
   const add = (warning: AdviserWarning) => warnings.push(warning);
   const threats = getThreatenedTerritories(state);
-  for (const threat of threats) {
+  for (const threat of threats.filter(threat => threat.stage !== 'recent-combat')) {
     const defenders = Object.values(state.taskGroups).filter(group => group.location === threat.territoryId && group.status === 'garrison');
     if (!defenders.length) add({ id: `undefended-${threat.territoryId}`, category: 'undefended-threat', severity: threat.stage === 'under-attack' ? 'critical' : 'danger', title: `${TERRITORIES[threat.territoryId].centre} is threatened and undefended`, detail: 'No formation is assigned to garrison the threatened territory.', territoryId: threat.territoryId });
   }
@@ -100,7 +100,7 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   }
   for (const project of state.engineeringProjects.filter(project => project.status === 'active' && project.allocation === 0)) {
     const routeName = STRATEGIC_ROUTE_BY_ID[project.routeId]?.name ?? project.routeId;
-    const supportWasWithdrawn = state.events.some(event => event.turn >= project.createdTurn
+    const supportWasWithdrawn = state.events.some(event => event.engineeringProjectId === project.id
       && event.text.includes('engineering support was withdrawn')
       && event.text.includes(routeName));
     if (supportWasWithdrawn) add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: 'danger', title: 'Engineering support has been withdrawn', detail: `${routeName} has lost its assigned military support. Civil work continues at local capability.`, routeId: project.routeId });

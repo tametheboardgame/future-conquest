@@ -18,12 +18,13 @@ export const MAX_ROUTE_UPGRADE_LEVEL = 2;
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
-function appendEvent(state: GameState, text: string, tone: GameEvent['tone']): GameState {
+function appendEvent(state: GameState, text: string, tone: GameEvent['tone'], engineeringProjectId?: string): GameState {
   const event: GameEvent = {
     id: (state.events[0]?.id ?? 0) + 1,
     turn: state.turn,
     text,
-    tone
+    tone,
+    engineeringProjectId
   };
   return { ...state, events: [event, ...state.events].slice(0, 100) };
 }
@@ -421,7 +422,8 @@ export function withdrawEngineeringSupport(state: GameState, projectId: string):
   return refreshSupplyNetwork(appendEvent(
     { ...state, engineeringProjects: projects },
     `${group?.name ?? 'Military'} engineering support was withdrawn from ${route?.name ?? project.routeId}. Civil work continues at local capability.`,
-    'neutral'
+    'neutral',
+    project.id
   ));
 }
 

@@ -65,6 +65,33 @@ test('WP5 engineering warning distinguishes civil-only work from withdrawn milit
   assert.ok(getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'));
 });
 
+test('WP5 adviser excludes resolved counterattacks while retaining active threat stages', () => {
+  const state = newGame(5513, 'standard', false);
+  const target = state.portalTerritory;
+  const origin = TERRITORIES[target].neighbours[0];
+  state.enemyOrders = [{ id:'resolved-threat', turn:state.turn, type:'counterattack', origin, target, executeTurn:state.turn, status:'completed', priority:100, summary:'resolved attack' }];
+  assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'undefended-threat'));
+
+  for (const [status, executeTurn] of [['planned', state.turn + 2], ['executing', state.turn]]) {
+    state.enemyOrders[0] = { ...state.enemyOrders[0], id:`active-${status}`, status, executeTurn };
+    assert.ok(getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'undefended-threat'), `${status} counterattack remains an active threat`);
+  }
+});
+
+test('WP5 engineering withdrawal history belongs only to the withdrawn project identity', () => {
+  const state = newGame(5514, 'standard', false);
+  const group = Object.values(state.taskGroups)[0];
+  const routeId = Object.keys(state.routeStates)[0];
+  const original = { id:'withdrawn-project', routeId, kind:'repair', assignedTaskGroupId:group.id, createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:25, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 };
+  state.engineeringProjects.push(original);
+  const withdrawn = withdrawEngineeringSupport(state, original.id);
+  assert.ok(getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.id === `engineering-${original.id}`));
+
+  const replacement = { ...withdrawn.engineeringProjects[0], id:'same-turn-civil-replacement', assignedTaskGroupId:undefined, allocation:0 };
+  withdrawn.engineeringProjects = [replacement];
+  assert.ok(!getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'), 'same-route, same-turn replacement must not inherit withdrawal history');
+});
+
 test('WP5 adviser consumes live session Assistance settings without storage reloads', () => {
   const app = fs.readFileSync('src/App.tsx', 'utf8');
   const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');

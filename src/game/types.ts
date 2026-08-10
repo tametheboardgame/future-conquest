@@ -322,6 +322,7 @@ export interface GameEvent {
   turn: number;
   text: string;
   tone: 'neutral' | 'good' | 'warning' | 'danger';
+  engineeringProjectId?: string;
 }
 
 export interface EnemyStrategyState {
