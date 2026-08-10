@@ -48,7 +48,12 @@ const traces = cases.map(testCase => {
       garrisonsReleased: result.garrisonsReleased,
       reserveTurns: result.reserveTurns,
       engineeringProjectsStarted: result.engineeringProjectsStarted,
-      formationsSplit: result.formationsSplit
+      formationsSplit: result.formationsSplit,
+      hubUpgrades: result.hubUpgrades,
+      hubCapacityGain: result.hubCapacityGain,
+      hubValueTurns: result.hubValueTurns,
+      hubLosses: result.hubLosses,
+      personnelAfterHubLoss: result.personnelAfterHubLoss
     };
     const changed = !previous || Object.keys(snapshot).some(key => key !== 'turn' && snapshot[key] !== previous[key]);
     if (changed || cap === testCase.maxTurns || result.outcome !== 'timeout') snapshots.push(snapshot);
@@ -63,9 +68,9 @@ writeFileSync(resolve(outputDir, 'current-engine-traces.json'), `${JSON.stringif
 
 const lines = ['# Current-engine diagnostic traces', ''];
 for (const trace of traces) {
-  lines.push(`## ${trace.id}`, '', `Seed ${trace.seed}, ${trace.difficulty}/${trace.policy}.`, '', '| Turn | Outcome | Control | Admin | Personnel | Escalation | Min network | Captures | Recaptures | Incidents | Ops | Moves | Garrisons A/R | Splits | Engineering |', '| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
+  lines.push(`## ${trace.id}`, '', `Seed ${trace.seed}, ${trace.difficulty}/${trace.policy}.`, '', '| Turn | Outcome | Control | Admin | Personnel | Escalation | Min network | Captures | Recaptures | Incidents | Ops | Moves | Garrisons A/R | Splits | Engineering | Hub upgrades/gain/value/loss/survivors |', '| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
   for (const row of trace.snapshots) {
-    lines.push(`| ${row.turn} | ${row.outcome}${row.defeatCause ? ` (${row.defeatCause})` : ''} | ${row.controlledTerritories} | ${row.administeredTerritories} | ${row.activePersonnel} | ${row.maxEscalation} | ${row.minNetworkEfficiency}% | ${row.captures} | ${row.enemyRecaptures} | ${row.infrastructureIncidents} | ${row.operationsStarted}/${row.operationsJoined} | ${row.movesIssued} | ${row.garrisonsAssigned}/${row.garrisonsReleased} | ${row.formationsSplit} | ${row.engineeringProjectsStarted} |`);
+    lines.push(`| ${row.turn} | ${row.outcome}${row.defeatCause ? ` (${row.defeatCause})` : ''} | ${row.controlledTerritories} | ${row.administeredTerritories} | ${row.activePersonnel} | ${row.maxEscalation} | ${row.minNetworkEfficiency}% | ${row.captures} | ${row.enemyRecaptures} | ${row.infrastructureIncidents} | ${row.operationsStarted}/${row.operationsJoined} | ${row.movesIssued} | ${row.garrisonsAssigned}/${row.garrisonsReleased} | ${row.formationsSplit} | ${row.engineeringProjectsStarted} | ${row.hubUpgrades}/${row.hubCapacityGain}/${row.hubValueTurns}/${row.hubLosses}/${row.personnelAfterHubLoss} |`);
   }
   lines.push('');
 }
