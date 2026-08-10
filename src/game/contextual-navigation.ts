@@ -5,7 +5,7 @@ import type { GameState } from './types';
 export type ContextualTarget =
   | { kind: 'route'; id: string; reason: string }
   | { kind: 'formation'; id: string; reason: string }
-  | { kind: 'territory'; id: string; reason: string; section?: 'defence' | 'logistics' }
+  | { kind: 'territory'; id: string; reason: string; section?: 'defence' | 'logistics' | 'intelligence' }
   | { kind: 'operation'; id: string; reason: string }
   | { kind: 'logistics'; reason: string }
   | { kind: 'infrastructure'; reason: string };

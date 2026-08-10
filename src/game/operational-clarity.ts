@@ -41,6 +41,7 @@ export interface SupplyDiagnostic {
   territoryId?: string;
   groupId?: string;
   routeId?: string;
+  operationId?: string;
 }
 
 export interface SupplyClarity {
@@ -104,7 +105,7 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   }
   for (const operation of Object.values(state.operations)) {
     const friendlyPower = operationFriendlyPower(state, operation.participantGroupIds);
-    if (operation.enemyPower > friendlyPower * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > friendlyPower * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: 'The planned assault is assessed as severely overmatched. Reconsider the commitment or gather better intelligence before proceeding.', territoryId: operation.target });
+    if (operation.enemyPower > friendlyPower * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > friendlyPower * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: 'The planned assault is assessed as severely overmatched. Reconsider the commitment or gather better intelligence before proceeding.', operationId: operation.id, territoryId: operation.target });
   }
   return warnings
     .filter(warning => adviserSeverityRank[warning.severity] >= assistanceThreshold[assistance])
