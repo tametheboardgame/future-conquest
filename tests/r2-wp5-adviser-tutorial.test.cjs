@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const { newGame } = require('../.test-dist/engine.js');
 const { TERRITORIES } = require('../.test-dist/data.js');
 const { getAdviserWarnings, moveTutorial } = require('../.test-dist/operational-clarity.js');
+const { withdrawEngineeringSupport } = require('../.test-dist/engineering-projects.js');
 
 test('WP5 adviser detects every approved strategic warning without mutating campaign state', () => {
   const state = newGame(5501, 'standard', true);
@@ -19,12 +20,58 @@ test('WP5 adviser detects every approved strategic warning without mutating camp
   const routeId = Object.keys(state.logistics.routeFlows)[0];
   state.logistics.routeFlows[routeId] = { ...state.logistics.routeFlows[routeId], used:100, capacity:50, utilisation:200, condition:'overloaded' };
   state.logistics.bottleneckRouteIds = [routeId];
-  state.engineeringProjects.push({ id:'wp5-project', routeId, kind:'repair', createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:0, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 });
-  state.operations['wp5-operation'] = { id:'wp5-operation', target:territoryId, participantGroupIds:[group.id], origins:{[group.id]:lowTerritory}, progress:0, days:3, enemyFormationIds:[], enemyPower:5000 };
+  state.engineeringProjects.push({ id:'wp5-project', routeId, kind:'repair', assignedTaskGroupId:group.id, createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:25, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 });
+  const withdrawn = withdrawEngineeringSupport(state, 'wp5-project');
+  state.engineeringProjects = withdrawn.engineeringProjects; state.events = withdrawn.events;
+  state.operations['wp5-operation'] = { id:'wp5-operation', target:territoryId, participantGroupIds:[group.id], origins:{[group.id]:lowTerritory}, progress:0, days:3, enemyFormationIds:[], enemyPower:20 };
   const snapshot = structuredClone(state);
   const warnings = getAdviserWarnings(state, 'Full Guidance');
   assert.deepEqual(new Set(warnings.map(w => w.category)), new Set(['undefended-threat','isolation','low-garrison','exhausted-stocks','overloaded-route','engineering-support-loss','suicidal-assault']));
   assert.deepEqual(state, snapshot, 'advice must not alter or restrict otherwise legal campaign actions');
+});
+
+test('WP5 suicidal-assault advice compares engine-scale combat power', () => {
+  const state = newGame(5510, 'standard', false);
+  const group = Object.values(state.taskGroups)[0];
+  const target = TERRITORIES[group.location].neighbours[0];
+  const operation = { id:'scale-operation', target, participantGroupIds:[group.id], origins:{[group.id]:group.location}, progress:0, days:1, enemyFormationIds:[], enemyPower:80 };
+  state.operations[operation.id] = operation;
+  assert.ok(getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'suicidal-assault'));
+  operation.enemyPower = 5;
+  assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'suicidal-assault'));
+});
+
+test('WP5 adviser orders severe warnings first while preserving every visible warning', () => {
+  const state = newGame(5511, 'standard', false);
+  const group = Object.values(state.taskGroups)[0];
+  group.status = 'garrison'; group.personnel = 500; group.supply = 5;
+  const warnings = getAdviserWarnings(state, 'Full Guidance');
+  assert.equal(warnings[0].category, 'exhausted-stocks');
+  assert.equal(warnings[0].severity, 'critical');
+  assert.ok(warnings.some(warning => warning.category === 'low-garrison'));
+  const app = fs.readFileSync('src/App.tsx', 'utf8');
+  assert.match(app, /adviserWarnings\.map\(/, 'the presentation must expose every applicable warning');
+});
+
+test('WP5 engineering warning distinguishes civil-only work from withdrawn military support', () => {
+  const state = newGame(5512, 'standard', false);
+  const group = Object.values(state.taskGroups)[0];
+  const routeId = Object.keys(state.routeStates)[0];
+  const project = { id:'support-history', routeId, kind:'repair', createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:0, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 };
+  state.engineeringProjects.push(project);
+  assert.ok(!getAdviserWarnings(state, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'));
+  project.assignedTaskGroupId = group.id; project.allocation = 25;
+  const withdrawn = withdrawEngineeringSupport(state, project.id);
+  assert.ok(getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'));
+});
+
+test('WP5 adviser consumes live session Assistance settings without storage reloads', () => {
+  const app = fs.readFileSync('src/App.tsx', 'utf8');
+  const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
+  assert.match(app, /useLiveGlobalSettings\(\)/);
+  assert.doesNotMatch(app, /loadGlobalSettings/);
+  assert.match(startup, /GlobalSettingsContext\.Provider value=\{settings\}/);
+  assert.match(startup, /setSettings\(saved\)/, 'session state must update even if persistence fails');
 });
 
 test('WP5 Assistance levels apply predictable severity thresholds', () => {

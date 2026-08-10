@@ -8,6 +8,7 @@ import { DefencePanel } from './components/DefencePanel';
 import { CombatAfterActionAlert, CombatReportsPanel } from './components/CombatReports';
 import { StrategicCollapseDecision } from './components/StrategicCollapseDecision';
 import { TutorialOverlay } from './components/TutorialOverlay';
+import { useLiveGlobalSettings } from './components/StartupExperience';
 import { MapView } from './components/MapView';
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
@@ -50,7 +51,6 @@ import { getTerritoryResourceState, logisticsHubUpgradeQuote, TERRITORY_RESOURCE
 import { getEscalationStage } from './game/strategic-response';
 import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-targeting';
 import type { Difficulty, GameState, Operation } from './game/types';
-import { loadGlobalSettings } from './game/global-settings';
 import { inspectCampaignSlot, writeCampaignSlot } from './game/persistence';
 import { getBrowserStorage, showPersistenceFailure } from './persistence-feedback';
 
@@ -58,6 +58,7 @@ const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(va
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
 
 export default function App() {
+  const { assistanceLevel, autosaveEnabled } = useLiveGlobalSettings();
   const [state, setState] = useState<GameState>(() => newGame());
   const [newDifficulty, setNewDifficulty] = useState<Difficulty>('standard');
   const [currentView, setCurrentView] = useState<CommandView>('map');
@@ -74,7 +75,6 @@ export default function App() {
   const confirmedEnemyContacts = enemyContacts.filter(contact => contact.confidence === 'confirmed').length;
   const threatenedTerritories = getThreatenedTerritories(state);
   const supplyClarity = getSupplyClarity(state);
-  const assistanceLevel = loadGlobalSettings().assistanceLevel;
   const adviserWarnings = getAdviserWarnings(state, assistanceLevel);
   const tutorialStep = getTutorialStep(state.tutorial);
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
@@ -217,7 +217,7 @@ export default function App() {
 
   const advanceDay = (current: GameState) => {
     const next = endTurn(current);
-    if (loadGlobalSettings().autosaveEnabled) {
+    if (autosaveEnabled) {
       const storage = getBrowserStorage();
       if (!storage) {
         showPersistenceFailure('The autosave campaign slot could not be saved. Browser storage is unavailable.');
@@ -447,7 +447,7 @@ export default function App() {
 
     {adviserWarnings.length > 0 && <section className={`adviser-alert-strip ${adviserWarnings[0].severity}`} aria-live="polite" data-assistance-level={assistanceLevel}>
       <div><small>ADVISER · {assistanceLevel.toUpperCase()}</small><strong>{adviserWarnings.length} strategic risk{adviserWarnings.length === 1 ? '' : 's'}</strong></div>
-      <div><strong>{adviserWarnings[0].title}</strong><span>{adviserWarnings[0].detail}</span></div>
+      <div className="adviser-warning-list" role="list">{adviserWarnings.map(warning => <div className={`adviser-warning-item ${warning.severity}`} role="listitem" key={warning.id}><strong>{warning.title}</strong><span>{warning.detail}</span></div>)}</div>
       <small>Advisory only — legal orders remain available.</small>
     </section>}
 

@@ -2,6 +2,7 @@ import { TERRITORIES } from './data';
 import { STRATEGIC_ROUTE_BY_ID, STRATEGIC_ROUTES } from './strategic-network-data';
 import type { GameState, OperationalAwarenessState, TutorialState } from './types';
 import type { AssistanceLevel } from './global-settings';
+import { engineeringOperationalPersonnel } from './engineering-projects';
 
 export type EnemyContactConfidence = 'confirmed' | 'estimated' | 'activity' | 'stale';
 export type OperationalSeverity = 'normal' | 'warning' | 'danger' | 'critical';
@@ -53,6 +54,20 @@ export interface SupplyClarity {
 export type AdviserWarningCategory = 'undefended-threat' | 'isolation' | 'low-garrison' | 'exhausted-stocks' | 'overloaded-route' | 'engineering-support-loss' | 'suicidal-assault';
 export interface AdviserWarning extends SupplyDiagnostic { category: AdviserWarningCategory }
 
+const adviserSeverityRank: Record<SupplyDiagnostic['severity'], number> = { warning: 1, danger: 2, critical: 3 };
+
+const operationFriendlyPower = (state: GameState, participantGroupIds: string[]) => {
+  const groups = participantGroupIds.flatMap(id => state.taskGroups[id] ? [state.taskGroups[id]] : []);
+  const combined = groups.reduce((sum, group) => {
+    const personnel = engineeringOperationalPersonnel(state, group);
+    const armour = Math.min(group.functionalArmour, personnel);
+    return sum + (personnel / 1000 * 4.1 + armour / 1000 * 1.9)
+      * (0.58 + group.morale / 150)
+      * (0.55 + group.supply / 190);
+  }, 0);
+  return combined * Math.max(0.82, 1 - (groups.length - 1) * 0.04);
+};
+
 const assistanceThreshold: Record<AssistanceLevel, number> = {
   'Full Guidance': 1,
   Recommended: 2,
@@ -83,15 +98,22 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
     const route = STRATEGIC_ROUTE_BY_ID[routeId]; const flow = state.logistics.routeFlows[routeId];
     if (route && flow?.condition === 'overloaded') add({ id: `overload-${routeId}`, category: 'overloaded-route', severity: 'danger', title: `${route.name} is overloaded`, detail: `${Math.round(flow.utilisation)}% of route throughput is committed.`, routeId, territoryId: route.toTerritoryId });
   }
-  for (const project of state.engineeringProjects.filter(project => project.status === 'active' && project.allocation < 25)) {
-    add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: project.allocation === 0 ? 'danger' : 'warning', title: 'Engineering support has been withdrawn', detail: `${STRATEGIC_ROUTE_BY_ID[project.routeId]?.name ?? project.routeId} now has ${project.allocation}% military support.`, routeId: project.routeId });
+  for (const project of state.engineeringProjects.filter(project => project.status === 'active' && project.allocation === 0)) {
+    const routeName = STRATEGIC_ROUTE_BY_ID[project.routeId]?.name ?? project.routeId;
+    const supportWasWithdrawn = state.events.some(event => event.turn >= project.createdTurn
+      && event.text.includes('engineering support was withdrawn')
+      && event.text.includes(routeName));
+    if (supportWasWithdrawn) add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: 'danger', title: 'Engineering support has been withdrawn', detail: `${routeName} has lost its assigned military support. Civil work continues at local capability.`, routeId: project.routeId });
   }
   for (const operation of Object.values(state.operations)) {
-    const strength = operation.participantGroupIds.reduce((sum, id) => sum + (state.taskGroups[id]?.personnel ?? 0), 0);
-    if (operation.enemyPower > strength * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > strength * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: `Assessed enemy power substantially exceeds the ${strength} personnel committed.`, territoryId: operation.target });
+    const friendlyPower = operationFriendlyPower(state, operation.participantGroupIds);
+    if (operation.enemyPower > friendlyPower * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > friendlyPower * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: `Assessed enemy combat power (${operation.enemyPower.toFixed(1)}) substantially exceeds friendly combat power (${friendlyPower.toFixed(1)}).`, territoryId: operation.target });
   }
-  const rank: Record<SupplyDiagnostic['severity'], number> = { warning: 1, danger: 2, critical: 3 };
-  return warnings.filter(warning => rank[warning.severity] >= assistanceThreshold[assistance]);
+  return warnings
+    .filter(warning => adviserSeverityRank[warning.severity] >= assistanceThreshold[assistance])
+    .sort((first, second) => adviserSeverityRank[second.severity] - adviserSeverityRank[first.severity]
+      || first.category.localeCompare(second.category)
+      || first.id.localeCompare(second.id));
 }
 
 export interface TutorialStep {
