@@ -126,7 +126,7 @@ test('hub survives territorial loss while reserves are captured and player benef
 });
 
 test('deterministic campaign validation exercises hub construction, value, loss, and continued play', () => {
-  const result = simulateCurrentEngineCampaign(13, 'story', 'managed', 30);
+  const result = simulateCurrentEngineCampaign(1, 'standard', 'managed', 60);
   assert.equal(result.hubUpgrades, 1);
   assert.ok(result.hubCapacityGain > 0);
   assert.ok(result.hubValueTurns > 0);

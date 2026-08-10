@@ -4,7 +4,6 @@ import {
   canIssueOperationalOrder,
   continueCampaignAfterCollapse,
   endTurn,
-  enemyStrengthAt,
   entrenchTerritory,
   getOperationAtTarget,
   issueMove,
@@ -31,6 +30,7 @@ import {
   upgradeLogisticsHub
 } from './territory-resources';
 import { getAdjacentOrderTargets } from './order-targeting';
+import { getEnemyContacts } from './operational-clarity';
 import { setFormationLogisticsPriority, setTerritoryLogisticsPriority } from './supply-network';
 import type { Difficulty, GameState, TaskGroup } from './types';
 
@@ -289,6 +289,18 @@ const combatPower = (group: TaskGroup) => {
     * (0.55 + group.supply / 190);
 };
 
+// The campaign player must make the same incomplete-information decision as a
+// human player. Convert the public contact's personnel range into a deliberately
+// conservative power proxy; armour, readiness and entrenchment remain unknown.
+const assessedEnemyPower = (state: GameState, territoryId: string) => {
+  const contact = getEnemyContacts(state).find(candidate => candidate.territoryId === territoryId);
+  if (!contact) return 1;
+  const assessedPersonnel = contact.confidence === 'confirmed'
+    ? (contact.estimatedMin + contact.estimatedMax) / 2
+    : contact.estimatedMin * 0.35 + contact.estimatedMax * 0.65;
+  return Math.max(1, assessedPersonnel / 1000 * 5.2);
+};
+
 function strategicReserveIds(state: GameState, policy: BalancePolicyId): Set<string> {
   const profile = POLICY[policy];
   if (profile.strategicReserve <= 0) return new Set<string>();
@@ -305,7 +317,7 @@ function strategicReserveIds(state: GameState, policy: BalancePolicyId): Set<str
       const delivery = state.logistics.formationAllocations[group.id]?.ratio ?? (territory.supplied ? 100 : 0);
       const adjacentEnemyPower = TERRITORIES[group.location].neighbours
         .filter(id => state.territories[id]?.controller === 'enemy')
-        .reduce((sum, id) => sum + enemyStrengthAt(state, id).power, 0);
+        .reduce((sum, id) => sum + assessedEnemyPower(state, id), 0);
       const exposure = adjacentEnemyPower / Math.max(1, combatPower(group));
       const depth = isFrontier(state, group.location) ? 0 : 1.2;
       const occupation = territory.occupation === 'administered' ? 1 : territory.occupation === 'controlled' ? 0.6 : 0;
@@ -416,7 +428,7 @@ function chooseAttackPlan(
       const support = operation ? undefined : supporterFor(state, group, targetId, policy, reserved, breakout);
       const basePower = combatPower(group) + operationPower(state, targetId);
       const plannedPower = support ? (basePower + combatPower(support)) * 0.96 : basePower;
-      const ratio = plannedPower / Math.max(1, enemyStrengthAt(state, targetId).power);
+      const ratio = plannedPower / assessedEnemyPower(state, targetId);
       const terrain = TERRAIN_CAUTION[TERRITORIES[targetId].terrain] ?? 0;
       const threshold = breakout
         ? Math.min(profile.attackRatio, 0.68) + terrain * 0.35

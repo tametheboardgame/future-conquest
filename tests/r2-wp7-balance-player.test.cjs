@@ -6,6 +6,9 @@ const source = fs.readFileSync('src/game/balance-simulation.ts', 'utf8');
 const { simulateCurrentEngineCampaign } = require('../.test-dist/balance-simulation.js');
 
 test('WP7 managed player uses assessed defence without hidden campaign-start privilege', () => {
+  assert.match(source, /getEnemyContacts/);
+  assert.match(source, /assessedEnemyPower/);
+  assert.doesNotMatch(source, /enemyStrengthAt/);
   assert.match(source, /getTerritoryDefenceAssessment/);
   assert.match(source, /prepareTerritoryDefence/);
   assert.match(source, /entrenchTerritory/);
