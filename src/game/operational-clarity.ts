@@ -100,10 +100,7 @@ export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel
   }
   for (const project of state.engineeringProjects.filter(project => project.status === 'active' && project.allocation === 0)) {
     const routeName = STRATEGIC_ROUTE_BY_ID[project.routeId]?.name ?? project.routeId;
-    const supportWasLost = state.events.some(event => event.engineeringProjectId === project.id
-      && (event.text.includes('engineering support was withdrawn') || event.text.includes('lost its assigned military engineering support'))
-      && event.text.includes(routeName));
-    if (supportWasLost) add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: 'danger', title: 'Engineering support has been lost', detail: `${routeName} has lost its assigned military support. Civil work continues at local capability.`, routeId: project.routeId });
+    if (project.engineeringSupportLost) add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: 'danger', title: 'Engineering support has been lost', detail: `${routeName} has lost its assigned military support. Civil work continues at local capability.`, routeId: project.routeId });
   }
   for (const operation of Object.values(state.operations)) {
     const friendlyPower = operationFriendlyPower(state, operation.participantGroupIds);

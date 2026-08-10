@@ -285,6 +285,8 @@ export interface EngineeringProject {
   targetCondition: number;
   progress: number;
   allocation: EngineeringAllocation;
+  /** Durable adviser state; unlike events, this survives command-log trimming. */
+  engineeringSupportLost?: boolean;
   supplySpent: number;
   status: EngineeringProjectStatus;
   returnStatus: 'ready' | 'garrison';

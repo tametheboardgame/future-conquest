@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const { newGame } = require('../.test-dist/engine.js');
 const { TERRITORIES } = require('../.test-dist/data.js');
 const { getAdviserWarnings, moveTutorial } = require('../.test-dist/operational-clarity.js');
-const { resolveEngineeringProjects, startEngineeringProject, withdrawEngineeringSupport } = require('../.test-dist/engineering-projects.js');
+const { assignEngineeringSupport, normaliseEngineeringProjects, resolveEngineeringProjects, startEngineeringProject, withdrawEngineeringSupport } = require('../.test-dist/engineering-projects.js');
 const { refreshSupplyNetwork } = require('../.test-dist/supply-network.js');
 
 test('WP5 adviser detects every approved strategic warning without mutating campaign state', () => {
@@ -88,7 +88,7 @@ test('WP5 engineering withdrawal history belongs only to the withdrawn project i
   const withdrawn = withdrawEngineeringSupport(state, original.id);
   assert.ok(getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.id === `engineering-${original.id}`));
 
-  const replacement = { ...withdrawn.engineeringProjects[0], id:'same-turn-civil-replacement', assignedTaskGroupId:undefined, allocation:0 };
+  const replacement = { ...withdrawn.engineeringProjects[0], id:'same-turn-civil-replacement', assignedTaskGroupId:undefined, allocation:0, engineeringSupportLost:false };
   withdrawn.engineeringProjects = [replacement];
   assert.ok(!getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'), 'same-route, same-turn replacement must not inherit withdrawal history');
 });
@@ -121,9 +121,50 @@ test('WP5 engineering adviser records automatic support loss against the affecte
     assert.equal(lossEvent?.engineeringProjectId, projectId, `${loss} formation loss must retain project identity`);
     assert.ok(getAdviserWarnings(resolved, 'Full Guidance').some(warning => warning.id === `engineering-${projectId}`));
 
-    resolved.engineeringProjects = [{ ...resolved.engineeringProjects[0], id:`replacement-${loss}`, assignedTaskGroupId:undefined, allocation:0 }];
+    resolved.engineeringProjects = [{ ...resolved.engineeringProjects[0], id:`replacement-${loss}`, assignedTaskGroupId:undefined, allocation:0, engineeringSupportLost:false }];
     assert.ok(!getAdviserWarnings(resolved, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'), 'replacement civil project must not inherit automatic loss');
   }
+});
+
+test('WP5 engineering support-loss advice survives event-log eviction and clears only on restoration', () => {
+  const state = newGame(5516, 'standard', false);
+  const group = state.taskGroups['TG-1'];
+  const routeId = 'R-BRUSSELS-AMSTERDAM';
+  state.portalTerritory = 'BE-01';
+  for (const id of ['BE-01', 'NL-01']) {
+    state.territories[id].controller = 'player'; state.territories[id].occupation = 'administered'; state.territories[id].supplied = true; state.territories[id].resistance = 10;
+  }
+  group.location = 'BE-01'; group.status = 'ready'; group.order = undefined;
+  const project = { id:'durable-manual-loss', routeId, kind:'repair', assignedTaskGroupId:group.id, createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:25, engineeringSupportLost:false, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 };
+  state.engineeringProjects.push(project);
+  const withdrawn = withdrawEngineeringSupport(state, project.id);
+  withdrawn.events = Array.from({ length: 101 }, (_, index) => ({ id:`newer-engineering-${index}`, turn:state.turn, text:`Newer engineering event ${index}`, tone:'neutral', engineeringProjectId:`other-${index}` })).slice(0, 100);
+  assert.ok(getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.id === `engineering-${project.id}`), 'manual loss must outlive the capped event history');
+
+  const restored = assignEngineeringSupport(withdrawn, project.id, group.id, 25);
+  assert.equal(restored.engineeringProjects[0].engineeringSupportLost, false);
+  assert.ok(!getAdviserWarnings(restored, 'Full Guidance').some(warning => warning.id === `engineering-${project.id}`), 'genuine reassignment clears support loss');
+});
+
+test('WP5 automatic engineering support loss survives event-log eviction', () => {
+  const state = newGame(5517, 'standard', false);
+  const group = state.taskGroups['TG-1'];
+  const routeId = 'R-BRUSSELS-AMSTERDAM';
+  state.portalTerritory = 'BE-01';
+  for (const id of ['BE-01', 'NL-01']) {
+    state.territories[id].controller = 'player'; state.territories[id].occupation = 'administered'; state.territories[id].supplied = true; state.territories[id].resistance = 10;
+  }
+  state.engineeringProjects.push({ id:'durable-automatic-loss', routeId, kind:'repair', assignedTaskGroupId:group.id, createdTurn:state.turn, startingCondition:20, targetCondition:100, progress:0, allocation:25, engineeringSupportLost:false, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 });
+  delete state.taskGroups[group.id];
+  const resolved = resolveEngineeringProjects(state);
+  resolved.events = Array.from({ length: 101 }, (_, index) => ({ id:`newer-automatic-${index}`, turn:state.turn, text:`Newer engineering event ${index}`, tone:'neutral', engineeringProjectId:`other-${index}` })).slice(0, 100);
+  assert.ok(getAdviserWarnings(resolved, 'Full Guidance').some(warning => warning.id === 'engineering-durable-automatic-loss'));
+});
+
+test('WP5 older engineering projects without durable support-loss state normalise safely', () => {
+  const legacyProject = { id:'legacy-civil-project', routeId:'legacy-route', kind:'repair', createdTurn:1, startingCondition:20, targetCondition:100, progress:0, allocation:0, supplySpent:0, status:'active', returnStatus:'ready', workCompleted:0, workRequired:10, materialCost:10, materialSpent:0 };
+  const [normalised] = normaliseEngineeringProjects([legacyProject]);
+  assert.equal(normalised.engineeringSupportLost, false);
 });
 
 test('WP5 adviser consumes live session Assistance settings without storage reloads', () => {
