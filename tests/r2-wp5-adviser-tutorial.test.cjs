@@ -4,7 +4,8 @@ const fs = require('node:fs');
 const { newGame } = require('../.test-dist/engine.js');
 const { TERRITORIES } = require('../.test-dist/data.js');
 const { getAdviserWarnings, moveTutorial } = require('../.test-dist/operational-clarity.js');
-const { withdrawEngineeringSupport } = require('../.test-dist/engineering-projects.js');
+const { resolveEngineeringProjects, startEngineeringProject, withdrawEngineeringSupport } = require('../.test-dist/engineering-projects.js');
+const { refreshSupplyNetwork } = require('../.test-dist/supply-network.js');
 
 test('WP5 adviser detects every approved strategic warning without mutating campaign state', () => {
   const state = newGame(5501, 'standard', true);
@@ -90,6 +91,39 @@ test('WP5 engineering withdrawal history belongs only to the withdrawn project i
   const replacement = { ...withdrawn.engineeringProjects[0], id:'same-turn-civil-replacement', assignedTaskGroupId:undefined, allocation:0 };
   withdrawn.engineeringProjects = [replacement];
   assert.ok(!getAdviserWarnings(withdrawn, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'), 'same-route, same-turn replacement must not inherit withdrawal history');
+});
+
+test('WP5 engineering adviser records automatic support loss against the affected project', () => {
+  const supportedState = () => {
+    let state = newGame(5515, 'standard', false);
+    state.portalTerritory = 'BE-01';
+    for (const id of ['BE-01', 'NL-01']) {
+      state.territories[id].controller = 'player';
+      state.territories[id].occupation = 'administered';
+      state.territories[id].supplied = true;
+      state.territories[id].resistance = 10;
+    }
+    state.taskGroups['TG-1'].location = 'BE-01';
+    state.taskGroups['TG-1'].status = 'ready';
+    state.taskGroups['TG-1'].order = undefined;
+    state.routeStates['R-BRUSSELS-AMSTERDAM'].condition = 55;
+    state = refreshSupplyNetwork(state);
+    return startEngineeringProject(state, 'R-BRUSSELS-AMSTERDAM', 'TG-1', 25);
+  };
+
+  for (const loss of ['missing', 'destroyed']) {
+    const state = supportedState();
+    const projectId = state.engineeringProjects[0].id;
+    if (loss === 'missing') delete state.taskGroups['TG-1'];
+    else state.taskGroups['TG-1'].personnel = 0;
+    const resolved = resolveEngineeringProjects(state);
+    const lossEvent = resolved.events.find(event => event.text.includes('lost its assigned military engineering support'));
+    assert.equal(lossEvent?.engineeringProjectId, projectId, `${loss} formation loss must retain project identity`);
+    assert.ok(getAdviserWarnings(resolved, 'Full Guidance').some(warning => warning.id === `engineering-${projectId}`));
+
+    resolved.engineeringProjects = [{ ...resolved.engineeringProjects[0], id:`replacement-${loss}`, assignedTaskGroupId:undefined, allocation:0 }];
+    assert.ok(!getAdviserWarnings(resolved, 'Full Guidance').some(warning => warning.category === 'engineering-support-loss'), 'replacement civil project must not inherit automatic loss');
+  }
 });
 
 test('WP5 adviser consumes live session Assistance settings without storage reloads', () => {

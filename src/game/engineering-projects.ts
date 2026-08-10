@@ -464,7 +464,7 @@ export function resolveEngineeringProjects(state: GameState): GameState {
       if (!supportGroup || supportGroup.personnel <= 0) {
         project.assignedTaskGroupId = undefined;
         project.allocation = 0;
-        next = appendEvent(next, `${route.name} lost its assigned military engineering support. Civil work continues.`, 'warning');
+        next = appendEvent(next, `${route.name} lost its assigned military engineering support. Civil work continues.`, 'warning', project.id);
       }
     }
 
