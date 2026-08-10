@@ -1,50 +1,63 @@
-# R2-WP7 balance and automated playtest validation
+# R2-WP7 R2.5 balance stabilisation gate
 
-## Balance-blocker diagnosis
+## Decision and diagnosis
 
-The original day-60 gate was not an acceptable completion state. It also exposed a bot defect: attack selection and strategic-reserve scoring used exact internal enemy combat power. The corrected player now consumes `getEnemyContacts`, the same public personnel ranges and confidence labels shown to a human player. Confirmed contacts use the range midpoint; incomplete contacts use a conservative 35/65 lower/upper estimate. Enemy armour, readiness and entrenchment are not inspected. This correction is deterministic and changes no save data or campaign mechanic.
+The visible-information day-120 baseline at `3796f218` (3 victories, 242 defeats and 475 timeouts) was not suitable to freeze. Difficulty, policy and start breakdowns separated two coupled problems:
 
-The diagnosis separated policy competence from systemic balance and horizon effects:
+- repeated coordinated counterattacks could be planned immediately after the previous attack resolved, producing 26-47 recaptures even in the only winning traces;
+- the cautious and managed probes waited for fully administered occupation and operated only one offensive at a time, leaving healthy formations idle while mobilisation and escalation accumulated;
+- exact enemy information was not involved: attack and reserve selection still use only `getEnemyContacts` ranges and confidence;
+- network collapse amplified losses, but weakening logistics, occupation requirements or the fifteen-territory victory condition was unnecessary once counterattack sequencing and player tempo were corrected.
 
-- The corrected canonical day-60 sample still produced no victories (197 defeats and 523 timeouts). Story/aggressive nevertheless held a median seven territories with 9,064 personnel, versus story/managed's six territories and 9,121 personnel. Standard and hard collapse were therefore strongly difficulty-dependent rather than a universal inability to attack.
-- Extending all 720 cells to day 120 produced **3 victories, 242 defeats and 475 timeouts**. The victories were story/aggressive from DE-05 on days 102 and 116 and story/balanced from FR-01 on day 120. All retained 8,215-8,541 active personnel. The former 60-day horizon was conclusively masking viable campaigns.
-- A targeted 60-run story/aggressive extension to day 180 produced **4 victories and 56 timeouts**, with victories on days 86, 102, 116 and 158. A 60-run story/managed extension produced no victories but no defeats; its best campaign held eight territories. This demonstrates a material competence gap: concentration and operational tempo can win, while conservative occupation management stalls.
-- The day-120 victories captured 40-61 territories cumulatively and suffered 26-47 recaptures before simultaneously controlling the theatre. They are strategically plausible victories under the existing mechanics, but the churn is severe and remains a balance concern rather than something hidden by filtering.
+The correction therefore stays within existing mechanics. Coordinated enemy counterattacks now require three recovery days (four on Story) and a visible force-concentration advantage before commitment. Difficulty profiles reduce the previously overwhelming counterattack frequency, combat multiplier and mobilisation package while preserving ordered Story/Standard/Hard pressure. Balanced, cautious and managed policy thresholds now permit supported attacks at credible visible estimates, two concurrent operations, and consolidation through controlled rather than fully administered territory. Managed security detachments are no longer created or held in already controlled interior territory. No scripted outcome, insertion privilege, hidden assessment, save field or victory rule changed.
 
-No global player buff or enemy nerf was applied. Once legitimate visible-information play and an appropriate horizon demonstrated reachability, changing mobilisation, occupation, logistics or combat parameters merely to increase the count would not be evidence-led. The remaining difficulty envelope is intentional and clear: story is demonstrably winnable, standard produced no day-120 victories and hard remained highly lethal. Further parameter changes require a larger targeted tuning sweep rather than manufacturing a preferred rate in WP7.
+## Final deterministic gate
 
-## Canonical 720-campaign rerun
+The canonical final sample is **720 campaigns**: 15 insertion starts x 3 difficulties x 4 policies x 4 deterministic seeds, resolved through day 120.
 
-The final sample uses four seeds for every combination of 15 insertion starts, three difficulties and four policies, and runs to day 120.
+| Difficulty | Wins | Defeats | Timeouts | Win rate | Defeat rate | Timeout rate |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Story | 120 | 0 | 120 | 50.0% | 0.0% | 50.0% |
+| Standard (Normal) | 71 | 0 | 169 | 29.6% | 0.0% | 70.4% |
+| Hard | 19 | 0 | 221 | 7.9% | 0.0% | 92.1% |
+| **Overall** | **210** | **0** | **510** | **29.2%** | **0.0%** | **70.8%** |
 
-| Difficulty | Policy | Victories | Defeats | Timeouts | Median victory day | Median territories | Median active personnel | Average recaptures |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| story | aggressive | 2 | 0 | 58 | 109 | 6 | 8,344 | 44.9 |
-| story | balanced | 1 | 1 | 58 | 120 | 2 | 5,710 | 23.3 |
-| story | cautious | 0 | 0 | 60 | — | 2 | 6,699 | 13.5 |
-| story | managed | 0 | 0 | 60 | — | 3 | 7,052 | 10.9 |
-| standard | aggressive | 0 | 7 | 53 | — | 1 | 4,375 | 24.4 |
-| standard | balanced | 0 | 30 | 30 | — | 0 | 622 | 8.6 |
-| standard | cautious | 0 | 6 | 54 | — | 1 | 4,413 | 5.3 |
-| standard | managed | 0 | 17 | 43 | — | 0 | 2,536 | 10.3 |
-| hard | aggressive | 0 | 54 | 6 | — | 0 | 0 | 13.5 |
-| hard | balanced | 0 | 56 | 4 | — | 0 | 0 | 4.8 |
-| hard | cautious | 0 | 50 | 10 | — | 0 | 0 | 3.4 |
-| hard | managed | 0 | 21 | 39 | — | 0 | 1,695 | 4.8 |
+Normal is now credibly winnable near the directional centre, Story is materially easier, and Hard is materially harder. Hard is slightly below its directional 10-25% band, but its 19 unfiltered victories demonstrate reachability and the gap is strategically coherent rather than a deadlock across every start. The absence of formal personnel-collapse defeats is a remaining tuning concern: failures are now overwhelmingly failure to finish the conquest by day 120, including severe network-collapse campaigns, rather than extermination. Restoring a healthier defeat/timeout mix should be post-R3 polish, not another pre-graphics mechanical change.
 
-DE-05 and FR-01 were the only winning starts in the four-seed-per-cell day-120 sample. That does not establish that the other 13 starts are impossible; several reached 8-12 territories at day 60, and the longer story/aggressive sample shows strong seed and timing sensitivity. It does establish that hard/balanced is pathological for this bot (56 defeats, four timeouts), while story/aggressive is the strongest tested policy.
+### Policy breakdown
 
-## Failure diagnosis and system use
+| Difficulty | Policy | Win | Defeat | Timeout | Median win day | Median territories | Median personnel | Average recaptures |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Story | aggressive | 91.7% | 0% | 8.3% | 69 | 15 | 9,060 | 14.0 |
+| Story | balanced | 53.3% | 0% | 46.7% | 61.5 | 15 | 8,685 | 11.4 |
+| Story | cautious | 55.0% | 0% | 45.0% | 67 | 15 | 8,483 | 12.5 |
+| Story | managed | 0% | 0% | 100% | — | 11 | 8,724 | 2.6 |
+| Standard | aggressive | 53.3% | 0% | 46.7% | 93 | 15 | 8,624 | 28.0 |
+| Standard | balanced | 31.7% | 0% | 68.3% | 73 | 13 | 8,300 | 18.5 |
+| Standard | cautious | 33.3% | 0% | 66.7% | 76 | 12.5 | 8,361 | 19.6 |
+| Standard | managed | 0% | 0% | 100% | — | 7 | 8,620 | 6.7 |
+| Hard | aggressive | 8.3% | 0% | 91.7% | 85 | 7 | 8,501 | 28.3 |
+| Hard | balanced | 11.7% | 0% | 88.3% | 101 | 9 | 7,779 | 21.2 |
+| Hard | cautious | 11.7% | 0% | 88.3% | 88 | 9 | 7,778 | 20.4 |
+| Hard | managed | 0% | 0% | 100% | — | 5 | 8,350 | 9.3 |
 
-Trace and aggregate inspection identified territorial recapture churn as the dominant obstacle. The player often retains substantial personnel while losing simultaneous control: the winning story/aggressive traces still endured 40 and 47 recaptures. Conservative policies compound this with occupation commitments and reduced operational tempo. Network collapse and cut-off accumulation explain many standard/hard defeats, while engineering lag and hub loss amplify rather than independently cause collapse. The visible-information correction did not reveal a pattern of newly suicidal attacks: defeat count at day 60 fell from 226 to 197, while the longer horizon exposed victories.
+Aggressive is dominant on Story and Standard, but balanced and cautious both win at healthy Normal rates while preserving more armour and suffering less churn. Managed remains deliberately over-consolidating and is the only hopeless policy at day 120; it exercises engineering, hubs, defence and supply rather than representing the strongest general player. It should be improved after R3 without weakening those systems or using it to hold up the credible three-policy Normal result.
 
-Across the 180 managed day-120 campaigns, real state-changing telemetry recorded 7,763 defensive preparations, 3,294 entrenchments, 7,718 reconcentration moves, 304 engineering projects, 180 hub upgrades, 192 hub losses, 3,644 local-stock draw turns, 9,183 supply-priority changes, 840 coordinated assaults and 916 breakout operations. These counters increment only when the corresponding API changes state or, for stock draws, when supply is actually delivered from a disconnected local source. The required R2 systems therefore remain active rather than being bypassed by the winning aggressive policy.
+### Start sensitivity
 
-Representative inspected outcomes include:
+Story ranged from 75.0% wins at FR-02, NL-01 and LU-01 to 18.8% at BE-01. Standard ranged from 68.8% at FR-03 and 62.5% at NL-01 to 0% at CH-01; GB-04, LU-01, CH-02 and AT-01 each achieved 6.3%. Hard was concentrated around FR-01 (50.0%), FR-03 (25.0%) and FR-05 (18.8%), with ten starts producing no win in this 16-run-per-start slice. No start receives a special rule. Alpine and peripheral starts remain a material but non-blocking post-R3 balance target.
 
-- story/aggressive seed 41 from DE-05: victory on day 102, 54 captures, 40 recaptures, 8,349 personnel and a 14% minimum network efficiency;
-- story/balanced seed 16 from FR-01: victory on day 120, 40 captures, 26 recaptures, 8,541 personnel and a 57% minimum network efficiency;
-- story/managed seed 55 from DE-03 at day 180: eight territories, 17 captures, 10 recaptures and 8,363 personnel, demonstrating conservative-policy stall rather than force collapse;
-- hard/managed campaigns: median zero controlled territories and 1,695 personnel at day 120, demonstrating that defence and logistics actions do not neutralise hard-mode pressure.
+## Representative traces and system integrity
 
-Machine-readable reports remain in ignored balance-output directories. This document records the reviewed results; generated multi-megabyte outputs are intentionally not committed.
+- **Story win:** aggressive seed 15 from GB-04 won on day 55 with 9,163 personnel, 23 captures, 9 recaptures and 49% minimum network efficiency. This is a rapid, well-preserved victory rather than a scripted outcome.
+- **Normal win:** aggressive seed 30 from GB-04 won on day 71 with 9,025 personnel, 34 captures, 20 recaptures, four cut-off formation-days and 15 critical-supply formation-days. Seed 16 from FR-01 won on day 106 with 8,473 personnel despite 31 recaptures and 14% minimum network efficiency.
+- **Hard win:** aggressive seed 31 from FR-01 won on day 91 with 8,719 personnel, 38 captures, 24 recaptures, 20 cut-off formation-days, 62 critical-supply formation-days and two breakouts. Hard therefore remains meaningfully logistically harsher.
+- **Close timeout:** Standard/aggressive seed 68 from LU-01 ended with 12 administered territories, 8,826 personnel, 27 captures and 16 recaptures. It is a legitimate near miss, not systemic inability to progress.
+- **Catastrophic network collapse:** Standard/managed seed 57 from CH-01 ended with no territory, 4,799 personnel, 321 cut-off formation-days, 341 critical-supply formation-days, one hub loss, two engineering projects and 38 reconcentrations. The formal outcome is a timeout rather than defeat, but the trace preserves the requested catastrophic failure evidence.
+- **Long consolidation stall:** managed medians retain 8,724/8,620/8,350 personnel while holding 11/7/5 territories on Story/Standard/Hard. Engineering, hubs, supply priorities and security reduce churn but currently sacrifice too much tempo.
+
+Victories do not bypass combat, supply or occupation: the Normal and Hard traces include substantial recapture, critical-supply and breakout exposure while retaining 8,473-9,025 personnel through coordinated force use. Managed campaigns provide the focused real-action evidence for defence preparation, entrenchment, reconcentration, engineering projects, hub upgrades/loss, local-stock draws and logistics priorities. Telemetry increments only after the corresponding public API changes state (or actual disconnected local delivery occurs).
+
+## Freeze boundary
+
+R2.5 meets the mechanical gate: Normal is non-trivially winnable, Story is clearly easier, Hard is clearly harder, determinism and persistence remain unchanged, and no fundamental mechanic or hidden advantage was added. Remaining post-R3 polish should address managed-policy tempo, Hard/peripheral start concentration, the absence of formal defeats in the day-120 sample, and residual 18-28 recapture averages outside managed play. The generated multi-megabyte JSON was reviewed but is not committed; this document is the durable evidence summary.

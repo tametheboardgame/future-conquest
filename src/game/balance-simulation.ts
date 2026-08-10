@@ -214,8 +214,8 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
     specialistManagement: false
   },
   balanced: {
-    attackRatio: 0.82,
-    joinRatio: 0.64,
+    attackRatio: 0.62,
+    joinRatio: 0.52,
     strategicReserve: 1,
     maxOperationParticipants: 2,
     maxConcurrentOperations: 2,
@@ -225,25 +225,25 @@ const POLICY: Record<BalancePolicyId, PolicyProfile> = {
     specialistManagement: false
   },
   cautious: {
-    attackRatio: 1,
-    joinRatio: 0.8,
+    attackRatio: 0.68,
+    joinRatio: 0.56,
     strategicReserve: 1,
     maxOperationParticipants: 2,
-    maxConcurrentOperations: 1,
-    minimumAttackDeliveryRatio: 0.68,
-    minimumAttackSupplyStock: 58,
-    occupationHold: 'administered',
+    maxConcurrentOperations: 2,
+    minimumAttackDeliveryRatio: 0.58,
+    minimumAttackSupplyStock: 50,
+    occupationHold: 'controlled',
     specialistManagement: false
   },
   managed: {
-    attackRatio: 0.88,
-    joinRatio: 0.7,
+    attackRatio: 0.65,
+    joinRatio: 0.54,
     strategicReserve: 0,
     maxOperationParticipants: 2,
-    maxConcurrentOperations: 1,
-    minimumAttackDeliveryRatio: 0.6,
-    minimumAttackSupplyStock: 52,
-    occupationHold: 'administered',
+    maxConcurrentOperations: 2,
+    minimumAttackDeliveryRatio: 0.52,
+    minimumAttackSupplyStock: 46,
+    occupationHold: 'controlled',
     specialistManagement: true
   }
 };
@@ -521,7 +521,7 @@ function createManagedSecurity(state: GameState, telemetry: ActionTelemetry): Ga
     const territory = next.territories[territoryId];
     if (territory.controller !== 'player') continue;
     const exposed = isFrontier(next, territoryId);
-    if (!exposed && territory.occupation === 'administered') continue;
+    if (!exposed && (territory.occupation === 'controlled' || territory.occupation === 'administered')) continue;
     if (groupsAt(next, territoryId).some(group => group.status === 'garrison' && isSecurityDetachment(group))) continue;
     const source = groupsAt(next, territoryId)
       .filter(group => group.status === 'ready' && !group.order && !isSecurityDetachment(group) && group.personnel >= 1800)
@@ -688,7 +688,11 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
     if (!canIssueOperationalOrder(group)) continue;
 
     if (POLICY[policy].specialistManagement && isSecurityDetachment(group)) {
-      if (isFrontier(next, group.location) || next.territories[group.location].occupation !== 'administered') {
+      if (
+        isFrontier(next, group.location)
+        || next.territories[group.location].occupation === 'unsecured'
+        || next.territories[group.location].occupation === 'contested'
+      ) {
         if (group.status === 'ready') {
           next = setGarrison(next);
           telemetry.garrisonsAssigned += 1;

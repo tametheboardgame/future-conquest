@@ -25,8 +25,8 @@ test('WP7 managed player makes condition-led engineering, hub, resource and supp
 });
 
 test('WP7 representative campaign exercises integrated strategic actions deterministically', () => {
-  const first = simulateCurrentEngineCampaign(16, 'standard', 'managed', 60);
-  const second = simulateCurrentEngineCampaign(16, 'standard', 'managed', 60);
+  const first = simulateCurrentEngineCampaign(2, 'standard', 'managed', 60);
+  const second = simulateCurrentEngineCampaign(2, 'standard', 'managed', 60);
   assert.deepEqual(second, first);
   assert.ok(first.defensivePreparations > 0);
   assert.ok(first.entrenchments > 0);

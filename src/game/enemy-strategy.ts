@@ -367,6 +367,12 @@ function planCoordinatedCounterattack(state: GameState): GameState {
   if (state.enemyStrategy.doctrine !== 'counteroffensive' && state.enemyStrategy.doctrine !== 'strategic-emergency') return state;
   if (state.escalationStage < 2) return state;
   if (state.enemyOrders.some(order => order.type === 'counterattack' && order.status !== 'completed')) return state;
+  const recoveryDays = state.difficulty === 'story' ? 4 : 3;
+  if (state.enemyOrders.some(order => (
+    order.type === 'counterattack'
+    && order.status === 'completed'
+    && state.turn - order.turn < recoveryDays
+  ))) return state;
   const target = state.enemyStrategy.focusTerritory;
   if (!target || state.territories[target]?.controller !== 'player') return state;
 
@@ -375,7 +381,7 @@ function planCoordinatedCounterattack(state: GameState): GameState {
   const participantLimit = state.enemyStrategy.doctrine === 'strategic-emergency' || state.escalationStage >= 4 ? 3 : 2;
   const participants = candidates.slice(0, participantLimit);
   const combinedPower = participants.reduce((sum, formation) => sum + enemyFormationPower(formation), 0);
-  const requiredRatio = state.difficulty === 'story' ? 1.28 : state.difficulty === 'hard' ? 0.76 : 1;
+  const requiredRatio = state.difficulty === 'story' ? 2.1 : 1.8;
   if (combinedPower < playerDefenceAt(state, target) * requiredRatio) return state;
 
   const primary = participants[0];
@@ -517,6 +523,7 @@ export function resolveEnemyStrategy(state: GameState): GameState {
 export const __testOnly = {
   adjacentEnemyFormations,
   focusScore,
+  planCoordinatedCounterattack,
   pressureFor,
   routeThreatScore,
   selectFocusTerritory,
