@@ -1,6 +1,7 @@
 import { TERRITORIES } from './data';
 import { STRATEGIC_ROUTE_BY_ID, STRATEGIC_ROUTES } from './strategic-network-data';
 import type { GameState, OperationalAwarenessState, TutorialState } from './types';
+import type { AssistanceLevel } from './global-settings';
 
 export type EnemyContactConfidence = 'confirmed' | 'estimated' | 'activity' | 'stale';
 export type OperationalSeverity = 'normal' | 'warning' | 'danger' | 'critical';
@@ -49,6 +50,50 @@ export interface SupplyClarity {
   acknowledgementRequired: boolean;
 }
 
+export type AdviserWarningCategory = 'undefended-threat' | 'isolation' | 'low-garrison' | 'exhausted-stocks' | 'overloaded-route' | 'engineering-support-loss' | 'suicidal-assault';
+export interface AdviserWarning extends SupplyDiagnostic { category: AdviserWarningCategory }
+
+const assistanceThreshold: Record<AssistanceLevel, number> = {
+  'Full Guidance': 1,
+  Recommended: 2,
+  'Critical Only': 3,
+  Off: 99
+};
+
+/** Produces advice only. It deliberately returns data and never calls an order mutator. */
+export function getAdviserWarnings(state: GameState, assistance: AssistanceLevel): AdviserWarning[] {
+  if (assistance === 'Off') return [];
+  const warnings: AdviserWarning[] = [];
+  const add = (warning: AdviserWarning) => warnings.push(warning);
+  const threats = getThreatenedTerritories(state);
+  for (const threat of threats) {
+    const defenders = Object.values(state.taskGroups).filter(group => group.location === threat.territoryId && group.status === 'garrison');
+    if (!defenders.length) add({ id: `undefended-${threat.territoryId}`, category: 'undefended-threat', severity: threat.stage === 'under-attack' ? 'critical' : 'danger', title: `${TERRITORIES[threat.territoryId].centre} is threatened and undefended`, detail: 'No formation is assigned to garrison the threatened territory.', territoryId: threat.territoryId });
+  }
+  for (const [territoryId, territory] of Object.entries(state.territories)) {
+    if (territory.controller !== 'player') continue;
+    if (!territory.supplied) add({ id: `isolated-${territoryId}`, category: 'isolation', severity: 'danger', title: `${TERRITORIES[territoryId].centre} is isolated`, detail: 'Local reserves are finite; restore a controlled route when practical.', territoryId });
+    const garrison = Object.values(state.taskGroups).filter(group => group.location === territoryId && group.status === 'garrison').reduce((sum, group) => sum + group.personnel, 0);
+    if (territory.occupation !== 'enemy' && garrison > 0 && garrison < 800) add({ id: `garrison-${territoryId}`, category: 'low-garrison', severity: 'warning', title: `${TERRITORIES[territoryId].centre} has a low garrison`, detail: `${garrison} personnel are holding the territory.`, territoryId });
+  }
+  for (const group of Object.values(state.taskGroups)) {
+    if (group.supply <= 15) add({ id: `stocks-${group.id}`, category: 'exhausted-stocks', severity: group.supply <= 5 ? 'critical' : 'danger', title: `${group.name} has exhausted stocks`, detail: `Carried stocks are at ${Math.round(group.supply)}%.`, groupId: group.id, territoryId: group.location });
+  }
+  for (const routeId of state.logistics.bottleneckRouteIds) {
+    const route = STRATEGIC_ROUTE_BY_ID[routeId]; const flow = state.logistics.routeFlows[routeId];
+    if (route && flow?.condition === 'overloaded') add({ id: `overload-${routeId}`, category: 'overloaded-route', severity: 'danger', title: `${route.name} is overloaded`, detail: `${Math.round(flow.utilisation)}% of route throughput is committed.`, routeId, territoryId: route.toTerritoryId });
+  }
+  for (const project of state.engineeringProjects.filter(project => project.status === 'active' && project.allocation < 25)) {
+    add({ id: `engineering-${project.id}`, category: 'engineering-support-loss', severity: project.allocation === 0 ? 'danger' : 'warning', title: 'Engineering support has been withdrawn', detail: `${STRATEGIC_ROUTE_BY_ID[project.routeId]?.name ?? project.routeId} now has ${project.allocation}% military support.`, routeId: project.routeId });
+  }
+  for (const operation of Object.values(state.operations)) {
+    const strength = operation.participantGroupIds.reduce((sum, id) => sum + (state.taskGroups[id]?.personnel ?? 0), 0);
+    if (operation.enemyPower > strength * 1.5) add({ id: `assault-${operation.id}`, category: 'suicidal-assault', severity: operation.enemyPower > strength * 2.25 ? 'critical' : 'danger', title: `Assault on ${TERRITORIES[operation.target].centre} is suicidal`, detail: `Assessed enemy power substantially exceeds the ${strength} personnel committed.`, territoryId: operation.target });
+  }
+  const rank: Record<SupplyDiagnostic['severity'], number> = { warning: 1, danger: 2, critical: 3 };
+  return warnings.filter(warning => rank[warning.severity] >= assistanceThreshold[assistance]);
+}
+
 export interface TutorialStep {
   id: string;
   title: string;
@@ -62,8 +107,8 @@ export interface TutorialStep {
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'formation',
-    title: 'Inspect a formation',
-    instruction: 'Open Forces and select any friendly formation. Read its personnel, powered armour, morale, carried supply stock and current logistics condition.',
+    title: 'Navigate the theatre, then inspect a formation',
+    instruction: 'On the map, Europe shows the whole theatre, Campaign frames controlled territory and nearby threats, and Selected focuses the active territory. Zoom with wheel, pinch or +/−; pan by dragging or using arrow keys. These controls only change framing. Then open Forces and select a friendly formation.',
     why: 'Every movement, attack, garrison and specialist task is assigned to a formation. Its current state determines what it can safely do next.',
     completion: 'The tutorial advances when a friendly formation is selected.',
     target: 'forces',
@@ -198,6 +243,17 @@ export function progressTutorial(state: GameState, trigger: TutorialTrigger): Ga
       enabled: !completed,
       completed,
       step: completed ? TUTORIAL_STEPS.length - 1 : nextStep
+    }
+  };
+}
+
+export function moveTutorial(state: GameState, direction: -1 | 1): GameState {
+  if (!state.tutorial.enabled || state.tutorial.completed) return state;
+  return {
+    ...state,
+    tutorial: {
+      ...state.tutorial,
+      step: Math.max(0, Math.min(TUTORIAL_STEPS.length - 1, state.tutorial.step + direction))
     }
   };
 }

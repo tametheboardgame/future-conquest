@@ -16,10 +16,12 @@ import { estimateRouteMovementDays } from './game/route-movement';
 import { SUPPLY_CONDITION_LABELS } from './game/supply-network';
 import {
   getEnemyContacts,
+  getAdviserWarnings,
   getSupplyClarity,
   getThreatenedTerritories,
   getTutorialStep,
   markSupplyWarningAcknowledged,
+  moveTutorial,
   progressTutorial,
   requiresSupplyAcknowledgement,
   restartTutorial,
@@ -72,6 +74,8 @@ export default function App() {
   const confirmedEnemyContacts = enemyContacts.filter(contact => contact.confidence === 'confirmed').length;
   const threatenedTerritories = getThreatenedTerritories(state);
   const supplyClarity = getSupplyClarity(state);
+  const assistanceLevel = loadGlobalSettings().assistanceLevel;
+  const adviserWarnings = getAdviserWarnings(state, assistanceLevel);
   const tutorialStep = getTutorialStep(state.tutorial);
   const selectedGroup = state.taskGroups[state.selectedTaskGroupId] ?? groups[0] ?? null;
   const selectedGroupSupply = selectedGroup ? state.logistics.formationAllocations[selectedGroup.id] : undefined;
@@ -255,7 +259,7 @@ export default function App() {
 
   const resolveDay = () => {
     if (collapseDecisionPending) return;
-    if (requiresSupplyAcknowledgement(state)) {
+    if (assistanceLevel !== 'Off' && requiresSupplyAcknowledgement(state) && (assistanceLevel !== 'Critical Only' || supplyClarity.severity === 'critical')) {
       setShowSupplyWarning(true);
       return;
     }
@@ -439,6 +443,12 @@ export default function App() {
       <div><small>LOGISTICS {supplyClarity.severity.toUpperCase()}</small><strong>{state.logistics.networkEfficiency}% network efficiency</strong></div>
       <div className="supply-diagnostic-copy"><strong>{supplyClarity.diagnostics[0]?.title ?? 'Supply network is degraded'}</strong><span>{supplyClarity.diagnostics[0]?.detail}</span></div>
       <button type="button" onClick={() => changeView('logistics')}>Open diagnostics</button>
+    </section>}
+
+    {adviserWarnings.length > 0 && <section className={`adviser-alert-strip ${adviserWarnings[0].severity}`} aria-live="polite" data-assistance-level={assistanceLevel}>
+      <div><small>ADVISER · {assistanceLevel.toUpperCase()}</small><strong>{adviserWarnings.length} strategic risk{adviserWarnings.length === 1 ? '' : 's'}</strong></div>
+      <div><strong>{adviserWarnings[0].title}</strong><span>{adviserWarnings[0].detail}</span></div>
+      <small>Advisory only — legal orders remain available.</small>
     </section>}
 
     {threatenedTerritories.length > 0 && (() => {
@@ -742,7 +752,7 @@ export default function App() {
       </div>
     </section>
 
-    <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} anchorSelector={tutorialAnchorSelector} onSkip={() => setState(skipTutorial)} />
+    <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} anchorSelector={tutorialAnchorSelector} onSkip={() => setState(skipTutorial)} onBack={() => setState(current => moveTutorial(current, -1))} onForward={() => setState(current => moveTutorial(current, 1))} />
 
     {collapseDecisionPending && <StrategicCollapseDecision
       state={state}

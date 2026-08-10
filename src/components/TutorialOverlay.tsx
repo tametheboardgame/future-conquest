@@ -8,6 +8,8 @@ interface Props {
   totalSteps: number;
   anchorSelector?: string;
   onSkip: () => void;
+  onBack: () => void;
+  onForward: () => void;
 }
 
 type TutorialPlacement = 'above' | 'below' | 'left' | 'right' | 'floating' | 'docked-top' | 'docked-bottom';
@@ -205,7 +207,7 @@ function explanationStepNumber(topic: ExplanationTopic, phase: number): number {
   return 17 + phase;
 }
 
-export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, onSkip }: Props) {
+export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, onSkip, onBack, onForward }: Props) {
   const cardRef = useRef<HTMLElement>(null);
   const previousStepId = useRef(step?.id);
   const [explanation, setExplanation] = useState<ExplanationProgress | null>(() => readStoredExplanation());
@@ -507,6 +509,8 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
       <div className="tutorial-actions">
         {explanationMode && visibleExplanationPhase > 0 && <button type="button" onClick={reviewPreviousExplanation}>Back</button>}
         {explanationMode && <button type="button" className="primary" onClick={advanceExplanation}>{explanation?.topic === 'infrastructure' && visibleExplanationPhase === EXPLANATION_PHASES.infrastructure.length - 1 ? 'Finish tutorial' : 'Continue'}</button>}
+        {!explanationMode && <button type="button" onClick={onBack} disabled={stepNumber <= 1}>Back</button>}
+        {!explanationMode && <button type="button" onClick={onForward} disabled={stepNumber >= totalSteps}>Forward</button>}
         <button type="button" onClick={skip}>Skip tutorial</button>
       </div>
     </aside>
