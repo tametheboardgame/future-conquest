@@ -285,6 +285,8 @@ export interface EngineeringProject {
   targetCondition: number;
   progress: number;
   allocation: EngineeringAllocation;
+  /** Durable adviser state; unlike events, this survives command-log trimming. */
+  engineeringSupportLost?: boolean;
   supplySpent: number;
   status: EngineeringProjectStatus;
   returnStatus: 'ready' | 'garrison';
@@ -322,6 +324,7 @@ export interface GameEvent {
   turn: number;
   text: string;
   tone: 'neutral' | 'good' | 'warning' | 'danger';
+  engineeringProjectId?: string;
 }
 
 export interface EnemyStrategyState {

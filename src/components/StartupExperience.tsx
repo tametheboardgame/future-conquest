@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { audioManager } from '../audio/audio-manager';
 import { BUILD_LABEL, BUILD_TIME } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
@@ -13,6 +13,14 @@ import './startup-launcher.css';
 
 interface Props {
   children: ReactNode;
+}
+
+const GlobalSettingsContext = createContext<GlobalSettings | null>(null);
+
+export function useLiveGlobalSettings(): GlobalSettings {
+  const settings = useContext(GlobalSettingsContext);
+  if (!settings) throw new Error('useLiveGlobalSettings must be used within StartupExperience');
+  return settings;
 }
 
 type CampaignEndingKind = 'victory' | 'defeat';
@@ -241,7 +249,7 @@ export function StartupExperience({ children }: Props) {
       className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}`}
       aria-hidden={mode !== 'game'}
       inert={mode !== 'game'}
-    >{children}</div>
+    ><GlobalSettingsContext.Provider value={settings}>{children}</GlobalSettingsContext.Provider></div>
 
     {mode === 'launcher' && <section className="startup-launcher" aria-label="Future Conquest title screen">
       <div className="startup-launcher-panel">

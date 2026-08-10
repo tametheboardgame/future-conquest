@@ -15,6 +15,15 @@
 .operational-alert-strip.danger { border-left-color: #ee7e52; }
 .operational-alert-strip.critical { border-left-color: #ff4f59; box-shadow: 0 0 22px rgba(255,79,89,.16); }
 .operational-alert-strip button { white-space: nowrap; }
+.adviser-alert-strip { display:grid; grid-template-columns:minmax(180px,.7fr) minmax(260px,2fr) auto; gap:14px; align-items:center; margin:0 18px 12px; padding:10px 14px; border:1px solid rgba(255,255,255,.13); border-left:5px solid #e8bd5a; background:rgba(10,18,28,.94); }
+.adviser-alert-strip.danger { border-left-color:#ee7e52; }
+.adviser-alert-strip.critical { border-left-color:#ff4f59; }
+.adviser-alert-strip strong { display:block; }
+.adviser-alert-strip span,.adviser-alert-strip small { color:#b9c8d8; }
+.adviser-warning-list { display:grid; gap:7px; max-height:132px; overflow-y:auto; padding-right:6px; }
+.adviser-warning-item { padding-left:9px; border-left:2px solid #e8bd5a; }
+.adviser-warning-item.danger { border-left-color:#ee7e52; }
+.adviser-warning-item.critical { border-left-color:#ff4f59; }
 .supply-diagnostic-copy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .enemy-threat-strip {
@@ -130,12 +139,13 @@
 
 @media (max-width: 760px) {
   .operational-alert-strip { grid-template-columns: 1fr; margin-inline: 8px; }
+  .adviser-alert-strip { grid-template-columns:1fr; margin-inline:8px; overflow-wrap:anywhere; }
   .enemy-threat-strip { margin-inline: 8px; }
   .supply-diagnostic-copy { white-space: normal; }
   .tutorial-overlay { width: min(360px, calc(100vw - 16px)); max-height: 38vh; padding: 14px; }
   .tutorial-overlay h2 { font-size: 1.05rem; }
   .tutorial-overlay p { margin-block: 7px; font-size: .9rem; }
-  .tutorial-actions { margin-top: 10px; }
+  .tutorial-actions { margin-top: 10px; flex-wrap:wrap; }
 }
 
 

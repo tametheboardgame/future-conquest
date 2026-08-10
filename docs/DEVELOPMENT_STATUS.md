@@ -34,22 +34,31 @@ Merge commit: `13ab39e2eda4c74a86713b419bc709acff309e41`
 
 WP3 passed focused resource/stockpile/hub regressions, save compatibility, deterministic campaign and representative-trace validation, full repository tests/build, final Codex review and GitHub CI before merge.
 
+### R2-WP4 - Saves, Settings & Assistance
+
+Status: COMPLETE / MERGED
+
+PR: #109
+
+Merge commit: `a2d2323b7a051d6fcd975c3f8fe55c0f3883600e`
+
+WP4 passed focused persistence and slot-isolation regressions, backwards save compatibility, autosave failure-feedback review fixes, full repository tests/build, final Codex review and green GitHub workflows before merge.
+
 ## Current active work
 
-### R2-WP4 - Saves, Settings & Assistance
+### R2-WP5 - Adviser & Tutorial Completion
 
 Status: ACTIVE
 
-Branch: `agent/r2-wp4-saves-settings-assistance`
+Branch: `agent/r2-wp5-adviser-tutorial`
 
-Current objective: implement WP4 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
+Current objective: implement WP5 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
 
 ## Next approved work
 
-1. R2-WP5 - Adviser & Tutorial Completion
-2. R2-WP6 - Contextual Navigation & Diagnostics
-3. R2-WP7 - Balance & Playtest Validation
-4. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
+1. R2-WP6 - Contextual Navigation & Diagnostics
+2. R2-WP7 - Balance & Playtest Validation
+3. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
 
 ## Product-owner stop conditions
 

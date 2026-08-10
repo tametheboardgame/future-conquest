@@ -18,12 +18,13 @@ export const MAX_ROUTE_UPGRADE_LEVEL = 2;
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
-function appendEvent(state: GameState, text: string, tone: GameEvent['tone']): GameState {
+function appendEvent(state: GameState, text: string, tone: GameEvent['tone'], engineeringProjectId?: string): GameState {
   const event: GameEvent = {
     id: (state.events[0]?.id ?? 0) + 1,
     turn: state.turn,
     text,
-    tone
+    tone,
+    engineeringProjectId
   };
   return { ...state, events: [event, ...state.events].slice(0, 100) };
 }
@@ -192,6 +193,7 @@ export function normaliseEngineeringProjects(value: unknown): EngineeringProject
       targetCondition,
       progress: clamp(Math.round(project.progress), 0, 100),
       allocation: clamp(Math.round(project.allocation), 0, 100),
+      engineeringSupportLost: project.engineeringSupportLost === true,
       supplySpent: Math.max(0, round1(project.supplySpent)),
       status: project.status,
       returnStatus: project.returnStatus === 'garrison' ? 'garrison' : 'ready',
@@ -346,6 +348,7 @@ export function startEngineeringProject(
     targetCondition: 100,
     progress: 0,
     allocation: groupId && allocation > 0 ? clamp(Math.round(allocation), 0, 100) : 0,
+    engineeringSupportLost: false,
     supplySpent: 0,
     status: 'active',
     returnStatus: group?.status === 'garrison' ? 'garrison' : 'ready',
@@ -386,6 +389,7 @@ export function assignEngineeringSupport(
   if (!project || !supportGroupEligible(state, project.routeId, groupId, projectId)) return state;
   project.assignedTaskGroupId = groupId;
   project.allocation = clamp(Math.round(allocation), 1, 100);
+  project.engineeringSupportLost = false;
   const route = STRATEGIC_ROUTE_BY_ID[project.routeId];
   const group = state.taskGroups[groupId];
   return refreshSupplyNetwork(appendEvent(
@@ -402,6 +406,7 @@ export function setEngineeringAllocation(state: GameState, projectId: string, al
   const project = projects.find(candidate => candidate.id === projectId && candidate.status === 'active');
   if (!project?.assignedTaskGroupId || project.allocation === allocation) return state;
   project.allocation = clamp(Math.round(allocation), 1, 100);
+  project.engineeringSupportLost = false;
   const route = STRATEGIC_ROUTE_BY_ID[project.routeId];
   return refreshSupplyNetwork(appendEvent(
     { ...state, engineeringProjects: projects },
@@ -418,10 +423,12 @@ export function withdrawEngineeringSupport(state: GameState, projectId: string):
   const route = STRATEGIC_ROUTE_BY_ID[project.routeId];
   project.assignedTaskGroupId = undefined;
   project.allocation = 0;
+  project.engineeringSupportLost = true;
   return refreshSupplyNetwork(appendEvent(
     { ...state, engineeringProjects: projects },
     `${group?.name ?? 'Military'} engineering support was withdrawn from ${route?.name ?? project.routeId}. Civil work continues at local capability.`,
-    'neutral'
+    'neutral',
+    project.id
   ));
 }
 
@@ -462,7 +469,8 @@ export function resolveEngineeringProjects(state: GameState): GameState {
       if (!supportGroup || supportGroup.personnel <= 0) {
         project.assignedTaskGroupId = undefined;
         project.allocation = 0;
-        next = appendEvent(next, `${route.name} lost its assigned military engineering support. Civil work continues.`, 'warning');
+        project.engineeringSupportLost = true;
+        next = appendEvent(next, `${route.name} lost its assigned military engineering support. Civil work continues.`, 'warning', project.id);
       }
     }
 
