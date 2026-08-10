@@ -1,6 +1,6 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
 
 ## Current programme
 
@@ -24,24 +24,32 @@ PR: #106
 
 Merge commit: `f6011f9b1512f29620ae84a7d3c922bb94741daa`
 
-WP2 completed its focused regressions, full repository tests, reproducible production build, persistence/save-load compatibility, deterministic 720-campaign validation across all insertion starts, representative traces and GitHub CI before merge.
+### R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
+
+Status: COMPLETE / MERGED
+
+PR: #108
+
+Merge commit: `13ab39e2eda4c74a86713b419bc709acff309e41`
+
+WP3 passed focused resource/stockpile/hub regressions, save compatibility, deterministic campaign and representative-trace validation, full repository tests/build, final Codex review and GitHub CI before merge.
 
 ## Current active work
 
-### R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
+### R2-WP4 - Saves, Settings & Assistance
 
-Status: APPROVED / NEXT
+Status: ACTIVE
 
-Current objective: implement WP3 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
+Branch: `agent/r2-wp4-saves-settings-assistance`
+
+Current objective: implement WP4 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap.
 
 ## Next approved work
 
-1. R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
-2. R2-WP4 - Saves, Settings & Assistance
-3. R2-WP5 - Adviser & Tutorial Completion
-4. R2-WP6 - Contextual Navigation & Diagnostics
-5. R2-WP7 - Balance & Playtest Validation
-6. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
+1. R2-WP5 - Adviser & Tutorial Completion
+2. R2-WP6 - Contextual Navigation & Diagnostics
+3. R2-WP7 - Balance & Playtest Validation
+4. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
 
 ## Product-owner stop conditions
 
