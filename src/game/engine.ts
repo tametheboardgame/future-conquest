@@ -52,9 +52,9 @@ const randomFor = (seed: number, turn: number, salt: number) => {
 const saltFor = (value: string) => [...value].reduce((sum, char, index) => sum + char.charCodeAt(0) * (index + 1), 0);
 
 const difficultyRules: Record<Difficulty, { enemy: number; counter: number; recovery: number }> = {
-  story: { enemy: 0.78, counter: 0.55, recovery: 1.3 },
-  standard: { enemy: 1, counter: 1, recovery: 1 },
-  hard: { enemy: 1.25, counter: 1.45, recovery: 0.78 }
+  story: { enemy: 0.58, counter: 0.1, recovery: 1.3 },
+  standard: { enemy: 0.68, counter: 0.18, recovery: 1 },
+  hard: { enemy: 0.7, counter: 0.2, recovery: 0.92 }
 };
 
 const terrainDefence: Record<string, number> = {

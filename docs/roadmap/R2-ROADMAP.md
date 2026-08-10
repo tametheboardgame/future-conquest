@@ -170,7 +170,7 @@ Validation expectations:
 
 ## R2-WP7 - Balance & Playtest Validation
 
-Status: APPROVED
+Status: COMPLETE
 
 Objective: validate the complete R2 systems together, improve automated strategic behaviour sufficiently to exercise the new systems, and establish a stable post-R2 baseline before broader hardening.
 

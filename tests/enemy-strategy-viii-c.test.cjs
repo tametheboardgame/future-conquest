@@ -100,6 +100,29 @@ test('coordinated counterattack resolution uses supporting formations', () => {
   assert.equal(next.enemyFormations[adjacent[1].id].location, target);
 });
 
+test('coordinated counterattacks require a difficulty-scaled recovery window', () => {
+  const state = newGame(307, 'standard');
+  const target = exposeFront(state);
+  state.turn = 8;
+  state.escalationStage = 4;
+  state.enemyStrategy.doctrine = 'counteroffensive';
+  state.enemyStrategy.focusTerritory = target;
+  state.enemyOrders = [{
+    id: 'EO-RECENT-COUNTERATTACK',
+    turn: 7,
+    type: 'counterattack',
+    formationId: Object.keys(state.enemyFormations)[0],
+    origin: target,
+    target,
+    status: 'completed',
+    priority: 110,
+    summary: 'Recently completed counterattack'
+  }];
+  const next = __testOnly.planCoordinatedCounterattack(state);
+  assert.equal(next, state);
+  assert.equal(next.enemyOrders.length, 1);
+});
+
 test('operational crisis requires depleted carried stocks as well as network failure and can recover', () => {
   let state = newGame(305, 'standard');
   exposeFront(state);

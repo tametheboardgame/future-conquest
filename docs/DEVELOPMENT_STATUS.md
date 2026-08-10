@@ -54,20 +54,35 @@ Merge commit: `26eabaecb8ad4a7f4edae3a7aee454b6174c053e`
 
 WP5 passed 330 repository tests, focused adviser/tutorial regressions, TypeScript and production build validation, balance simulation, repeated merge-gate review fixes, and final clean Codex review before merge.
 
-## Current active work
-
 ### R2-WP6 - Contextual Navigation & Diagnostics
 
-Status: ACTIVE
+Status: COMPLETE / MERGED
 
-Branch: `agent/r2-wp6-contextual-navigation`
+PR: #112
 
-Current objective: implement WP6 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap, covering exact contextual navigation and deep links among Intelligence, Operations, Logistics and Infrastructure, with safe fallbacks and no state mutation from navigation.
+Merge commit: `d055a40f72faf32f917528dffd91a9e76c7187ee`
+
+WP6 passed focused contextual-navigation regressions, exact-object/fallback/no-mutation validation, green build/deploy and balance workflows, repeated review fixes including stale-target revalidation, and final clean Codex review before merge.
+
+## Current active work
+
+### R2-WP7 - Balance & Playtest Validation
+
+Status: COMPLETE / VALIDATED
+
+Branch: `agent/r2-wp7-balance-playtest-validation`
+
+WP7 upgraded the deterministic campaign player to exercise assessed defence, reconcentration, engineering, resource stocks, hubs and supply priorities without insertion-start privilege. The final gate passed 346 tests, TypeScript, production build, 720 deterministic campaigns across all 15 insertion starts, and representative success/stall/collapse/hub-loss trace inspection. Detailed evidence is recorded in `docs/validation/R2-WP7-BALANCE.md`.
 
 ## Next approved work
 
-1. R2-WP7 - Balance & Playtest Validation
-2. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
+1. Whole-game audit
+2. Hardening
+3. Balance programme
+4. Adversarial/exploit testing
+5. UX/clarity validation
+6. Final integrated validation
+7. Surface results to David
 
 ## Product-owner stop conditions
 
