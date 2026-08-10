@@ -32,6 +32,14 @@ test('manual persistence feedback cannot route autosaves through the manual slot
   assert.doesNotMatch(controller, /Resolve all orders/);
 });
 
+test('autosave write and load failures use visible persistence feedback', () => {
+  const app = fs.readFileSync('src/App.tsx', 'utf8');
+
+  assert.match(controller, /export function showPersistenceFailure/);
+  assert.match(app, /if \(!saved\.ok\) showPersistenceFailure\(saved\.message\)/);
+  assert.match(app, /else \{\s*showPersistenceFailure\(saved\.message\);\s*\}/);
+});
+
 test('save notifications remain visible above the game and adapt to mobile screens', () => {
   assert.match(css, /position: fixed/);
   assert.match(css, /z-index: 1000/);

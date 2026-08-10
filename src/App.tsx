@@ -50,6 +50,7 @@ import { getAdjacentOrderTargets, getOrderTargetInfo } from './game/order-target
 import type { Difficulty, GameState, Operation } from './game/types';
 import { loadGlobalSettings } from './game/global-settings';
 import { inspectCampaignSlot, writeCampaignSlot } from './game/persistence';
+import { getBrowserStorage, showPersistenceFailure } from './persistence-feedback';
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
@@ -196,16 +197,31 @@ export default function App() {
   };
 
   const loadAutosave = () => {
-    const saved = inspectCampaignSlot(localStorage, 'autosave');
+    const storage = getBrowserStorage();
+    if (!storage) {
+      showPersistenceFailure('The autosaved campaign could not be read. Browser storage is unavailable.');
+      return;
+    }
+    const saved = inspectCampaignSlot(storage, 'autosave');
     if (saved.ok) {
       setState(saved.state);
       setCurrentView('map');
+    } else {
+      showPersistenceFailure(saved.message);
     }
   };
 
   const advanceDay = (current: GameState) => {
     const next = endTurn(current);
-    if (loadGlobalSettings().autosaveEnabled) writeCampaignSlot(localStorage, next, 'autosave');
+    if (loadGlobalSettings().autosaveEnabled) {
+      const storage = getBrowserStorage();
+      if (!storage) {
+        showPersistenceFailure('The autosave campaign slot could not be saved. Browser storage is unavailable.');
+      } else {
+        const saved = writeCampaignSlot(storage, next, 'autosave');
+        if (!saved.ok) showPersistenceFailure(saved.message);
+      }
+    }
     return next;
   };
 

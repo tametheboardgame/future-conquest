@@ -19,7 +19,7 @@ type NoticeTone = 'success' | 'info' | 'error';
 let noticeTimer: number | null = null;
 let pendingLoad: SuccessfulInspection | null = null;
 
-function browserStorage(): Storage | null {
+export function getBrowserStorage(): Storage | null {
   try {
     return window.localStorage;
   } catch {
@@ -54,20 +54,25 @@ function showNotice(tone: NoticeTone, message: string): void {
   noticeTimer = window.setTimeout(() => notice?.remove(), 3500);
 }
 
+/** Show persistence failures initiated outside the manual save/load controls. */
+export function showPersistenceFailure(message: string): void {
+  showNotice('error', message);
+}
+
 function stopButtonAction(event: Event): void {
   event.preventDefault();
   event.stopImmediatePropagation();
 }
 
 function preflightSave(event: Event): void {
-  const storage = browserStorage();
+  const storage = getBrowserStorage();
   if (storage && storageIsWritable(storage)) return;
   stopButtonAction(event);
   showNotice('error', 'The campaign could not be saved. Browser storage is unavailable.');
 }
 
 function preflightLoad(event: Event): void {
-  const storage = browserStorage();
+  const storage = getBrowserStorage();
   if (!storage) {
     stopButtonAction(event);
     showNotice('error', 'The saved campaign could not be read. Browser storage is unavailable.');
@@ -83,7 +88,7 @@ function preflightLoad(event: Event): void {
 }
 
 function finishSave(): void {
-  const storage = browserStorage();
+  const storage = getBrowserStorage();
   if (!storage) {
     showNotice('error', 'The campaign could not be saved. Browser storage is unavailable.');
     return;
