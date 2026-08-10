@@ -538,3 +538,25 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.contextual-navigation-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(86, 190, 220, .55);
+  background: rgba(10, 31, 43, .94);
+}
+
+.contextual-navigation-banner span { overflow-wrap: anywhere; }
+.contextual-navigation-banner.fallback { border-color: #d9a441; }
+.contextual-route-focus { margin-bottom: 12px; }
+
+@media (max-width: 640px) {
+  .contextual-navigation-banner { align-items: flex-start; flex-direction: column; }
+  .contextual-navigation-banner button { width: 100%; min-height: 44px; }
+}
