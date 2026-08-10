@@ -7,10 +7,10 @@ const require = createRequire(import.meta.url);
 const outputDir = resolve(process.cwd(), process.env.FC_BALANCE_OUTPUT_DIR ?? 'balance-output');
 
 const cases = [
-  { id: 'story-managed-best-progress', seed: 18, difficulty: 'story', policy: 'managed', maxTurns: 120 },
-  { id: 'standard-managed-best-progress', seed: 54, difficulty: 'standard', policy: 'managed', maxTurns: 120 },
-  { id: 'standard-managed-cutoff-stall', seed: 17, difficulty: 'standard', policy: 'managed', maxTurns: 120 },
-  { id: 'hard-managed-healthy-network-stall', seed: 16, difficulty: 'hard', policy: 'managed', maxTurns: 120 }
+  { id: 'story-managed-hub-loss', seed: 13, difficulty: 'story', policy: 'managed', maxTurns: 60 },
+  { id: 'standard-managed-best-progress', seed: 54, difficulty: 'standard', policy: 'managed', maxTurns: 60 },
+  { id: 'standard-managed-cutoff-stall', seed: 17, difficulty: 'standard', policy: 'managed', maxTurns: 60 },
+  { id: 'hard-managed-collapse', seed: 16, difficulty: 'hard', policy: 'managed', maxTurns: 60 }
 ];
 
 rmSync('.balance-dist', { recursive: true, force: true });
@@ -53,7 +53,12 @@ const traces = cases.map(testCase => {
       hubCapacityGain: result.hubCapacityGain,
       hubValueTurns: result.hubValueTurns,
       hubLosses: result.hubLosses,
-      personnelAfterHubLoss: result.personnelAfterHubLoss
+      personnelAfterHubLoss: result.personnelAfterHubLoss,
+      defensivePreparations: result.defensivePreparations,
+      entrenchments: result.entrenchments,
+      reconcentrationMoves: result.reconcentrationMoves,
+      supplyPriorityChanges: result.supplyPriorityChanges,
+      territoryStockDrawTurns: result.territoryStockDrawTurns
     };
     const changed = !previous || Object.keys(snapshot).some(key => key !== 'turn' && snapshot[key] !== previous[key]);
     if (changed || cap === testCase.maxTurns || result.outcome !== 'timeout') snapshots.push(snapshot);
@@ -68,9 +73,9 @@ writeFileSync(resolve(outputDir, 'current-engine-traces.json'), `${JSON.stringif
 
 const lines = ['# Current-engine diagnostic traces', ''];
 for (const trace of traces) {
-  lines.push(`## ${trace.id}`, '', `Seed ${trace.seed}, ${trace.difficulty}/${trace.policy}.`, '', '| Turn | Outcome | Control | Admin | Personnel | Escalation | Min network | Captures | Recaptures | Incidents | Ops | Moves | Garrisons A/R | Splits | Engineering | Hub upgrades/gain/value/loss/survivors |', '| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
+  lines.push(`## ${trace.id}`, '', `Seed ${trace.seed}, ${trace.difficulty}/${trace.policy}.`, '', '| Turn | Outcome | Control | Personnel | Ops | Moves | Defence/entrench/reconcentrate | Engineering | Supply priority/local stock | Hub upgrades/gain/value/loss |', '| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
   for (const row of trace.snapshots) {
-    lines.push(`| ${row.turn} | ${row.outcome}${row.defeatCause ? ` (${row.defeatCause})` : ''} | ${row.controlledTerritories} | ${row.administeredTerritories} | ${row.activePersonnel} | ${row.maxEscalation} | ${row.minNetworkEfficiency}% | ${row.captures} | ${row.enemyRecaptures} | ${row.infrastructureIncidents} | ${row.operationsStarted}/${row.operationsJoined} | ${row.movesIssued} | ${row.garrisonsAssigned}/${row.garrisonsReleased} | ${row.formationsSplit} | ${row.engineeringProjectsStarted} | ${row.hubUpgrades}/${row.hubCapacityGain}/${row.hubValueTurns}/${row.hubLosses}/${row.personnelAfterHubLoss} |`);
+    lines.push(`| ${row.turn} | ${row.outcome}${row.defeatCause ? ` (${row.defeatCause})` : ''} | ${row.controlledTerritories} | ${row.activePersonnel} | ${row.operationsStarted}/${row.operationsJoined} | ${row.movesIssued} | ${row.defensivePreparations}/${row.entrenchments}/${row.reconcentrationMoves} | ${row.engineeringProjectsStarted} | ${row.supplyPriorityChanges}/${row.territoryStockDrawTurns} | ${row.hubUpgrades}/${row.hubCapacityGain}/${row.hubValueTurns}/${row.hubLosses} |`);
   }
   lines.push('');
 }

@@ -68,11 +68,11 @@ WP6 passed focused contextual-navigation regressions, exact-object/fallback/no-m
 
 ### R2-WP7 - Balance & Playtest Validation
 
-Status: ACTIVE
+Status: COMPLETE / VALIDATED
 
 Branch: `agent/r2-wp7-balance-playtest-validation`
 
-Current objective: validate the fully integrated R2 systems together, improve automated strategic behaviour enough to exercise reconcentration, defence, engineering support, territory resources, hubs and supply decisions, then run at least 720 deterministic campaign simulations and inspect representative traces for dominant strategies, dead systems, pathological failures and implausible campaign states.
+WP7 upgraded the deterministic campaign player to exercise assessed defence, reconcentration, engineering, resource stocks, hubs and supply priorities without insertion-start privilege. The final gate passed 346 tests, TypeScript, production build, 720 deterministic campaigns across all 15 insertion starts, and representative success/stall/collapse/hub-loss trace inspection. Detailed evidence is recorded in `docs/validation/R2-WP7-BALANCE.md`.
 
 ## Next approved work
 

@@ -5,9 +5,12 @@ import {
   continueCampaignAfterCollapse,
   endTurn,
   enemyStrengthAt,
+  entrenchTerritory,
   getOperationAtTarget,
   issueMove,
   newGame,
+  prepareTerritoryDefence,
+  reinforceTerritory,
   selectTaskGroup,
   selectTerritory,
   setGarrison
@@ -18,6 +21,7 @@ import {
   startEngineeringProject
 } from './engineering-projects';
 import { crisisLimitForDifficulty } from './enemy-strategy';
+import { getTerritoryDefenceAssessment } from './defence';
 import { occupationRequirement, splitFormation } from './formation-organisation';
 import {
   getTerritoryResourceState,
@@ -82,6 +86,11 @@ export interface CampaignBalanceResult {
   hubValueTurns: number;
   hubLosses: number;
   personnelAfterHubLoss: number;
+  defensivePreparations: number;
+  entrenchments: number;
+  reconcentrationMoves: number;
+  supplyPriorityChanges: number;
+  territoryStockDrawTurns: number;
 }
 
 export interface BalanceGroupSummary {
@@ -168,6 +177,11 @@ interface ActionTelemetry {
   hubValueTurns: number;
   hubLosses: number;
   personnelAfterHubLoss: number;
+  defensivePreparations: number;
+  entrenchments: number;
+  reconcentrationMoves: number;
+  supplyPriorityChanges: number;
+  territoryStockDrawTurns: number;
 }
 
 interface AttackPlan {
@@ -538,6 +552,40 @@ function applyManagedPriorities(state: GameState): GameState {
   return next;
 }
 
+function manageDefence(state: GameState, telemetry: ActionTelemetry): GameState {
+  let next = state;
+  let reinforcementIssued = false;
+  const assessments = Object.keys(next.territories)
+    .sort()
+    .map(id => getTerritoryDefenceAssessment(next, id))
+    .filter((assessment): assessment is NonNullable<typeof assessment> => Boolean(assessment?.frontline))
+    .sort((first, second) => second.attackProbability - first.attackProbability || first.territoryId.localeCompare(second.territoryId));
+
+  for (const assessment of assessments) {
+    if (assessment.attackProbability < 55 && assessment.defensivePosition !== 'critical') continue;
+    if (!assessment.prepared && assessment.localFormationCount > 0) {
+      const prepared = prepareTerritoryDefence(next, assessment.territoryId);
+      if (prepared !== next) telemetry.defensivePreparations += 1;
+      next = prepared;
+    }
+    const refreshed = getTerritoryDefenceAssessment(next, assessment.territoryId);
+    if (refreshed?.preferredEntrenchGroupId && refreshed.fortification < 28) {
+      const entrenched = entrenchTerritory(next, assessment.territoryId, refreshed.preferredEntrenchGroupId);
+      if (entrenched !== next) telemetry.entrenchments += 1;
+      next = entrenched;
+    }
+    if (!reinforcementIssued && refreshed?.reinforcementCandidateId && refreshed.defensivePosition === 'critical') {
+      const reinforced = reinforceTerritory(next, assessment.territoryId);
+      if (reinforced !== next) {
+        telemetry.reconcentrationMoves += 1;
+        reinforcementIssued = true;
+      }
+      next = reinforced;
+    }
+  }
+  return next;
+}
+
 function startManagedEngineering(state: GameState, telemetry: ActionTelemetry): GameState {
   if (state.engineeringProjects.some(project => project.status === 'active')) return state;
   const selected = repairableEngineeringRoutes(state)
@@ -561,7 +609,10 @@ function startManagedEngineering(state: GameState, telemetry: ActionTelemetry): 
 
 function prepareManaged(state: GameState, telemetry: ActionTelemetry): GameState {
   let next = createManagedSecurity(state, telemetry);
-  next = applyManagedPriorities(next);
+  const prioritised = applyManagedPriorities(next);
+  if (prioritised !== next) telemetry.supplyPriorityChanges += 1;
+  next = prioritised;
+  next = manageDefence(next, telemetry);
   if (next.turn >= 5) next = startManagedEngineering(next, telemetry);
   return next;
 }
@@ -625,7 +676,7 @@ function issueOrders(state: GameState, policy: BalancePolicyId, telemetry: Actio
     if (!canIssueOperationalOrder(group)) continue;
 
     if (POLICY[policy].specialistManagement && isSecurityDetachment(group)) {
-      if (group.location === next.portalTerritory || isFrontier(next, group.location) || next.territories[group.location].occupation !== 'administered') {
+      if (isFrontier(next, group.location) || next.territories[group.location].occupation !== 'administered') {
         if (group.status === 'ready') {
           next = setGarrison(next);
           telemetry.garrisonsAssigned += 1;
@@ -708,16 +759,27 @@ export function simulateCurrentEngineCampaign(
     hubCapacityGain: 0,
     hubValueTurns: 0,
     hubLosses: 0,
-    personnelAfterHubLoss: 0
+    personnelAfterHubLoss: 0,
+    defensivePreparations: 0,
+    entrenchments: 0,
+    reconcentrationMoves: 0,
+    supplyPriorityChanges: 0,
+    territoryStockDrawTurns: 0
   };
 
   while (state.status === 'playing' && state.turn < maxTurns) {
     if (state.strategicCollapse?.pending) state = continueCampaignAfterCollapse(state);
-    if (telemetry.hubUpgrades === 0) {
-      const hubTerritory = Object.keys(state.territories).sort().find(id => {
+    if (policy === 'managed' && telemetry.hubUpgrades === 0) {
+      const hubTerritory = Object.keys(state.territories).sort().map(id => {
         const quote = logisticsHubUpgradeQuote(state, id);
-        return quote.eligible && quote.affordable;
-      });
+        const resource = getTerritoryResourceState(state, id);
+        const allocation = state.logistics.territoryAllocations[id];
+        const score = territoryStrategicValue(id) + (isFrontier(state, id) ? 18 : 0)
+          + (state.territories[id].occupation === 'unsecured' ? 120 : state.territories[id].occupation === 'contested' ? 60 : 0)
+          + (allocation ? Math.max(0, 100 - allocation.ratio) : 0) + resource.stocks.transport * 0.05;
+        return { id, eligible: quote.eligible && quote.affordable, score };
+      }).filter(candidate => candidate.eligible)
+        .sort((first, second) => second.score - first.score || first.id.localeCompare(second.id))[0]?.id;
       if (hubTerritory) {
         const before = territorySupplySourceCapacity(state, hubTerritory);
         state = upgradeLogisticsHub(state, hubTerritory);
@@ -728,6 +790,13 @@ export function simulateCurrentEngineCampaign(
     telemetry.hubValueTurns += Object.keys(state.territories).filter(id =>
       state.territories[id].controller === 'player' && getTerritoryResourceState(state, id).hubLevel > 0
     ).length;
+    if (Object.entries(state.logistics.formationAllocations).some(([groupId, allocation]) => (
+      allocation.delivered > 0
+      && allocation.path.sourceTerritoryId === state.taskGroups[groupId]?.location
+      && !state.territories[state.taskGroups[groupId]?.location]?.supplied
+    ))) {
+      telemetry.territoryStockDrawTurns += 1;
+    }
     state = issueOrders(state, policy, telemetry);
     const controllers = Object.fromEntries(Object.entries(state.territories).map(([id, territory]) => [id, territory.controller]));
     state = endTurn(state);
