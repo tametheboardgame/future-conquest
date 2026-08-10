@@ -54,20 +54,35 @@ Merge commit: `26eabaecb8ad4a7f4edae3a7aee454b6174c053e`
 
 WP5 passed 330 repository tests, focused adviser/tutorial regressions, TypeScript and production build validation, balance simulation, repeated merge-gate review fixes, and final clean Codex review before merge.
 
+### R2-WP6 - Contextual Navigation & Diagnostics
+
+Status: COMPLETE / MERGED
+
+PR: #112
+
+Merge commit: `d055a40f72faf32f917528dffd91a9e76c7187ee`
+
+WP6 passed focused contextual-navigation regressions, exact-object/fallback/no-mutation validation, green build/deploy and balance workflows, repeated review fixes including stale-target revalidation, and final clean Codex review before merge.
+
 ## Current active work
 
-### R2-WP6 - Contextual Navigation & Diagnostics
+### R2-WP7 - Balance & Playtest Validation
 
 Status: ACTIVE
 
-Branch: `agent/r2-wp6-contextual-navigation`
+Branch: `agent/r2-wp7-balance-playtest-validation`
 
-Current objective: implement WP6 from current `main` according to the acceptance criteria and validation expectations in the authoritative roadmap, covering exact contextual navigation and deep links among Intelligence, Operations, Logistics and Infrastructure, with safe fallbacks and no state mutation from navigation.
+Current objective: validate the fully integrated R2 systems together, improve automated strategic behaviour enough to exercise reconcentration, defence, engineering support, territory resources, hubs and supply decisions, then run at least 720 deterministic campaign simulations and inspect representative traces for dominant strategies, dead systems, pathological failures and implausible campaign states.
 
 ## Next approved work
 
-1. R2-WP7 - Balance & Playtest Validation
-2. Approved post-R2 autonomous programme in `docs/roadmap/R2-ROADMAP.md`
+1. Whole-game audit
+2. Hardening
+3. Balance programme
+4. Adversarial/exploit testing
+5. UX/clarity validation
+6. Final integrated validation
+7. Surface results to David
 
 ## Product-owner stop conditions
 
