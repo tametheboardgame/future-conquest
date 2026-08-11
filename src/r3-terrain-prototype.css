@@ -1,0 +1,152 @@
+/* R3-WP2B experimental MapLibre terrain host.
+   This is deliberately isolated from the stable SVG campaign renderer until
+   the terrain direction passes visual and technical review. */
+
+.r3-terrain-prototype {
+  position: relative;
+  min-height: 560px;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(126, 175, 173, .35);
+  border-radius: 10px;
+  background: #081317;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 18px 42px rgba(0,0,0,.28);
+}
+
+.r3-terrain-prototype-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.r3-terrain-prototype-toolbar {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 12px;
+  right: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(164, 214, 209, .25);
+  border-radius: 8px;
+  background: rgba(4, 15, 19, .82);
+  backdrop-filter: blur(8px);
+  color: #c7dcda;
+  pointer-events: none;
+}
+
+.r3-terrain-prototype-toolbar span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 11px;
+  letter-spacing: .02em;
+}
+
+.r3-terrain-prototype-toolbar strong {
+  color: #8fe1d4;
+  font-size: 10px;
+  letter-spacing: .14em;
+}
+
+.r3-terrain-prototype-toolbar > div {
+  display: flex;
+  gap: 5px;
+  pointer-events: auto;
+}
+
+.r3-terrain-prototype-toolbar button {
+  padding: 5px 8px;
+  border: 1px solid rgba(132, 194, 188, .35);
+  border-radius: 5px;
+  background: rgba(16, 51, 54, .82);
+  color: #d9f1ed;
+  font: inherit;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.r3-terrain-prototype-toolbar button:hover,
+.r3-terrain-prototype-toolbar button:focus-visible {
+  border-color: #8fe1d4;
+  outline: none;
+}
+
+.r3-terrain-prototype-attribution {
+  position: absolute;
+  z-index: 5;
+  left: 10px;
+  bottom: 8px;
+  max-width: min(720px, calc(100% - 20px));
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(2, 9, 12, .72);
+  color: rgba(216, 229, 225, .74);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+.r3-terrain-prototype[data-status='warning'] {
+  border-color: rgba(230, 174, 94, .55);
+}
+
+.r3-terrain-prototype .maplibregl-ctrl-group {
+  background: rgba(5, 19, 24, .88);
+}
+
+.r3-terrain-prototype .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(.9) sepia(.15) saturate(.5);
+}
+
+.r3-terrain-prototype .maplibregl-ctrl-attrib {
+  background: rgba(3, 11, 14, .72);
+  color: #b8cbc7;
+}
+
+.r3-terrain-prototype .maplibregl-ctrl-attrib a {
+  color: #9edbd1;
+}
+
+@media (max-width: 900px) {
+  .r3-terrain-prototype {
+    min-height: 430px;
+  }
+
+  .r3-terrain-prototype-toolbar {
+    right: 48px;
+    align-items: flex-start;
+  }
+
+  .r3-terrain-prototype-toolbar span {
+    max-width: 62%;
+  }
+}
+
+@media (max-width: 600px) {
+  .r3-terrain-prototype {
+    min-height: 360px;
+  }
+
+  .r3-terrain-prototype-toolbar {
+    right: 10px;
+    flex-direction: column;
+  }
+
+  .r3-terrain-prototype-toolbar span {
+    max-width: 100%;
+  }
+
+  .r3-terrain-prototype-attribution {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r3-terrain-prototype *,
+  .r3-terrain-prototype *::before,
+  .r3-terrain-prototype *::after {
+    scroll-behavior: auto !important;
+  }
+}
