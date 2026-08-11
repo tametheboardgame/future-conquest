@@ -8,15 +8,17 @@ const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const impl = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
-test('R3 WP2B installs MapLibre and keeps the real-terrain host isolated from the stable SVG map', () => {
+test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the stable SVG map', () => {
   assert.match(pkg.dependencies['maplibre-gl'], /^\^6\./);
-  assert.doesNotMatch(host, /from 'maplibre-gl'/);
-  assert.match(host, /lazy\(\(\) => import\('\.\/TerrainMapPrototypeImpl'\)/);
-  assert.match(impl, /from 'maplibre-gl'/);
+  assert.match(app, /const TerrainMapPrototype = lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
   assert.match(app, /import \{ MapView \} from '\.\/components\/MapView'/);
-  assert.match(app, /import \{ TerrainMapPrototype \} from '\.\/components\/TerrainMapPrototype'/);
+  assert.doesNotMatch(app, /import \{ TerrainMapPrototype \} from '\.\/components\/TerrainMapPrototype'/);
+  assert.match(host, /export \{ TerrainMapPrototypeImpl as TerrainMapPrototype \} from '\.\/TerrainMapPrototypeImpl'/);
+  assert.doesNotMatch(host, /lazy\(|Suspense|from 'maplibre-gl'/);
+  assert.match(impl, /from 'maplibre-gl'/);
   assert.match(app, /URLSearchParams\(window\.location\.search\)\.get\('terrain'\) === '1'/);
-  assert.match(app, /terrainPrototypeRequested && !terrainPrototypeFailed \? <TerrainMapPrototype/);
+  assert.match(app, /terrainPrototypeRequested && !terrainPrototypeFailed \? <Suspense/);
+  assert.match(app, /<TerrainMapPrototype/);
   assert.match(app, /: <MapView/);
 });
 
