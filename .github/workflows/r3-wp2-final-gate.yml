@@ -1,9 +1,9 @@
 name: R3 WP2 final validation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/r3-wp2-2_5d-strategic-map
+      - main
     paths:
       - .github/workflows/r3-wp2-final-gate.yml
 
