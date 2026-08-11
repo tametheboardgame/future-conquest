@@ -74,7 +74,7 @@ Final WP1 validation passed 369/369 repository tests, TypeScript, production bui
 
 ### R3-WP2 - 2.5D Strategic Map
 
-Status: ACTIVE - DEPTH / TERRAIN / FRONT FOUNDATION WIRED
+Status: ACTIVE - DEPTH / TERRAIN / FRONT / HIERARCHY WIRED
 
 Branch: `agent/r3-wp2-2_5d-strategic-map`
 PR: #115
@@ -90,19 +90,23 @@ Implemented so far:
 - restrained SVG terrain patterns and a common directional sheen layered above control fills rather than replacing them;
 - deterministic opposing-control adjacency derivation with short boundary-centred front marks that remain visually distinct from administrative borders;
 - front geometry remains presentation-only and does not participate in hit-testing, pathfinding or combat;
+- crowded-region/zoom hierarchy tuning for Benelux, Rhine and Alpine-style dense geography: country names recede at local/tactical zoom, centre labels outrank full territory names, fronts become supporting cues at deep zoom, and optional routes/nodes gain restrained casing/halos above terrain;
+- mobile hierarchy reduces simultaneous surface effects while preserving centre labels and operational pieces;
 - decorative depth, terrain, lighting and front layers are `aria-hidden`/non-interactive;
-- mobile depth/front simplification and reduced-motion compatibility retained;
-- focused terrain/front/depth regression coverage added.
+- focused terrain/front/depth/hierarchy regression coverage added.
 
-The wired terrain/front candidate `1953e8498402636bd701e4ad5d60096ddbad0f7f` passed the complete repository test step and production build in GitHub Actions. Temporary one-shot renderer patch tooling was removed immediately after use and is not part of the intended PR diff.
+Validation evidence so far:
+
+- terrain/front wired candidate `1953e8498402636bd701e4ad5d60096ddbad0f7f` passed complete repository tests and production build;
+- hierarchy candidate `297ad66af2dd0908db53d2fa7d54a2bcee812fd7` passed complete repository tests and production build in GitHub Actions run #1222;
+- no simulation, save, route-topology or authoritative territory-geometry files have been modified by these presentation slices.
 
 Primary requirements still to complete or validate:
 
-- tune the visual depth/terrain balance against representative crowded regions and tactical zoom;
-- add any remaining restrained geographic context cues that materially improve strategic reading without clutter;
-- verify labels, overlays, routes and strategic nodes sit correctly in the new depth hierarchy;
-- complete compact-desktop/mobile readability and representative performance checks;
-- complete exact geometry/hit-testing review, deterministic balance parity, final CI and final diff review before merge.
+- complete representative performance checks for layered SVG effects at theatre/regional/local/tactical views;
+- complete compact-desktop/mobile readability checks and final effect simplification if measured pressure requires it;
+- complete exact geometry/hit-testing review and deterministic balance parity;
+- complete final CI, PR diff/review and merge gate before WP3.
 
 Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
