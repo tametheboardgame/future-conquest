@@ -1,6 +1,6 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 ## Current programme
 
@@ -60,13 +60,28 @@ Known small UI/UX issues observed during manual fiddling are intentionally being
 
 ### R3-WP1 - Visual Architecture & Renderer Foundation
 
-Status: ACTIVE
+Status: ACTIVE - RENDERER DECISION RECORDED / FINAL VALIDATION PENDING
 
 Branch: `agent/r3-wp1-visual-architecture`
+PR: #114
 
 Objective: establish explicit presentation boundaries, compare the current SVG/DOM renderer with a WebGL/Three.js-class alternative, build a focused technical spike, select the renderer on measured evidence, preserve authoritative geometry/state, and establish camera/LOD/assets/performance/fallback foundations for the later 2.5D map.
 
-Acceptance and validation: see `docs/roadmap/R3-ROADMAP.md`.
+Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL remains an optional acceleration path behind the renderer-neutral presentation contract if later measured browser paint/effect pressure justifies it. This avoids replacing mature camera, selection, keyboard, pointer, mobile and accessibility behaviour without a demonstrated need while preserving a higher-performance escape hatch.
+
+WP1 now contains:
+
+- renderer-neutral `MapPresentationFrame` and lifecycle contract;
+- explicit terrain/control/routes/pieces/effects/overlay layer boundaries;
+- GameState-to-presentation adapter with hidden-enemy-information boundary;
+- theatre/regional/local/tactical LOD foundation;
+- versioned R3 asset namespace and frame-budget instrumentation;
+- equivalent representative/dense SVG and WebGL preparation spikes;
+- deterministic renderer preparation benchmark and browser WebGL capability/fallback probe;
+- evidence-based renderer scoring and decision record in `docs/architecture/R3-WP1-RENDERER-SPIKE.md`;
+- focused WP1 architecture, adapter and renderer-spike regressions.
+
+Remaining WP1 gates: full repository tests, TypeScript, production build, deterministic balance parity, GitHub workflows and final architecture review. R3-WP2 must not begin until those gates pass and WP1 is merged.
 
 Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
