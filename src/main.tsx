@@ -27,6 +27,7 @@ import './combat-reports.css';
 import './map-readability.css';
 import './r2-tactical-map.css';
 import './r3-strategic-map.css';
+import './r3-map-hierarchy.css';
 import './responsive-command-fit.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 
