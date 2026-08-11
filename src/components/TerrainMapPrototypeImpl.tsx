@@ -11,6 +11,9 @@ import { feature as topojsonFeature } from 'topojson-client';
 import worldAtlas from 'world-atlas/countries-110m.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import activeGeojson from '../assets/vertical-slice-map.json';
+import { TERRITORIES } from '../game/data';
+import { getThreatenedTerritories } from '../game/operational-clarity';
+import { STRATEGIC_NODES, STRATEGIC_ROUTES } from '../game/strategic-network-data';
 import type { GameState } from '../game/types';
 import {
   R3_TERRAIN_CAMERA_PRESETS,
@@ -20,7 +23,13 @@ import {
   terrainCameraPreset,
   type TerrainCameraPreset
 } from '../presentation/r3-terrain-config';
-import { buildTerrainPoliticalGeoJSON } from '../presentation/r3-terrain-overlay';
+import { deriveR3FrontSegments } from '../presentation/r3-map-visual-state';
+import {
+  buildTerrainFrontGeoJSON,
+  buildTerrainPoliticalGeoJSON,
+  buildTerrainStrategicNodeGeoJSON,
+  buildTerrainStrategicRouteGeoJSON
+} from '../presentation/r3-terrain-overlay';
 import {
   generatedRasterDemSource,
   generatedTerrainManifestUrl,
@@ -68,7 +77,10 @@ async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
 }
 
 function mapStyle(
-  data: GeoJSONSourceSpecification['data'],
+  politicalData: GeoJSONSourceSpecification['data'],
+  frontData: GeoJSONSourceSpecification['data'],
+  routeData: GeoJSONSourceSpecification['data'],
+  nodeData: GeoJSONSourceSpecification['data'],
   demSource: RasterDEMSourceSpecification
 ): StyleSpecification {
   return {
@@ -81,7 +93,19 @@ function mapStyle(
       'r3-wp2b-dem': demSource,
       'campaign-territories': {
         type: 'geojson',
-        data
+        data: politicalData
+      },
+      'campaign-fronts': {
+        type: 'geojson',
+        data: frontData
+      },
+      'campaign-strategic-routes': {
+        type: 'geojson',
+        data: routeData
+      },
+      'campaign-strategic-nodes': {
+        type: 'geojson',
+        data: nodeData
       }
     },
     terrain: {
@@ -163,31 +187,188 @@ function mapStyle(
           ],
           'fill-opacity': [
             'case',
-            ['boolean', ['get', 'selected'], false], 0.31,
-            ['boolean', ['get', 'targeted'], false], 0.26,
-            0.13
+            ['boolean', ['get', 'selected'], false], 0.18,
+            ['boolean', ['get', 'targeted'], false], 0.17,
+            0.11
           ]
         }
       },
       {
-        id: 'campaign-territories-line',
+        id: 'campaign-territory-state-wash',
+        type: 'fill',
+        source: 'campaign-territories',
+        paint: {
+          'fill-color': [
+            'case',
+            ['boolean', ['get', 'active_combat'], false], '#ff5447',
+            ['==', ['get', 'threat_stage'], 'under-attack'], '#ff6158',
+            ['==', ['get', 'threat_stage'], 'imminent'], '#ff9a55',
+            ['==', ['get', 'threat_stage'], 'preparing'], '#f0c96d',
+            ['==', ['get', 'threat_stage'], 'recent-combat'], '#a65c57',
+            ['boolean', ['get', 'targeted'], false], '#ffc76b',
+            ['boolean', ['get', 'selected'], false], '#8ffff1',
+            '#000000'
+          ],
+          'fill-opacity': [
+            'case',
+            ['boolean', ['get', 'active_combat'], false], 0.22,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 0.2,
+            ['==', ['get', 'threat_stage'], 'imminent'], 0.15,
+            ['==', ['get', 'threat_stage'], 'preparing'], 0.1,
+            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.09,
+            ['boolean', ['get', 'targeted'], false], 0.11,
+            ['boolean', ['get', 'selected'], false], 0.08,
+            0
+          ]
+        }
+      },
+      {
+        id: 'campaign-administrative-borders',
+        type: 'line',
+        source: 'campaign-territories',
+        paint: {
+          'line-color': '#d6d8c9',
+          'line-opacity': 0.34,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.55, 8, 1.05]
+        }
+      },
+      {
+        id: 'campaign-strategic-routes',
+        type: 'line',
+        source: 'campaign-strategic-routes',
+        minzoom: 5.1,
+        paint: {
+          'line-color': [
+            'case',
+            ['boolean', ['get', 'selected_supply_path'], false], '#8ffff1',
+            ['boolean', ['get', 'bottleneck'], false], '#f0ad58',
+            ['==', ['get', 'status'], 'destroyed'], '#6f2d34',
+            ['==', ['get', 'status'], 'blocked'], '#a44343',
+            ['==', ['get', 'status'], 'damaged'], '#c58a50',
+            '#9ba58f'
+          ],
+          'line-opacity': [
+            'case',
+            ['boolean', ['get', 'selected_supply_path'], false], 0.9,
+            ['boolean', ['get', 'bottleneck'], false], 0.78,
+            ['==', ['get', 'status'], 'destroyed'], 0.42,
+            0.5
+          ],
+          'line-width': [
+            'case',
+            ['boolean', ['get', 'selected_supply_path'], false], 3.2,
+            ['boolean', ['get', 'bottleneck'], false], 2.4,
+            ['==', ['get', 'status'], 'destroyed'], 1.1,
+            1.45
+          ]
+        }
+      },
+      {
+        id: 'campaign-control-borders',
         type: 'line',
         source: 'campaign-territories',
         paint: {
           'line-color': [
             'case',
-            ['boolean', ['get', 'selected'], false], '#effffc',
-            ['boolean', ['get', 'targeted'], false], '#ffd58a',
-            ['==', ['get', 'controller'], 'player'], '#75d7c8',
-            '#b59698'
+            ['==', ['get', 'controller'], 'player'], '#70d9cb',
+            '#b99194'
           ],
-          'line-opacity': 0.92,
+          'line-opacity': 0.72,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 2]
+        }
+      },
+      {
+        id: 'campaign-fronts-underlay',
+        type: 'line',
+        source: 'campaign-fronts',
+        layout: {
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3c2623',
+          'line-opacity': 0.88,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 5.2, 8, 8.4]
+        }
+      },
+      {
+        id: 'campaign-fronts-core',
+        type: 'line',
+        source: 'campaign-fronts',
+        layout: {
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#f3a15d',
+          'line-opacity': 0.96,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 2.1, 8, 3.6]
+        }
+      },
+      {
+        id: 'campaign-state-outline',
+        type: 'line',
+        source: 'campaign-territories',
+        paint: {
+          'line-color': [
+            'case',
+            ['boolean', ['get', 'active_combat'], false], '#ff7a63',
+            ['==', ['get', 'threat_stage'], 'under-attack'], '#ff695e',
+            ['==', ['get', 'threat_stage'], 'imminent'], '#ffaf67',
+            ['==', ['get', 'threat_stage'], 'preparing'], '#f1d37e',
+            ['boolean', ['get', 'targeted'], false], '#ffd58a',
+            ['boolean', ['get', 'selected'], false], '#effffc',
+            '#000000'
+          ],
+          'line-opacity': [
+            'case',
+            ['any',
+              ['boolean', ['get', 'active_combat'], false],
+              ['!=', ['get', 'threat_stage'], 'none'],
+              ['boolean', ['get', 'targeted'], false],
+              ['boolean', ['get', 'selected'], false]
+            ],
+            0.96,
+            0
+          ],
           'line-width': [
             'case',
-            ['boolean', ['get', 'selected'], false], 3.2,
-            ['boolean', ['get', 'targeted'], false], 2.6,
-            1.25
+            ['boolean', ['get', 'active_combat'], false], 4.2,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 3.8,
+            ['boolean', ['get', 'selected'], false], 3.4,
+            ['boolean', ['get', 'targeted'], false], 3,
+            2.5
           ]
+        }
+      },
+      {
+        id: 'campaign-strategic-nodes',
+        type: 'circle',
+        source: 'campaign-strategic-nodes',
+        minzoom: 5.5,
+        paint: {
+          'circle-color': [
+            'case',
+            ['==', ['get', 'node_type'], 'capital'], '#f1d07a',
+            ['==', ['get', 'node_type'], 'port'], '#77bfd2',
+            ['==', ['get', 'node_type'], 'airport'], '#b9b0e1',
+            ['==', ['get', 'node_type'], 'rail-hub'], '#c4a96e',
+            ['==', ['get', 'node_type'], 'crossing'], '#df8b68',
+            ['==', ['get', 'node_type'], 'logistics'], '#84cba8',
+            '#d0d3bd'
+          ],
+          'circle-radius': [
+            'case',
+            ['==', ['get', 'importance'], 3], 5,
+            ['==', ['get', 'importance'], 2], 4,
+            3
+          ],
+          'circle-opacity': 0.86,
+          'circle-stroke-color': [
+            'case',
+            ['==', ['get', 'controller'], 'player'], '#6de2d2',
+            '#c39a9e'
+          ],
+          'circle-stroke-width': 1.4,
+          'circle-stroke-opacity': 0.92
         }
       }
     ]
@@ -207,9 +388,29 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
   selectRef.current = onSelect;
   fallbackRef.current = onFallback;
 
+  const visibleThreats = useMemo(() => getThreatenedTerritories(state), [state]);
+  const activeCombatTerritoryIds = useMemo(
+    () => Object.values(state.operations).map(operation => operation.target),
+    [state.operations]
+  );
   const politicalData = useMemo(() => (
-    buildTerrainPoliticalGeoJSON(terrainGeoJSON, state) as unknown as GeoJSONSourceSpecification['data']
+    buildTerrainPoliticalGeoJSON(terrainGeoJSON, state, {
+      threatenedTerritories: visibleThreats,
+      activeCombatTerritoryIds
+    }) as unknown as GeoJSONSourceSpecification['data']
+  ), [state, visibleThreats, activeCombatTerritoryIds]);
+  const frontData = useMemo(() => (
+    buildTerrainFrontGeoJSON(
+      terrainGeoJSON,
+      deriveR3FrontSegments(state.territories, TERRITORIES)
+    ) as unknown as GeoJSONSourceSpecification['data']
+  ), [state.territories]);
+  const routeData = useMemo(() => (
+    buildTerrainStrategicRouteGeoJSON(STRATEGIC_NODES, STRATEGIC_ROUTES, state) as unknown as GeoJSONSourceSpecification['data']
   ), [state]);
+  const nodeData = useMemo(() => (
+    buildTerrainStrategicNodeGeoJSON(STRATEGIC_NODES, state) as unknown as GeoJSONSourceSpecification['data']
+  ), [state.territories]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -230,7 +431,7 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
       const map = new Map({
         container: containerRef.current,
-        style: mapStyle(politicalData, terrainSource.source),
+        style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source),
         center: [initial.center[0], initial.center[1]],
         zoom: initial.zoom,
         pitch: initial.pitch,
@@ -249,7 +450,7 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       map.on('load', () => {
         loadedRef.current = true;
         setStatus('ready');
-        setMessage(`${terrainSource.label} · continuous relief · political control remains an overlay`);
+        setMessage(`${terrainSource.label} · continuous relief · operational overlays projected from campaign state`);
       });
 
       map.on('error', () => {
@@ -283,17 +484,25 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       mapRef.current = null;
       ownedMap?.remove();
     };
-    // This host deliberately creates one renderer instance; political data is
-    // updated through the GeoJSON source effect below rather than recreating it.
+    // This host deliberately creates one renderer instance; campaign overlays
+    // update through GeoJSON sources below rather than recreating the map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
-    const source = map.getSource('campaign-territories');
-    if (source instanceof GeoJSONSource) source.setData(politicalData);
-  }, [politicalData]);
+    const updates: Array<[string, GeoJSONSourceSpecification['data']]> = [
+      ['campaign-territories', politicalData],
+      ['campaign-fronts', frontData],
+      ['campaign-strategic-routes', routeData],
+      ['campaign-strategic-nodes', nodeData]
+    ];
+    for (const [sourceId, data] of updates) {
+      const source = map.getSource(sourceId);
+      if (source instanceof GeoJSONSource) source.setData(data);
+    }
+  }, [politicalData, frontData, routeData, nodeData]);
 
   const goTo = (preset: TerrainCameraPreset) => {
     mapRef.current?.easeTo({
