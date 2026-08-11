@@ -35,3 +35,4 @@ jobs:
             git commit -m "Lazy-load experimental terrain renderer"
             git push origin HEAD:agent/r3-wp2b-real-terrain
           fi
+# one-shot trigger
