@@ -27,6 +27,7 @@ import {
 import { getAdjacentOrderTargets } from '../game/order-targeting';
 import { getEnemyContacts, getThreatenedTerritories } from '../game/operational-clarity';
 import type { GameState, StrategicNodeType } from '../game/types';
+import { deriveR3FrontSegments, r3FrontLineEndpoints, r3TerrainClass } from '../presentation/r3-map-visual-state';
 
 interface Props {
   state: GameState;
@@ -330,6 +331,13 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
   const showStrategicNodes = zoomPercent >= 150;
   const showStrategicNodeNames = zoomPercent >= 285;
   const selectedSupplyRouteIds = new Set(state.logistics.formationAllocations[state.selectedTaskGroupId]?.path.routeIds ?? []);
+  const frontSegments = deriveR3FrontSegments(state.territories, TERRITORIES).flatMap(segment => {
+    const from = geographicAnchors[segment.fromTerritoryId];
+    const to = geographicAnchors[segment.toTerritoryId];
+    if (!from || !to) return [];
+    const endpoints = r3FrontLineEndpoints(from, to, 18 * overlayScale);
+    return endpoints ? [{ ...segment, ...endpoints }] : [];
+  });
 
   const statusText = useMemo(() => {
     if (zoomPercent <= 110) return 'European theatre overview';
@@ -495,6 +503,25 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
       <defs>
         <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
         <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <linearGradient id="r3TerritorySheen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity=".7" />
+          <stop offset="38%" stopColor="#ffffff" stopOpacity=".16" />
+          <stop offset="72%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity=".36" />
+        </linearGradient>
+        <pattern id="r3TerrainOpenLowland" width="18" height="18" patternUnits="userSpaceOnUse">
+          <path d="M0 13 H18" stroke="#dff8ee" strokeWidth=".7" opacity=".42" />
+        </pattern>
+        <pattern id="r3TerrainMixedLowland" width="16" height="16" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="5" r="1.15" fill="#d9f4e8" opacity=".55" />
+          <circle cx="12" cy="11" r=".8" fill="#d9f4e8" opacity=".36" />
+        </pattern>
+        <pattern id="r3TerrainMixedUpland" width="15" height="15" patternUnits="userSpaceOnUse">
+          <path d="M-3 15 L15 -3 M4 18 L18 4" stroke="#e4eee2" strokeWidth="1" opacity=".52" />
+        </pattern>
+        <pattern id="r3TerrainMountainous" width="18" height="16" patternUnits="userSpaceOnUse">
+          <path d="M1 13 L6 6 L10 11 L13 7 L17 13" fill="none" stroke="#f1eee1" strokeWidth="1.15" opacity=".68" />
+        </pattern>
         <marker id="operationArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" /></marker><marker id="enemyMovementArrow" markerWidth="5" markerHeight="5" refX="4.4" refY="2.5" orient="auto"><path className="enemy-movement-arrowhead" d="M0,0 L5,2.5 L0,5 Z" /></marker>
       </defs>
       <rect width={MAP_WIDTH} height={MAP_HEIGHT} className="sea" />
@@ -504,6 +531,13 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
       </g>
 
       <g className="active-campaign-layer">
+        <g className="r3-territory-depth-layer" aria-hidden="true">
+          {activePaths.map(({ id, path }) => {
+            const territory = state.territories[id];
+            return territory ? <path key={`${id}-depth`} d={path} className={`territory-depth-shell ${territory.controller}`} /> : null;
+          })}
+        </g>
+
         {activePaths.map(({ id, path }) => {
           const territory = state.territories[id];
           if (!territory) return null;
@@ -517,8 +551,29 @@ export function MapView({ state, onSelect, onSelectGroup, operationConfirmation 
             strokeWidth: 3,
             strokeDasharray: '8 5'
           } : undefined;
-          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''} ${threat ? 'threatened' : ''} ${threat?.stage === 'under-attack' ? 'under-attack' : ''} ${threat?.stage === 'recent-combat' ? 'recent-combat' : ''}`} />;
+          return <path key={id} d={path} onClick={() => selectTerritory(id)} style={reachStyle} className={`territory ${territory.controller} ${r3TerrainClass(TERRITORIES[id]?.terrain)} ${territory.supplied ? 'supplied' : 'isolated'} ${territory.occupation === 'unsecured' ? 'unsecured-control' : ''} ${selected ? 'selected' : ''} ${targeted ? 'targeted' : ''} ${active ? 'active-battle' : ''} ${threat ? 'threatened' : ''} ${threat?.stage === 'under-attack' ? 'under-attack' : ''} ${threat?.stage === 'recent-combat' ? 'recent-combat' : ''}`} />;
         })}
+
+        <g className="r3-terrain-layer" aria-hidden="true">
+          {activePaths.map(({ id, path }) => {
+            const territory = state.territories[id];
+            if (!territory) return null;
+            return <path key={`${id}-terrain`} d={path} className={`territory-terrain ${territory.controller} ${r3TerrainClass(TERRITORIES[id]?.terrain)}`} />;
+          })}
+        </g>
+
+        <g className="r3-territory-light-layer" aria-hidden="true">
+          {activePaths.map(({ id, path }) => state.territories[id]
+            ? <path key={`${id}-sheen`} d={path} className="territory-sheen" />
+            : null)}
+        </g>
+
+        <g className="r3-front-line-layer" aria-hidden="true">
+          {frontSegments.map(segment => <g key={segment.id} className="r3-front-segment">
+            <line className="r3-front-line-underlay" x1={segment.x1} y1={segment.y1} x2={segment.x2} y2={segment.y2} />
+            <line className="r3-front-line-core" x1={segment.x1} y1={segment.y1} x2={segment.x2} y2={segment.y2} />
+          </g>)}
+        </g>
 
         {layers.routes && zoomPercent >= 120 && <g className="strategic-route-layer" aria-hidden="true">
           {projectedStrategicRoutes.map(route => {
