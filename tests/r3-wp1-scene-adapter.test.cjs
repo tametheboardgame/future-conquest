@@ -31,5 +31,5 @@ test('R3 WP1 scene adapter derives selection and operation feedback without muta
   assert.match(adapter, /selected: state\.selectedTerritory === id/);
   assert.match(adapter, /selected: state\.selectedTaskGroupId === group\.id/);
   assert.match(adapter, /participantCount: operation\.participantGroupIds\.length/);
-  assert.doesNotMatch(adapter, /state\.[A-Za-z0-9_]+\s*=/);
+  assert.doesNotMatch(adapter, /state\.[A-Za-z0-9_]+\s*=(?!=)/);
 });
