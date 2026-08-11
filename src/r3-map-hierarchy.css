@@ -180,9 +180,19 @@
 
 @media (max-width: 900px) {
   /* Mobile gets the same information hierarchy with fewer simultaneous surface
-     effects. Centre labels and operational pieces win over terrain decoration. */
+     effects. Centre labels and operational pieces win over terrain decoration.
+     The campaign group shadow is disabled because the individual territories
+     already retain their cheaper mobile depth cue. */
+  .europe-map .active-campaign-layer {
+    filter: none;
+  }
+
   .europe-map .r3-territory-light-layer {
-    opacity: .5;
+    opacity: .42;
+  }
+
+  .europe-map .territory-sheen {
+    opacity: .12;
   }
 
   .europe-map.map-detail-local .r3-terrain-layer,
