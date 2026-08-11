@@ -1,0 +1,232 @@
+/* R3-WP2 — crowded-region and zoom hierarchy.
+   Dense Belgium/Rhine/Alpine geography must keep operational objects readable
+   without flattening the physical command-table treatment. This layer loads
+   after the base R3 map treatment and only changes presentation priority. */
+
+/* Territory labels remain the primary geographic reference once the player is
+   inside the campaign. Country names deliberately recede as local detail grows. */
+.europe-map.map-detail-regional .future-theatre-labels {
+  opacity: .5;
+}
+
+.europe-map.map-detail-local .future-theatre-labels {
+  opacity: .11;
+}
+
+.europe-map.map-detail-tactical .future-theatre-labels {
+  opacity: .05;
+}
+
+.europe-map.map-detail-local .future-theatre-labels .country-name-label.compact,
+.europe-map.map-detail-tactical .future-theatre-labels .country-name-label.compact {
+  opacity: 0;
+}
+
+.europe-map .territory-centre-label,
+.europe-map .territory-name-label,
+.europe-map .order-label,
+.europe-map .isolated-label {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .82));
+}
+
+.europe-map.map-detail-regional .territory-centre-label {
+  font-size: 14px;
+}
+
+.europe-map.map-detail-local .territory-centre-label {
+  font-size: 15px;
+  stroke-width: 4.6px;
+}
+
+.europe-map.map-detail-tactical .territory-centre-label {
+  font-size: 16px;
+  stroke-width: 5px;
+}
+
+/* Full territory names are useful locally but are intentionally subordinate to
+   centre names in the Rhine/Benelux cluster. Tactical view restores full weight. */
+.europe-map.map-detail-local .territory-name-label {
+  opacity: .68;
+  font-size: 9px;
+  stroke-width: 3.8px;
+}
+
+.europe-map.map-detail-tactical .territory-name-label {
+  opacity: 1;
+  font-size: 10px;
+  stroke-width: 4px;
+}
+
+/* Texture is strongest only when zoomed deeply enough to inspect terrain. This
+   avoids the small Benelux territories becoming noisy at campaign scale. */
+.europe-map.map-detail-regional .r3-terrain-layer {
+  opacity: .78;
+}
+
+.europe-map.map-detail-local .r3-terrain-layer {
+  opacity: .92;
+}
+
+.europe-map.map-detail-tactical .r3-terrain-layer {
+  opacity: 1;
+}
+
+.europe-map.map-detail-theatre .r3-territory-light-layer,
+.europe-map.map-detail-regional .r3-territory-light-layer {
+  opacity: .62;
+}
+
+.europe-map.map-detail-local .r3-territory-light-layer,
+.europe-map.map-detail-tactical .r3-territory-light-layer {
+  opacity: .82;
+}
+
+/* Fronts should read immediately from campaign/regional scale, then become a
+   supporting boundary cue rather than a thick ribbon when zoomed into Belgium,
+   the Rhine and the Alpine approaches. */
+.europe-map.map-detail-regional .r3-front-line-layer {
+  opacity: .92;
+}
+
+.europe-map.map-detail-local .r3-front-line-layer {
+  opacity: .78;
+}
+
+.europe-map.map-detail-tactical .r3-front-line-layer {
+  opacity: .66;
+}
+
+.europe-map.map-detail-local .r3-front-line-underlay,
+.europe-map.map-detail-tactical .r3-front-line-underlay {
+  stroke-width: 5.5px;
+}
+
+.europe-map.map-detail-local .r3-front-line-core,
+.europe-map.map-detail-tactical .r3-front-line-core {
+  stroke-width: 2.8px;
+  stroke-dasharray: 6 4;
+}
+
+/* Optional network overlays live above terrain/front cues in the SVG ordering.
+   Give them a restrained casing so routes stay visible over upland textures
+   without competing with formations, threats or active operations. */
+.europe-map .strategic-route {
+  paint-order: stroke;
+  filter: drop-shadow(0 1px 1px rgba(2, 8, 11, .82));
+}
+
+.europe-map.map-detail-regional .strategic-route {
+  opacity: .42;
+}
+
+.europe-map.map-detail-local .strategic-route {
+  opacity: .56;
+}
+
+.europe-map.map-detail-tactical .strategic-route {
+  opacity: .7;
+}
+
+.europe-map .strategic-route.supply-critical,
+.europe-map .supply-route-flow.selected-path,
+.europe-map .supply-route-flow.bottleneck,
+.europe-map .supply-route-flow.broken {
+  opacity: 1;
+}
+
+/* Strategic nodes get a physical pin-like separation from the board. Their name
+   halo is intentionally heavier in the dense central-European cluster. */
+.europe-map .strategic-node {
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .68));
+}
+
+.europe-map .strategic-node .node-marker {
+  stroke-width: 2px;
+}
+
+.europe-map .strategic-node .node-name {
+  stroke: #050c10;
+  stroke-width: 4.2px;
+  paint-order: stroke;
+}
+
+.europe-map.map-detail-local .strategic-node .node-name {
+  font-size: 8.5px;
+}
+
+.europe-map.map-detail-tactical .strategic-node .node-name {
+  font-size: 9.5px;
+}
+
+.europe-map.map-detail-local .strategic-node.capital .node-name,
+.europe-map.map-detail-tactical .strategic-node.capital .node-name {
+  font-size: 11px;
+  stroke-width: 4.8px;
+}
+
+/* Formations/threats/operations are the top operational layer. Increase their
+   separation just enough that they remain legible over the raised terrain. */
+.europe-map .task-group-marker,
+.europe-map .enemy-contact-marker,
+.europe-map .threat-marker,
+.europe-map .operation-marker {
+  isolation: isolate;
+}
+
+.europe-map .operation-route,
+.europe-map .enemy-concentration-route {
+  filter: drop-shadow(0 1px 1px rgba(2, 8, 11, .9));
+}
+
+@media (max-width: 900px) {
+  /* Mobile gets the same information hierarchy with fewer simultaneous surface
+     effects. Centre labels and operational pieces win over terrain decoration. */
+  .europe-map .r3-territory-light-layer {
+    opacity: .5;
+  }
+
+  .europe-map.map-detail-local .r3-terrain-layer,
+  .europe-map.map-detail-tactical .r3-terrain-layer {
+    opacity: .72;
+  }
+
+  .europe-map.map-detail-local .territory-name-label,
+  .europe-map.map-detail-tactical .territory-name-label {
+    opacity: .72;
+    font-size: 9px;
+  }
+
+  .europe-map .strategic-route {
+    filter: none;
+  }
+
+  .europe-map .strategic-node {
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .62));
+  }
+}
+
+@media (max-width: 540px) {
+  .europe-map.map-detail-local .future-theatre-labels,
+  .europe-map.map-detail-tactical .future-theatre-labels {
+    opacity: 0;
+  }
+
+  .europe-map .territory-centre-label {
+    font-size: 14px;
+  }
+
+  .europe-map .r3-front-line-underlay {
+    stroke-width: 4.8px;
+  }
+
+  .europe-map .r3-front-line-core {
+    stroke-width: 2.5px;
+    stroke-dasharray: 5 4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .europe-map .future-theatre-labels {
+    transition: none;
+  }
+}
