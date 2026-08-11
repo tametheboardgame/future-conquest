@@ -44,7 +44,6 @@ interface TerrainSourceResolution {
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
 const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
 const terrainLandGeoJSON = topojsonFeature(atlas, atlas.objects.countries) as unknown as GeoJSONSourceSpecification['data'];
-const DEMO_TERRAIN_URL = 'https://demotiles.maplibre.org/terrain-tiles/tiles.json';
 const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved';
 
 function browserSupportsTerrain(): boolean {
@@ -57,27 +56,15 @@ function browserSupportsTerrain(): boolean {
 }
 
 async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
-  try {
-    const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
-    const response = await fetch(manifestUrl, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
-    const manifest = await response.json() as GeneratedTerrainTileJson;
-    return {
-      source: generatedRasterDemSource(manifest, import.meta.env.BASE_URL) as unknown as RasterDEMSourceSpecification,
-      label: 'Copernicus GLO-30 static terrain',
-      attribution: manifest.attribution
-    };
-  } catch {
-    return {
-      source: {
-        type: 'raster-dem',
-        url: DEMO_TERRAIN_URL,
-        tileSize: 256
-      },
-      label: 'temporary MapLibre terrain fallback',
-      attribution: 'MapLibre demo terrain'
-    };
-  }
+  const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
+  const response = await fetch(manifestUrl, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
+  const manifest = await response.json() as GeneratedTerrainTileJson;
+  return {
+    source: generatedRasterDemSource(manifest, import.meta.env.BASE_URL) as unknown as RasterDEMSourceSpecification,
+    label: 'Copernicus GLO-30 static terrain',
+    attribution: manifest.attribution
+  };
 }
 
 function mapStyle(
@@ -287,7 +274,7 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
     };
 
     void initialise().catch(() => {
-      if (!disposed) fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
+      if (!disposed) fallbackRef.current('Generated Copernicus terrain is unavailable; using the stable SVG command map.');
     });
 
     return () => {
