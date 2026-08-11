@@ -75,11 +75,12 @@ WP1 now contains:
 - explicit terrain/control/routes/pieces/effects/overlay layer boundaries;
 - GameState-to-presentation adapter with hidden-enemy-information boundary;
 - theatre/regional/local/tactical LOD foundation;
+- deterministic eased camera interpolation with exact endpoints and the existing viewport aspect preserved, ready for reduced-motion-aware preset transitions;
 - versioned R3 asset namespace and frame-budget instrumentation;
 - equivalent representative/dense SVG and WebGL preparation spikes;
 - deterministic renderer preparation benchmark and browser WebGL capability/fallback probe;
 - evidence-based renderer scoring and decision record in `docs/architecture/R3-WP1-RENDERER-SPIKE.md`;
-- focused WP1 architecture, adapter and renderer-spike regressions.
+- focused WP1 architecture, adapter, camera and renderer-spike regressions.
 
 Remaining WP1 gates: full repository tests, TypeScript, production build, deterministic balance parity, GitHub workflows and final architecture review. R3-WP2 must not begin until those gates pass and WP1 is merged.
 
