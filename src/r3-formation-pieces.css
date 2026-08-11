@@ -1,0 +1,157 @@
+/* R3-WP3 — physical formation pieces.
+   This layer deliberately restyles the existing accessible SVG formation/contact
+   geometry. Engine state, hit testing and selection handlers remain untouched. */
+
+/* Friendly formations read as small raised command pieces placed on the WP2
+   command table. The existing marker body remains the authoritative button area. */
+.europe-map .task-group-marker {
+  filter:
+    drop-shadow(0 2px 0 rgba(182, 255, 246, .16))
+    drop-shadow(0 4px 0 rgba(2, 25, 27, .96))
+    drop-shadow(0 7px 7px rgba(0, 0, 0, .64));
+}
+
+.europe-map .task-group-marker .marker-body {
+  fill: #13545a;
+  stroke: #a9fff5;
+  stroke-width: 2.2px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* A dark inner plate makes the existing rectangular counter feel like a physical
+   block rather than text floating on the map while retaining all legacy geometry. */
+.europe-map .task-group-marker .marker-id {
+  fill: #f7fffe;
+  stroke: #071518;
+  stroke-width: 3px;
+  paint-order: stroke;
+  letter-spacing: .055em;
+}
+
+.europe-map .task-group-marker .marker-strength {
+  fill: #c9fff6;
+  stroke: #071518;
+  stroke-width: 2.6px;
+  paint-order: stroke;
+}
+
+.europe-map .task-group-marker .marker-status {
+  fill: #d6e9ec;
+  stroke: #071518;
+  stroke-width: 2.4px;
+  paint-order: stroke;
+}
+
+/* Status is communicated through material treatment as well as text so pieces
+   remain scannable before tactical labels appear. */
+.europe-map .task-group-marker.garrison .marker-body {
+  fill: #465c37;
+  stroke: #e3f58b;
+}
+
+.europe-map .task-group-marker.attacking .marker-body {
+  fill: #733933;
+  stroke: #ffb194;
+}
+
+.europe-map .task-group-marker.moving .marker-body {
+  fill: #244f64;
+  stroke: #9fd9ff;
+  stroke-dasharray: 5 2;
+}
+
+.europe-map .task-group-marker.recovering .marker-body,
+.europe-map .task-group-marker.engineering .marker-body,
+.europe-map .task-group-marker.interdicting .marker-body {
+  fill: #39444c;
+  stroke: #c1d2d8;
+}
+
+/* Selected pieces lift visually above every other friendly piece. The halo is
+   still the existing non-authoritative selection decoration. */
+.europe-map .task-group-marker .marker-selection-halo {
+  fill: rgba(86, 255, 235, .08);
+  stroke: rgba(198, 255, 248, .9);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .task-group-marker.selected {
+  filter:
+    drop-shadow(0 2px 0 rgba(245, 255, 253, .36))
+    drop-shadow(0 5px 0 rgba(4, 54, 51, .98))
+    drop-shadow(0 0 10px rgba(105, 255, 238, .72))
+    drop-shadow(0 10px 9px rgba(0, 0, 0, .72));
+}
+
+.europe-map .task-group-marker.selected .marker-body {
+  fill: #1e8075;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.europe-map .task-group-marker:hover .marker-body,
+.europe-map .task-group-marker:focus-visible .marker-body {
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+/* Enemy intelligence remains a different visual language: pointed contact
+   plaques rather than friendly command blocks. No exact enemy identity is added. */
+.europe-map .enemy-contact-marker {
+  filter:
+    drop-shadow(0 3px 0 rgba(44, 10, 13, .9))
+    drop-shadow(0 7px 7px rgba(0, 0, 0, .7));
+}
+
+.europe-map .enemy-contact-marker .contact-body {
+  stroke-width: 2.4px;
+  vector-effect: non-scaling-stroke;
+}
+
+.europe-map .enemy-contact-marker.confirmed .contact-body {
+  fill: #822e34;
+  stroke: #ffd9cf;
+}
+
+.europe-map .enemy-contact-marker.estimated .contact-body {
+  fill: #715126;
+  stroke: #ffe09a;
+}
+
+.europe-map .enemy-contact-marker.activity .contact-body {
+  fill: #574267;
+  stroke: #dec1ff;
+}
+
+.europe-map .enemy-contact-marker.stale {
+  opacity: .62;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .58));
+}
+
+/* Preserve crowded-region usability: pieces keep their existing deterministic
+   stack positions while effects simplify before their text/selection does. */
+@media (max-width: 900px) {
+  .europe-map .task-group-marker {
+    filter:
+      drop-shadow(0 2px 0 rgba(2, 25, 27, .94))
+      drop-shadow(0 4px 4px rgba(0, 0, 0, .58));
+  }
+
+  .europe-map .task-group-marker.selected {
+    filter:
+      drop-shadow(0 0 7px rgba(105, 255, 238, .68))
+      drop-shadow(0 5px 5px rgba(0, 0, 0, .66));
+  }
+
+  .europe-map .enemy-contact-marker {
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .64));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .europe-map .task-group-marker,
+  .europe-map .enemy-contact-marker {
+    transition: none;
+  }
+}
