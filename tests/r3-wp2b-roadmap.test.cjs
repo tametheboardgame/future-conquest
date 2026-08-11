@@ -26,8 +26,9 @@ test('R3 WP2B selects MapLibre Copernicus and Three.js with an SVG fallback', ()
   assert.match(packageDoc, /SVG\/DOM strategic map remains an accessible\/reduced-effects\/failure fallback/);
 });
 
-test('R3 WP2B forbids browser geospatial secrets', () => {
-  assert.match(dataDoc, /must never be embedded in Vite output/i);
-  assert.match(dataDoc, /Do not commit OAuth client IDs\/secrets/i);
+test('R3 WP2B forbids browser geospatial acquisition credentials', () => {
+  assert.match(dataDoc, /does not query authenticated Copernicus DEM services from the shipped browser/i);
+  assert.match(dataDoc, /No terrain acquisition credential or access token belongs in Vite\/browser output/i);
+  assert.match(dataDoc, /MapLibre requests only the generated same-origin Terrain-RGB assets/i);
   assert.match(packageDoc, /shipped browser must not contain Copernicus client secrets/i);
 });
