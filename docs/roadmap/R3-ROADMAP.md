@@ -34,7 +34,7 @@ Status: COMPLETE / MERGED (#114)
 
 Objective: establish a clean presentation architecture and select the rendering approach before substantial visual content is built.
 
-WP1 established renderer-neutral presentation state, camera/LOD/assets/performance boundaries and initially selected evolved SVG/DOM over a wholesale WebGL rewrite based on the then-required map. That decision remains valid as the **fallback renderer**. The later WP2B art-direction decision justifies adding a specialised geospatial terrain renderer without moving game authority into it.
+WP1 established renderer-neutral presentation state, camera/LOD/assets/performance boundaries and initially selected evolved SVG/DOM over a wholesale WebGL rewrite based on the then-required map. WP1 explicitly evaluated the **existing SVG/DOM map** against a **WebGL/Three.js**-class alternative using measured evidence, selecting evolved SVG/DOM as the primary renderer with a **clear fallback** and escalation path if later browser paint/effect pressure justified WebGL. That historical decision remains valid for the stable fallback renderer. The later WP2B art-direction decision is a separately approved specialised geospatial-terrain requirement and does not move game authority into the renderer.
 
 ---
 
