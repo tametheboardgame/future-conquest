@@ -1,27 +1,20 @@
 name: R3 WP2B Copernicus terrain build
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'scripts/build-r3-copernicus-terrain.py'
-      - 'scripts/r3-terrain-requirements.txt'
-      - '.github/workflows/r3-wp2b-copernicus-terrain.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build-copernicus-terrain:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Checkout exact PR branch
+      - name: Checkout requested branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -72,4 +65,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Generate Copernicus terrain prototype assets'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:${{ github.ref_name }}
