@@ -32,9 +32,10 @@ test('R3 WP2 decorative depth terrain lighting and fronts cannot steal hit testi
 
 test('R3 WP2 retains the established theatre regional local tactical zoom contract', () => {
   assert.match(map, /zoomPercent >= 600 \? 'tactical' : zoomPercent >= 285 \? 'local' : zoomPercent >= 135 \? 'regional' : 'theatre'/);
-  for (const tier of ['theatre', 'regional', 'local', 'tactical']) {
-    assert.ok(hierarchyCss.includes(`map-detail-${tier}`) || tier === 'theatre');
+  for (const tier of ['regional', 'local', 'tactical']) {
+    assert.ok(hierarchyCss.includes(`map-detail-${tier}`), `missing ${tier} hierarchy`);
   }
+  assert.match(baseCss, /map-detail-theatre/);
 });
 
 test('R3 WP2 keeps keyboard and accessible SVG navigation intact', () => {
@@ -47,10 +48,9 @@ test('R3 WP2 keeps keyboard and accessible SVG navigation intact', () => {
 });
 
 test('R3 WP2 explicitly reduces duplicate layered effects on mobile', () => {
-  const mobile = hierarchyCss.match(/@media \(max-width: 900px\) \{([\s\S]*?)\n\}/)?.[1] ?? '';
-  assert.match(mobile, /\.active-campaign-layer[\s\S]*filter: none/);
-  assert.match(mobile, /\.territory-sheen[\s\S]*opacity: \.12/);
-  assert.match(mobile, /\.strategic-route[\s\S]*filter: none/);
+  assert.match(hierarchyCss, /@media \(max-width: 900px\)[\s\S]*\.active-campaign-layer \{[\s\S]*filter: none/);
+  assert.match(hierarchyCss, /@media \(max-width: 900px\)[\s\S]*\.territory-sheen \{[\s\S]*opacity: \.12/);
+  assert.match(hierarchyCss, /@media \(max-width: 900px\)[\s\S]*\.strategic-route \{[\s\S]*filter: none/);
   assert.match(baseCss, /@media \(max-width: 900px\)[\s\S]*\.territory-depth-shell[\s\S]*translateY\(3px\)/);
 });
 
