@@ -49,3 +49,20 @@ test('R3 WP2 front derivation is deterministic, pure and ignores missing visual 
   assert.match(source, /not a replacement border geometry/i);
   assert.match(source, /never participate in hit-testing, pathfinding or combat/i);
 });
+
+test('R3 WP2 turns opposing centres into a short perpendicular front mark', () => {
+  const horizontal = visual.r3FrontLineEndpoints([0, 0], [20, 0], 4);
+  assert.deepEqual(horizontal, { x1: 10, y1: -4, x2: 10, y2: 4 });
+
+  const vertical = visual.r3FrontLineEndpoints([0, 0], [0, 20], 5);
+  assert.deepEqual(vertical, { x1: 5, y1: 10, x2: -5, y2: 10 });
+});
+
+test('R3 WP2 front geometry is deterministic and rejects degenerate centre pairs', () => {
+  const first = visual.r3FrontLineEndpoints([4, 7], [13, 19], 6);
+  const second = visual.r3FrontLineEndpoints([4, 7], [13, 19], 6);
+  assert.deepEqual(second, first);
+  assert.equal(visual.r3FrontLineEndpoints([2, 2], [2, 2], 8), undefined);
+  assert.equal(visual.r3FrontLineEndpoints([0, 0], [10, 0], Number.NaN).y1, 0);
+  assert.match(source, /approximately[\s\S]*screen-space stable/i);
+});
