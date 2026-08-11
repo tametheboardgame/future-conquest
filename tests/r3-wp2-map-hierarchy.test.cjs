@@ -44,7 +44,9 @@ test('R3 WP2 optional routes and strategic nodes remain legible above terrain wi
 });
 
 test('R3 WP2 mobile hierarchy reduces simultaneous surface effects', () => {
-  assert.match(hierarchy, /@media \(max-width: 900px\)[\s\S]*r3-territory-light-layer[\s\S]*opacity: \.5/);
+  assert.match(hierarchy, /@media \(max-width: 900px\)[\s\S]*active-campaign-layer[\s\S]*filter: none/);
+  assert.match(hierarchy, /@media \(max-width: 900px\)[\s\S]*r3-territory-light-layer[\s\S]*opacity: \.42/);
+  assert.match(hierarchy, /@media \(max-width: 900px\)[\s\S]*territory-sheen[\s\S]*opacity: \.12/);
   assert.match(hierarchy, /@media \(max-width: 900px\)[\s\S]*strategic-route[\s\S]*filter: none/);
   assert.match(hierarchy, /@media \(max-width: 540px\)[\s\S]*future-theatre-labels[\s\S]*opacity: 0/);
   assert.match(hierarchy, /@media \(prefers-reduced-motion: reduce\)/);
