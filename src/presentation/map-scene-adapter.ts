@@ -79,9 +79,9 @@ const cameraFrom = (input: CameraInput): PresentationCamera => ({
 /**
  * Adapts authoritative simulation state into renderer-safe semantic layers.
  *
- * Deliberately excluded here: `state.enemyFormations`. Enemy pieces/intelligence
+ * Deliberately excluded here: exact hidden enemy-formation state. Enemy pieces/intelligence
  * must enter the presentation model through player-visible assessment helpers,
- * never from exact hidden enemy formation state.
+ * never from exact hidden enemy formation data.
  */
 export function buildMapPresentationFrame(state: Readonly<GameState>, cameraInput: CameraInput): MapPresentationFrame {
   const territories: TerritoryPresentationState[] = Object.entries(state.territories).map(([id, territory]) => ({
