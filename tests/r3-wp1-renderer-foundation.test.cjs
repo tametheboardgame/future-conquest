@@ -36,16 +36,18 @@ test('R3 WP1 defines versioned assets and renderer-neutral frame instrumentation
   assert.match(foundation, /overBudgetRatio/);
 });
 
-test('R3 WP1 evaluates SVG DOM and WebGL hybrid without prematurely selecting a renderer', () => {
+test('R3 WP1 evaluates SVG DOM and WebGL hybrid using measured evidence', () => {
   assert.match(foundation, /'svg-dom' \| 'webgl-hybrid'/);
   assert.match(spike, /Evolved SVG\/DOM/);
   assert.match(spike, /WebGL hybrid/);
-  assert.match(spike, /deliberately not the final renderer decision/i);
+  assert.match(spike, /Preparation benchmark/i);
+  assert.match(spike, /Decision/i);
   assert.match(roadmap, /existing SVG\/DOM map[\s\S]*WebGL\/Three\.js/i);
   assert.match(roadmap, /measured/i);
 });
 
-test('R3 WP1 maintains a graceful fallback requirement', () => {
-  assert.match(spike, /retain an evolved SVG renderer as a supported fallback/i);
+test('R3 WP1 records SVG DOM primary with a graceful WebGL escalation fallback', () => {
+  assert.match(spike, /primary R3 map renderer is evolved SVG\/DOM/i);
+  assert.match(spike, /WebGL[\s\S]*optional acceleration/i);
   assert.match(roadmap, /clear fallback/i);
 });
