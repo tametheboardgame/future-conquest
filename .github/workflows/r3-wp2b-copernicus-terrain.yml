@@ -1,0 +1,75 @@
+name: R3 WP2B Copernicus terrain build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/build-r3-copernicus-terrain.py'
+      - 'scripts/r3-terrain-requirements.txt'
+      - '.github/workflows/r3-wp2b-copernicus-terrain.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-copernicus-terrain:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/r3-terrain-requirements.txt
+      - name: Install terrain build dependencies
+        run: python -m pip install -r scripts/r3-terrain-requirements.txt
+      - name: Build representative Copernicus terrain tiles
+        env:
+          GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
+          CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
+          GDAL_HTTP_MULTIRANGE: YES
+          GDAL_HTTP_MERGE_CONSECUTIVE_RANGES: YES
+        run: >-
+          python scripts/build-r3-copernicus-terrain.py
+          --output public/generated/r3-terrain
+          --bounds -5.8 44.0 14.8 53.8
+          --min-zoom 4
+          --max-zoom 7
+          --primary glo30
+          --fallback glo90
+      - name: Validate generated terrain evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('public/generated/r3-terrain/tiles.json').read_text())
+          stats = manifest['futureConquest']['stats']
+          assert stats['tiles'] > 0, stats
+          assert stats['primaryTiles'] > 0, stats
+          assert stats['maximumElevationMetres'] > 2500, stats
+          assert manifest['bounds'] == [-5.8, 44.0, 14.8, 53.8], manifest['bounds']
+          print(json.dumps(stats, indent=2))
+          PY
+      - name: Report generated footprint
+        run: |
+          du -sh public/generated/r3-terrain
+          find public/generated/r3-terrain/tiles -type f | wc -l
+      - name: Commit generated static terrain assets
+        run: |
+          git add public/generated/r3-terrain
+          if git diff --cached --quiet; then
+            echo 'Generated terrain is unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Generate Copernicus terrain prototype assets'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
