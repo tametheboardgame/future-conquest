@@ -70,56 +70,50 @@ Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL rem
 
 Final WP1 validation passed 369/369 repository tests, TypeScript, production build, exact-head deterministic balance simulation, both GitHub workflows and final architecture/diff review with no simulation/save coupling or unresolved review threads.
 
-## Current active work
-
 ### R3-WP2 - 2.5D Strategic Map
 
-Status: VALIDATED - MERGE READY
-
-Branch: `agent/r3-wp2-2_5d-strategic-map`
+Status: COMPLETE / MERGED
 PR: #115
-Validated functional head: `1c55717bc60fd25ee6b888724597310ce97abc2b`
+Merge commit: `7ad39d5d75889cf05b6af8f54f61eafb09ef033b`
 
-Objective: transform the flat strategic map into the approved 2.5D command-table presentation while preserving authoritative territory geometry, hit-testing, selection, adjacency, camera semantics, information boundaries and deterministic simulation.
+WP2 delivered the raised command-table theatre, supporting water treatment, political-control hierarchy, presentation-only terrain textures and lighting, deterministic opposing-control front cues, crowded Benelux/Rhine/Alpine zoom hierarchy, and mobile effect simplification while retaining the existing authoritative territory paths for hit-testing and all gameplay geography.
 
-Implemented:
+Final functional validation passed 393/393 repository tests, renderer preparation benchmarks, `git diff --check origin/main...HEAD`, TypeScript and production build. The canonical 720-campaign day-120 simulation preserved the R2.5 balance gradient at approximately Story 50.0%, Normal 29.6% and Hard 7.9%. No simulation, save, route-topology, territory-data or gameplay-mechanics files were modified by WP2.
 
-- darker physical command-table theatre and supporting water treatment;
-- controlled screen-space territory depth using decorative lower shells and shadows while retaining the original authoritative territory paths for interaction;
-- stronger player/enemy political-control palette plus distinct selected, targeted, isolated, threatened, under-attack and recent-combat states;
-- presentation-only terrain classification for open lowland, mixed lowland, mixed upland and mountainous territory;
-- restrained SVG terrain patterns and a common directional sheen layered above control fills rather than replacing them;
-- deterministic opposing-control adjacency derivation with short boundary-centred front marks that remain visually distinct from administrative borders;
-- front geometry remains presentation-only and does not participate in hit-testing, pathfinding or combat;
-- crowded-region/zoom hierarchy tuning for Benelux, Rhine and Alpine-style dense geography: country names recede at local/tactical zoom, centre labels outrank full territory names, fronts become supporting cues at deep zoom, and optional routes/nodes gain restrained casing/halos above terrain;
-- mobile hierarchy reduces simultaneous surface effects, including removal of the redundant campaign-wide shadow, while preserving cheaper territory depth, centre labels and operational pieces;
-- decorative depth, terrain, lighting and front layers are `aria-hidden`/non-interactive;
-- focused terrain/front/depth/hierarchy/geometry/performance-guard regression coverage.
+## Current active work
 
-Final validation on exact PR head `1c55717bc60fd25ee6b888724597310ce97abc2b`:
+### R3-WP3 - Formation Pieces & Animated Movement
 
-- 393/393 repository tests passed;
-- renderer preparation benchmark remained well within the R3 preparation budget: SVG/DOM averaged approximately 0.056 ms for the representative scene and 0.097 ms for the dense scene;
-- canonical 720-campaign, 15-start, day-120 simulation preserved the R2.5 balance gradient at approximately Story 50.0%, Normal 29.6% and Hard 7.9%;
-- `git diff --check origin/main...HEAD` passed;
-- TypeScript and Vite production build passed;
-- authoritative geography, keyboard navigation, hit-testing and reduced-motion contracts have focused regression coverage;
-- no simulation, save, route-topology, territory-data or gameplay-mechanics files were changed by WP2;
-- no unresolved PR review threads were present during the final review.
+Status: ACTIVE - PACKAGE OPENED
 
-The temporary expensive WP2 validation workflow is removed before merge; the immediately preceding exact functional head carries the full deterministic balance evidence and the final documentation-only cleanup is covered by the normal repository build/test workflow.
+Branch: `agent/r3-wp3-formation-pieces-movement`
+
+Objective: replace flat formation counters with clear physical board-game-style pieces and presentation-only movement/state transitions on the stable WP2 map without changing deterministic engine timing, save semantics or intelligence boundaries.
+
+Primary requirements:
+
+- friendly formation pieces visually distinct from enemy contacts;
+- readable ownership, identity/type, operational status and player-visible strength at appropriate map detail levels;
+- stable stacking/offset behaviour in crowded territories;
+- selected formations remain visually dominant and keyboard accessible;
+- presentation transitions for movement, split, merge, reinforcement/reconcentration, retreat and regroup/recovery where authoritative before/after state is available;
+- animations never author, delay or change game-state resolution;
+- enemy pieces/contacts preserve existing intelligence uncertainty and never expose hidden exact formation state;
+- reduced-motion collapses transitions to immediate state changes;
+- mobile/compact layouts simplify shadows/transitions before sacrificing operational readability.
+
+Validation will include piece identity/stacking/selection regressions, transition lifecycle/determinism tests, hidden-information checks, reduced-motion/mobile checks, representative renderer pressure, complete repository tests, TypeScript/build, relevant balance parity and final diff review for accidental simulation/save coupling.
 
 Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
 ## Next approved work
 
-1. R3-WP3 - Formation Pieces & Animated Movement
-2. R3-WP4 - Battle, Front & Strategic Event Feedback
-3. R3-WP5 - Strategic Information Layers
-4. R3-WP6 - Command UI/UX Overhaul
-5. R3-WP7 - Audio, Music & Atmosphere
-6. R3-WP8 - Performance, Scalability, Accessibility & Resilience
-7. R3-WP9 - Visual Polish & Integrated Validation
+1. R3-WP4 - Battle, Front & Strategic Event Feedback
+2. R3-WP5 - Strategic Information Layers
+3. R3-WP6 - Command UI/UX Overhaul
+4. R3-WP7 - Audio, Music & Atmosphere
+5. R3-WP8 - Performance, Scalability, Accessibility & Resilience
+6. R3-WP9 - Visual Polish & Integrated Validation
 
 ## Product-owner stop conditions
 
