@@ -74,27 +74,35 @@ Final WP1 validation passed 369/369 repository tests, TypeScript, production bui
 
 ### R3-WP2 - 2.5D Strategic Map
 
-Status: ACTIVE - PACKAGE OPENED
+Status: ACTIVE - DEPTH / TERRAIN / FRONT FOUNDATION WIRED
 
 Branch: `agent/r3-wp2-2_5d-strategic-map`
+PR: #115
 
 Objective: transform the flat strategic map into the approved 2.5D command-table presentation while preserving authoritative territory geometry, hit-testing, selection, adjacency, camera semantics, information boundaries and deterministic simulation.
 
-Primary requirements:
+Implemented so far:
 
-- controlled territory elevation/extrusion or equivalent depth cues;
-- precise borders and unchanged selection/adjacency semantics;
-- immediately readable political control;
-- restrained terrain cues for mountains, forests, rivers and urban concentration where useful;
-- styled water that supports rather than dominates the command surface;
-- front lines visually distinct from administrative borders;
-- selected, threatened, contested and captured states remain unambiguous;
-- labels and interactions remain readable from Europe-wide to local command views;
-- preserve Europe/Campaign/Selected navigation unless a clearly superior equivalent is demonstrated;
-- maintain compact-desktop, mobile, keyboard and reduced-motion behaviour;
-- preserve simulation, save, route topology and hidden-information boundaries.
+- darker physical command-table theatre and supporting water treatment;
+- controlled screen-space territory depth using decorative lower shells and shadows while retaining the original authoritative territory paths for interaction;
+- stronger player/enemy political-control palette plus distinct selected, targeted, isolated, threatened, under-attack and recent-combat states;
+- presentation-only terrain classification for open lowland, mixed lowland, mixed upland and mountainous territory;
+- restrained SVG terrain patterns and a common directional sheen layered above control fills rather than replacing them;
+- deterministic opposing-control adjacency derivation with short boundary-centred front marks that remain visually distinct from administrative borders;
+- front geometry remains presentation-only and does not participate in hit-testing, pathfinding or combat;
+- decorative depth, terrain, lighting and front layers are `aria-hidden`/non-interactive;
+- mobile depth/front simplification and reduced-motion compatibility retained;
+- focused terrain/front/depth regression coverage added.
 
-Validation will include geometry/hit-testing parity, ownership/front state checks, crowded-region checks, compact-desktop/mobile readability, performance, full tests/build, deterministic balance parity and GitHub CI.
+The wired terrain/front candidate `1953e8498402636bd701e4ad5d60096ddbad0f7f` passed the complete repository test step and production build in GitHub Actions. Temporary one-shot renderer patch tooling was removed immediately after use and is not part of the intended PR diff.
+
+Primary requirements still to complete or validate:
+
+- tune the visual depth/terrain balance against representative crowded regions and tactical zoom;
+- add any remaining restrained geographic context cues that materially improve strategic reading without clutter;
+- verify labels, overlays, routes and strategic nodes sit correctly in the new depth hierarchy;
+- complete compact-desktop/mobile readability and representative performance checks;
+- complete exact geometry/hit-testing review, deterministic balance parity, final CI and final diff review before merge.
 
 Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
