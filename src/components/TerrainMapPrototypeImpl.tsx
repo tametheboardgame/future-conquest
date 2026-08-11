@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GeoJSONSource, Map, NavigationControl, type GeoJSONSourceSpecification, type StyleSpecification } from 'maplibre-gl';
+import {
+  GeoJSONSource,
+  Map,
+  NavigationControl,
+  type GeoJSONSourceSpecification,
+  type RasterDEMSourceSpecification,
+  type StyleSpecification
+} from 'maplibre-gl';
+import { feature as topojsonFeature } from 'topojson-client';
+import worldAtlas from 'world-atlas/countries-110m.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import type { GameState } from '../game/types';
@@ -12,6 +21,11 @@ import {
   type TerrainCameraPreset
 } from '../presentation/r3-terrain-config';
 import { buildTerrainPoliticalGeoJSON } from '../presentation/r3-terrain-overlay';
+import {
+  generatedRasterDemSource,
+  generatedTerrainManifestUrl,
+  type GeneratedTerrainTileJson
+} from '../presentation/r3-terrain-source';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -21,9 +35,17 @@ export interface TerrainMapPrototypeProps {
 
 type PrototypeStatus = 'initialising' | 'ready' | 'warning';
 
+interface TerrainSourceResolution {
+  source: RasterDEMSourceSpecification;
+  label: string;
+  attribution: string;
+}
+
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
+const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
+const terrainLandGeoJSON = topojsonFeature(atlas, atlas.objects.countries) as unknown as GeoJSONSourceSpecification['data'];
 const DEMO_TERRAIN_URL = 'https://demotiles.maplibre.org/terrain-tiles/tiles.json';
-const OSM_TILES = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved';
 
 function browserSupportsTerrain(): boolean {
   if (typeof document === 'undefined') return false;
@@ -34,21 +56,42 @@ function browserSupportsTerrain(): boolean {
   }) === 'real-terrain';
 }
 
-function mapStyle(data: GeoJSONSourceSpecification['data']): StyleSpecification {
-  return {
-    version: 8,
-    sources: {
-      'r3-wp2b-surface': {
-        type: 'raster',
-        tiles: OSM_TILES,
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors'
-      },
-      'r3-wp2b-dem': {
+async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
+  try {
+    const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
+    const response = await fetch(manifestUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
+    const manifest = await response.json() as GeneratedTerrainTileJson;
+    return {
+      source: generatedRasterDemSource(manifest, import.meta.env.BASE_URL) as unknown as RasterDEMSourceSpecification,
+      label: 'Copernicus GLO-30 static terrain',
+      attribution: manifest.attribution
+    };
+  } catch {
+    return {
+      source: {
         type: 'raster-dem',
         url: DEMO_TERRAIN_URL,
         tileSize: 256
       },
+      label: 'temporary MapLibre terrain fallback',
+      attribution: 'MapLibre demo terrain'
+    };
+  }
+}
+
+function mapStyle(
+  data: GeoJSONSourceSpecification['data'],
+  demSource: RasterDEMSourceSpecification
+): StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      'r3-wp2b-land': {
+        type: 'geojson',
+        data: terrainLandGeoJSON
+      },
+      'r3-wp2b-dem': demSource,
       'campaign-territories': {
         type: 'geojson',
         data
@@ -60,15 +103,44 @@ function mapStyle(data: GeoJSONSourceSpecification['data']): StyleSpecification 
     },
     layers: [
       {
-        id: 'r3-wp2b-surface',
-        type: 'raster',
-        source: 'r3-wp2b-surface',
+        id: 'r3-wp2b-sea',
+        type: 'background',
         paint: {
-          'raster-saturation': -0.72,
-          'raster-contrast': 0.12,
-          'raster-brightness-min': 0.12,
-          'raster-brightness-max': 0.72,
-          'raster-opacity': 0.9
+          'background-color': '#132d35'
+        }
+      },
+      {
+        id: 'r3-wp2b-relief',
+        type: 'color-relief',
+        source: 'r3-wp2b-dem',
+        paint: {
+          'color-relief-color': [
+            'interpolate',
+            ['linear'],
+            ['elevation'],
+            -250, '#15313a',
+            0, '#29413c',
+            80, '#53684b',
+            250, '#657550',
+            500, '#737650',
+            850, '#80765a',
+            1200, '#887964',
+            1700, '#8d8273',
+            2200, '#9f9789',
+            2800, '#b8b2a8',
+            3400, '#d0cfca',
+            4500, '#eceeeb'
+          ],
+          'color-relief-opacity': 0.96
+        }
+      },
+      {
+        id: 'r3-wp2b-land-wash',
+        type: 'fill',
+        source: 'r3-wp2b-land',
+        paint: {
+          'fill-color': '#6c805b',
+          'fill-opacity': 0.34
         }
       },
       {
@@ -76,10 +148,20 @@ function mapStyle(data: GeoJSONSourceSpecification['data']): StyleSpecification 
         type: 'hillshade',
         source: 'r3-wp2b-dem',
         paint: {
-          'hillshade-exaggeration': 0.58,
-          'hillshade-shadow-color': '#111918',
-          'hillshade-highlight-color': '#c5d0bb',
-          'hillshade-accent-color': '#5c6a5e'
+          'hillshade-exaggeration': 0.72,
+          'hillshade-shadow-color': '#161b18',
+          'hillshade-highlight-color': '#d5d8ca',
+          'hillshade-accent-color': '#6c6759'
+        }
+      },
+      {
+        id: 'r3-wp2b-coastline',
+        type: 'line',
+        source: 'r3-wp2b-land',
+        paint: {
+          'line-color': '#a6b7a8',
+          'line-opacity': 0.32,
+          'line-width': 0.8
         }
       },
       {
@@ -89,14 +171,14 @@ function mapStyle(data: GeoJSONSourceSpecification['data']): StyleSpecification 
         paint: {
           'fill-color': [
             'case',
-            ['==', ['get', 'controller'], 'player'], '#31a99a',
-            '#746466'
+            ['==', ['get', 'controller'], 'player'], '#2db8a4',
+            '#7c6669'
           ],
           'fill-opacity': [
             'case',
-            ['boolean', ['get', 'selected'], false], 0.34,
-            ['boolean', ['get', 'targeted'], false], 0.29,
-            0.17
+            ['boolean', ['get', 'selected'], false], 0.31,
+            ['boolean', ['get', 'targeted'], false], 0.26,
+            0.13
           ]
         }
       },
@@ -107,17 +189,17 @@ function mapStyle(data: GeoJSONSourceSpecification['data']): StyleSpecification 
         paint: {
           'line-color': [
             'case',
-            ['boolean', ['get', 'selected'], false], '#ecfffb',
+            ['boolean', ['get', 'selected'], false], '#effffc',
             ['boolean', ['get', 'targeted'], false], '#ffd58a',
-            ['==', ['get', 'controller'], 'player'], '#75c9be',
-            '#a18d8e'
+            ['==', ['get', 'controller'], 'player'], '#75d7c8',
+            '#b59698'
           ],
-          'line-opacity': 0.9,
+          'line-opacity': 0.92,
           'line-width': [
             'case',
             ['boolean', ['get', 'selected'], false], 3.2,
             ['boolean', ['get', 'targeted'], false], 2.6,
-            1.2
+            1.25
           ]
         }
       }
@@ -133,6 +215,7 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
   const loadedRef = useRef(false);
   const [status, setStatus] = useState<PrototypeStatus>('initialising');
   const [message, setMessage] = useState('Initialising continuous terrain…');
+  const [sourceAttribution, setSourceAttribution] = useState(COPERNICUS_ATTRIBUTION);
 
   selectRef.current = onSelect;
   fallbackRef.current = onFallback;
@@ -148,55 +231,70 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       return;
     }
 
-    const initial = terrainCameraPreset('campaign');
-    const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
-    const map = new Map({
-      container: containerRef.current,
-      style: mapStyle(politicalData),
-      center: [initial.center[0], initial.center[1]],
-      zoom: initial.zoom,
-      pitch: initial.pitch,
-      bearing: initial.bearing,
-      minZoom: 3.6,
-      maxZoom: 10.5,
-      maxPitch: 70,
-      maxBounds: [[west, south], [east, north]],
-      canvasContextAttributes: { antialias: true },
-      attributionControl: {}
-    });
-    mapRef.current = map;
-    map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+    let disposed = false;
+    let ownedMap: Map | null = null;
 
-    map.on('load', () => {
-      loadedRef.current = true;
-      setStatus('ready');
-      setMessage('Experimental continuous terrain · political control is an overlay, not elevation');
-    });
+    const initialise = async () => {
+      const terrainSource = await resolveTerrainSource();
+      if (disposed || !containerRef.current) return;
 
-    map.on('error', () => {
-      if (!loadedRef.current) {
-        fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
-      } else {
-        setStatus('warning');
-        setMessage('Terrain source warning · the SVG fallback remains available');
-      }
-    });
+      setSourceAttribution(terrainSource.attribution);
+      const initial = terrainCameraPreset('campaign');
+      const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
+      const map = new Map({
+        container: containerRef.current,
+        style: mapStyle(politicalData, terrainSource.source),
+        center: [initial.center[0], initial.center[1]],
+        zoom: initial.zoom,
+        pitch: initial.pitch,
+        bearing: initial.bearing,
+        minZoom: 3.6,
+        maxZoom: 10.5,
+        maxPitch: 70,
+        maxBounds: [[west, south], [east, north]],
+        canvasContextAttributes: { antialias: true },
+        attributionControl: {}
+      });
+      ownedMap = map;
+      mapRef.current = map;
+      map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
 
-    map.on('mouseenter', 'campaign-territories-fill', () => {
-      map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'campaign-territories-fill', () => {
-      map.getCanvas().style.cursor = '';
-    });
-    map.on('click', 'campaign-territories-fill', event => {
-      const territoryId = event.features?.[0]?.properties?.territory_id;
-      if (typeof territoryId === 'string') selectRef.current(territoryId);
+      map.on('load', () => {
+        loadedRef.current = true;
+        setStatus('ready');
+        setMessage(`${terrainSource.label} · continuous relief · political control remains an overlay`);
+      });
+
+      map.on('error', () => {
+        if (!loadedRef.current) {
+          fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
+        } else {
+          setStatus('warning');
+          setMessage('Terrain source warning · the SVG fallback remains available');
+        }
+      });
+
+      map.on('mouseenter', 'campaign-territories-fill', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'campaign-territories-fill', () => {
+        map.getCanvas().style.cursor = '';
+      });
+      map.on('click', 'campaign-territories-fill', event => {
+        const territoryId = event.features?.[0]?.properties?.territory_id;
+        if (typeof territoryId === 'string') selectRef.current(territoryId);
+      });
+    };
+
+    void initialise().catch(() => {
+      if (!disposed) fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
     });
 
     return () => {
+      disposed = true;
       loadedRef.current = false;
       mapRef.current = null;
-      map.remove();
+      ownedMap?.remove();
     };
     // This host deliberately creates one renderer instance; political data is
     // updated through the GeoJSON source effect below rather than recreating it.
@@ -226,6 +324,6 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button key={preset.id} type="button" onClick={() => goTo(preset)}>{preset.id}</button>)}</div>
     </div>
     <div ref={containerRef} className="r3-terrain-prototype-canvas" role="application" aria-label="Experimental real-elevation campaign map" />
-    <div className="r3-terrain-prototype-attribution">Prototype surface: © OpenStreetMap contributors · prototype DEM plumbing: MapLibre demo terrain · production elevation direction: Copernicus DEM</div>
+    <div className="r3-terrain-prototype-attribution">{sourceAttribution}</div>
   </div>;
 }
