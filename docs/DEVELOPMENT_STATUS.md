@@ -56,46 +56,57 @@ Final R2.5 evidence demonstrated a mechanically credible baseline before the gra
 
 Known small UI/UX issues observed during manual fiddling are intentionally being accumulated for a small post-overhaul bug pass where the graphical redesign may supersede them.
 
-## Current active work
+## Completed R3 work
 
 ### R3-WP1 - Visual Architecture & Renderer Foundation
 
-Status: ACTIVE - RENDERER DECISION RECORDED / FINAL VALIDATION PENDING
-
-Branch: `agent/r3-wp1-visual-architecture`
+Status: COMPLETE / MERGED
 PR: #114
+Merge commit: `be3176de940b37346d713eb575d81bf0c92fe03d`
 
-Objective: establish explicit presentation boundaries, compare the current SVG/DOM renderer with a WebGL/Three.js-class alternative, build a focused technical spike, select the renderer on measured evidence, preserve authoritative geometry/state, and establish camera/LOD/assets/performance/fallback foundations for the later 2.5D map.
+WP1 established the renderer-neutral presentation frame, explicit terrain/control/routes/pieces/effects/overlay boundaries, GameState-to-presentation adapter, level-of-detail foundation, asset-versioning and performance instrumentation conventions, equivalent SVG/WebGL renderer spikes, WebGL capability fallback, and deterministic smooth-camera primitives.
 
-Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL remains an optional acceleration path behind the renderer-neutral presentation contract if later measured browser paint/effect pressure justifies it. This avoids replacing mature camera, selection, keyboard, pointer, mobile and accessibility behaviour without a demonstrated need while preserving a higher-performance escape hatch.
+Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL remains an optional acceleration path behind the renderer-neutral presentation contract if later measured browser paint/effect pressure justifies it.
 
-WP1 now contains:
+Final WP1 validation passed 369/369 repository tests, TypeScript, production build, exact-head deterministic balance simulation, both GitHub workflows and final architecture/diff review with no simulation/save coupling or unresolved review threads.
 
-- renderer-neutral `MapPresentationFrame` and lifecycle contract;
-- explicit terrain/control/routes/pieces/effects/overlay layer boundaries;
-- GameState-to-presentation adapter with hidden-enemy-information boundary;
-- theatre/regional/local/tactical LOD foundation;
-- deterministic eased camera interpolation with exact endpoints and the existing viewport aspect preserved, ready for reduced-motion-aware preset transitions;
-- versioned R3 asset namespace and frame-budget instrumentation;
-- equivalent representative/dense SVG and WebGL preparation spikes;
-- deterministic renderer preparation benchmark and browser WebGL capability/fallback probe;
-- evidence-based renderer scoring and decision record in `docs/architecture/R3-WP1-RENDERER-SPIKE.md`;
-- focused WP1 architecture, adapter, camera and renderer-spike regressions.
+## Current active work
 
-Remaining WP1 gates: full repository tests, TypeScript, production build, deterministic balance parity, GitHub workflows and final architecture review. R3-WP2 must not begin until those gates pass and WP1 is merged.
+### R3-WP2 - 2.5D Strategic Map
+
+Status: ACTIVE - PACKAGE OPENED
+
+Branch: `agent/r3-wp2-2_5d-strategic-map`
+
+Objective: transform the flat strategic map into the approved 2.5D command-table presentation while preserving authoritative territory geometry, hit-testing, selection, adjacency, camera semantics, information boundaries and deterministic simulation.
+
+Primary requirements:
+
+- controlled territory elevation/extrusion or equivalent depth cues;
+- precise borders and unchanged selection/adjacency semantics;
+- immediately readable political control;
+- restrained terrain cues for mountains, forests, rivers and urban concentration where useful;
+- styled water that supports rather than dominates the command surface;
+- front lines visually distinct from administrative borders;
+- selected, threatened, contested and captured states remain unambiguous;
+- labels and interactions remain readable from Europe-wide to local command views;
+- preserve Europe/Campaign/Selected navigation unless a clearly superior equivalent is demonstrated;
+- maintain compact-desktop, mobile, keyboard and reduced-motion behaviour;
+- preserve simulation, save, route topology and hidden-information boundaries.
+
+Validation will include geometry/hit-testing parity, ownership/front state checks, crowded-region checks, compact-desktop/mobile readability, performance, full tests/build, deterministic balance parity and GitHub CI.
 
 Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
 ## Next approved work
 
-1. R3-WP2 - 2.5D Strategic Map
-2. R3-WP3 - Formation Pieces & Animated Movement
-3. R3-WP4 - Battle, Front & Strategic Event Feedback
-4. R3-WP5 - Strategic Information Layers
-5. R3-WP6 - Command UI/UX Overhaul
-6. R3-WP7 - Audio, Music & Atmosphere
-7. R3-WP8 - Performance, Scalability, Accessibility & Resilience
-8. R3-WP9 - Visual Polish & Integrated Validation
+1. R3-WP3 - Formation Pieces & Animated Movement
+2. R3-WP4 - Battle, Front & Strategic Event Feedback
+3. R3-WP5 - Strategic Information Layers
+4. R3-WP6 - Command UI/UX Overhaul
+5. R3-WP7 - Audio, Music & Atmosphere
+6. R3-WP8 - Performance, Scalability, Accessibility & Resilience
+7. R3-WP9 - Visual Polish & Integrated Validation
 
 ## Product-owner stop conditions
 
