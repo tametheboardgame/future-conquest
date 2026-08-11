@@ -153,7 +153,7 @@ export function TerrainMapPrototype({ state, onSelect, onFallback }: Props) {
     const map = new Map({
       container: containerRef.current,
       style: mapStyle(politicalData),
-      center: initial.center,
+      center: [initial.center[0], initial.center[1]],
       zoom: initial.zoom,
       pitch: initial.pitch,
       bearing: initial.bearing,
@@ -162,7 +162,7 @@ export function TerrainMapPrototype({ state, onSelect, onFallback }: Props) {
       maxPitch: 70,
       maxBounds: [[west, south], [east, north]],
       canvasContextAttributes: { antialias: true },
-      attributionControl: true
+      attributionControl: {}
     });
     mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
@@ -212,7 +212,7 @@ export function TerrainMapPrototype({ state, onSelect, onFallback }: Props) {
 
   const goTo = (preset: TerrainCameraPreset) => {
     mapRef.current?.easeTo({
-      center: preset.center,
+      center: [preset.center[0], preset.center[1]],
       zoom: preset.zoom,
       pitch: preset.pitch,
       bearing: preset.bearing,
