@@ -2,49 +2,51 @@
 
 ## Decision
 
-Future Conquest will not query authenticated Copernicus DEM services directly from the shipped browser. Copernicus client credentials are build/tooling secrets and must never be embedded in Vite output, committed configuration or browser network code.
+Future Conquest does not query authenticated Copernicus DEM services from the shipped browser. Terrain acquisition and conversion are build/tooling concerns; runtime consumes versioned static terrain assets committed with the game.
 
-The runtime contract is therefore:
+The production-shaped contract is:
 
-`Copernicus DEM source -> controlled preprocessing/downsampling -> versioned terrain assets or approved public terrain endpoint -> MapLibre raster-dem source -> continuous campaign terrain`
+`public Copernicus DEM COG -> controlled build-time preprocessing -> static Mapbox Terrain-RGB PNGs + TileJSON -> MapLibre raster-dem source -> continuous campaign terrain`
 
-The first prototype prefers COP-DEM-GLO-30 source material where access and preprocessing are practical. COP-DEM-GLO-90 is an approved fallback because campaign-scale rendering does not require every browser to receive raw 30 m source data.
+COP-DEM-GLO-30 is the preferred source. COP-DEM-GLO-90 remains an approved preprocessing fallback where source coverage, processing cost or campaign-scale delivery makes that preferable.
 
-## Current service facts affecting implementation
+## Implemented WP2B-B pipeline
 
-- Copernicus Data Space Sentinel Hub requests are OAuth2-authenticated.
-- Copernicus documents both COPERNICUS_30 and COPERNICUS_90 DEM instances.
-- The 30 m view service has additional access-category requirements from 28 July 2026, so production architecture must not assume anonymous direct 30 m tile access.
-- MapLibre terrain consumes a `raster-dem` source and supports terrain exaggeration.
+`scripts/build-r3-copernicus-terrain.py` reads the public Copernicus DEM Cloud Optimized GeoTIFF distribution using HTTP range requests, mosaics only the source cells required for each bounded web tile, resamples to 256 px and encodes elevation using the Mapbox Terrain-RGB convention.
 
-These constraints reinforce preprocessing/static delivery rather than weakening the selected Copernicus source direction.
+The representative southern-England-to-Alps prototype generated:
 
-## Prototype data rules
+- bounds: `[-5.8, 44.0, 14.8, 53.8]`;
+- zooms: 4 through 7;
+- 82 Terrain-RGB PNGs;
+- approximately 6.1 MB total static terrain footprint;
+- 81 output tiles using GLO-30 source material;
+- zero GLO-90 fallback tiles required for the current prototype;
+- one sea-only output tile;
+- measured elevation range approximately -248.6 m to 4,535.8 m.
 
-1. Do not commit OAuth client IDs/secrets or short-lived access tokens.
-2. Do not make the game fail to load because terrain tiles are unavailable.
-3. Keep source attribution metadata adjacent to the terrain manifest.
-4. Prefer derived/downsampled terrain appropriate to the visible campaign scale instead of shipping raw source resolution.
-5. Preserve WGS84 longitude/latitude coordinates from the existing authoritative GeoJSON so political geometry can be projected without inventing a parallel territory model.
-6. Keep the SVG renderer available until MapLibre terrain passes product-owner visual review and technical parity gates.
+The generated manifest is committed at `public/generated/r3-terrain/tiles.json` and records source family, preferred/fallback dataset, encoding, bounds, generation statistics and attribution. Production build smoke testing verifies that the manifest and all 82 PNGs survive into `dist/generated/r3-terrain/`.
+
+Terrain regeneration is explicit rather than automatic on every presentation commit. The committed asset set is deterministic input to normal game builds; regenerate it only when bounds, source choice, zoom range or preprocessing intentionally changes.
+
+## Runtime rules
+
+1. No terrain acquisition credential or access token belongs in Vite/browser output.
+2. MapLibre requests only the generated same-origin Terrain-RGB assets during normal WP2B runtime.
+3. If generated terrain cannot initialise, the game returns to the stable SVG command map rather than depending on a third-party demo terrain service.
+4. Keep required source attribution adjacent to the generated terrain manifest and visible in the prototype.
+5. Preserve WGS84 longitude/latitude coordinates from the existing authoritative GeoJSON so political geometry is projected without inventing a parallel territory model.
+6. Terrain/elevation remains presentation only: it does not alter adjacency, routes, movement, combat, logistics or save state.
+7. Keep the SVG renderer available until MapLibre terrain passes product-owner visual review and technical parity gates.
+
+## Surface treatment
+
+WP2B-B deliberately does not use a consumer satellite/web-map raster as the visual identity. The self-hosted DEM drives a stylised campaign surface composed from elevation colour relief, hillshade, a restrained land wash, coastline treatment and subdued sea. Political ownership remains a translucent overlay laid onto that continuous landscape.
 
 ## Renderer split
 
-MapLibre will own:
+MapLibre owns geographic projection, terrain LOD, pitch/bearing/zoom camera, elevation/hillshade and geographic map picking.
 
-- geographic projection;
-- terrain tile loading/LOD;
-- pitch/bearing/zoom camera;
-- terrain elevation/hillshade;
-- geographic feature layers and map picking.
+The gameplay engine continues to own territory identity/control, adjacency/routes, formations/orders, combat/logistics, intelligence boundaries, save state and deterministic resolution.
 
-The gameplay engine continues to own:
-
-- territory identity/control;
-- adjacency and routes;
-- formations and orders;
-- combat/logistics;
-- hidden-information semantics;
-- save state and deterministic resolution.
-
-Three.js, when introduced in WP3, will own only presentation objects such as physical formation miniatures/effects through a MapLibre custom 3D layer. It will not own geography or simulation.
+Three.js, when introduced after WP2B, owns only presentation objects such as physical formation miniatures/effects through a MapLibre custom 3D layer. It does not own geography or simulation.
