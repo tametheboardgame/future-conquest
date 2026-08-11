@@ -41,7 +41,8 @@ test('R3 WP1 evaluates SVG DOM and WebGL hybrid without prematurely selecting a 
   assert.match(spike, /Evolved SVG\/DOM/);
   assert.match(spike, /WebGL hybrid/);
   assert.match(spike, /deliberately not the final renderer decision/i);
-  assert.match(roadmap, /compare the existing React\/SVG\/DOM renderer with a WebGL\/Three\.js-class alternative/i);
+  assert.match(roadmap, /existing SVG\/DOM map[\s\S]*WebGL\/Three\.js/i);
+  assert.match(roadmap, /measured/i);
 });
 
 test('R3 WP1 maintains a graceful fallback requirement', () => {
