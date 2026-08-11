@@ -1,0 +1,312 @@
+/* R3-WP2 — 2.5D strategic command-table foundation.
+   This layer deliberately styles the existing authoritative SVG geometry rather
+   than introducing replacement hit areas or gameplay state. Depth is rendered
+   in screen space with drop shadows so it remains controlled at deep zoom. */
+
+.europe-map-frame {
+  background:
+    radial-gradient(ellipse at 48% 38%, rgba(61, 105, 112, .2) 0, rgba(10, 25, 31, .08) 42%, transparent 66%),
+    linear-gradient(145deg, #0d2028 0%, #07151c 52%, #040b10 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 222, 222, .06),
+    inset 0 -24px 54px rgba(0, 0, 0, .34),
+    0 20px 58px rgba(0, 0, 0, .2);
+}
+
+.europe-map-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(112deg, transparent 0 39%, rgba(146, 191, 190, .025) 40%, transparent 41% 100%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .012) 0 1px, transparent 1px 5px);
+  mix-blend-mode: screen;
+}
+
+.europe-map-frame .map,
+.europe-map-frame .map-controls,
+.europe-map-frame .map-viewport-status {
+  position: relative;
+  z-index: 2;
+}
+
+.europe-map .sea {
+  fill: #07141b;
+}
+
+.europe-map .map-graticule {
+  stroke: #24404a;
+  opacity: .26;
+}
+
+.europe-map .theatre-country {
+  fill: #10262e;
+  stroke: #304751;
+  stroke-width: .85px;
+  opacity: .9;
+}
+
+/* The active campaign should feel like raised pieces set onto the darker Europe
+   table. CSS drop-shadow offsets are screen-space effects, so the perceived
+   thickness does not explode when the SVG viewBox reaches tactical zoom. */
+.europe-map .active-campaign-layer {
+  filter: drop-shadow(0 8px 13px rgba(0, 0, 0, .42));
+}
+
+.europe-map .r3-territory-depth-layer,
+.europe-map .r3-terrain-layer,
+.europe-map .r3-territory-light-layer,
+.europe-map .r3-front-line-layer {
+  pointer-events: none;
+}
+
+.europe-map .territory-depth-shell {
+  fill: #03090c;
+  stroke: #020608;
+  stroke-width: 2.25px;
+  vector-effect: non-scaling-stroke;
+  transform: translateY(5px);
+  opacity: .88;
+}
+
+.europe-map .territory-depth-shell.player {
+  fill: #08201f;
+}
+
+.europe-map .territory-depth-shell.enemy {
+  fill: #211719;
+}
+
+.europe-map .territory {
+  paint-order: stroke fill;
+  stroke: #81959b;
+  stroke-width: 1.35px;
+  stroke-linejoin: round;
+  filter:
+    drop-shadow(0 1px 0 rgba(210, 230, 226, .1))
+    drop-shadow(0 2px 0 rgba(4, 11, 14, .95))
+    drop-shadow(0 4px 0 rgba(3, 8, 11, .72))
+    drop-shadow(0 7px 7px rgba(0, 0, 0, .42));
+  transition: fill .16s ease, stroke .16s ease, filter .16s ease, opacity .16s ease;
+}
+
+/* Political control remains the strongest territory-level signal. Player ground
+   reads as future-force teal; enemy ground is deliberately warmer and less
+   saturated than combat/threat red so hostile ownership is obvious without
+   making the whole map look permanently on fire. */
+.europe-map .territory.player {
+  fill: #176b61;
+  stroke: #6fb8ae;
+}
+
+.europe-map .territory.enemy {
+  fill: #4a4142;
+  stroke: #8d7777;
+}
+
+.europe-map .territory.player.isolated {
+  fill: #56573d;
+  stroke: #d0c276;
+  stroke-dasharray: 6 4;
+}
+
+.europe-map .territory.unsecured-control {
+  stroke-dasharray: 4 3;
+}
+
+.europe-map .territory:hover {
+  fill: #315f62;
+  stroke: #e3fffb;
+  stroke-width: 2.25px;
+  filter:
+    drop-shadow(0 1px 0 rgba(230, 251, 247, .18))
+    drop-shadow(0 3px 0 rgba(3, 10, 13, .94))
+    drop-shadow(0 6px 0 rgba(2, 7, 10, .72))
+    drop-shadow(0 10px 10px rgba(0, 0, 0, .5));
+}
+
+.europe-map .territory.selected {
+  fill: #238b7e;
+  stroke: #eafffb;
+  stroke-width: 3px;
+  filter:
+    drop-shadow(0 1px 0 rgba(235, 255, 251, .28))
+    drop-shadow(0 3px 0 rgba(7, 49, 46, .95))
+    drop-shadow(0 6px 0 rgba(4, 28, 28, .82))
+    drop-shadow(0 0 8px rgba(111, 255, 236, .55))
+    drop-shadow(0 11px 11px rgba(0, 0, 0, .5));
+}
+
+.europe-map .territory.targeted {
+  fill: #896628;
+  stroke: #ffe2a0;
+  stroke-width: 3px;
+}
+
+.europe-map .territory.threatened:not(.active-battle) {
+  stroke: #ed7b6f;
+  stroke-width: 2.1px;
+}
+
+.europe-map .territory.under-attack,
+.europe-map .territory.active-battle {
+  fill: #7e3933;
+  stroke: #ffb28d;
+  stroke-width: 3px;
+  filter:
+    drop-shadow(0 2px 0 rgba(63, 16, 14, .95))
+    drop-shadow(0 5px 0 rgba(36, 9, 8, .8))
+    drop-shadow(0 0 9px rgba(255, 101, 83, .42))
+    drop-shadow(0 10px 10px rgba(0, 0, 0, .48));
+}
+
+.europe-map .territory.recent-combat:not(.active-battle) {
+  stroke: #b77b73;
+  opacity: .94;
+}
+
+/* Terrain is deliberately a secondary texture cue over political control. The
+   patterns are restrained enough to survive crowded Belgium/Rhine geography and
+   become most useful in local/tactical views. */
+.europe-map .territory-terrain,
+.europe-map .territory-sheen {
+  stroke: none;
+  pointer-events: none;
+}
+
+.europe-map .territory-terrain {
+  opacity: .18;
+  mix-blend-mode: screen;
+}
+
+.europe-map .territory-terrain.terrain-open-lowland {
+  fill: url(#r3TerrainOpenLowland);
+  opacity: .09;
+}
+
+.europe-map .territory-terrain.terrain-mixed-lowland {
+  fill: url(#r3TerrainMixedLowland);
+  opacity: .14;
+}
+
+.europe-map .territory-terrain.terrain-mixed-upland {
+  fill: url(#r3TerrainMixedUpland);
+  opacity: .18;
+}
+
+.europe-map .territory-terrain.terrain-mountainous {
+  fill: url(#r3TerrainMountainous);
+  opacity: .25;
+}
+
+.europe-map .territory-terrain.terrain-unspecified {
+  fill: transparent;
+}
+
+.europe-map .territory-sheen {
+  fill: url(#r3TerritorySheen);
+  opacity: .2;
+  mix-blend-mode: screen;
+}
+
+.europe-map.map-detail-theatre .territory-terrain {
+  opacity: .08;
+}
+
+.europe-map.map-detail-local .territory-terrain,
+.europe-map.map-detail-tactical .territory-terrain {
+  opacity: .24;
+}
+
+.europe-map.map-detail-local .territory-terrain.terrain-mountainous,
+.europe-map.map-detail-tactical .territory-terrain.terrain-mountainous {
+  opacity: .34;
+}
+
+/* Fronts are short boundary-centred marks derived only from opposing-control
+   adjacency. Administrative territory borders remain thin and continuous; the
+   front uses a dark casing plus warm segmented core so the two concepts do not
+   compete visually. */
+.europe-map .r3-front-line-underlay,
+.europe-map .r3-front-line-core {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.europe-map .r3-front-line-underlay {
+  stroke: rgba(3, 8, 10, .92);
+  stroke-width: 7px;
+  opacity: .95;
+}
+
+.europe-map .r3-front-line-core {
+  stroke: #eeb36e;
+  stroke-width: 3px;
+  stroke-dasharray: 7 4;
+  opacity: .94;
+  filter: drop-shadow(0 0 3px rgba(236, 135, 82, .42));
+}
+
+.europe-map.map-detail-theatre .r3-front-line-layer {
+  opacity: .72;
+}
+
+.europe-map.map-detail-local .r3-front-line-core,
+.europe-map.map-detail-tactical .r3-front-line-core {
+  stroke: #ffc47e;
+  stroke-width: 3.4px;
+}
+
+/* Country names sit visually on the table while active territory labels sit on
+   the raised campaign layer. */
+.europe-map .future-theatre-labels text {
+  fill: #678087;
+  stroke: #061016;
+  stroke-width: 3.2px;
+}
+
+.europe-map .territory-centre-label {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .72));
+}
+
+/* Keep all decorative depth strictly non-interactive; the original territory
+   paths and explicit hit circles remain the only interaction geometry. */
+.europe-map .future-theatre,
+.europe-map .map-graticule {
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .europe-map .territory-depth-shell {
+    transform: translateY(3px);
+  }
+
+  .europe-map .territory {
+    filter:
+      drop-shadow(0 1px 0 rgba(210, 230, 226, .08))
+      drop-shadow(0 2px 0 rgba(4, 11, 14, .9))
+      drop-shadow(0 4px 5px rgba(0, 0, 0, .4));
+  }
+
+  .europe-map .r3-front-line-underlay {
+    stroke-width: 6px;
+  }
+
+  .europe-map .r3-front-line-core {
+    stroke-width: 2.8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .europe-map .territory,
+  .europe-map .future-theatre-labels {
+    transition: none;
+  }
+
+  .europe-map .territory.active-battle {
+    animation: none;
+  }
+}
