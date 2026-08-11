@@ -1,95 +1,108 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 ## Current programme
 
-R2 gameplay/system improvement programme.
+R3 Visualisation & Command Experience programme.
 
-Authoritative roadmap: `docs/roadmap/R2-ROADMAP.md`.
+Authoritative roadmap: `docs/roadmap/R3-ROADMAP.md`.
 
-Approved autonomous sequence:
+Approved sequence:
 
-R2-WP2 -> R2-WP3 -> R2-WP4 -> R2-WP5 -> R2-WP6 -> R2-WP7 -> whole-game audit -> hardening -> balance programme -> adversarial/exploit testing -> UX/clarity validation -> final integrated validation -> surface results to David.
+R3-WP1 -> R3-WP2 -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
-The development supervisor is authorised to progress through this sequence when the documented acceptance and validation gates are satisfied.
+The simulation/gameplay layer is mechanically frozen from the validated R2.5 baseline unless R3 exposes a genuine integration defect.
 
-## Completed work
+## Completed R2 / R2.5 baseline
 
 ### R2-WP2 - Engineering & Infrastructure Mechanics
 
 Status: COMPLETE / MERGED
-
 PR: #106
-
 Merge commit: `f6011f9b1512f29620ae84a7d3c922bb94741daa`
 
 ### R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
 
 Status: COMPLETE / MERGED
-
 PR: #108
-
 Merge commit: `13ab39e2eda4c74a86713b419bc709acff309e41`
-
-WP3 passed focused resource/stockpile/hub regressions, save compatibility, deterministic campaign and representative-trace validation, full repository tests/build, final Codex review and GitHub CI before merge.
 
 ### R2-WP4 - Saves, Settings & Assistance
 
 Status: COMPLETE / MERGED
-
 PR: #109
-
 Merge commit: `a2d2323b7a051d6fcd975c3f8fe55c0f3883600e`
-
-WP4 passed focused persistence and slot-isolation regressions, backwards save compatibility, autosave failure-feedback review fixes, full repository tests/build, final Codex review and green GitHub workflows before merge.
 
 ### R2-WP5 - Adviser & Tutorial Completion
 
 Status: COMPLETE / MERGED
-
 PR: #110
-
 Merge commit: `26eabaecb8ad4a7f4edae3a7aee454b6174c053e`
-
-WP5 passed 330 repository tests, focused adviser/tutorial regressions, TypeScript and production build validation, balance simulation, repeated merge-gate review fixes, and final clean Codex review before merge.
 
 ### R2-WP6 - Contextual Navigation & Diagnostics
 
 Status: COMPLETE / MERGED
-
 PR: #112
-
 Merge commit: `d055a40f72faf32f917528dffd91a9e76c7187ee`
 
-WP6 passed focused contextual-navigation regressions, exact-object/fallback/no-mutation validation, green build/deploy and balance workflows, repeated review fixes including stale-target revalidation, and final clean Codex review before merge.
+### R2-WP7 / R2.5 - Balance & Playtest Validation / Stabilisation
+
+Status: COMPLETE / MERGED
+PR: #113
+Merge commit: `60950fcb634bc789bc77a49f2f2708fd2e7fc281`
+
+Final R2.5 evidence demonstrated a mechanically credible baseline before the graphical overhaul: approximately Story 50.0%, Normal 29.6% and Hard 7.9% wins across 720 deterministic day-120 campaigns. The final branch passed 348 repository tests, TypeScript, production build and GitHub workflows. The final independent Codex review gate was explicitly waived by David because Codex review capacity was exhausted for five days; all other gates were green.
+
+Known small UI/UX issues observed during manual fiddling are intentionally being accumulated for a small post-overhaul bug pass where the graphical redesign may supersede them.
 
 ## Current active work
 
-### R2-WP7 - Balance & Playtest Validation
+### R3-WP1 - Visual Architecture & Renderer Foundation
 
-Status: COMPLETE / VALIDATED
+Status: ACTIVE - RENDERER DECISION RECORDED / FINAL VALIDATION PENDING
 
-Branch: `agent/r2-wp7-balance-playtest-validation`
+Branch: `agent/r3-wp1-visual-architecture`
+PR: #114
 
-WP7 upgraded the deterministic campaign player to exercise assessed defence, reconcentration, engineering, resource stocks, hubs and supply priorities without insertion-start privilege. The final gate passed 346 tests, TypeScript, production build, 720 deterministic campaigns across all 15 insertion starts, and representative success/stall/collapse/hub-loss trace inspection. Detailed evidence is recorded in `docs/validation/R2-WP7-BALANCE.md`.
+Objective: establish explicit presentation boundaries, compare the current SVG/DOM renderer with a WebGL/Three.js-class alternative, build a focused technical spike, select the renderer on measured evidence, preserve authoritative geometry/state, and establish camera/LOD/assets/performance/fallback foundations for the later 2.5D map.
+
+Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL remains an optional acceleration path behind the renderer-neutral presentation contract if later measured browser paint/effect pressure justifies it. This avoids replacing mature camera, selection, keyboard, pointer, mobile and accessibility behaviour without a demonstrated need while preserving a higher-performance escape hatch.
+
+WP1 now contains:
+
+- renderer-neutral `MapPresentationFrame` and lifecycle contract;
+- explicit terrain/control/routes/pieces/effects/overlay layer boundaries;
+- GameState-to-presentation adapter with hidden-enemy-information boundary;
+- theatre/regional/local/tactical LOD foundation;
+- deterministic eased camera interpolation with exact endpoints and the existing viewport aspect preserved, ready for reduced-motion-aware preset transitions;
+- versioned R3 asset namespace and frame-budget instrumentation;
+- equivalent representative/dense SVG and WebGL preparation spikes;
+- deterministic renderer preparation benchmark and browser WebGL capability/fallback probe;
+- evidence-based renderer scoring and decision record in `docs/architecture/R3-WP1-RENDERER-SPIKE.md`;
+- focused WP1 architecture, adapter, camera and renderer-spike regressions.
+
+Remaining WP1 gates: full repository tests, TypeScript, production build, deterministic balance parity, GitHub workflows and final architecture review. R3-WP2 must not begin until those gates pass and WP1 is merged.
+
+Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
 
 ## Next approved work
 
-1. Whole-game audit
-2. Hardening
-3. Balance programme
-4. Adversarial/exploit testing
-5. UX/clarity validation
-6. Final integrated validation
-7. Surface results to David
+1. R3-WP2 - 2.5D Strategic Map
+2. R3-WP3 - Formation Pieces & Animated Movement
+3. R3-WP4 - Battle, Front & Strategic Event Feedback
+4. R3-WP5 - Strategic Information Layers
+5. R3-WP6 - Command UI/UX Overhaul
+6. R3-WP7 - Audio, Music & Atmosphere
+7. R3-WP8 - Performance, Scalability, Accessibility & Resilience
+8. R3-WP9 - Visual Polish & Integrated Validation
 
 ## Product-owner stop conditions
 
-Product-owner input is required for fundamental mechanic changes, materially different design directions, narrative or art-direction choices, unresolved subjective gameplay decisions, conflicts with intentional design, permissions/tooling blockers, or a stable deployed build that materially benefits from human playtesting.
+Product-owner input is required for fundamental mechanic changes, materially different design directions, narrative changes, art-direction choices outside the approved command-table/animated-board-game direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed visual milestone that materially benefits from human review.
 
-Routine engineering, testing, CI, save compatibility, deployment, technical architecture, exploit fixes, performance work and evidence-based balance tuning within approved design remain autonomous.
+Routine presentation architecture, renderer integration, testing, CI, save compatibility, deployment, performance work, accessibility, exploit fixes and evidence-based technical choices within the approved direction remain autonomous.
 
 ## Source-of-truth rule
 
-Current code, tests, Git history, active PR acceptance criteria, this status file and the approved roadmap take precedence over stale historical status text elsewhere in the repository.
+Current code, tests, Git history, active PR acceptance criteria, this status file and the approved roadmaps take precedence over stale historical status text elsewhere in the repository.
