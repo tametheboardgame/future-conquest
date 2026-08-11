@@ -23,7 +23,7 @@ test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the st
 });
 
 test('R3 WP2B prototype uses continuous raster-dem terrain and never raises political polygons', () => {
-  assert.match(impl, /type: 'raster-dem'/);
+  assert.match(impl, /r3-wp2b-dem/);
   assert.match(impl, /terrain:[\s\S]*source: 'r3-wp2b-dem'/);
   assert.match(impl, /exaggeration: R3_TERRAIN_MANIFEST\.initialExaggeration/);
   assert.match(impl, /campaign-territories-fill/);
@@ -38,13 +38,13 @@ test('R3 WP2B prototype reuses authoritative WGS84 campaign geometry and state c
   assert.match(app, /onSelect=\{openTerritoryOnMap\}/);
 });
 
-test('R3 WP2B prefers generated Copernicus terrain and keeps demo terrain only as a renderer fallback', () => {
+test('R3 WP2B runtime uses generated Copernicus terrain and no external terrain or consumer-map service', () => {
   assert.match(impl, /generatedTerrainManifestUrl\(import\.meta\.env\.BASE_URL\)/);
   assert.match(impl, /generatedRasterDemSource\(manifest, import\.meta\.env\.BASE_URL\)/);
   assert.match(impl, /Copernicus GLO-30 static terrain/);
-  assert.match(impl, /demotiles\.maplibre\.org\/terrain-tiles\/tiles\.json/);
-  assert.doesNotMatch(impl, /tile\.openstreetmap\.org/);
+  assert.doesNotMatch(impl, /demotiles\.maplibre\.org|tile\.openstreetmap\.org|google\.com\/maps|earth\.google/i);
   assert.doesNotMatch(impl, /client_secret|clientSecret|access_token|accessToken/i);
+  assert.match(impl, /Generated Copernicus terrain is unavailable; using the stable SVG command map/);
 });
 
 test('R3 WP2B stylises real relief rather than depending on a consumer web-map surface', () => {
