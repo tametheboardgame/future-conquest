@@ -39,3 +39,4 @@ jobs:
             git commit -m "Wire hidden real terrain prototype"
             git push origin HEAD:agent/r3-wp2b-real-terrain
           fi
+# one-shot wiring trigger
