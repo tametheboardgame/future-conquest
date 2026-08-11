@@ -38,11 +38,22 @@ test('R3 WP2B prototype reuses authoritative WGS84 campaign geometry and state c
   assert.match(app, /onSelect=\{openTerritoryOnMap\}/);
 });
 
-test('R3 WP2B clearly separates temporary plumbing sources from the production Copernicus direction', () => {
+test('R3 WP2B prefers generated Copernicus terrain and keeps demo terrain only as a renderer fallback', () => {
+  assert.match(impl, /generatedTerrainManifestUrl\(import\.meta\.env\.BASE_URL\)/);
+  assert.match(impl, /generatedRasterDemSource\(manifest, import\.meta\.env\.BASE_URL\)/);
+  assert.match(impl, /Copernicus GLO-30 static terrain/);
   assert.match(impl, /demotiles\.maplibre\.org\/terrain-tiles\/tiles\.json/);
-  assert.match(impl, /tile\.openstreetmap\.org/);
-  assert.match(impl, /production elevation direction: Copernicus DEM/);
+  assert.doesNotMatch(impl, /tile\.openstreetmap\.org/);
   assert.doesNotMatch(impl, /client_secret|clientSecret|access_token|accessToken/i);
+});
+
+test('R3 WP2B stylises real relief rather than depending on a consumer web-map surface', () => {
+  assert.match(impl, /type: 'color-relief'/);
+  assert.match(impl, /'color-relief-color'/);
+  assert.match(impl, /type: 'hillshade'/);
+  assert.match(impl, /r3-wp2b-land-wash/);
+  assert.match(impl, /r3-wp2b-coastline/);
+  assert.doesNotMatch(impl, /OpenStreetMap contributors/);
 });
 
 test('R3 WP2B renderer failure collapses to SVG and reduced motion collapses camera transitions', () => {
