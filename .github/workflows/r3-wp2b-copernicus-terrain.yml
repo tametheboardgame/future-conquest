@@ -2,6 +2,11 @@ name: R3 WP2D Europe Copernicus terrain build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - '.github/workflows/r3-wp2b-copernicus-terrain.yml'
 
 permissions:
   contents: write
