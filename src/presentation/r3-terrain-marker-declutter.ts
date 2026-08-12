@@ -23,6 +23,13 @@ export interface TerrainMarkerCandidate {
   y: number;
 }
 
+export interface TerrainMarkerReservedRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 interface TerrainMarkerRule {
   priority: number;
   radius: number;
@@ -64,10 +71,23 @@ export const terrainMarkerLodForZoom = (zoom: number): TerrainMarkerLod => (
 );
 
 export const terrainMarkerPriority = (kind: TerrainMarkerKind) => RULES[kind].priority;
+export const terrainMarkerIsProtected = (kind: TerrainMarkerKind) => Boolean(RULES[kind].protected);
+
+const intersectsReservedRect = (
+  candidate: TerrainMarkerCandidate,
+  radius: number,
+  rect: TerrainMarkerReservedRect
+) => (
+  candidate.x + radius > rect.left
+  && candidate.x - radius < rect.right
+  && candidate.y + radius > rect.top
+  && candidate.y - radius < rect.bottom
+);
 
 export function visibleTerrainMarkerIds(
   candidates: readonly TerrainMarkerCandidate[],
-  lod: TerrainMarkerLod
+  lod: TerrainMarkerLod,
+  reservedRects: readonly TerrainMarkerReservedRect[] = []
 ): ReadonlySet<string> {
   const eligible = candidates
     .filter(candidate => Number.isFinite(candidate.x) && Number.isFinite(candidate.y))
@@ -86,6 +106,10 @@ export function visibleTerrainMarkerIds(
     if (rule.protected) {
       accepted.push(candidate);
       visible.add(candidate.id);
+      continue;
+    }
+
+    if (reservedRects.some(rect => intersectsReservedRect(candidate, rule.radius, rect))) {
       continue;
     }
 
