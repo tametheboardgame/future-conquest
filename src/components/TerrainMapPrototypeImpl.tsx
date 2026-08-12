@@ -39,6 +39,7 @@ import {
   generatedTerrainManifestUrl,
   type GeneratedTerrainTileJson
 } from '../presentation/r3-terrain-source';
+import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-error';
 import {
   buildTerrainOperationalMarkers,
   removeTerrainOperationalMarkers
@@ -612,16 +613,25 @@ export function TerrainMapPrototypeImpl({
       }, 3000);
 
       map.on('error', event => {
-        const runtimeDetail = event.error instanceof Error
-          ? event.error.message
-          : String(event.error ?? 'Unknown MapLibre runtime error');
-        console.error(`R3 terrain MapLibre error: ${runtimeDetail}`, event.error);
+        const runtimeError = classifyTerrainRuntimeError(event.error);
         if (!loadedRef.current) {
-          fallbackRef.current(`Terrain renderer error: ${runtimeDetail}`);
-        } else {
-          setStatus('warning');
-          setMessage(`Terrain source warning · ${runtimeDetail}`);
+          console.error(`R3 terrain initialisation error: ${runtimeError.detail}`, event.error);
+          fallbackRef.current(`Terrain renderer error: ${runtimeError.detail}`);
+          return;
         }
+
+        if (runtimeError.kind === 'transient-tile-request') {
+          console.info('R3 terrain transient tile request ignored', {
+            status: runtimeError.status,
+            url: runtimeError.url,
+            detail: runtimeError.detail
+          });
+          return;
+        }
+
+        console.error(`R3 terrain source warning: ${runtimeError.detail}`, event.error);
+        setStatus('warning');
+        setMessage(`Terrain source warning · ${runtimeError.detail}`);
       });
 
       map.on('mouseenter', 'campaign-territories-fill', () => {
