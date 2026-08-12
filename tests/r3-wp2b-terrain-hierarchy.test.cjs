@@ -21,7 +21,7 @@ test('R3 WP2B-C keeps ordinary political detail restrained at theatre scale', ()
 
 test('R3 WP2B-C lets critical network state beat ordinary route clutter', () => {
   const routes = layerSlice('campaign-strategic-routes', 'campaign-control-borders');
-  assert.match(routes, /minzoom: 5/);
+  assert.match(routes, /minzoom: compact \? 5\.6 : 5/);
   assert.match(routes, /selected_supply_path[\s\S]*0\.92/);
   assert.match(routes, /bottleneck[\s\S]*0\.82/);
   assert.match(routes, /status'\], 'blocked'\], 0\.62/);
@@ -50,7 +50,8 @@ test('R3 WP2B-C prioritises active threats over stale combat residue', () => {
 
 test('R3 WP2B-C reveals major strategic nodes before minor nodes in dense regions', () => {
   const nodes = layerSlice('campaign-strategic-nodes');
-  assert.match(nodes, /minzoom: 5\.4/);
+  assert.match(nodes, /minzoom: compact \? 6 : 5\.4/);
+  assert.match(nodes, /filter: \['>=', \['get', 'importance'\], compact \? 2 : 1\]/);
   assert.match(nodes, /5\.4, \['case', \['==', \['get', 'importance'\], 3\], 0\.72, 0\]/);
   assert.match(nodes, /6\.2, \['case', \['>=', \['get', 'importance'\], 2\], 0\.82, 0\.16\]/);
   assert.match(nodes, /7\.2, 0\.88/);
