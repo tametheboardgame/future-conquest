@@ -1,0 +1,44 @@
+name: R3 WP2B terrain smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/components/TerrainMapPrototype*.tsx'
+      - 'src/presentation/r3-terrain-*.ts'
+      - 'src/r3-terrain-prototype.css'
+      - 'public/generated/r3-terrain/**'
+      - 'scripts/measure-r3-terrain-budget.mjs'
+      - 'tests/r3-wp2b-*.test.cjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/r3-wp2b-lazy-load.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  terrain-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run WP2B focused regressions
+        run: node --test tests/r3-wp2b-*.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Verify Copernicus terrain ships in production output
+        run: |
+          test -f dist/generated/r3-terrain/tiles.json
+          test "$(find dist/generated/r3-terrain/tiles -type f -name '*.png' | wc -l)" -eq 82
+      - name: Enforce terrain production budget
+        run: node scripts/measure-r3-terrain-budget.mjs

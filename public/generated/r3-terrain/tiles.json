@@ -1,0 +1,33 @@
+{
+  "tilejson": "3.0.0",
+  "name": "Future Conquest R3 Copernicus terrain prototype",
+  "description": "Static Mapbox Terrain-RGB tiles derived at build time from public Copernicus DEM COGs.",
+  "version": "1.0.0",
+  "scheme": "xyz",
+  "tiles": [
+    "./tiles/{z}/{x}/{y}.png"
+  ],
+  "minzoom": 4,
+  "maxzoom": 7,
+  "bounds": [
+    -5.8,
+    44.0,
+    14.8,
+    53.8
+  ],
+  "attribution": "produced using Copernicus WorldDEM-30 \u00a9 DLR e.V. 2010-2014 and \u00a9 Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+  "futureConquest": {
+    "source": "Copernicus DEM via AWS Registry of Open Data",
+    "preferredDataset": "COP-DEM-GLO-30",
+    "fallbackDataset": "COP-DEM-GLO-90",
+    "encoding": "mapbox-terrain-rgb",
+    "stats": {
+      "tiles": 82,
+      "primaryTiles": 81,
+      "fallbackTiles": 0,
+      "seaOnlyTiles": 1,
+      "minimumElevationMetres": -248.6490020751953,
+      "maximumElevationMetres": 4535.76611328125
+    }
+  }
+}

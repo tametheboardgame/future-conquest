@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
@@ -10,6 +10,8 @@ import { StrategicCollapseDecision } from './components/StrategicCollapseDecisio
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { useLiveGlobalSettings } from './components/StartupExperience';
 import { MapView } from './components/MapView';
+
+const TerrainMapPrototype = lazy(() => import('./components/TerrainMapPrototype').then(module => ({ default: module.TerrainMapPrototype })));
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
 import { NODE_TYPE_LABELS, ROUTE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
@@ -68,6 +70,8 @@ export default function App() {
   const [showSupplyWarning, setShowSupplyWarning] = useState(false);
   const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
   const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
+  const terrainPrototypeRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('terrain') === '1';
+  const [terrainPrototypeFailed, setTerrainPrototypeFailed] = useState(false);
 
   useEffect(() => {
     setNavigationContext(current => revalidateNavigationContext(state, current));
@@ -528,7 +532,16 @@ export default function App() {
               <p>{instruction}</p>
               <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Recon contact · Orange/red borders indicate threatened territory</div>
             </div>
-            <MapView
+            {terrainPrototypeRequested && !terrainPrototypeFailed ? <Suspense fallback={<div className="r3-terrain-prototype-loading" role="status">Loading experimental terrain renderer…</div>}>
+              <TerrainMapPrototype
+                state={state}
+                onSelect={openTerritoryOnMap}
+                onFallback={(reason) => {
+                  console.warn(`R3 terrain prototype fallback: ${reason}`);
+                  setTerrainPrototypeFailed(true);
+                }}
+              />
+            </Suspense> : <MapView
               state={state}
               onSelect={openTerritoryOnMap}
               onSelectGroup={openGroupOnMap}
@@ -537,7 +550,7 @@ export default function App() {
                 label: targetOperation ? 'Join operation?' : 'Confirm operation?',
                 onConfirm: () => setState(current => beginOperation(current, chosenRouteId || undefined))
               } : undefined}
-            />
+            />}
           </div>
 
           <aside className="command-panel map-context-panel">

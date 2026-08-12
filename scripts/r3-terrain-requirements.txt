@@ -1,0 +1,5 @@
+rio-tiler==9.4.2
+mercantile>=1.2,<2
+numpy>=2.0,<3
+Pillow>=11,<13
+requests>=2.32,<3

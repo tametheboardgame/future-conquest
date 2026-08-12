@@ -1,6 +1,6 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Current programme
 
@@ -10,51 +10,13 @@ Authoritative roadmap: `docs/roadmap/R3-ROADMAP.md`.
 
 Approved sequence:
 
-R3-WP1 -> R3-WP2 -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
-The simulation/gameplay layer is mechanically frozen from the validated R2.5 baseline unless R3 exposes a genuine integration defect.
+The simulation/gameplay layer remains mechanically frozen from the validated R2.5 baseline unless R3 exposes a genuine integration defect.
 
 ## Completed R2 / R2.5 baseline
 
-### R2-WP2 - Engineering & Infrastructure Mechanics
-
-Status: COMPLETE / MERGED
-PR: #106
-Merge commit: `f6011f9b1512f29620ae84a7d3c922bb94741daa`
-
-### R2-WP3 - Territory Resources, Stockpiles & Logistics Hubs
-
-Status: COMPLETE / MERGED
-PR: #108
-Merge commit: `13ab39e2eda4c74a86713b419bc709acff309e41`
-
-### R2-WP4 - Saves, Settings & Assistance
-
-Status: COMPLETE / MERGED
-PR: #109
-Merge commit: `a2d2323b7a051d6fcd975c3f8fe55c0f3883600e`
-
-### R2-WP5 - Adviser & Tutorial Completion
-
-Status: COMPLETE / MERGED
-PR: #110
-Merge commit: `26eabaecb8ad4a7f4edae3a7aee454b6174c053e`
-
-### R2-WP6 - Contextual Navigation & Diagnostics
-
-Status: COMPLETE / MERGED
-PR: #112
-Merge commit: `d055a40f72faf32f917528dffd91a9e76c7187ee`
-
-### R2-WP7 / R2.5 - Balance & Playtest Validation / Stabilisation
-
-Status: COMPLETE / MERGED
-PR: #113
-Merge commit: `60950fcb634bc789bc77a49f2f2708fd2e7fc281`
-
-Final R2.5 evidence demonstrated a mechanically credible baseline before the graphical overhaul: approximately Story 50.0%, Normal 29.6% and Hard 7.9% wins across 720 deterministic day-120 campaigns. The final branch passed 348 repository tests, TypeScript, production build and GitHub workflows. The final independent Codex review gate was explicitly waived by David because Codex review capacity was exhausted for five days; all other gates were green.
-
-Known small UI/UX issues observed during manual fiddling are intentionally being accumulated for a small post-overhaul bug pass where the graphical redesign may supersede them.
+R2-WP2 through R2-WP7/R2.5 are complete and merged. The final R2.5 baseline merged via PR #113 as `60950fcb634bc789bc77a49f2f2708fd2e7fc281` and demonstrated approximately Story 50.0%, Normal 29.6% and Hard 7.9% wins across 720 deterministic day-120 campaigns.
 
 ## Completed R3 work
 
@@ -64,54 +26,119 @@ Status: COMPLETE / MERGED
 PR: #114
 Merge commit: `be3176de940b37346d713eb575d81bf0c92fe03d`
 
-WP1 established the renderer-neutral presentation frame, explicit terrain/control/routes/pieces/effects/overlay boundaries, GameState-to-presentation adapter, level-of-detail foundation, asset-versioning and performance instrumentation conventions, equivalent SVG/WebGL renderer spikes, WebGL capability fallback, and deterministic smooth-camera primitives.
-
-Renderer decision: **evolved SVG/DOM is the primary R3 map renderer**. WebGL remains an optional acceleration path behind the renderer-neutral presentation contract if later measured browser paint/effect pressure justifies it.
-
-Final WP1 validation passed 369/369 repository tests, TypeScript, production build, exact-head deterministic balance simulation, both GitHub workflows and final architecture/diff review with no simulation/save coupling or unresolved review threads.
-
-## Current active work
+WP1 established renderer-neutral presentation state, explicit terrain/control/routes/pieces/effects boundaries, camera/LOD/assets/performance conventions and a stable SVG/DOM renderer/fallback.
 
 ### R3-WP2 - 2.5D Strategic Map
 
-Status: VALIDATED - MERGE READY
-
-Branch: `agent/r3-wp2-2_5d-strategic-map`
+Status: COMPLETE / MERGED; PRIMARY DEPTH ART DIRECTION SUPERSEDED BY WP2B
 PR: #115
-Validated functional head: `1c55717bc60fd25ee6b888724597310ce97abc2b`
+Merge commit: `7ad39d5d75889cf05b6af8f54f61eafb09ef033b`
 
-Objective: transform the flat strategic map into the approved 2.5D command-table presentation while preserving authoritative territory geometry, hit-testing, selection, adjacency, camera semantics, information boundaries and deterministic simulation.
+WP2 proved political/control hierarchy, deterministic front derivation, crowded-region zoom hierarchy, non-interactive presentation layers, geometry/hit-testing preservation, mobile/reduced-motion simplification, 393/393 tests, production build and 720-campaign balance parity.
+
+Human visual review immediately after merge identified that the political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons no longer serve as the physical terrain surface.
+
+## Current active work
+
+### R3-WP2B - Real Terrain Foundation
+
+Status: A/B/C VALIDATED; D ACTIVE / TECHNICAL GATE
+PR: #117
+Branch: `agent/r3-wp2b-real-terrain`
+Package definition: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`
+
+Product-owner decision: replace ownership-driven territory extrusion with one continuous real-elevation landscape.
+
+Selected technical direction:
+
+- MapLibre GL JS for geospatial camera, terrain, tile/LOD and map interaction;
+- Copernicus DEM as source direction, preferring GLO-30 material where practical/permitted and allowing GLO-90/downsampled production terrain where appropriate;
+- stylised real-earth surface rather than raw Google imagery;
+- territory ownership/borders/fronts/routes as overlays on terrain, never terrain geometry;
+- initial prototype terrain exaggeration around 2×, tuned visually;
+- Three.js reserved for physical pieces/effects through a MapLibre custom 3D layer when WP3 resumes;
+- no Copernicus/API client secret in browser code;
+- existing SVG/DOM map retained as accessibility/reduced-effects/renderer-failure fallback.
+
+Prototype theatre: southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps.
+
+#### WP2B-A - Platform and data boundary
+
+Status: COMPLETE
+
+- MapLibre GL JS 6 is isolated behind a lazy `?terrain=1` prototype path;
+- WGS84 political geometry remains authoritative;
+- terrain/WebGL/data failure returns to the stable SVG command map;
+- camera, attribution and no-secret runtime boundaries are established.
+
+#### WP2B-B - Representative real-terrain scene
+
+Status: COMPLETE / VALIDATED
+Validated head: `21d2e43f5d43f55f4bc934225eea83438aa0b911`
+
+- public Copernicus DEM COGs preprocess into self-hosted Terrain-RGB assets;
+- representative set is 82 PNG tiles / approximately 6.1 MB across z4-z7;
+- 81 generated tiles use GLO-30, zero require GLO-90 fallback, one is sea-only;
+- measured prototype relief spans approximately -248.6 m to 4,535.8 m;
+- stylised colour relief, hillshade, land wash, coastline and subdued sea replace consumer-map imagery;
+- exact-head terrain smoke, production build and 720-campaign balance/trace workflow passed.
+
+#### WP2B-C - Strategic overlays on terrain
+
+Status: COMPLETE / VALIDATED
+Validated head: `c2bb9a568eaa04456369eafffc5d732636e95af5`
+
+- ownership wash, administrative borders, control borders and opposing-control fronts remain separate concepts;
+- threat/combat presentation reuses existing player-visible operational-clarity helpers and does not expose hidden enemy strength;
+- routes and nodes reuse the authoritative strategic-network definitions and coordinates;
+- dense Benelux/Rhine LOD keeps ordinary infrastructure restrained while critical state, fronts and active threats remain prominent;
+- representative tests exercise real Wallonia/Rhine geometry under simultaneous threat, operation, front and bottleneck state;
+- exact-head focused terrain smoke, full repository build/tests and 720-campaign balance/trace workflow passed.
+
+#### WP2B-D - Interaction, performance and fallback gate
+
+Status: ACTIVE / TECHNICAL VALIDATION
 
 Implemented:
 
-- darker physical command-table theatre and supporting water treatment;
-- controlled screen-space territory depth using decorative lower shells and shadows while retaining the original authoritative territory paths for interaction;
-- stronger player/enemy political-control palette plus distinct selected, targeted, isolated, threatened, under-attack and recent-combat states;
-- presentation-only terrain classification for open lowland, mixed lowland, mixed upland and mountainous territory;
-- restrained SVG terrain patterns and a common directional sheen layered above control fills rather than replacing them;
-- deterministic opposing-control adjacency derivation with short boundary-centred front marks that remain visually distinct from administrative borders;
-- front geometry remains presentation-only and does not participate in hit-testing, pathfinding or combat;
-- crowded-region/zoom hierarchy tuning for Benelux, Rhine and Alpine-style dense geography: country names recede at local/tactical zoom, centre labels outrank full territory names, fronts become supporting cues at deep zoom, and optional routes/nodes gain restrained casing/halos above terrain;
-- mobile hierarchy reduces simultaneous surface effects, including removal of the redundant campaign-wide shadow, while preserving cheaper territory depth, centre labels and operational pieces;
-- decorative depth, terrain, lighting and front layers are `aria-hidden`/non-interactive;
-- focused terrain/front/depth/hierarchy/geometry/performance-guard regression coverage.
+- `full`, `compact` and `svg-fallback` presentation profiles;
+- compact profile preserves authoritative geography while reducing terrain exaggeration (2.0 -> 1.6), pitch, hillshade pressure, antialiasing and route/node density;
+- very small coarse-pointer displays return deliberately to the stable SVG map;
+- profile selection adapts to viewport/orientation changes and remounts the presentation renderer when required;
+- visible keyboard-focusable `2D accessible map` escape is available from the terrain renderer;
+- MapLibre keyboard pan/zoom remains enabled and accessible help is attached to the terrain canvas;
+- Selected camera now uses the selected territory's existing WGS84 centre;
+- reduced-motion camera transitions remain immediate;
+- all renderer/data failures remain non-blocking and fall back to SVG;
+- exact production output keeps MapLibre in a separate lazy terrain chunk.
 
-Final validation on exact PR head `1c55717bc60fd25ee6b888724597310ce97abc2b`:
+Performance budget gate:
 
-- 393/393 repository tests passed;
-- renderer preparation benchmark remained well within the R3 preparation budget: SVG/DOM averaged approximately 0.056 ms for the representative scene and 0.097 ms for the dense scene;
-- canonical 720-campaign, 15-start, day-120 simulation preserved the R2.5 balance gradient at approximately Story 50.0%, Normal 29.6% and Hard 7.9%;
-- `git diff --check origin/main...HEAD` passed;
-- TypeScript and Vite production build passed;
-- authoritative geography, keyboard navigation, hit-testing and reduced-motion contracts have focused regression coverage;
-- no simulation, save, route-topology, territory-data or gameplay-mechanics files were changed by WP2;
-- no unresolved PR review threads were present during the final review.
+- exactly 82 representative Terrain-RGB tiles;
+- generated terrain <= 8 MiB (measured 6,108,110 bytes);
+- lazy terrain JS <= 1.1 MiB raw / 300 KiB gzip (measured 949,750 / 249,054 bytes);
+- lazy terrain CSS <= 90 KiB raw / 20 KiB gzip (measured 69,918 / 9,987 bytes);
+- MapLibre implementation markers must not leak into eager `index-*.js` chunks;
+- production smoke enforces these limits after the real Vite build.
 
-The temporary expensive WP2 validation workflow is removed before merge; the immediately preceding exact functional head carries the full deterministic balance evidence and the final documentation-only cleanup is covered by the normal repository build/test workflow.
+Remaining D gate:
 
-Implementation is being performed directly through ChatGPT/GitHub while Codex capacity is unavailable. The scheduled Codex supervisor is delayed until 15 August 2026 and will resume from live repository state rather than duplicating direct work.
+1. complete exact-head full build and deterministic 720-campaign parity on the final D candidate;
+2. perform final diff/review/save-topology-information-boundary check;
+3. merge the technically accepted prototype while keeping terrain behind `?terrain=1` and the normal live game on SVG;
+4. verify GitHub Pages deployment;
+5. surface the live hidden terrain prototype for product-owner visual review;
+6. do not make terrain primary and do not resume WP3 until that visual review approves the direction.
 
-## Next approved work
+## Paused / superseded work
+
+### R3-WP3 - Formation Pieces & Animated Movement
+
+Status: PAUSED UNTIL WP2B VISUAL APPROVAL
+
+Exploratory PR #116 was closed unmerged after the terrain art-direction correction. Its early piece styling may be selectively reused later, but movement animation will not be built around the superseded raised-territory map.
+
+## Next approved work after WP2B visual approval
 
 1. R3-WP3 - Formation Pieces & Animated Movement
 2. R3-WP4 - Battle, Front & Strategic Event Feedback
@@ -123,9 +150,9 @@ Implementation is being performed directly through ChatGPT/GitHub while Codex ca
 
 ## Product-owner stop conditions
 
-Product-owner input is required for fundamental mechanic changes, materially different design directions, narrative changes, art-direction choices outside the approved command-table/animated-board-game direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed visual milestone that materially benefits from human review.
+Product-owner input is required for fundamental mechanic changes, narrative changes, materially different art direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed WP2B terrain prototype that materially benefits from human visual review.
 
-Routine presentation architecture, renderer integration, testing, CI, save compatibility, deployment, performance work, accessibility, exploit fixes and evidence-based technical choices within the approved direction remain autonomous.
+Routine renderer integration, data-pipeline architecture, projection, testing, CI, save compatibility, deployment, performance work, accessibility, attribution and evidence-based technical choices within the approved MapLibre/Copernicus/Three.js direction remain autonomous.
 
 ## Source-of-truth rule
 
