@@ -12,6 +12,8 @@ const limits = Object.freeze({
   terrainStaticBytes: 8 * 1024 * 1024,
   terrainJsBytes: 1100 * 1024,
   terrainJsGzipBytes: 300 * 1024,
+  terrainWorkerBytes: 550 * 1024,
+  terrainWorkerGzipBytes: 180 * 1024,
   terrainCssBytes: 90 * 1024,
   terrainCssGzipBytes: 20 * 1024
 });
@@ -38,6 +40,7 @@ const terrainStaticBytes = terrainFiles.reduce((sum, file) => sum + fs.statSync(
 
 const emittedAssets = fs.readdirSync(ASSETS);
 const terrainJsFiles = emittedAssets.filter(name => /^TerrainMapPrototype-.*\.js$/.test(name));
+const terrainWorkerFiles = emittedAssets.filter(name => /^maplibre-gl-worker-.*\.js$/.test(name));
 const terrainCssFiles = emittedAssets.filter(name => /^TerrainMapPrototype-.*\.css$/.test(name));
 
 if (tileFiles.length !== limits.tileCount) {
@@ -48,6 +51,9 @@ if (terrainStaticBytes > limits.terrainStaticBytes) {
 }
 if (terrainJsFiles.length !== 1) {
   fail(`expected exactly one lazy TerrainMapPrototype JS chunk, found ${terrainJsFiles.length}`);
+}
+if (terrainWorkerFiles.length !== 1) {
+  fail(`expected exactly one lazy MapLibre worker asset, found ${terrainWorkerFiles.length}`);
 }
 if (terrainCssFiles.length !== 1) {
   fail(`expected exactly one lazy TerrainMapPrototype CSS chunk, found ${terrainCssFiles.length}`);
@@ -67,6 +73,7 @@ const measureAsset = (name, rawBudget, gzipBudget) => {
 };
 
 const terrainJs = measureAsset(terrainJsFiles[0], limits.terrainJsBytes, limits.terrainJsGzipBytes);
+const terrainWorker = measureAsset(terrainWorkerFiles[0], limits.terrainWorkerBytes, limits.terrainWorkerGzipBytes);
 const terrainCss = measureAsset(terrainCssFiles[0], limits.terrainCssBytes, limits.terrainCssGzipBytes);
 
 const indexJsFiles = emittedAssets.filter(name => /^index-.*\.js$/.test(name));
@@ -84,6 +91,7 @@ const result = {
     terrainTiles: tileFiles.length,
     terrainStaticBytes,
     terrainJs,
+    terrainWorker,
     terrainCss,
     eagerIndexChunks: indexJsFiles
   }
