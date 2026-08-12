@@ -3,6 +3,7 @@ import {
   GeoJSONSource,
   Map,
   NavigationControl,
+  setWorkerUrl,
   type GeoJSONSourceSpecification,
   type RasterDEMSourceSpecification,
   type StyleSpecification
@@ -10,6 +11,7 @@ import {
 import { feature as topojsonFeature } from 'topojson-client';
 import worldAtlas from 'world-atlas/countries-110m.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import { TERRITORIES } from '../game/data';
 import { getThreatenedTerritories } from '../game/operational-clarity';
@@ -52,6 +54,9 @@ interface TerrainSourceResolution {
   label: string;
   attribution: string;
 }
+
+// MapLibre v6 ESM requires Vite's worker pipeline for GeoJSON/vector worker tasks.
+setWorkerUrl(mapLibreWorkerUrl);
 
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
 const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
