@@ -6,6 +6,7 @@ const app = fs.readFileSync('src/App.tsx', 'utf8');
 const main = fs.readFileSync('src/main.tsx', 'utf8');
 const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const impl = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
+const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the stable SVG map', () => {
@@ -13,7 +14,8 @@ test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the st
   assert.match(app, /const TerrainMapPrototype = lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
   assert.match(app, /import \{ MapView \} from '\.\/components\/MapView'/);
   assert.doesNotMatch(app, /import \{ TerrainMapPrototype \} from '\.\/components\/TerrainMapPrototype'/);
-  assert.match(host, /export \{ TerrainMapPrototypeImpl as TerrainMapPrototype \} from '\.\/TerrainMapPrototypeImpl'/);
+  assert.match(host, /TerrainMapPrototypeImpl/);
+  assert.match(host, /export function TerrainMapPrototype/);
   assert.doesNotMatch(host, /lazy\(|Suspense|from 'maplibre-gl'/);
   assert.match(impl, /from 'maplibre-gl'/);
   assert.match(app, /URLSearchParams\(window\.location\.search\)\.get\('terrain'\) === '1'/);
@@ -25,7 +27,7 @@ test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the st
 test('R3 WP2B prototype uses continuous raster-dem terrain and never raises political polygons', () => {
   assert.match(impl, /r3-wp2b-dem/);
   assert.match(impl, /terrain:[\s\S]*source: 'r3-wp2b-dem'/);
-  assert.match(impl, /exaggeration: R3_TERRAIN_MANIFEST\.initialExaggeration/);
+  assert.match(impl, /exaggeration: terrainExaggerationForProfile\(presentationProfile\)/);
   assert.match(impl, /campaign-territories-fill/);
   assert.match(impl, /campaign-administrative-borders/);
   assert.match(impl, /campaign-control-borders/);
@@ -86,6 +88,43 @@ test('R3 WP2B-C keeps contextual territory navigation on the authoritative selec
   assert.match(impl, /map\.on\('click', 'campaign-territories-fill'/);
   assert.match(impl, /selectRef\.current\(territoryId\)/);
   assert.doesNotMatch(impl, /setState\(|selectedTerritory\s*=/);
+});
+
+test('R3 WP2B-D gives compact displays real reduced-pressure terrain rather than CSS-only signalling', () => {
+  assert.match(host, /chooseTerrainPresentationProfile/);
+  assert.match(host, /presentationProfile=\{profile\}/);
+  assert.match(impl, /presentationProfile = 'full'/);
+  assert.match(impl, /terrainCameraForProfile\(terrainCameraPreset\('campaign'\), presentationProfile\)/);
+  assert.match(impl, /terrainExaggerationForProfile\(presentationProfile\)/);
+  assert.match(impl, /hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
+  assert.match(impl, /antialias: presentationProfile === 'full'/);
+  assert.match(impl, /maxPitch: presentationProfile === 'compact' \? 52 : 70/);
+  assert.match(impl, /minzoom: compact \? 5\.6 : 5/);
+  assert.match(impl, /minzoom: compact \? 6 : 5\.4/);
+});
+
+test('R3 WP2B-D keeps a deliberate SVG path for very small touch displays and manual accessibility choice', () => {
+  assert.match(host, /profile === 'svg-fallback'/);
+  assert.match(host, /Compact touch display selected the stable SVG command map/);
+  assert.match(host, /2D accessible map/);
+  assert.match(host, /Player selected the stable SVG command map/);
+  assert.match(css, /\.r3-terrain-use-svg/);
+  assert.match(css, /focus-visible/);
+});
+
+test('R3 WP2B-D restores selected-camera parity using the selected territory WGS84 centre', () => {
+  assert.match(impl, /function territoryCentre\(territoryId: string \| null\)/);
+  assert.match(impl, /const selectedCentre = useMemo\(\(\) => territoryCentre\(state\.selectedTerritory\)/);
+  assert.match(impl, /preset\.id === 'selected' && selectedCentre \? selectedCentre : profiled\.center/);
+  assert.match(impl, /disabled=\{preset\.id === 'selected' && !state\.selectedTerritory\}/);
+});
+
+test('R3 WP2B-D exposes keyboard help and keeps MapLibre keyboard navigation enabled', () => {
+  assert.match(impl, /keyboard: true/);
+  assert.match(impl, /tabIndex=\{0\}/);
+  assert.match(impl, /aria-describedby="r3-terrain-keyboard-help"/);
+  assert.match(impl, /Use arrow keys to pan and plus or minus to zoom/);
+  assert.match(css, /\.r3-terrain-sr-only/);
 });
 
 test('R3 WP2B renderer failure collapses to SVG and reduced motion collapses camera transitions', () => {
