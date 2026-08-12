@@ -15,17 +15,17 @@ const layerSlice = (id, nextId) => {
 test('R3 WP2B-C keeps ordinary political detail restrained at theatre scale', () => {
   const territoryFill = layerSlice('campaign-territories-fill', 'campaign-territory-state-wash');
   const administrative = layerSlice('campaign-administrative-borders', 'campaign-strategic-routes');
-  assert.match(territoryFill, /\['interpolate', \['linear'\], \['zoom'\], 4, 0\.07, 5\.5, 0\.09, 7, 0\.12, 9, 0\.13\]/);
+  assert.match(territoryFill, /'fill-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
+  assert.match(territoryFill, /4, \['case'[\s\S]*?0\.07[\s\S]*?5\.5, \['case'[\s\S]*?0\.09[\s\S]*?7, \['case'[\s\S]*?0\.12[\s\S]*?9, \['case'[\s\S]*?0\.13/);
   assert.match(administrative, /'line-opacity': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.18, 5\.5, 0\.23, 7, 0\.31, 9, 0\.4\]/);
 });
 
 test('R3 WP2B-C lets critical network state beat ordinary route clutter', () => {
   const routes = layerSlice('campaign-strategic-routes', 'campaign-control-borders');
   assert.match(routes, /minzoom: compact \? 5\.6 : 5/);
-  assert.match(routes, /selected_supply_path[\s\S]*0\.92/);
-  assert.match(routes, /bottleneck[\s\S]*0\.82/);
-  assert.match(routes, /status'\], 'blocked'\], 0\.62/);
-  assert.match(routes, /\['interpolate', \['linear'\], \['zoom'\], 5, 0\.1, 5\.8, 0\.25, 7, 0\.44, 9, 0\.58\]/);
+  assert.match(routes, /'line-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
+  assert.match(routes, /5, \['case'[\s\S]*?selected_supply_path[\s\S]*?0\.92[\s\S]*?bottleneck[\s\S]*?0\.82[\s\S]*?status'\], 'blocked'\], 0\.62[\s\S]*?0\.1/);
+  assert.match(routes, /5\.8, \['case'[\s\S]*?0\.25[\s\S]*?7, \['case'[\s\S]*?0\.44[\s\S]*?9, \['case'[\s\S]*?0\.58/);
 });
 
 test('R3 WP2B-C keeps fronts visually stronger than ordinary control boundaries', () => {
