@@ -23,6 +23,7 @@ function browserTerrainProfile(): TerrainPresentationProfile {
  */
 export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
   const [profile, setProfile] = useState<TerrainPresentationProfile>(browserTerrainProfile);
+  const { onFallback } = props;
 
   useEffect(() => {
     const refreshProfile = () => setProfile(browserTerrainProfile());
@@ -32,9 +33,9 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
 
   useEffect(() => {
     if (profile === 'svg-fallback') {
-      props.onFallback('Compact touch display selected the stable SVG command map.');
+      onFallback('Compact touch display selected the stable SVG command map.');
     }
-  }, [profile, props]);
+  }, [profile, onFallback]);
 
   if (profile === 'svg-fallback') {
     return <div className="r3-terrain-compact-fallback" role="status">Loading compact 2D command map…</div>;
@@ -44,7 +45,7 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     <button
       type="button"
       className="r3-terrain-use-svg"
-      onClick={() => props.onFallback('Player selected the stable SVG command map.')}
+      onClick={() => onFallback('Player selected the stable SVG command map.')}
     >
       2D accessible map
     </button>
