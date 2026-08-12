@@ -7,6 +7,7 @@ on:
       - 'src/**'
       - 'public/generated/r3-terrain/**'
       - 'scripts/run-r3-wp2e-performance.mjs'
+      - 'scripts/compare-r3-wp2e-performance.mjs'
       - 'tests/r3-wp2e-*.test.cjs'
       - '.github/workflows/r3-wp2e-performance-gate.yml'
 

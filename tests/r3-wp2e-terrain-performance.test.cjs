@@ -40,6 +40,7 @@ test('exact-head Chromium gate writes request, byte and transition evidence', ()
   }
   assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
+  assert.match(workflow, /- 'scripts\/compare-r3-wp2e-performance\.mjs'/);
   assert.match(probe, /R3_WP2E_BUILD_SHA/);
   assert.match(probe, /R3_WP2E_VARIANT/);
   assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
