@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const config = fs.readFileSync('src/presentation/r3-terrain-config.ts', 'utf8');
 const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const impl = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
+const terrainSource = fs.readFileSync('src/presentation/r3-terrain-source.ts', 'utf8');
 const app = fs.readFileSync('src/App.tsx', 'utf8');
 const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 const main = fs.readFileSync('src/main.tsx', 'utf8');
@@ -25,9 +26,9 @@ test('R3 WP2B keeps authenticated terrain acquisition out of the browser runtime
 test('R3 WP2B treats the real-terrain renderer as progressive enhancement', () => {
   assert.match(config, /chooseCampaignMapRenderer/);
   assert.match(config, /'svg-fallback'/);
-  assert.match(host, /lazy\(\(\) => import\('\.\/TerrainMapPrototypeImpl'\)\)/);
+  assert.match(app, /lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
   assert.match(host, /if \(profile === 'svg-fallback'\)/);
-  assert.match(host, /onFallback\(fallbackReason/);
+  assert.match(host, /onFallback\('Compact touch display selected the stable SVG command map\.'\)/);
 });
 
 test('R3 WP2B-D gives smaller and touch displays a deliberate reduced-pressure path', () => {
@@ -59,14 +60,15 @@ test('R3 WP2B normalises authoritative WGS84 points without inventing gameplay g
 });
 
 test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the stable SVG map', () => {
+  assert.match(app, /lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
   assert.match(host, /TerrainMapPrototypeImpl/);
-  assert.match(host, /Terrain prototype failed/);
   assert.match(app, /terrainPrototypeRequested/);
+  assert.match(app, /terrainPrototypeFailed/);
   assert.match(app, /MapView/);
 });
 
 test('R3 WP2B prototype uses continuous raster-dem terrain and never raises political polygons', () => {
-  assert.match(impl, /type: 'raster-dem'/);
+  assert.match(terrainSource, /type: 'raster-dem'/);
   assert.match(impl, /terrain:/);
   assert.match(impl, /campaign-territories-fill/);
   assert.doesNotMatch(impl, /fill-extrusion/);
@@ -128,8 +130,9 @@ test('R3 WP2B-D gives compact displays real reduced-pressure terrain rather than
 });
 
 test('R3 WP2B-D adapts compact/full terrain when the viewport changes', () => {
-  assert.match(host, /window\.addEventListener\('resize', updateEnvironment\)/);
-  assert.match(host, /setEnvironmentVersion/);
+  assert.match(host, /const refreshProfile = \(\) => setProfile\(browserTerrainProfile\(\)\)/);
+  assert.match(host, /window\.addEventListener\('resize', refreshProfile\)/);
+  assert.match(host, /window\.removeEventListener\('resize', refreshProfile\)/);
   assert.match(host, /key=\{profile\}/);
 });
 
