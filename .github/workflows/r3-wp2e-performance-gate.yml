@@ -40,13 +40,23 @@ jobs:
           npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp2e-vite.log 2>&1 &
           for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
           cat /tmp/r3-wp2e-vite.log; exit 1
-      - name: Record cold startup, streaming and transitions
+      - name: Record default tile-cancellation profile
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+          R3_WP2E_VARIANT: cancel-pending
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-cancel-pending.json
         run: npm run performance:r3-wp2e
+      - name: Record retained previous-zoom tile candidate
+        env:
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+          R3_WP2E_VARIANT: retain-pending
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-retain-pending.json
+        run: npm run performance:r3-wp2e
+      - name: Compare tile-cancellation A/B
+        run: node scripts/compare-r3-wp2e-tile-cancellation.mjs artifacts/r3-wp2e-cancel-pending.json artifacts/r3-wp2e-retain-pending.json
       - name: Upload machine-readable evidence
         uses: actions/upload-artifact@v4
         with:
           name: r3-wp2e-performance-${{ github.event.pull_request.head.sha }}
-          path: artifacts/r3-wp2e-performance.json
+          path: artifacts/r3-wp2e-*
           if-no-files-found: error

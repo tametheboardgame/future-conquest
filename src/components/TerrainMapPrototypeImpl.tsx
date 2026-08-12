@@ -569,6 +569,11 @@ export function TerrainMapPrototypeImpl({
       setSourceAttribution(terrainSource.attribution);
       const initial = terrainCameraForProfile(terrainCameraPreset('campaign'), presentationProfile);
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
+      // This query-only switch is intentionally limited to the full renderer. It lets the
+      // performance gate compare MapLibre's default cancellation policy with retained
+      // previous-zoom tiles without changing the shipped default before evidence exists.
+      const retainPendingTiles = presentationProfile === 'full'
+        && new URLSearchParams(window.location.search).get('terrainRetainPendingTiles') === '1';
       const map = new Map({
         container: containerRef.current,
         style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
@@ -581,6 +586,7 @@ export function TerrainMapPrototypeImpl({
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
         renderWorldCopies: false,
+        cancelPendingTileRequestsWhileZooming: !retainPendingTiles,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}

@@ -4,7 +4,9 @@ import { chromium } from 'playwright';
 
 const origin = process.env.R3_WP2E_ORIGIN ?? 'http://127.0.0.1:4173';
 const output = process.env.R3_WP2E_EVIDENCE ?? 'artifacts/r3-wp2e-performance.json';
-const head = process.env.GITHUB_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+const variant = process.env.R3_WP2E_VARIANT ?? 'cancel-pending';
+if (!['cancel-pending', 'retain-pending'].includes(variant)) throw new Error(`unknown R3_WP2E_VARIANT: ${variant}`);
+const head = process.env.R3_WP2E_BUILD_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const page = await context.newPage();
@@ -32,7 +34,8 @@ await page.addInitScript(() => {
 });
 
 const started = performance.now();
-await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+const retainPendingTiles = variant === 'retain-pending';
+await page.goto(`${origin}/?terrain=1${retainPendingTiles ? '&terrainRetainPendingTiles=1' : ''}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
 await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15_000 });
 await page.locator('[data-command-view="map"]').click();
@@ -52,6 +55,12 @@ const transition = async (name, expectedLod) => {
 };
 const campaignToTheatreMs = await transition('theatre', 'theatre');
 const theatreToSelectedMs = await transition('selected', 'local');
+const presentationProfile = await page.locator('.r3-terrain-prototype').getAttribute('data-terrain-profile');
+if (presentationProfile !== 'full') throw new Error(`tile request policy probe requires full profile, got ${presentationProfile}`);
+const visualDirectory = output.replace(/\.json$/, '-visual');
+fs.mkdirSync(visualDirectory, { recursive: true });
+const selectedScreenshot = `${visualDirectory}/selected-settled.png`;
+await page.screenshot({ path: selectedScreenshot });
 
 const resourceEntries = await page.evaluate(() => performance.getEntriesByType('resource')
   .filter(entry => entry.name.includes('/generated/r3-terrain/tiles/'))
@@ -69,6 +78,9 @@ const evidence = {
   browser: await browser.version(),
   viewport: { width: 1600, height: 1000 },
   cacheMode: 'cold-disabled',
+  variant,
+  presentationProfile,
+  tileRequestPolicy: retainPendingTiles ? 'retain-pending' : 'cancel-pending',
   timingsMs: { firstUsefulPaintMs, campaignSettledMs, campaignToTheatreMs, theatreToSelectedMs },
   terrainNetwork: {
     totalRequests: requests.length,
@@ -82,6 +94,7 @@ const evidence = {
   fallbackVisible: await page.locator('.r3-terrain-fallback-notice').isVisible().catch(() => false),
   warning: await page.locator('.r3-terrain-prototype').getAttribute('data-status') === 'warning'
 };
+evidence.visualEvidence = { selectedSettledScreenshot: selectedScreenshot };
 if (evidence.fallbackVisible) throw new Error('terrain fell back during WP2E performance gate');
 fs.mkdirSync(new URL('../artifacts/', import.meta.url), { recursive: true });
 fs.mkdirSync(output.slice(0, output.lastIndexOf('/')) || '.', { recursive: true });

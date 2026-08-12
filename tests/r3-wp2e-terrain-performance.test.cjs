@@ -40,3 +40,19 @@ test('exact-head Chromium gate writes request, byte and transition evidence', ()
   assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
 });
+
+test('full-profile performance probe A/Bs MapLibre pending-tile cancellation without changing its default', () => {
+  const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
+  const probe = read('scripts/run-r3-wp2e-performance.mjs');
+  const comparison = read('scripts/compare-r3-wp2e-tile-cancellation.mjs');
+  const workflow = read('.github/workflows/r3-wp2e-performance-gate.yml');
+  assert.match(implementation, /presentationProfile === 'full'/);
+  assert.match(implementation, /cancelPendingTileRequestsWhileZooming: !retainPendingTiles/);
+  assert.match(probe, /terrainRetainPendingTiles=1/);
+  assert.match(probe, /presentationProfile !== 'full'/);
+  assert.match(workflow, /R3_WP2E_VARIANT: cancel-pending/);
+  assert.match(workflow, /R3_WP2E_VARIANT: retain-pending/);
+  assert.match(comparison, /resourcePressureAcceptable/);
+  assert.match(comparison, /requiresHumanSmoothnessReview: true/);
+  assert.doesNotMatch(implementation, /maxTileCacheZoomLevels/);
+});

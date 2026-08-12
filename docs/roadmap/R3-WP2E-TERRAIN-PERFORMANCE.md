@@ -118,3 +118,13 @@ lifecycle semantics. The measured benefit does not justify that risk in WP2E.
 The terrain mesh and hillshade sources therefore remain independent, preserving
 the production-runtime fix from PR #119; only the visually inert third
 colour-relief consumer was removed.
+
+The exact-head probe also runs an evidence-gated full-profile A/B for MapLibre's
+`cancelPendingTileRequestsWhileZooming` option. The control preserves MapLibre
+v6's default (`true`); the candidate sets it to `false` so previous zoom-level
+tiles can remain visible during camera changes. Both variants publish matching
+timing, request/byte and settled-screenshot evidence plus a comparison summary.
+The candidate is not enabled for players unless human review finds a smoother
+transition and its settle timing and short-term resource pressure remain within
+the recorded thresholds. `maxTileCacheZoomLevels` remains untouched; its
+existing MapLibre default is not increased without evidence.
