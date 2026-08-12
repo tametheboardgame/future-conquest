@@ -2,6 +2,12 @@
    This is deliberately isolated from the stable SVG campaign renderer until
    the terrain direction passes visual and technical review. */
 
+.r3-terrain-prototype-shell {
+  position: relative;
+  min-height: 560px;
+  height: 100%;
+}
+
 .r3-terrain-prototype {
   position: relative;
   min-height: 560px;
@@ -16,6 +22,40 @@
 .r3-terrain-prototype-canvas {
   position: absolute;
   inset: 0;
+}
+
+.r3-terrain-use-svg {
+  position: absolute;
+  z-index: 9;
+  right: 58px;
+  bottom: 12px;
+  padding: 6px 9px;
+  border: 1px solid rgba(155, 205, 199, .42);
+  border-radius: 6px;
+  background: rgba(4, 15, 19, .88);
+  color: #d7eeea;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: .03em;
+  cursor: pointer;
+}
+
+.r3-terrain-use-svg:hover,
+.r3-terrain-use-svg:focus-visible {
+  border-color: #8fe1d4;
+  outline: 2px solid rgba(143, 225, 212, .35);
+  outline-offset: 2px;
+}
+
+.r3-terrain-compact-fallback {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(126, 175, 173, .28);
+  border-radius: 10px;
+  background: #081317;
+  color: #c7dcda;
+  font-size: 12px;
 }
 
 .r3-terrain-prototype-toolbar {
@@ -109,22 +149,37 @@
   color: #9edbd1;
 }
 
+.r3-terrain-prototype-shell[data-terrain-profile='compact'],
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .r3-terrain-prototype {
+  min-height: 430px;
+}
+
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .r3-terrain-prototype-toolbar {
+  right: 48px;
+  align-items: flex-start;
+}
+
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .r3-terrain-prototype-toolbar span {
+  max-width: 62%;
+}
+
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .maplibregl-ctrl-compass {
+  display: none;
+}
+
 @media (max-width: 900px) {
+  .r3-terrain-prototype-shell,
   .r3-terrain-prototype {
     min-height: 430px;
   }
 
-  .r3-terrain-prototype-toolbar {
-    right: 48px;
-    align-items: flex-start;
-  }
-
-  .r3-terrain-prototype-toolbar span {
-    max-width: 62%;
+  .r3-terrain-use-svg {
+    right: 10px;
   }
 }
 
 @media (max-width: 600px) {
+  .r3-terrain-prototype-shell,
   .r3-terrain-prototype {
     min-height: 360px;
   }
@@ -140,6 +195,12 @@
 
   .r3-terrain-prototype-attribution {
     font-size: 8px;
+    max-width: calc(100% - 118px);
+  }
+
+  .r3-terrain-use-svg {
+    font-size: 9px;
+    bottom: 8px;
   }
 }
 
