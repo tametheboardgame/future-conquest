@@ -198,7 +198,12 @@ function mapStyle(
         source: 'r3-wp2b-land',
         paint: {
           'fill-color': '#6c805b',
-          'fill-opacity': compact ? 0.29 : 0.34
+          'fill-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            3.6, 0,
+            4.72, 0,
+            4.8, compact ? 0.29 : 0.34
+          ]
         }
       },
       {
