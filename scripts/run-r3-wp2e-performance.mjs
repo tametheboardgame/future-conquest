@@ -66,9 +66,12 @@ if (startupOutcome !== 'terrain') {
   }));
   console.error('WP2E performance startup diagnostics:', JSON.stringify({ startupOutcome, state, diagnostics }, null, 2));
   await browser.close();
-  throw new Error(startupOutcome === 'fallback'
+  // Exit 75 distinguishes the one retryable renderer-start path from later
+  // measurement failures, which must remain strict for both variants.
+  console.error(startupOutcome === 'fallback'
     ? `terrain fell back during WP2E performance gate: ${state.fallback ?? 'unknown reason'}`
     : 'terrain renderer did not expose a visible canvas during WP2E performance gate');
+  process.exit(75);
 }
 
 const firstUsefulPaintMs = performance.now() - started;

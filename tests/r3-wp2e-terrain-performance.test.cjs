@@ -55,6 +55,9 @@ test('exact-head Chromium gate writes comparable request, byte and transition ev
   assert.doesNotMatch(probe, /data-map-idle-at|data-map-moving/);
   assert.match(probe, /startupOutcome/);
   assert.match(probe, /r3-terrain-fallback-notice/);
+  assert.match(probe, /process\.exit\(75\)/);
+  assert.match(workflow, /if \[ \"\$status\" -eq 75 \]/);
+  assert.match(workflow, /elif \[ \"\$status\" -ne 0 \]/);
   assert.match(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
   assert.match(implementation, /cancelPendingTileRequestsWhileZooming: !retainTilesWhileZooming/);
   assert.match(implementation, /presentationProfile === 'full'[\s\S]+tileCancellation/);

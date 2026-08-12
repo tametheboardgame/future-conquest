@@ -53,10 +53,16 @@ jobs:
           R3_WP2E_VARIANT: base
           R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-base.json
         run: |
-          node scripts/run-r3-wp2e-performance.mjs || {
-            echo 'Base terrain probe cold-start failed once; retrying in a fresh Chromium process.'
+          set +e
+          node scripts/run-r3-wp2e-performance.mjs
+          status=$?
+          set -e
+          if [ "$status" -eq 75 ]; then
+            echo 'Base terrain renderer-start failed once; retrying in a fresh Chromium process.'
             node scripts/run-r3-wp2e-performance.mjs
-          }
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
       - name: Stop base preview
         run: pkill -f 'vite preview' || true
       - name: Checkout exact PR head
