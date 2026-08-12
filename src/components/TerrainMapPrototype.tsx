@@ -42,7 +42,7 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     >
       2D accessible map
     </button>
-    <TerrainMapPrototypeImpl {...props} />
+    <TerrainMapPrototypeImpl {...props} presentationProfile={profile} />
   </div>;
 }
 
