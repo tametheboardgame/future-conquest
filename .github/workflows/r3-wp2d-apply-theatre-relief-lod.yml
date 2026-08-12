@@ -1,0 +1,34 @@
+name: Apply R3 WP2D Theatre relief LOD
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - 'scripts/apply-r3-wp2d-theatre-relief-lod.mjs'
+      - '.github/workflows/r3-wp2d-apply-theatre-relief-lod.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-theatre-relief-lod:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2d-terrain-refinement
+          fetch-depth: 0
+      - name: Apply Theatre relief LOD
+        run: node scripts/apply-r3-wp2d-theatre-relief-lod.mjs
+      - name: Commit Theatre relief LOD
+        run: |
+          git add src/components/TerrainMapPrototypeImpl.tsx
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Suppress fine hillshade at Theatre scale'
+          git push origin HEAD:agent/r3-wp2d-terrain-refinement
