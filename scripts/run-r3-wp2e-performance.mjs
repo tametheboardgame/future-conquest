@@ -4,7 +4,10 @@ import { chromium } from 'playwright';
 
 const origin = process.env.R3_WP2E_ORIGIN ?? 'http://127.0.0.1:4173';
 const output = process.env.R3_WP2E_EVIDENCE ?? 'artifacts/r3-wp2e-performance.json';
-const head = process.env.GITHUB_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+// Do not use GITHUB_SHA here: pull_request workflows set it to GitHub's
+// synthetic merge commit unless every caller remembers to override it.
+const buildSha = process.env.R3_WP2E_BUILD_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+const variant = process.env.R3_WP2E_VARIANT ?? 'local';
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const page = await context.newPage();
@@ -64,7 +67,8 @@ const transferredBytes = resourceEntries.reduce((sum, entry) => sum + entry.tran
 const encodedBodyBytes = resourceEntries.reduce((sum, entry) => sum + entry.encodedBodySize, 0);
 const evidence = {
   schemaVersion: 1,
-  head,
+  buildSha,
+  variant,
   measuredAt: new Date().toISOString(),
   browser: await browser.version(),
   viewport: { width: 1600, height: 1000 },

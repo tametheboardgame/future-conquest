@@ -33,10 +33,20 @@ test('markers reconcile by stable identity and overlay source updates are isolat
 
 test('exact-head Chromium gate writes request, byte and transition evidence', () => {
   const probe = read('scripts/run-r3-wp2e-performance.mjs');
+  const comparison = read('scripts/compare-r3-wp2e-performance.mjs');
   const workflow = read('.github/workflows/r3-wp2e-performance-gate.yml');
   for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs', 'totalRequests', 'uniqueRequests', 'duplicateRequests', 'transferredBytes']) {
     assert.match(probe, new RegExp(field));
   }
   assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
+  assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
+  assert.match(workflow, /- 'scripts\/compare-r3-wp2e-performance\.mjs'/);
+  assert.match(probe, /R3_WP2E_BUILD_SHA/);
+  assert.match(probe, /R3_WP2E_VARIANT/);
+  assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
+  assert.match(comparison, /evidence identity mismatch/);
+  for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs']) {
+    assert.match(comparison, new RegExp(field));
+  }
   assert.match(workflow, /actions\/upload-artifact@v4/);
 });
