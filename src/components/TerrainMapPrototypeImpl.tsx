@@ -109,7 +109,9 @@ function mapStyle(
         type: 'geojson',
         data: terrainLandGeoJSON
       },
-      'r3-wp2b-dem': demSource,
+      'r3-wp2b-terrain-dem': demSource,
+      'r3-wp2b-relief-dem': { ...demSource },
+      'r3-wp2b-hillshade-dem': { ...demSource },
       'campaign-territories': {
         type: 'geojson',
         data: politicalData
@@ -128,7 +130,7 @@ function mapStyle(
       }
     },
     terrain: {
-      source: 'r3-wp2b-dem',
+      source: 'r3-wp2b-terrain-dem',
       exaggeration: terrainExaggerationForProfile(presentationProfile)
     },
     layers: [
@@ -142,7 +144,7 @@ function mapStyle(
       {
         id: 'r3-wp2b-relief',
         type: 'color-relief',
-        source: 'r3-wp2b-dem',
+        source: 'r3-wp2b-relief-dem',
         paint: {
           'color-relief-color': [
             'interpolate',
@@ -176,7 +178,7 @@ function mapStyle(
       {
         id: 'r3-wp2b-hillshade',
         type: 'hillshade',
-        source: 'r3-wp2b-dem',
+        source: 'r3-wp2b-hillshade-dem',
         paint: {
           'hillshade-exaggeration': compact ? 0.48 : 0.72,
           'hillshade-shadow-color': '#161b18',
