@@ -586,6 +586,7 @@ export function TerrainMapPrototypeImpl({
         maxZoom: 10.5,
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
+        renderWorldCopies: false,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
