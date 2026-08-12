@@ -66,6 +66,11 @@ jobs:
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
+          await page.waitForFunction(
+            () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
+            null,
+            { timeout: 5000 }
+          );
           await page.locator('[data-command-view="map"]').click();
           await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
           await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
@@ -116,7 +121,11 @@ jobs:
 
           const selectedCamera = page.locator('.r3-terrain-prototype-toolbar button', { hasText: 'selected' }).first();
           await selectedCamera.click();
-          await page.waitForTimeout(1200);
+          await page.waitForFunction(
+            () => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'local',
+            null,
+            { timeout: 6000 }
+          );
           const selectedCameraState = await page.evaluate(() => {
             const host = document.querySelector('.r3-terrain-prototype');
             return host instanceof HTMLElement ? {
