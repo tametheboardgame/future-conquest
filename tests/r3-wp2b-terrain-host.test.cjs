@@ -103,6 +103,13 @@ test('R3 WP2B-D gives compact displays real reduced-pressure terrain rather than
   assert.match(impl, /minzoom: compact \? 6 : 5\.4/);
 });
 
+test('R3 WP2B-D adapts compact/full terrain when the viewport changes', () => {
+  assert.match(host, /const \[profile, setProfile\] = useState<TerrainPresentationProfile>\(browserTerrainProfile\)/);
+  assert.match(host, /window\.addEventListener\('resize', refreshProfile\)/);
+  assert.match(host, /window\.removeEventListener\('resize', refreshProfile\)/);
+  assert.match(host, /<TerrainMapPrototypeImpl key=\{profile\}/);
+});
+
 test('R3 WP2B-D keeps a deliberate SVG path for very small touch displays and manual accessibility choice', () => {
   assert.match(host, /profile === 'svg-fallback'/);
   assert.match(host, /Compact touch display selected the stable SVG command map/);
