@@ -4,6 +4,7 @@ const fs = require('node:fs');
 
 const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
+const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 
 test('WP2D-D tags every terrain marker with stable priority metadata and explicit screen offset', () => {
   assert.match(markers, /element\.dataset\.r3MarkerKind = kind/);
@@ -33,6 +34,11 @@ test('WP2D-D declutters from projected screen coordinates without altering autho
   assert.match(markers, /visibleTerrainMarkerIds\(candidates, terrainMarkerLodForZoom\(map\.getZoom\(\)\)\)/);
   assert.match(markers, /element\.hidden = hidden/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*declutter/i);
+});
+
+test('WP2D-D hidden declutter state beats marker display rules in the real browser cascade', () => {
+  assert.match(markers, /element\.dataset\.declutter = hidden \? 'hidden' : 'visible'/);
+  assert.match(css, /\[data-declutter="hidden"\]\s*\{\s*display:\s*none\s*!important;/);
 });
 
 test('WP2D-D reapplies declutter after state rebuilds and camera movement', () => {
