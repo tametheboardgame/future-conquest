@@ -571,6 +571,8 @@ export function TerrainMapPrototypeImpl({
       setSourceAttribution(terrainSource.attribution);
       const initial = terrainCameraForProfile(terrainCameraPreset('campaign'), presentationProfile);
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
+      const retainTilesWhileZooming = presentationProfile === 'full'
+        && new URLSearchParams(window.location.search).get('tileCancellation') === 'retain';
       const map = new Map({
         container: containerRef.current,
         style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
@@ -583,12 +585,19 @@ export function TerrainMapPrototypeImpl({
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
         renderWorldCopies: false,
+        // The performance gate A/Bs retained prior-zoom tiles without changing
+        // the production default until its resource/settle evidence is accepted.
+        cancelPendingTileRequestsWhileZooming: !retainTilesWhileZooming,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
       });
       ownedMap = map;
       mapRef.current = map;
+      const host = containerRef.current.parentElement;
+      map.on('movestart', () => { if (host) host.dataset.mapMoving = 'true'; });
+      map.on('moveend', () => { if (host) host.dataset.mapMoving = 'false'; });
+      map.on('idle', () => { if (host) host.dataset.mapIdleAt = String(performance.now()); });
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
       const applySafePadding = () => {

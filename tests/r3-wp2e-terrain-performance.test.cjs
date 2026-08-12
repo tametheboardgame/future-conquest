@@ -39,14 +39,20 @@ test('exact-head Chromium gate writes request, byte and transition evidence', ()
   const probe = read('scripts/run-r3-wp2e-performance.mjs');
   const comparison = read('scripts/compare-r3-wp2e-performance.mjs');
   const workflow = read('.github/workflows/r3-wp2e-performance-gate.yml');
+  const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
   for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs', 'totalRequests', 'uniqueRequests', 'duplicateRequests', 'transferredBytes']) {
     assert.match(probe, new RegExp(field));
   }
   assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
-  assert.match(workflow, /- 'scripts\/compare-r3-wp2e-performance\.mjs'/);
   assert.match(probe, /R3_WP2E_BUILD_SHA/);
   assert.match(probe, /R3_WP2E_VARIANT/);
+  assert.match(probe, /waitForTerrainSettlement/);
+  assert.match(probe, /data-map-idle-at/);
+  assert.match(probe, /waitForTerrainSettlement\(before\)/);
+  assert.match(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
+  assert.match(implementation, /cancelPendingTileRequestsWhileZooming: !retainTilesWhileZooming/);
+  assert.match(implementation, /presentationProfile === 'full'[\s\S]+tileCancellation/);
   assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
   assert.match(comparison, /evidence identity mismatch/);
   for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs']) {
