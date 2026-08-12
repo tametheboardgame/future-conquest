@@ -28,6 +28,18 @@ test('WP2D surfaces MapLibre-like status-0 generated tile failures without an ab
   assert.equal(result.status, 0);
 });
 
+test('WP2D surfaces a status-0 CORS failure as a source warning', async () => {
+  const { classifyTerrainRuntimeError } = await runtimeModule;
+  const result = classifyTerrainRuntimeError({
+    message: 'CORS request failed before receiving a response',
+    status: 0,
+    url: '/future-conquest/generated/r3-terrain/tiles/7/65/46.png'
+  });
+
+  assert.equal(result.kind, 'source-warning');
+  assert.equal(result.status, 0);
+});
+
 test('WP2D suppresses explicitly aborted generated terrain requests', async () => {
   const { classifyTerrainRuntimeError } = await runtimeModule;
   const byName = classifyTerrainRuntimeError({
