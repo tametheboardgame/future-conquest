@@ -38,6 +38,9 @@ test('WP2D-E land mask is reproducible from World Atlas during normal production
 
 test('WP2D-E generated land mask is bounded, non-empty and free of empty rings', () => {
   assert.equal(asset.type, 'FeatureCollection');
+  assert.equal(asset.futureConquest.id, 'r3-europe-land-mask-v1');
+  assert.equal(asset.futureConquest.source, 'world-atlas/land-110m');
+  assert.equal(asset.futureConquest.purpose, 'presentation-only physical land wash and coastline');
   assert.deepEqual(asset.futureConquest.clipBounds, clipBounds);
   assert.ok(asset.features.length > 0);
   assert.ok(fs.statSync(assetPath).size < 500_000, 'Europe land mask should remain a small presentation asset');
