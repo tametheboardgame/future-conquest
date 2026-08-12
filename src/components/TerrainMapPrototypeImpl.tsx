@@ -8,8 +8,7 @@ import {
   type RasterDEMSourceSpecification,
   type StyleSpecification
 } from 'maplibre-gl';
-import { feature as topojsonFeature } from 'topojson-client';
-import worldLand from 'world-atlas/land-110m.json';
+import europeLandMask from '../assets/r3-europe-land-mask.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import activeGeojson from '../assets/vertical-slice-map.json';
@@ -66,8 +65,7 @@ interface TerrainSourceResolution {
 setWorkerUrl(mapLibreWorkerUrl);
 
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
-const landAtlas = worldLand as unknown as { objects: { land: unknown } };
-const terrainLandGeoJSON = topojsonFeature(landAtlas, landAtlas.objects.land) as unknown as GeoJSONSourceSpecification['data'];
+const terrainLandGeoJSON = europeLandMask as unknown as GeoJSONSourceSpecification['data'];
 const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved';
 
 function terrainViewportPadding(
