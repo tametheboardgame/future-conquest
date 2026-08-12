@@ -108,7 +108,12 @@ jobs:
             }
             const beforeTiles = new Set(terrainResponses.keys());
             await button.click();
-            await page.waitForTimeout(1100);
+            await page.waitForFunction(
+              expected => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === expected,
+              expectedLod,
+              { timeout: 6000 }
+            );
+            await page.waitForTimeout(180);
 
             const result = await page.evaluate(expected => {
               const host = document.querySelector('.r3-terrain-prototype');
@@ -134,6 +139,7 @@ jobs:
               const count = kind => visible.filter(element => element.dataset.r3MarkerKind === kind).length;
               return {
                 lod: host.dataset.overlayLod ?? null,
+                zoom: Number(host.dataset.overlayZoom ?? Number.NaN),
                 expected,
                 visible: visible.length,
                 hidden: markers.length - visible.length,
@@ -153,6 +159,7 @@ jobs:
             console.log(`WP2D ${viewName} state:`, JSON.stringify({ ...result, newTerrainTiles: newTiles.length, requestedBytes }));
 
             if (result.lod !== expectedLod) throw new Error(`${viewName} expected ${expectedLod} LOD but got ${result.lod}.`);
+            if (!Number.isFinite(result.zoom)) throw new Error(`${viewName} did not expose a settled camera zoom.`);
             if (result.hiddenProtected.length) throw new Error(`${viewName} hid protected command markers: ${result.hiddenProtected.join(', ')}`);
             if (result.overlaps.length) throw new Error(`${viewName} markers overlap terrain HUD: ${result.overlaps.join(', ')}`);
             if (result.selectedFormations < 1) throw new Error(`${viewName} lost the selected formation.`);
