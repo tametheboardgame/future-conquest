@@ -5,6 +5,7 @@ on:
     branches:
       - agent/r3-wp2d-terrain-refinement
     paths:
+      - 'scripts/maps/build-r3-europe-land-mask.mjs'
       - 'scripts/apply-r3-wp2d-europe-land-mask.mjs'
       - '.github/workflows/r3-wp2d-apply-europe-land-mask.yml'
 
