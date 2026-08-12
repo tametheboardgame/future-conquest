@@ -38,6 +38,10 @@ jobs:
           done
           cat /tmp/future-conquest-vite.log
           exit 1
+      - name: Verify representative terrain assets over HTTP
+        run: |
+          curl -fsSI http://127.0.0.1:4173/generated/r3-terrain/tiles.json
+          curl -fsSI http://127.0.0.1:4173/generated/r3-terrain/tiles/4/8/5.png
       - name: Exercise terrain renderer in Chromium
         run: |
           node --input-type=module <<'NODE'
@@ -48,6 +52,14 @@ jobs:
           page.on('console', message => console.log(`[browser console ${message.type()}] ${message.text()}`));
           page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
           page.on('requestfailed', request => console.log(`[request failed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`));
+          page.on('request', request => {
+            if (request.url().includes('/generated/r3-terrain/')) console.log(`[terrain request] ${request.url()}`);
+          });
+          page.on('response', response => {
+            if (!response.url().includes('/generated/r3-terrain/')) return;
+            const headers = response.headers();
+            console.log(`[terrain response ${response.status()} ${headers['content-type'] ?? 'unknown'}] ${response.url()}`);
+          });
 
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           const capability = await page.evaluate(() => {
@@ -76,6 +88,13 @@ jobs:
             throw new Error(`Terrain renderer fell back in Chromium: ${text}`);
           }
           if (!(await ready.isVisible())) {
+            const state = await page.evaluate(() => ({
+              terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
+              canvasCount: document.querySelectorAll('.maplibregl-canvas').length,
+              canvasWidth: document.querySelector('.maplibregl-canvas')?.getBoundingClientRect().width ?? 0,
+              canvasHeight: document.querySelector('.maplibregl-canvas')?.getBoundingClientRect().height ?? 0
+            }));
+            console.log('Terrain DOM state:', JSON.stringify(state));
             console.log('Page body:', (await page.locator('body').innerText()).slice(0, 4000));
             await browser.close();
             throw new Error('Terrain renderer neither became ready nor surfaced fallback diagnostics.');
