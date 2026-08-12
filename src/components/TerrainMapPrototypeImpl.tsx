@@ -39,10 +39,15 @@ import {
   generatedTerrainManifestUrl,
   type GeneratedTerrainTileJson
 } from '../presentation/r3-terrain-source';
+import {
+  buildTerrainOperationalMarkers,
+  removeTerrainOperationalMarkers
+} from '../presentation/r3-terrain-operational-markers';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
   onSelect: (territoryId: string) => void;
+  onSelectGroup?: (groupId: string) => void;
   onFallback: (reason: string) => void;
   presentationProfile?: Exclude<TerrainPresentationProfile, 'svg-fallback'>;
 }
@@ -490,12 +495,15 @@ function mapStyle(
 export function TerrainMapPrototypeImpl({
   state,
   onSelect,
+  onSelectGroup,
   onFallback,
   presentationProfile = 'full'
 }: TerrainMapPrototypeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
   const selectRef = useRef(onSelect);
+  const selectGroupRef = useRef(onSelectGroup);
   const fallbackRef = useRef(onFallback);
   const loadedRef = useRef(false);
   const [status, setStatus] = useState<PrototypeStatus>('initialising');
@@ -503,6 +511,7 @@ export function TerrainMapPrototypeImpl({
   const [sourceAttribution, setSourceAttribution] = useState(COPERNICUS_ATTRIBUTION);
 
   selectRef.current = onSelect;
+  selectGroupRef.current = onSelectGroup;
   fallbackRef.current = onFallback;
 
   const visibleThreats = useMemo(() => getThreatenedTerritories(state), [state]);
@@ -566,6 +575,15 @@ export function TerrainMapPrototypeImpl({
       mapRef.current = map;
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
+      const updateOverlayLod = () => {
+        const host = containerRef.current?.parentElement;
+        if (!host) return;
+        const zoom = map.getZoom();
+        host.dataset.overlayLod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local';
+      };
+      map.on('zoom', updateOverlayLod);
+      updateOverlayLod();
+
       map.on('load', () => {
         loadedRef.current = true;
         setStatus('ready');
@@ -625,6 +643,8 @@ export function TerrainMapPrototypeImpl({
     return () => {
       disposed = true;
       loadedRef.current = false;
+      removeTerrainOperationalMarkers(operationalMarkersRef.current);
+      operationalMarkersRef.current = [];
       mapRef.current = null;
       ownedMap?.remove();
     };
@@ -647,6 +667,22 @@ export function TerrainMapPrototypeImpl({
       if (source instanceof GeoJSONSource) source.setData(data);
     }
   }, [politicalData, frontData, routeData, nodeData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current || status === 'initialising') return;
+
+    removeTerrainOperationalMarkers(operationalMarkersRef.current);
+    operationalMarkersRef.current = buildTerrainOperationalMarkers(map, state, {
+      onSelectTerritory: territoryId => selectRef.current(territoryId),
+      onSelectGroup: groupId => selectGroupRef.current?.(groupId)
+    });
+
+    return () => {
+      removeTerrainOperationalMarkers(operationalMarkersRef.current);
+      operationalMarkersRef.current = [];
+    };
+  }, [state, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {
     const profiled = terrainCameraForProfile(preset, presentationProfile);

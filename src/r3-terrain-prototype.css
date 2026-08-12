@@ -276,3 +276,209 @@
   padding: 5px 8px;
   cursor: pointer;
 }
+
+
+/* R3-WP2C operational information layer. MapLibre markers deliberately live in
+   screen space so command counters remain readable over pitched terrain. */
+.r3-terrain-territory-label,
+.r3-terrain-node-marker,
+.r3-terrain-task-group-marker,
+.r3-terrain-enemy-contact,
+.r3-terrain-threat-marker,
+.r3-terrain-operation-marker {
+  font-family: inherit;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.r3-terrain-territory-label {
+  z-index: 4;
+  display: grid;
+  min-width: 58px;
+  padding: 3px 6px 4px;
+  border: 1px solid rgba(201, 231, 223, .3);
+  border-radius: 5px;
+  background: rgba(4, 17, 20, .76);
+  color: #e6f4f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .42);
+  text-align: center;
+  line-height: 1.05;
+}
+
+.r3-terrain-territory-label span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .045em;
+}
+
+.r3-terrain-territory-label small {
+  margin-top: 2px;
+  color: rgba(220, 235, 230, .7);
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.r3-terrain-territory-label.player { border-color: rgba(91, 225, 205, .5); }
+.r3-terrain-territory-label.enemy { border-color: rgba(213, 147, 151, .45); }
+.r3-terrain-territory-label.selected {
+  border-color: #effffc;
+  box-shadow: 0 0 0 2px rgba(143, 255, 241, .36), 0 3px 12px rgba(0, 0, 0, .48);
+}
+
+.r3-terrain-node-marker {
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #eef2e7;
+  text-shadow: 0 1px 3px #000, 0 0 5px #000;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.r3-terrain-node-marker b {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid rgba(242, 234, 205, .75);
+  border-radius: 50%;
+  background: rgba(18, 28, 25, .9);
+  color: #f0d27e;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .62);
+  font-size: 8px;
+}
+
+.r3-terrain-node-marker.port b { color: #7bd1e2; }
+.r3-terrain-node-marker.airport b { color: #c6b8ed; }
+.r3-terrain-node-marker.rail-hub b { color: #d0b574; }
+.r3-terrain-node-marker.crossing b { color: #ef9a75; }
+.r3-terrain-node-marker.logistics b { color: #8bdeb7; }
+
+.r3-terrain-task-group-marker {
+  z-index: 8;
+  display: grid;
+  width: 58px;
+  min-height: 38px;
+  place-items: center;
+  padding: 4px 5px;
+  border: 2px solid #7de9dd;
+  border-radius: 6px;
+  background: rgba(6, 48, 50, .96);
+  color: #edfffb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .55), inset 0 0 0 1px rgba(255, 255, 255, .06);
+  line-height: 1;
+}
+
+.r3-terrain-task-group-marker strong {
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.r3-terrain-task-group-marker span {
+  margin-top: 3px;
+  color: #a7f2e8;
+  font-size: 8px;
+}
+
+.r3-terrain-task-group-marker.selected {
+  border-color: #f4ffff;
+  box-shadow: 0 0 0 3px rgba(102, 245, 226, .35), 0 4px 14px rgba(0, 0, 0, .6);
+}
+
+.r3-terrain-task-group-marker.moving,
+.r3-terrain-task-group-marker.attacking { border-color: #ffd27e; }
+.r3-terrain-task-group-marker.recovering { opacity: .72; }
+
+.r3-terrain-enemy-contact {
+  z-index: 9;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 2px;
+  border: 2px solid #ff7770;
+  border-radius: 5px;
+  background: rgba(83, 28, 29, .94);
+  color: #fff5ef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
+  line-height: 1;
+}
+
+.r3-terrain-enemy-contact strong { font-size: 12px; }
+.r3-terrain-enemy-contact span { font-size: 7px; letter-spacing: .04em; }
+.r3-terrain-enemy-contact.estimated { border-style: dashed; }
+.r3-terrain-enemy-contact.activity { border-color: #ffb46d; }
+.r3-terrain-enemy-contact.stale { opacity: .62; }
+
+.r3-terrain-threat-marker {
+  z-index: 10;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #ffc06c;
+  border-radius: 50%;
+  background: rgba(79, 35, 22, .96);
+  color: #fff0cb;
+  box-shadow: 0 0 0 2px rgba(255, 122, 86, .16), 0 4px 12px rgba(0, 0, 0, .55);
+  line-height: .85;
+}
+
+.r3-terrain-threat-marker strong { font-size: 16px; }
+.r3-terrain-threat-marker span { font-size: 7px; }
+.r3-terrain-threat-marker.under-attack { border-color: #ff6158; }
+
+.r3-terrain-operation-marker {
+  z-index: 11;
+  padding: 5px 7px;
+  border: 1px solid #ffd08a;
+  border-radius: 4px;
+  background: rgba(64, 37, 18, .95);
+  color: #ffe4ad;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .5);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.r3-terrain-portal-marker {
+  z-index: 7;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+}
+
+.r3-terrain-portal-marker i {
+  position: absolute;
+  inset: 2px;
+  border: 2px solid #7df9e7;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(79, 255, 229, .75);
+}
+
+.r3-terrain-portal-marker i + i { inset: 9px; border-width: 1px; }
+
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-territory-label small,
+.r3-terrain-prototype[data-overlay-lod='campaign'] .r3-terrain-territory-label small { display: none; }
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-node-marker.importance-2 { display: none; }
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-node-marker span { display: none; }
+.r3-terrain-prototype[data-overlay-lod='campaign'] .r3-terrain-node-marker.importance-2 span { display: none; }
+
+.r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-node-marker.importance-2 { display: none; }
+.r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-territory-label small { display: none; }
+.r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-task-group-marker {
+  width: 52px;
+  min-height: 34px;
+}
+
+@media (max-width: 900px) {
+  .r3-terrain-node-marker.importance-2 { display: none; }
+  .r3-terrain-territory-label small { display: none; }
+}

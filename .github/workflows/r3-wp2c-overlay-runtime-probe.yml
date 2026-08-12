@@ -1,0 +1,123 @@
+name: R3 WP2C terrain overlay runtime probe
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/components/TerrainMapPrototype*.tsx'
+      - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'src/r3-terrain-prototype.css'
+      - 'tests/r3-wp2c-terrain-overlay-parity.test.cjs'
+      - '.github/workflows/r3-wp2c-overlay-runtime-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-overlay-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install game dependencies
+        run: npm ci
+      - name: Run WP2C focused regression
+        run: node --test tests/r3-wp2c-terrain-overlay-parity.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Install Chromium probe
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/future-conquest-wp2c-vite.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/future-conquest-wp2c-vite.log
+          exit 1
+      - name: Verify operational overlays in Chromium
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+          page.on('console', message => console.log(`[browser console ${message.type()}] ${message.text()}`));
+          page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
+
+          await page.addInitScript(() => {
+            localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+            localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
+          });
+          await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+          await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
+          await page.locator('[data-command-view="map"]').click();
+          await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
+          await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
+          await page.locator('.r3-terrain-task-group-marker').first().waitFor({ state: 'visible', timeout: 10000 });
+          await page.waitForTimeout(800);
+
+          const overlayState = await page.evaluate(() => {
+            const visibleCount = selector => [...document.querySelectorAll(selector)].filter(element => {
+              if (!(element instanceof HTMLElement)) return false;
+              const rect = element.getBoundingClientRect();
+              const style = getComputedStyle(element);
+              return rect.width > 4 && rect.height > 4 && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0;
+            }).length;
+            const host = document.querySelector('.r3-terrain-prototype');
+            return {
+              overlayLod: host instanceof HTMLElement ? host.dataset.overlayLod ?? null : null,
+              taskGroups: document.querySelectorAll('.r3-terrain-task-group-marker').length,
+              visibleTaskGroups: visibleCount('.r3-terrain-task-group-marker'),
+              selectedTaskGroups: document.querySelectorAll('.r3-terrain-task-group-marker.selected').length,
+              territoryLabels: document.querySelectorAll('.r3-terrain-territory-label').length,
+              visibleTerritoryLabels: visibleCount('.r3-terrain-territory-label'),
+              strategicNodes: document.querySelectorAll('.r3-terrain-node-marker').length,
+              visibleStrategicNodes: visibleCount('.r3-terrain-node-marker'),
+              enemyContacts: document.querySelectorAll('.r3-terrain-enemy-contact').length,
+              visibleEnemyContacts: visibleCount('.r3-terrain-enemy-contact'),
+              threats: document.querySelectorAll('.r3-terrain-threat-marker').length,
+              operations: document.querySelectorAll('.r3-terrain-operation-marker').length,
+              portal: document.querySelectorAll('.r3-terrain-portal-marker').length
+            };
+          });
+          console.log('WP2C terrain overlay state:', JSON.stringify(overlayState));
+
+          if (overlayState.visibleTaskGroups < 1) throw new Error('Terrain map has no visible friendly formation counters.');
+          if (overlayState.selectedTaskGroups < 1) throw new Error('Terrain map does not distinguish the selected formation.');
+          if (overlayState.visibleTerritoryLabels < 10) throw new Error(`Terrain map has insufficient visible territory/location labels: ${overlayState.visibleTerritoryLabels}.`);
+          if (overlayState.visibleStrategicNodes < 3) throw new Error(`Terrain map has insufficient visible city/network cues: ${overlayState.visibleStrategicNodes}.`);
+          if (overlayState.enemyContacts > 0 && overlayState.visibleEnemyContacts < 1) throw new Error('Player-visible enemy contacts exist but none are visible on terrain.');
+          if (!overlayState.overlayLod) throw new Error('Terrain operational overlay LOD was not initialised.');
+
+          const secondGroup = page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"]');
+          await secondGroup.click();
+          await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'visible', timeout: 5000 });
+          console.log('WP2C formation counter selection verified for TG-2.');
+
+          await page.locator('.r3-terrain-prototype-canvas').screenshot({ path: '/tmp/r3-wp2c-overlay.png' });
+          await browser.close();
+          NODE
+      - name: Upload overlay screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp2c-terrain-overlay
+          path: /tmp/r3-wp2c-overlay.png
+          if-no-files-found: ignore
+      - name: Print preview log on failure
+        if: failure()
+        run: cat /tmp/future-conquest-wp2c-vite.log || true

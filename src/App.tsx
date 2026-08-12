@@ -541,6 +541,7 @@ export default function App() {
               <TerrainMapPrototype
                 state={state}
                 onSelect={openTerritoryOnMap}
+                onSelectGroup={openGroupOnMap}
                 onFallback={(reason) => {
                   console.warn(`R3 terrain prototype fallback: ${reason}`);
                   setTerrainPrototypeFailureReason(reason);
