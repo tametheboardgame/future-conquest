@@ -67,7 +67,19 @@ jobs:
           page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
           page.on('requestfailed', request => console.log(`[request failed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`));
 
+          await page.addInitScript(() => {
+            localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+          });
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+          await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+          await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
+          await page.locator('[data-command-view="map"]').click();
+          await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
+          if (await page.locator('.startup-launcher').isVisible()) {
+            await browser.close();
+            throw new Error('Terrain visual probe remained covered by the title launcher.');
+          }
 
           const ready = page.locator('.r3-terrain-prototype[data-status="ready"]');
           const fallback = page.locator('.r3-terrain-fallback-notice');
@@ -125,6 +137,9 @@ jobs:
 
           const canvasCount = await page.locator('.maplibregl-canvas').count();
           if (canvasCount < 1) throw new Error('Terrain reported ready without a MapLibre canvas.');
+          if (!visualState.host || visualState.host.width < 300 || visualState.host.height < 250) {
+            throw new Error(`Terrain host has invalid visible dimensions: ${JSON.stringify(visualState.host)}`);
+          }
           if (!visualState.canvas || visualState.canvas.width < 300 || visualState.canvas.height < 250) {
             throw new Error(`Terrain canvas has invalid visible dimensions: ${JSON.stringify(visualState.canvas)}`);
           }
@@ -137,8 +152,12 @@ jobs:
           const png = PNG.sync.read(fs.readFileSync('/tmp/r3-terrain-visible.png'));
           const counts = new Map();
           let samples = 0;
-          for (let y = 0; y < png.height; y += 8) {
-            for (let x = 0; x < png.width; x += 8) {
+          const xStart = Math.floor(png.width * 0.08);
+          const xEnd = Math.floor(png.width * 0.92);
+          const yStart = Math.floor(png.height * 0.10);
+          const yEnd = Math.floor(png.height * 0.92);
+          for (let y = yStart; y < yEnd; y += 8) {
+            for (let x = xStart; x < xEnd; x += 8) {
               const index = (png.width * y + x) << 2;
               const key = `${png.data[index] >> 3},${png.data[index + 1] >> 3},${png.data[index + 2] >> 3}`;
               counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -159,7 +178,7 @@ jobs:
             throw new Error(`Terrain canvas is visually blank or near-uniform: ${counts.size} colours, dominant ratio ${dominantRatio.toFixed(4)}`);
           }
 
-          console.log(`MapLibre terrain visibly rendered with ${canvasCount} canvas element(s).`);
+          console.log(`MapLibre terrain visibly rendered in the campaign map with ${canvasCount} canvas element(s).`);
           await browser.close();
           NODE
       - name: Upload terrain visual diagnostic
