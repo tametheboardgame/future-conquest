@@ -20,3 +20,8 @@ test('WP2D-E keeps political and control geometry separate from the physical lan
   assert.match(renderer, /id: 'campaign-administrative-borders'/);
   assert.match(renderer, /id: 'campaign-control-borders'/);
 });
+
+test('WP2D-E disables repeated world copies on the bounded Europe command map', () => {
+  assert.match(renderer, /maxBounds: \[\[west, south\], \[east, north\]\]/);
+  assert.match(renderer, /renderWorldCopies: false/);
+});
