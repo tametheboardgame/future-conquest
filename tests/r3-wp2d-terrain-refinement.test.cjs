@@ -47,8 +47,9 @@ test('WP2D uses a flat Theatre LOD while preserving physical terrain for Campaig
   assert.match(renderer, /host\.dataset\.terrainRelief = terrainMeshMode/);
 });
 
-test('WP2D ignores only transient status-zero generated-terrain requests after readiness', () => {
-  assert.match(runtimeErrors, /generatedTerrainTile && cancelledOrStatusZero \? 'transient-tile-request' : 'source-warning'/);
+test('WP2D suppresses only explicitly cancelled generated-terrain requests after readiness', () => {
+  assert.match(runtimeErrors, /generatedTerrainTile && explicitlyCancelled \? 'transient-tile-request' : 'source-warning'/);
+  assert.match(runtimeErrors, /Status 0 by itself is not an abort signal/);
   assert.match(renderer, /runtimeError\.kind === 'transient-tile-request'/);
   assert.match(renderer, /Terrain source warning/);
   assert.match(renderer, /if \(!loadedRef\.current\)/);
