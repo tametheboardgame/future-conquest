@@ -33,6 +33,27 @@ test('R3 WP2B treats the real-terrain renderer as progressive enhancement', () =
   assert.equal(terrain.chooseCampaignMapRenderer({ webgl: true, terrainEnabled: true, forceFallback: true }), 'svg-fallback');
 });
 
+test('R3 WP2B-D gives smaller and touch displays a deliberate reduced-pressure path', () => {
+  assert.equal(terrain.chooseTerrainPresentationProfile({ viewportWidth: 1440, coarsePointer: false }), 'full');
+  assert.equal(terrain.chooseTerrainPresentationProfile({ viewportWidth: 820, coarsePointer: false }), 'compact');
+  assert.equal(terrain.chooseTerrainPresentationProfile({ viewportWidth: 820, coarsePointer: true }), 'compact');
+  assert.equal(terrain.chooseTerrainPresentationProfile({ viewportWidth: 390, coarsePointer: true }), 'svg-fallback');
+  assert.equal(terrain.chooseTerrainPresentationProfile({ viewportWidth: 1440, coarsePointer: false, forceFallback: true }), 'svg-fallback');
+});
+
+test('R3 WP2B-D compact terrain reduces camera and relief pressure without changing geography', () => {
+  const campaign = terrain.terrainCameraPreset('campaign');
+  const full = terrain.terrainCameraForProfile(campaign, 'full');
+  const compact = terrain.terrainCameraForProfile(campaign, 'compact');
+  assert.deepEqual(full.center, campaign.center);
+  assert.deepEqual(compact.center, campaign.center);
+  assert.equal(full.pitch, campaign.pitch);
+  assert.ok(compact.pitch <= 42);
+  assert.ok(compact.zoom < campaign.zoom);
+  assert.equal(terrain.terrainExaggerationForProfile('full'), 2);
+  assert.equal(terrain.terrainExaggerationForProfile('compact'), 1.6);
+});
+
 test('R3 WP2B camera presets are geospatial presentation state only', () => {
   for (const id of ['theatre', 'campaign', 'selected']) {
     const preset = terrain.terrainCameraPreset(id);
