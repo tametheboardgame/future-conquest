@@ -9,6 +9,7 @@ on:
       - 'src/presentation/r3-terrain-*.ts'
       - 'src/r3-terrain-prototype.css'
       - 'public/generated/r3-terrain/**'
+      - 'scripts/measure-r3-terrain-budget.mjs'
       - 'tests/r3-wp2b-*.test.cjs'
       - 'package.json'
       - 'package-lock.json'
@@ -39,3 +40,5 @@ jobs:
         run: |
           test -f dist/generated/r3-terrain/tiles.json
           test "$(find dist/generated/r3-terrain/tiles -type f -name '*.png' | wc -l)" -eq 82
+      - name: Enforce terrain production budget
+        run: node scripts/measure-r3-terrain-budget.mjs
