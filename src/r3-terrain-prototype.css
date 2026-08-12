@@ -24,6 +24,15 @@
   inset: 0;
 }
 
+/* MapLibre adds .maplibregl-map to the supplied host and its library stylesheet
+   sets that class back to position: relative. This more-specific application
+   rule keeps the host stretched to the terrain panel instead of collapsing to
+   zero height after Map construction. */
+.r3-terrain-prototype .r3-terrain-prototype-canvas.maplibregl-map {
+  position: absolute;
+  inset: 0;
+}
+
 .r3-terrain-sr-only {
   position: absolute;
   width: 1px;
