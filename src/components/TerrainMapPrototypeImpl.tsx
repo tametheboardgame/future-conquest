@@ -108,7 +108,9 @@ function territoryCentre(territoryId: string | null): readonly [number, number] 
 
 async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
   const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
-  const response = await fetch(manifestUrl, { cache: 'force-cache' });
+  // The manifest URL is stable between deployments, so allow normal HTTP
+  // revalidation rather than pinning a potentially stale cached response.
+  const response = await fetch(manifestUrl, { cache: 'default' });
   if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
   const manifest = await response.json() as GeneratedTerrainTileJson;
   return {

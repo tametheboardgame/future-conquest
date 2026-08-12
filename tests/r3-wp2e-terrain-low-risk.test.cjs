@@ -16,7 +16,7 @@ test('WP2E exposes one reusable non-blocking terrain module prewarm boundary', (
 });
 
 test('WP2E reuses a cacheable manifest request while preserving retry after failure', () => {
-  assert.match(renderer, /fetch\(manifestUrl, \{ cache: 'force-cache' \}\)/);
+  assert.match(renderer, /fetch\(manifestUrl, \{ cache: 'default' \}\)/);
   assert.match(renderer, /terrainSourcePromise \?\?= resolveTerrainSource\(\)/);
   assert.match(renderer, /terrainSourcePromise = undefined/);
   assert.doesNotMatch(renderer, /cache: 'no-store'/);

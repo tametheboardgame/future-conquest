@@ -10,7 +10,7 @@ test('terrain has one reusable lazy/prewarm boundary and a cacheable shared mani
   const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
   assert.match(app, /prewarmTerrainMapModule/);
   assert.match(loader, /terrainModulePromise \?\?= import/);
-  assert.match(implementation, /cache: 'force-cache'/);
+  assert.match(implementation, /cache: 'default'/);
   assert.match(implementation, /terrainSourcePromise \?\?= resolveTerrainSource/);
   assert.doesNotMatch(implementation, /no-store/);
 });
@@ -26,6 +26,10 @@ test('markers reconcile by stable identity and overlay source updates are isolat
   const markers = read('src/presentation/r3-terrain-operational-markers.ts');
   const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
   assert.match(markers, /priorById/);
+  assert.match(markers, /buildTerrainOperationalMarkerDescriptors/);
+  assert.match(markers, /if \(!prior\) return new Marker/);
+  assert.doesNotMatch(markers, /candidate\.remove\(\)/);
+  assert.match(markers, /element\.onclick = descriptor\.action/);
   assert.match(markers, /return prior/);
   assert.match(implementation, /reconcileTerrainOperationalMarkers/);
   assert.doesNotMatch(implementation, /\[politicalData, frontData, routeData, nodeData\]/);
