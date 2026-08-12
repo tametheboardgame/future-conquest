@@ -1,6 +1,6 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Current programme
 
@@ -36,13 +36,14 @@ Merge commit: `7ad39d5d75889cf05b6af8f54f61eafb09ef033b`
 
 WP2 proved political/control hierarchy, deterministic front derivation, crowded-region zoom hierarchy, non-interactive presentation layers, geometry/hit-testing preservation, mobile/reduced-motion simplification, 393/393 tests, production build and 720-campaign balance parity.
 
-Human visual review immediately after merge identified that the political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons will no longer serve as the physical terrain surface.
+Human visual review immediately after merge identified that the political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons no longer serve as the physical terrain surface.
 
 ## Current active work
 
 ### R3-WP2B - Real Terrain Foundation
 
-Status: APPROVED / ACTIVE
+Status: A/B/C VALIDATED; D ACTIVE / TECHNICAL GATE
+PR: #117
 Branch: `agent/r3-wp2b-real-terrain`
 Package definition: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`
 
@@ -61,15 +62,73 @@ Selected technical direction:
 
 Prototype theatre: southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps.
 
-Immediate WP2B-A work:
+#### WP2B-A - Platform and data boundary
 
-1. land platform/data-source contract and geospatial camera helpers;
-2. establish attribution/no-secret/fallback rules in code;
-3. add an isolated MapLibre terrain host without replacing game authority;
-4. prove continuous terrain with representative relief and camera movement;
-5. project existing GeoJSON territory overlays onto it;
-6. run interaction/performance/build/balance gates;
-7. deploy a stable prototype for product-owner visual approval.
+Status: COMPLETE
+
+- MapLibre GL JS 6 is isolated behind a lazy `?terrain=1` prototype path;
+- WGS84 political geometry remains authoritative;
+- terrain/WebGL/data failure returns to the stable SVG command map;
+- camera, attribution and no-secret runtime boundaries are established.
+
+#### WP2B-B - Representative real-terrain scene
+
+Status: COMPLETE / VALIDATED
+Validated head: `21d2e43f5d43f55f4bc934225eea83438aa0b911`
+
+- public Copernicus DEM COGs preprocess into self-hosted Terrain-RGB assets;
+- representative set is 82 PNG tiles / approximately 6.1 MB across z4-z7;
+- 81 generated tiles use GLO-30, zero require GLO-90 fallback, one is sea-only;
+- measured prototype relief spans approximately -248.6 m to 4,535.8 m;
+- stylised colour relief, hillshade, land wash, coastline and subdued sea replace consumer-map imagery;
+- exact-head terrain smoke, production build and 720-campaign balance/trace workflow passed.
+
+#### WP2B-C - Strategic overlays on terrain
+
+Status: COMPLETE / VALIDATED
+Validated head: `c2bb9a568eaa04456369eafffc5d732636e95af5`
+
+- ownership wash, administrative borders, control borders and opposing-control fronts remain separate concepts;
+- threat/combat presentation reuses existing player-visible operational-clarity helpers and does not expose hidden enemy strength;
+- routes and nodes reuse the authoritative strategic-network definitions and coordinates;
+- dense Benelux/Rhine LOD keeps ordinary infrastructure restrained while critical state, fronts and active threats remain prominent;
+- representative tests exercise real Wallonia/Rhine geometry under simultaneous threat, operation, front and bottleneck state;
+- exact-head focused terrain smoke, full repository build/tests and 720-campaign balance/trace workflow passed.
+
+#### WP2B-D - Interaction, performance and fallback gate
+
+Status: ACTIVE / TECHNICAL VALIDATION
+
+Implemented:
+
+- `full`, `compact` and `svg-fallback` presentation profiles;
+- compact profile preserves authoritative geography while reducing terrain exaggeration (2.0 -> 1.6), pitch, hillshade pressure, antialiasing and route/node density;
+- very small coarse-pointer displays return deliberately to the stable SVG map;
+- profile selection adapts to viewport/orientation changes and remounts the presentation renderer when required;
+- visible keyboard-focusable `2D accessible map` escape is available from the terrain renderer;
+- MapLibre keyboard pan/zoom remains enabled and accessible help is attached to the terrain canvas;
+- Selected camera now uses the selected territory's existing WGS84 centre;
+- reduced-motion camera transitions remain immediate;
+- all renderer/data failures remain non-blocking and fall back to SVG;
+- exact production output keeps MapLibre in a separate lazy terrain chunk.
+
+Performance budget gate:
+
+- exactly 82 representative Terrain-RGB tiles;
+- generated terrain <= 8 MiB (measured 6,108,110 bytes);
+- lazy terrain JS <= 1.1 MiB raw / 300 KiB gzip (measured 949,750 / 249,054 bytes);
+- lazy terrain CSS <= 90 KiB raw / 20 KiB gzip (measured 69,918 / 9,987 bytes);
+- MapLibre implementation markers must not leak into eager `index-*.js` chunks;
+- production smoke enforces these limits after the real Vite build.
+
+Remaining D gate:
+
+1. complete exact-head full build and deterministic 720-campaign parity on the final D candidate;
+2. perform final diff/review/save-topology-information-boundary check;
+3. merge the technically accepted prototype while keeping terrain behind `?terrain=1` and the normal live game on SVG;
+4. verify GitHub Pages deployment;
+5. surface the live hidden terrain prototype for product-owner visual review;
+6. do not make terrain primary and do not resume WP3 until that visual review approves the direction.
 
 ## Paused / superseded work
 
@@ -79,7 +138,7 @@ Status: PAUSED UNTIL WP2B VISUAL APPROVAL
 
 Exploratory PR #116 was closed unmerged after the terrain art-direction correction. Its early piece styling may be selectively reused later, but movement animation will not be built around the superseded raised-territory map.
 
-## Next approved work after WP2B
+## Next approved work after WP2B visual approval
 
 1. R3-WP3 - Formation Pieces & Animated Movement
 2. R3-WP4 - Battle, Front & Strategic Event Feedback
