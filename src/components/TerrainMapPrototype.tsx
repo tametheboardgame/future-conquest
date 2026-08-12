@@ -5,6 +5,7 @@ import {
 } from '../presentation/r3-terrain-config';
 import {
   TerrainMapPrototypeImpl,
+  prewarmTerrainRuntime,
   type TerrainMapPrototypeProps
 } from './TerrainMapPrototypeImpl';
 
@@ -54,3 +55,4 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
 }
 
 export type { TerrainMapPrototypeProps };
+export { prewarmTerrainRuntime };

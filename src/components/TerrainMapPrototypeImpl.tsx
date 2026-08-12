@@ -107,7 +107,7 @@ function territoryCentre(territoryId: string | null): readonly [number, number] 
 
 async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
   const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
-  const response = await fetch(manifestUrl, { cache: 'no-store' });
+  const response = await fetch(manifestUrl, { cache: 'force-cache' });
   if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
   const manifest = await response.json() as GeneratedTerrainTileJson;
   return {
@@ -115,6 +115,21 @@ async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
     label: 'Copernicus GLO-30 static terrain',
     attribution: manifest.attribution
   };
+}
+
+let terrainSourcePromise: Promise<TerrainSourceResolution> | undefined;
+
+function loadTerrainSource(): Promise<TerrainSourceResolution> {
+  terrainSourcePromise ??= resolveTerrainSource().catch(error => {
+    terrainSourcePromise = undefined;
+    throw error;
+  });
+  return terrainSourcePromise;
+}
+
+/** Opportunistically warm the versioned manifest; failure remains owned by normal fallback. */
+export function prewarmTerrainRuntime(): void {
+  void loadTerrainSource().catch(() => undefined);
 }
 
 function mapStyle(
@@ -134,7 +149,6 @@ function mapStyle(
         data: terrainLandGeoJSON
       },
       'r3-wp2b-terrain-dem': demSource,
-      'r3-wp2b-relief-dem': { ...demSource },
       'r3-wp2b-hillshade-dem': { ...demSource },
       'campaign-territories': {
         type: 'geojson',
@@ -163,31 +177,6 @@ function mapStyle(
         type: 'background',
         paint: {
           'background-color': '#132d35'
-        }
-      },
-      {
-        id: 'r3-wp2b-relief',
-        type: 'color-relief',
-        source: 'r3-wp2b-relief-dem',
-        paint: {
-          'color-relief-color': [
-            'interpolate',
-            ['linear'],
-            ['elevation'],
-            -250, '#15313a',
-            0, '#29413c',
-            80, '#53684b',
-            250, '#657550',
-            500, '#737650',
-            850, '#80765a',
-            1200, '#887964',
-            1700, '#8d8273',
-            2200, '#9f9789',
-            2800, '#b8b2a8',
-            3400, '#d0cfca',
-            4500, '#eceeeb'
-          ],
-          'color-relief-opacity': 0
         }
       },
       {
@@ -572,7 +561,7 @@ export function TerrainMapPrototypeImpl({
     let toolbarResizeObserver: ResizeObserver | null = null;
 
     const initialise = async () => {
-      const terrainSource = await resolveTerrainSource();
+      const terrainSource = await loadTerrainSource();
       if (disposed || !containerRef.current) return;
 
       setSourceAttribution(terrainSource.attribution);
@@ -648,7 +637,6 @@ export function TerrainMapPrototypeImpl({
         const sourceIds = [
           'r3-wp2b-land',
           'r3-wp2b-terrain-dem',
-          'r3-wp2b-relief-dem',
           'r3-wp2b-hillshade-dem',
           'campaign-territories',
           'campaign-fronts',

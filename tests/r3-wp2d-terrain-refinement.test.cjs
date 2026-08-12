@@ -32,11 +32,9 @@ test('WP2D terrain budget follows the generated manifest instead of the old 82-t
 });
 
 test('WP2D uses a flat Theatre LOD while preserving physical terrain for Campaign and Selected command scales', () => {
-  const relief = layerBlock('r3-wp2b-relief');
   const hillshade = layerBlock('r3-wp2b-hillshade');
   assert.match(renderer, /terrain:\s*\{[\s\S]*source: 'r3-wp2b-terrain-dem'/);
   assert.match(renderer, /exaggeration: terrainExaggerationForProfile\(presentationProfile\)/);
-  assert.match(relief, /'color-relief-opacity': 0/);
   assert.match(hillshade, /minzoom: 4\.8/);
   assert.match(hillshade, /'hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
   assert.match(renderer, /let terrainMeshMode: 'physical' \| 'strategic-flat' = 'physical'/);
