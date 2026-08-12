@@ -45,7 +45,7 @@ await page.addInitScript(() => {
 });
 
 const started = performance.now();
-const query = tileCancellation === 'retain' ? '?terrain=1&tileCancellation=retain' : '?terrain=1';
+const query = tileCancellation === 'cancel' ? '?terrain=1&tileCancellation=cancel' : '?terrain=1';
 await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
 await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15_000 });

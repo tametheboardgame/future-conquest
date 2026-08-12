@@ -88,12 +88,12 @@ jobs:
           R3_WP2E_VARIANT: head
           R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head.json
         run: node scripts/run-r3-wp2e-performance.mjs
-      - name: Record MapLibre retained-tile A/B evidence
+      - name: Record explicit MapLibre cancellation A/B evidence
         env:
           R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
-          R3_WP2E_VARIANT: head-retained-tiles
-          R3_WP2E_TILE_CANCELLATION: retain
-          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head-retained-tiles.json
+          R3_WP2E_VARIANT: head-cancel-pending-tiles
+          R3_WP2E_TILE_CANCELLATION: cancel
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head-cancel-pending-tiles.json
         run: node scripts/run-r3-wp2e-performance.mjs
       - name: Assert identities and compare base with head
         run: >-

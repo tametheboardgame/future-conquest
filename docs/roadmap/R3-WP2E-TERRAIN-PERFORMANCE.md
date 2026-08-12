@@ -102,12 +102,13 @@ After WP2E acceptance, resume R3-WP3 Formation Pieces & Animated Movement on thi
 
 The permanent Chromium job now runs the identical head-owned probe against the
 exact PR base and head SHAs, asserts those artifact identities, and publishes
-base, head, comparison, and retained-tile A/B JSON. Camera timings wait for
-MapLibre movement/idle plus a quiet terrain-response window rather than a fixed
-delay. The retained-tile variant sets
-`cancelPendingTileRequestsWhileZooming: false`; production retains MapLibre's
-default until the A/B shows that smoother progressive arrival does not
-materially regress settle time or resource pressure.
+base, head, comparison, and explicit-cancellation A/B JSON. Camera timings use
+the same build-neutral minimum render window plus terrain-response quiet window
+for both revisions. The full production profile now sets
+`cancelPendingTileRequestsWhileZooming: false`, retaining prior-zoom tiles for
+a smoother progressive reveal. Compact presentation continues to cancel
+pending tiles, and `?tileCancellation=cancel` provides an explicit full-profile
+A/B and debugging override.
 
 The job publishes schema-versioned JSON for
 cold first useful paint/readiness, Campaign/Theatre/Selected settles, unique and
@@ -116,8 +117,20 @@ and warning state. A local cold-cache-disabled production run of the WP2E
 implementation recorded 96 total / 61 unique requests and 7,333,102 declared
 bytes. That historical run is retained only as diagnostic evidence: its older
 journey and settle semantics are not comparable to the new gate, so no
-improvement claim is made from it. The next CI artifact supplies the valid
-like-for-like base-versus-head result and tile-cancellation A/B.
+improvement claim is made from it.
+
+The final cold-cache-disabled, build-neutral run on head `3534b255` supplied
+the promotion evidence. The WP2D base settled Campaign in 14,967.7 ms and the
+Selected transition in 8,432.1 ms, with 128 requests, 52 duplicates, and 9.52
+MB transferred. The WP2E head with explicit cancellation settled Campaign in
+9,741.5 ms and Selected in 1,838.6 ms, with 64 requests, 2 duplicates, and 4.56
+MB transferred. Retaining prior-zoom tiles improved Campaign settle again to
+8,798.3 ms while Selected remained comparable at 1,850.3 ms, with exactly the
+same 64 requests, 2 duplicates, and 4.56 MB transferred. First useful paint was
+approximately 111 ms slower than the base, so this evidence does **not** claim
+a first-paint improvement; the promotion is based on substantially faster
+settlement and smoother progressive camera transitions without added request or
+byte pressure.
 
 That run measured 35 repeated requests. A shared service worker or custom
 MapLibre protocol cache was deliberately deferred: the browser normally

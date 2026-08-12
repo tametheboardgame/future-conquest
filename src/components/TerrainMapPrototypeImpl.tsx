@@ -571,8 +571,9 @@ export function TerrainMapPrototypeImpl({
       setSourceAttribution(terrainSource.attribution);
       const initial = terrainCameraForProfile(terrainCameraPreset('campaign'), presentationProfile);
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
-      const retainTilesWhileZooming = presentationProfile === 'full'
-        && new URLSearchParams(window.location.search).get('tileCancellation') === 'retain';
+      const tileCancellationOverride = new URLSearchParams(window.location.search).get('tileCancellation');
+      const cancelTilesWhileZooming = presentationProfile === 'compact'
+        || tileCancellationOverride === 'cancel';
       const map = new Map({
         container: containerRef.current,
         style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
@@ -585,9 +586,10 @@ export function TerrainMapPrototypeImpl({
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
         renderWorldCopies: false,
-        // The performance gate A/Bs retained prior-zoom tiles without changing
-        // the production default until its resource/settle evidence is accepted.
-        cancelPendingTileRequestsWhileZooming: !retainTilesWhileZooming,
+        // Full presentation retains prior-zoom tiles for a smoother progressive
+        // reveal. Compact remains conservative; ?tileCancellation=cancel keeps
+        // an explicit full-profile comparison/debug path.
+        cancelPendingTileRequestsWhileZooming: cancelTilesWhileZooming,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
