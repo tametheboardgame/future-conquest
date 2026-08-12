@@ -10,13 +10,17 @@ test('R3 WP2B-D locks the representative terrain footprint to a bounded producti
   assert.match(script, /terrainStaticBytes: 8 \* 1024 \* 1024/);
   assert.match(script, /terrainJsBytes: 1100 \* 1024/);
   assert.match(script, /terrainJsGzipBytes: 300 \* 1024/);
+  assert.match(script, /terrainWorkerBytes: 550 \* 1024/);
+  assert.match(script, /terrainWorkerGzipBytes: 180 \* 1024/);
   assert.match(script, /terrainCssBytes: 90 \* 1024/);
   assert.match(script, /terrainCssGzipBytes: 20 \* 1024/);
 });
 
-test('R3 WP2B-D requires MapLibre to remain a lazy production chunk', () => {
+test('R3 WP2B-D requires MapLibre runtime code and worker to remain lazy production assets', () => {
   assert.match(script, /TerrainMapPrototype-\.\*\\\.js/);
+  assert.match(script, /maplibre-gl-worker-\.\*\\\.js/);
   assert.match(script, /TerrainMapPrototype-\.\*\\\.css/);
+  assert.match(script, /expected exactly one lazy MapLibre worker asset/);
   assert.match(script, /MapLibre implementation markers leaked into eager chunk/);
 });
 
