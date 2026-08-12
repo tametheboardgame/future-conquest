@@ -1,0 +1,46 @@
+name: R3 WP2B runtime diagnostic patch
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2b-browser-runtime-fix
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2b-browser-runtime-fix
+      - name: Preserve MapLibre runtime error detail and improve browser probe
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          impl = Path('src/components/TerrainMapPrototypeImpl.tsx')
+          text = impl.read_text()
+          old = """      map.on('error', () => {\n        if (!loadedRef.current) {\n          fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');\n        } else {\n          setStatus('warning');\n          setMessage('Terrain source warning · the SVG fallback remains available');\n        }\n      });"""
+          new = """      map.on('error', event => {\n        const runtimeDetail = event.error instanceof Error\n          ? event.error.message\n          : String(event.error ?? 'Unknown MapLibre runtime error');\n        console.error(`R3 terrain MapLibre error: ${runtimeDetail}`, event.error);\n        if (!loadedRef.current) {\n          fallbackRef.current(`Terrain renderer error: ${runtimeDetail}`);\n        } else {\n          setStatus('warning');\n          setMessage(`Terrain source warning · ${runtimeDetail}`);\n        }\n      });"""
+          if old not in text:
+              raise SystemExit('MapLibre error-handler block not found')
+          impl.write_text(text.replace(old, new, 1))
+
+          workflow = Path('.github/workflows/r3-wp2b-browser-runtime-probe.yml')
+          text = workflow.read_text()
+          text = text.replace(
+              "await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'networkidle' });",
+              "await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });"
+          )
+          workflow.write_text(text)
+          PY
+      - name: Commit diagnostic patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/TerrainMapPrototypeImpl.tsx .github/workflows/r3-wp2b-browser-runtime-probe.yml
+          git commit -m 'Expose MapLibre terrain runtime errors'
+          git push origin HEAD:agent/r3-wp2b-browser-runtime-fix
