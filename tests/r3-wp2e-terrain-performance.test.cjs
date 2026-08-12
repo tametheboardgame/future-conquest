@@ -59,4 +59,5 @@ test('exact-head Chromium gate writes request, byte and transition evidence', ()
     assert.match(comparison, new RegExp(field));
   }
   assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /pull_request:[\s\S]+paths:[\s\S]+scripts\/compare-r3-wp2e-performance\.mjs/);
 });
