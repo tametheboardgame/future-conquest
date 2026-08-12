@@ -1,14 +1,15 @@
 # R3-WP2D — Terrain Refinement & Presentation Polish
 
-Status: APPROVED / ACTIVE
+Status: TECHNICALLY VALIDATED / AWAITING LIVE PRODUCT-OWNER VISUAL ACCEPTANCE
 
 Product-owner approval: 2026-08-12.
+Technical validation candidate: `ea3adc1becd89074e642871ed6b7fc663f4ee445`.
 
 ## Why this package exists
 
 R3-WP2B proved the continuous Copernicus/MapLibre terrain foundation and R3-WP2C restored the operational information that the mature SVG map already exposed. Product-owner visual review of the deployed `?terrain=1` build confirmed that the direction is now substantially closer to the intended grand-strategy / physical relief command-table experience and that the top-down / pitched 2.5D camera is a strong part of the final visual identity.
 
-The same review also showed that the terrain path is not yet visually finished. The representative DEM footprint is smaller than the intended Europe theatre, one live terrain tile request can fail, political/territory linework is visually noisy in places, dense markers need stronger collision/safe-area behaviour, and the operational markers can intrude beneath the terrain status/control panel.
+The same review also showed that the terrain path was not yet visually finished. The representative DEM footprint was smaller than the intended Europe theatre, one live terrain tile request could fail, political/territory linework was visually noisy in places, dense markers needed stronger collision/safe-area behaviour, and operational markers could intrude beneath the terrain status/control panel.
 
 WP2D is therefore an intensive second pass focused on **refining the terrain presentation until it is robust, legible and visually cohesive enough to become the accepted foundation for WP3**. This remains a presentation package: simulation authority, territory topology, save state and deterministic campaign behaviour remain mechanically frozen.
 
@@ -74,6 +75,19 @@ Terrain beauty can continue to improve later in R3, but WP2D must leave the rend
 - deterministic 720-campaign balance/trace parity;
 - final diff/save/topology/intelligence-boundary review;
 - deploy hidden `?terrain=1` candidate and obtain product-owner visual acceptance before making terrain primary or resuming substantial WP3 movement work.
+
+## Technical validation result
+
+The autonomous technical gate is complete on code-bearing head `ea3adc1becd89074e642871ed6b7fc663f4ee445`:
+
+- full engine regression suite, save/persistence migration coverage and production build passed;
+- terrain smoke, terrain runtime, operational-overlay runtime and three-view Chromium visual gates passed;
+- Theatre/Campaign/Selected camera, relief LOD, protected-marker visibility and HUD exclusion behaviour passed in real Chromium;
+- exact-head visual evidence confirmed the previous world-scale diagonal polygon artefacts were eliminated by a reproducible Europe-only build-time land mask;
+- no authoritative `src/game/**`, territory topology, route topology, save-schema or intelligence-boundary change was introduced;
+- the deterministic day-120 balance report returned 720 campaigns with exact frozen R2.5 aggregate parity: Story 50.0%, Standard 29.6%, Hard 7.9%.
+
+The remaining acceptance gate is live product-owner visual review of the hidden `?terrain=1` deployment. R3-WP3 remains paused until that approval is explicit.
 
 ## Acceptance criteria
 
