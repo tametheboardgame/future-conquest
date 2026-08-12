@@ -189,7 +189,7 @@ function mapStyle(
             3400, '#d0cfca',
             4500, '#eceeeb'
           ],
-          'color-relief-opacity': compact ? 0.9 : 0.96
+          'color-relief-opacity': 0
         }
       },
       {
