@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+// One-shot deterministic patch. Game files are committed by Actions; workflow
+// verification is updated separately through the authenticated GitHub connector.
 const replaceOnce = (source, from, to, label) => {
   const count = source.split(from).length - 1;
   if (count !== 1) throw new Error(`${label}: expected exactly one match, found ${count}`);
