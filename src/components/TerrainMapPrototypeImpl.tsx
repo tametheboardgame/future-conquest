@@ -61,8 +61,9 @@ const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V
 function browserSupportsTerrain(): boolean {
   if (typeof document === 'undefined') return false;
   const canvas = document.createElement('canvas');
+  const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
   return chooseCampaignMapRenderer({
-    webgl: Boolean(canvas.getContext('webgl2')),
+    webgl: Boolean(context),
     terrainEnabled: true
   }) === 'real-terrain';
 }

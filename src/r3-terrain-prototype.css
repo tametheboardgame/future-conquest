@@ -228,3 +228,42 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Live-review diagnostic: terrain fallback must be visible rather than silently
+   presenting the SVG map as though the terrain request had been ignored. */
+.r3-terrain-fallback-notice {
+  position: relative;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(230, 174, 94, .58);
+  border-radius: 6px;
+  background: rgba(43, 27, 16, .94);
+  color: #f2dfbd;
+  font-size: 11px;
+}
+
+.r3-terrain-fallback-notice span {
+  display: grid;
+  gap: 2px;
+}
+
+.r3-terrain-fallback-notice strong {
+  color: #ffc779;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.r3-terrain-fallback-notice button {
+  flex: 0 0 auto;
+  border: 1px solid #8b6c45;
+  background: #3b2a1b;
+  color: #fff0d2;
+  padding: 5px 8px;
+  cursor: pointer;
+}

@@ -72,6 +72,7 @@ export default function App() {
   const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
   const terrainPrototypeRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('terrain') === '1';
   const [terrainPrototypeFailed, setTerrainPrototypeFailed] = useState(false);
+  const [terrainPrototypeFailureReason, setTerrainPrototypeFailureReason] = useState('');
 
   useEffect(() => {
     setNavigationContext(current => revalidateNavigationContext(state, current));
@@ -532,12 +533,17 @@ export default function App() {
               <p>{instruction}</p>
               <div className="legend"><span className="player-dot" />Controlled <span className="enemy-dot" />Enemy <span className="group-dot" />Task group <span className="formation-dot" />Recon contact · Orange/red borders indicate threatened territory</div>
             </div>
+            {terrainPrototypeRequested && terrainPrototypeFailed && <div className="r3-terrain-fallback-notice" role="alert">
+              <span><strong>3D terrain unavailable</strong>{terrainPrototypeFailureReason || 'The terrain renderer returned to the stable 2D map.'}</span>
+              <button type="button" onClick={() => { setTerrainPrototypeFailureReason(''); setTerrainPrototypeFailed(false); }}>Retry terrain</button>
+            </div>}
             {terrainPrototypeRequested && !terrainPrototypeFailed ? <Suspense fallback={<div className="r3-terrain-prototype-loading" role="status">Loading experimental terrain renderer…</div>}>
               <TerrainMapPrototype
                 state={state}
                 onSelect={openTerritoryOnMap}
                 onFallback={(reason) => {
                   console.warn(`R3 terrain prototype fallback: ${reason}`);
+                  setTerrainPrototypeFailureReason(reason);
                   setTerrainPrototypeFailed(true);
                 }}
               />

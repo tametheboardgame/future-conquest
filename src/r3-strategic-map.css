@@ -25,11 +25,17 @@
   mix-blend-mode: screen;
 }
 
-.europe-map-frame .map,
-.europe-map-frame .map-controls,
-.europe-map-frame .map-viewport-status {
+.europe-map-frame .map {
   position: relative;
   z-index: 2;
+}
+
+/* Preserve the absolute overlay positioning established by europe-map.css.
+   WP2 previously grouped these with the SVG and accidentally changed them to
+   position: relative, allowing the later SVG to paint over the Layers popover. */
+.europe-map-frame .map-controls,
+.europe-map-frame .map-viewport-status {
+  z-index: 6;
 }
 
 .europe-map .sea {
