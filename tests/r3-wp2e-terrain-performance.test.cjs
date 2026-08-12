@@ -35,7 +35,7 @@ test('markers reconcile by stable identity and overlay source updates are isolat
   assert.doesNotMatch(implementation, /\[politicalData, frontData, routeData, nodeData\]/);
 });
 
-test('exact-head Chromium gate writes request, byte and transition evidence', () => {
+test('exact-head Chromium gate writes comparable request, byte and transition evidence', () => {
   const probe = read('scripts/run-r3-wp2e-performance.mjs');
   const comparison = read('scripts/compare-r3-wp2e-performance.mjs');
   const workflow = read('.github/workflows/r3-wp2e-performance-gate.yml');
@@ -48,8 +48,13 @@ test('exact-head Chromium gate writes request, byte and transition evidence', ()
   assert.match(probe, /R3_WP2E_BUILD_SHA/);
   assert.match(probe, /R3_WP2E_VARIANT/);
   assert.match(probe, /waitForTerrainSettlement/);
-  assert.match(probe, /data-map-idle-at/);
-  assert.match(probe, /waitForTerrainSettlement\(before\)/);
+  assert.match(probe, /TERRAIN_QUIET_MS = 500/);
+  assert.match(probe, /CAMERA_SETTLE_MINIMUM_MS = 950/);
+  assert.match(probe, /minimumElapsed && terrainQuiet/);
+  assert.match(probe, /waitForTerrainSettlement\(before, CAMERA_SETTLE_MINIMUM_MS\)/);
+  assert.doesNotMatch(probe, /data-map-idle-at|data-map-moving/);
+  assert.match(probe, /startupOutcome/);
+  assert.match(probe, /r3-terrain-fallback-notice/);
   assert.match(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
   assert.match(implementation, /cancelPendingTileRequestsWhileZooming: !retainTilesWhileZooming/);
   assert.match(implementation, /presentationProfile === 'full'[\s\S]+tileCancellation/);
