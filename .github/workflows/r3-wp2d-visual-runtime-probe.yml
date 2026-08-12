@@ -64,6 +64,7 @@ jobs:
           });
           page.on('console', message => console.log(`[browser console ${message.type()}] ${message.text()}`));
           page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
+          page.on('requestfailed', request => console.log(`[request failed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`));
 
           await page.addInitScript(() => {
             localStorage.setItem('future-conquest:intro-seen:v3', 'true');
@@ -72,12 +73,32 @@ jobs:
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15000 });
-          const workspace = page.locator('.command-map-workspace');
-          if (!(await workspace.isVisible())) {
-            await page.locator('[data-command-view="map"]').click();
+          await page.locator('[data-command-view="map"]').click();
+          await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 20000 });
+
+          const terrain = page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first();
+          const fallback = page.locator('.r3-terrain-fallback-notice');
+          const outcome = await Promise.race([
+            terrain.waitFor({ state: 'visible', timeout: 45000 }).then(() => 'terrain'),
+            fallback.waitFor({ state: 'visible', timeout: 45000 }).then(() => 'fallback')
+          ]).catch(() => 'timeout');
+
+          if (outcome === 'fallback' || await fallback.isVisible()) {
+            const text = await fallback.innerText();
+            await browser.close();
+            throw new Error(`WP2D visual probe hit terrain fallback: ${text}`);
           }
-          await workspace.waitFor({ state: 'visible', timeout: 20000 });
-          await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
+          if (outcome !== 'terrain' || !(await terrain.isVisible())) {
+            const state = await page.evaluate(() => ({
+              terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
+              terrainPrototype: Boolean(document.querySelector('.r3-terrain-prototype')),
+              fallback: document.querySelector('.r3-terrain-fallback-notice')?.textContent ?? null,
+              canvasCount: document.querySelectorAll('.maplibregl-canvas').length
+            }));
+            console.log('WP2D terrain startup state:', JSON.stringify(state));
+            await browser.close();
+            throw new Error('WP2D terrain renderer neither became visible nor surfaced fallback diagnostics.');
+          }
           await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
           const verifyView = async (viewName, expectedLod) => {
@@ -138,6 +159,7 @@ jobs:
             if (result.selectedTerritories < 1) throw new Error(`${viewName} lost selected-territory context.`);
             if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);
             if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
+            if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
 
             await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png` });
           };
