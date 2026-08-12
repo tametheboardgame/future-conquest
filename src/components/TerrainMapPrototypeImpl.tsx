@@ -69,6 +69,20 @@ const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
 const terrainLandGeoJSON = topojsonFeature(atlas, atlas.objects.countries) as unknown as GeoJSONSourceSpecification['data'];
 const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved';
 
+function terrainViewportPadding(
+  toolbar: HTMLElement | null,
+  presentationProfile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
+) {
+  const measuredToolbarHeight = toolbar?.getBoundingClientRect().height ?? 0;
+  const minimumToolbarHeight = presentationProfile === 'compact' ? 72 : 52;
+  return {
+    top: Math.ceil(Math.max(measuredToolbarHeight, minimumToolbarHeight) + 24),
+    right: presentationProfile === 'compact' ? 52 : 72,
+    bottom: 40,
+    left: 18
+  };
+}
+
 function browserSupportsTerrain(): boolean {
   if (typeof document === 'undefined') return false;
   const canvas = document.createElement('canvas');
@@ -501,6 +515,7 @@ export function TerrainMapPrototypeImpl({
   presentationProfile = 'full'
 }: TerrainMapPrototypeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
   const selectRef = useRef(onSelect);
@@ -549,6 +564,7 @@ export function TerrainMapPrototypeImpl({
 
     let disposed = false;
     let ownedMap: Map | null = null;
+    let toolbarResizeObserver: ResizeObserver | null = null;
 
     const initialise = async () => {
       const terrainSource = await resolveTerrainSource();
@@ -575,6 +591,15 @@ export function TerrainMapPrototypeImpl({
       ownedMap = map;
       mapRef.current = map;
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
+
+      const applySafePadding = () => {
+        map.setPadding(terrainViewportPadding(toolbarRef.current, presentationProfile));
+      };
+      applySafePadding();
+      if (typeof ResizeObserver !== 'undefined' && toolbarRef.current) {
+        toolbarResizeObserver = new ResizeObserver(applySafePadding);
+        toolbarResizeObserver.observe(toolbarRef.current);
+      }
 
       const updateOverlayLod = () => {
         const host = containerRef.current?.parentElement;
@@ -655,6 +680,7 @@ export function TerrainMapPrototypeImpl({
       loadedRef.current = false;
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
+      toolbarResizeObserver?.disconnect();
       mapRef.current = null;
       ownedMap?.remove();
     };
@@ -702,12 +728,13 @@ export function TerrainMapPrototypeImpl({
       zoom: profiled.zoom,
       pitch: profiled.pitch,
       bearing: profiled.bearing,
+      padding: terrainViewportPadding(toolbarRef.current, presentationProfile),
       duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 850
     });
   };
 
   return <div className="r3-terrain-prototype" data-status={status} data-terrain-profile={presentationProfile}>
-    <div className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
+    <div ref={toolbarRef} className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
       <span aria-live="polite"><strong>R3 TERRAIN SPIKE</strong>{message}</span>
       <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button
         key={preset.id}

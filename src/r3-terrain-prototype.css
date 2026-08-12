@@ -81,7 +81,9 @@
 
 .r3-terrain-prototype-toolbar {
   position: absolute;
-  z-index: 6;
+  /* WP2D safe-area HUD must always occlude operational markers rather than
+     allowing counters/contacts to paint through the persistent map controls. */
+  z-index: 30;
   top: 12px;
   left: 12px;
   right: 58px;
