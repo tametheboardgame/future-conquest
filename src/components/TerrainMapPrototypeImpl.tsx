@@ -606,6 +606,7 @@ export function TerrainMapPrototypeImpl({
         const host = containerRef.current?.parentElement;
         if (!host) return;
         const zoom = map.getZoom();
+        host.dataset.overlayZoom = zoom.toFixed(2);
         host.dataset.overlayLod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local';
       };
       const refreshOperationalPresentation = () => {
