@@ -330,3 +330,48 @@ export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readon
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
   for (const marker of markers) marker.remove();
 }
+
+/**
+ * Reconcile presentation markers by their stable command identity. MapLibre's
+ * Marker has no detached construction mode, so the next projection is built
+ * first and matching temporary markers are immediately replaced by the prior
+ * instance. This keeps the accessible DOM node, focus and MapLibre marker
+ * allocation stable across unrelated campaign-state updates.
+ */
+export function reconcileTerrainOperationalMarkers(
+  map: Map,
+  previous: readonly Marker[],
+  state: GameState,
+  callbacks: MarkerCallbacks
+): Marker[] {
+  const priorById = new globalThis.Map(previous.flatMap(marker => {
+    const id = marker.getElement().dataset.r3MarkerId;
+    return id ? [[id, marker] as const] : [];
+  }));
+  const next = buildTerrainOperationalMarkers(map, state, callbacks);
+  const reconciled = next.map(candidate => {
+    const nextElement = candidate.getElement();
+    const id = nextElement.dataset.r3MarkerId;
+    const prior = id ? priorById.get(id) : undefined;
+    if (!prior) return candidate;
+
+    const element = prior.getElement();
+    element.className = nextElement.className;
+    element.innerHTML = nextElement.innerHTML;
+    for (const attribute of ['aria-label', 'aria-hidden']) {
+      const value = nextElement.getAttribute(attribute);
+      if (value === null) element.removeAttribute(attribute);
+      else element.setAttribute(attribute, value);
+    }
+    for (const [key, value] of Object.entries(nextElement.dataset)) {
+      if (value !== undefined) element.dataset[key] = value;
+    }
+    prior.setLngLat(candidate.getLngLat());
+    prior.setOffset(candidate.getOffset());
+    candidate.remove();
+    priorById.delete(id!);
+    return prior;
+  });
+  for (const removed of priorById.values()) removed.remove();
+  return reconciled;
+}

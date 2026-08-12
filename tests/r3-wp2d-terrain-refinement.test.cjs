@@ -35,6 +35,7 @@ test('WP2D uses a flat Theatre LOD while preserving physical terrain for Campaig
   const hillshade = layerBlock('r3-wp2b-hillshade');
   assert.match(renderer, /terrain:\s*\{[\s\S]*source: 'r3-wp2b-terrain-dem'/);
   assert.match(renderer, /exaggeration: terrainExaggerationForProfile\(presentationProfile\)/);
+  assert.doesNotMatch(renderer, /r3-wp2b-relief-dem|type: 'color-relief'/);
   assert.match(hillshade, /minzoom: 4\.8/);
   assert.match(hillshade, /'hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
   assert.match(renderer, /let terrainMeshMode: 'physical' \| 'strategic-flat' = 'physical'/);

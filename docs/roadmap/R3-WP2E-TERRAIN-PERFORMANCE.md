@@ -97,3 +97,24 @@ WP2E is complete when all of the following are true:
 ## WP3 handoff
 
 After WP2E acceptance, resume R3-WP3 Formation Pieces & Animated Movement on this renderer. WP3 should inherit the new performance instrumentation and must treat piece count, DOM/WebGL allocations and animation cost as explicit budgets rather than adding effects without measurement.
+
+## Implementation evidence (2026-08-12)
+
+The permanent exact-head Chromium job now publishes schema-versioned JSON for
+cold first useful paint/readiness, Campaign/Theatre/Selected settles, unique and
+total Terrain-RGB requests, duplicates, declared/transfer/body bytes, fallback
+and warning state. A local cold-cache-disabled production run of the WP2E
+implementation recorded 96 total / 61 unique requests and 7,333,102 declared
+bytes. Against the WP2D journey's 97 unique requests and 6,946,795 declared
+bytes, this is 36 fewer unique URLs (37.1% fewer); declared bytes were 5.6%
+higher because the cold-disabled run exposes repeat transfers from the two
+deliberately independent DEM consumers rather than browser-cache reuse.
+
+That run measured 35 repeated requests. A shared service worker or custom
+MapLibre protocol cache was deliberately deferred: the browser normally
+coalesces/caches these same-origin versioned assets, while an application byte
+cache would have to reproduce MapLibre abort, worker, eviction and source-error
+lifecycle semantics. The measured benefit does not justify that risk in WP2E.
+The terrain mesh and hillshade sources therefore remain independent, preserving
+the production-runtime fix from PR #119; only the visually inert third
+colour-relief consumer was removed.

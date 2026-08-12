@@ -42,6 +42,7 @@ import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-
 import {
   applyTerrainOperationalMarkerDeclutter,
   buildTerrainOperationalMarkers,
+  reconcileTerrainOperationalMarkers,
   removeTerrainOperationalMarkers
 } from '../presentation/r3-terrain-operational-markers';
 
@@ -187,9 +188,10 @@ function mapStyle(
           'fill-color': '#6c805b',
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            3.6, 0,
-            4.72, 0,
-            4.8, compact ? 0.29 : 0.34
+            3.6, compact ? 0.25 : 0.3,
+            4.8, compact ? 0.23 : 0.27,
+            6.4, compact ? 0.16 : 0.18,
+            8.5, compact ? 0.1 : 0.12
           ]
         }
       },
@@ -535,7 +537,7 @@ export function TerrainMapPrototypeImpl({
       threatenedTerritories: visibleThreats,
       activeCombatTerritoryIds
     }) as unknown as GeoJSONSourceSpecification['data']
-  ), [state, visibleThreats, activeCombatTerritoryIds]);
+  ), [state.territories, state.selectedTerritory, state.targetTerritory, visibleThreats, activeCombatTerritoryIds]);
   const frontData = useMemo(() => (
     buildTerrainFrontGeoJSON(
       terrainGeoJSON,
@@ -544,7 +546,7 @@ export function TerrainMapPrototypeImpl({
   ), [state.territories]);
   const routeData = useMemo(() => (
     buildTerrainStrategicRouteGeoJSON(STRATEGIC_NODES, STRATEGIC_ROUTES, state) as unknown as GeoJSONSourceSpecification['data']
-  ), [state]);
+  ), [state.routeStates, state.logistics, state.selectedTaskGroupId]);
   const nodeData = useMemo(() => (
     buildTerrainStrategicNodeGeoJSON(STRATEGIC_NODES, state) as unknown as GeoJSONSourceSpecification['data']
   ), [state.territories]);
@@ -707,33 +709,41 @@ export function TerrainMapPrototypeImpl({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
-    const updates: Array<[string, GeoJSONSourceSpecification['data']]> = [
-      ['campaign-territories', politicalData],
-      ['campaign-fronts', frontData],
-      ['campaign-strategic-routes', routeData],
-      ['campaign-strategic-nodes', nodeData]
-    ];
-    for (const [sourceId, data] of updates) {
-      const source = map.getSource(sourceId);
-      if (source instanceof GeoJSONSource) source.setData(data);
-    }
-  }, [politicalData, frontData, routeData, nodeData]);
+    const source = map.getSource('campaign-territories');
+    if (source instanceof GeoJSONSource) source.setData(politicalData);
+  }, [politicalData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-fronts');
+    if (source instanceof GeoJSONSource) source.setData(frontData);
+  }, [frontData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-strategic-routes');
+    if (source instanceof GeoJSONSource) source.setData(routeData);
+  }, [routeData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-strategic-nodes');
+    if (source instanceof GeoJSONSource) source.setData(nodeData);
+  }, [nodeData]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loadedRef.current || status === 'initialising') return;
 
-    removeTerrainOperationalMarkers(operationalMarkersRef.current);
-    operationalMarkersRef.current = buildTerrainOperationalMarkers(map, state, {
+    operationalMarkersRef.current = reconcileTerrainOperationalMarkers(map, operationalMarkersRef.current, state, {
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
     applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
 
-    return () => {
-      removeTerrainOperationalMarkers(operationalMarkersRef.current);
-      operationalMarkersRef.current = [];
-    };
   }, [state, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {

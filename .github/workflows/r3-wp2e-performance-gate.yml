@@ -1,0 +1,52 @@
+name: R3 WP2E exact-head terrain performance gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/generated/r3-terrain/**'
+      - 'scripts/run-r3-wp2e-performance.mjs'
+      - 'tests/r3-wp2e-*.test.cjs'
+      - '.github/workflows/r3-wp2e-performance-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Focused WP2E contracts
+        run: node --test tests/r3-wp2e-*.test.cjs
+      - run: npm run build
+      - run: node scripts/measure-r3-terrain-budget.mjs
+      - name: Install exact Chromium probe
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production head
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp2e-vite.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/r3-wp2e-vite.log; exit 1
+      - name: Record cold startup, streaming and transitions
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npm run performance:r3-wp2e
+      - name: Upload machine-readable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp2e-performance-${{ github.event.pull_request.head.sha }}
+          path: artifacts/r3-wp2e-performance.json
+          if-no-files-found: error

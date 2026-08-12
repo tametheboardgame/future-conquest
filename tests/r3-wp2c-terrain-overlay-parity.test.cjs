@@ -30,14 +30,14 @@ test('WP2C terrain enemy markers use player-visible intelligence adapters only',
 
 test('WP2C terrain operational markers are screen-space MapLibre markers with LOD', () => {
   assert.match(markers, /new Marker\(/);
-  assert.match(renderer, /buildTerrainOperationalMarkers\(map, state/);
+  assert.match(renderer, /reconcileTerrainOperationalMarkers\(map, operationalMarkersRef\.current, state/);
   assert.match(renderer, /host\.dataset\.overlayLod/);
   assert.match(renderer, /zoom < 4\.8 \? 'theatre' : zoom < 6\.4 \? 'campaign' : 'local'/);
   assert.match(css, /data-overlay-lod='theatre'/);
   assert.match(css, /data-overlay-lod='campaign'/);
 });
 
-test('WP2C terrain markers are rebuilt from current campaign state and cleaned up', () => {
+test('WP2C terrain markers reconcile from current campaign state and clean up on renderer disposal', () => {
   assert.match(renderer, /removeTerrainOperationalMarkers\(operationalMarkersRef\.current\)/);
   assert.match(renderer, /\[state, status\]/);
   assert.match(renderer, /operationalMarkersRef\.current = \[\]/);

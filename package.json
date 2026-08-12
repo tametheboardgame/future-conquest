@@ -10,6 +10,7 @@
     "test": "node scripts/run-engine-tests.mjs",
     "simulate:current-balance": "node scripts/simulate-current-engine-balance.mjs",
     "benchmark:r3-renderer": "node scripts/benchmark-r3-renderer-spike.mjs",
+    "performance:r3-wp2e": "node scripts/run-r3-wp2e-performance.mjs",
     "build:slice-map": "node scripts/build-vertical-slice-map.mjs",
     "build:audio": "node scripts/build-audio-assets.mjs",
     "build:motion-comic": "node scripts/repair-page2-bundle-tail.mjs && node scripts/build-title-card-asset.mjs && node scripts/build-motion-comic-assets.mjs",
