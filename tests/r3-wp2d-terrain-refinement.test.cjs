@@ -31,7 +31,7 @@ test('WP2D terrain budget follows the generated manifest instead of the old 82-t
   assert.doesNotMatch(budget, /tileCount:\s*82/);
 });
 
-test('WP2D keeps physical terrain but removes sea-tile colour blocks and defers fine hillshade until Campaign scale', () => {
+test('WP2D uses a flat Theatre LOD while preserving physical terrain for Campaign and Selected command scales', () => {
   const relief = layerBlock('r3-wp2b-relief');
   const hillshade = layerBlock('r3-wp2b-hillshade');
   assert.match(renderer, /terrain:\s*\{[\s\S]*source: 'r3-wp2b-terrain-dem'/);
@@ -39,6 +39,12 @@ test('WP2D keeps physical terrain but removes sea-tile colour blocks and defers 
   assert.match(relief, /'color-relief-opacity': 0/);
   assert.match(hillshade, /minzoom: 4\.8/);
   assert.match(hillshade, /'hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
+  assert.match(renderer, /let terrainMeshMode: 'physical' \| 'strategic-flat' = 'physical'/);
+  assert.match(renderer, /const nextMode = map\.getZoom\(\) < 4\.8 \? 'strategic-flat' : 'physical'/);
+  assert.match(renderer, /map\.setTerrain\(nextMode === 'physical' \? \{/);
+  assert.match(renderer, /source: 'r3-wp2b-terrain-dem'/);
+  assert.match(renderer, /\} : null\)/);
+  assert.match(renderer, /host\.dataset\.terrainRelief = terrainMeshMode/);
 });
 
 test('WP2D ignores only transient status-zero generated-terrain requests after readiness', () => {
