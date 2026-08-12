@@ -484,3 +484,8 @@
   .r3-terrain-node-marker.importance-2 { display: none; }
   .r3-terrain-territory-label small { display: none; }
 }
+
+/* WP2D-D: deterministic declutter must override marker-specific display rules. */
+.r3-terrain-prototype [data-declutter="hidden"] {
+  display: none !important;
+}
