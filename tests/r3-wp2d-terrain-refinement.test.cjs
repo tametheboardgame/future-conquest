@@ -31,6 +31,16 @@ test('WP2D terrain budget follows the generated manifest instead of the old 82-t
   assert.doesNotMatch(budget, /tileCount:\s*82/);
 });
 
+test('WP2D keeps physical terrain but removes sea-tile colour blocks and defers fine hillshade until Campaign scale', () => {
+  const relief = layerBlock('r3-wp2b-relief');
+  const hillshade = layerBlock('r3-wp2b-hillshade');
+  assert.match(renderer, /terrain:\s*\{[\s\S]*source: 'r3-wp2b-terrain-dem'/);
+  assert.match(renderer, /exaggeration: terrainExaggerationForProfile\(presentationProfile\)/);
+  assert.match(relief, /'color-relief-opacity': 0/);
+  assert.match(hillshade, /minzoom: 4\.8/);
+  assert.match(hillshade, /'hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
+});
+
 test('WP2D ignores only transient status-zero generated-terrain requests after readiness', () => {
   assert.match(runtimeErrors, /generatedTerrainTile && cancelledOrStatusZero \? 'transient-tile-request' : 'source-warning'/);
   assert.match(renderer, /runtimeError\.kind === 'transient-tile-request'/);
