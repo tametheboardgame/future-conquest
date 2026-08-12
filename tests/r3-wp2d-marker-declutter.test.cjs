@@ -60,3 +60,25 @@ test('WP2D-D relaxes spacing as the player zooms into local command detail', asy
   assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 1);
   assert.equal(visibleTerrainMarkerIds(candidates, 'local').size, 2);
 });
+
+test('WP2D-D treats persistent HUD rectangles as deterministic no-clutter zones', async () => {
+  const { visibleTerrainMarkerIds } = await load();
+  const reserved = [{ left: 80, top: 40, right: 260, bottom: 100 }];
+  const candidates = [
+    { id: 'major-node-under-hud', kind: 'node-major', x: 120, y: 70 },
+    { id: 'enemy-under-hud', kind: 'enemy-estimated', x: 220, y: 70 },
+    { id: 'ordinary-clear', kind: 'territory', x: 400, y: 200 }
+  ];
+  assert.deepEqual([...visibleTerrainMarkerIds(candidates, 'local', reserved)], ['ordinary-clear']);
+});
+
+test('WP2D-D never sacrifices protected command pieces to a reserved HUD zone', async () => {
+  const { visibleTerrainMarkerIds } = await load();
+  const reserved = [{ left: 0, top: 0, right: 300, bottom: 150 }];
+  const candidates = [
+    { id: 'selected', kind: 'selected-formation', x: 100, y: 70 },
+    { id: 'operation', kind: 'operation', x: 120, y: 70 },
+    { id: 'threat', kind: 'live-threat', x: 140, y: 70 }
+  ];
+  assert.deepEqual([...visibleTerrainMarkerIds(candidates, 'local', reserved)].sort(), ['operation', 'selected', 'threat']);
+});
