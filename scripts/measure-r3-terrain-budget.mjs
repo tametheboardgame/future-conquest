@@ -6,10 +6,13 @@ const DIST = path.resolve('dist');
 const ASSETS = path.join(DIST, 'assets');
 const TERRAIN = path.join(DIST, 'generated', 'r3-terrain');
 const TILE_ROOT = path.join(TERRAIN, 'tiles');
+const TILEJSON = path.join(TERRAIN, 'tiles.json');
 
 const limits = Object.freeze({
-  tileCount: 82,
-  terrainStaticBytes: 8 * 1024 * 1024,
+  // WP2D hosts a Europe-wide static terrain envelope. Total hosted bytes are
+  // bounded here, while browser/runtime probes separately measure the much
+  // smaller set of tiles actually requested by representative camera views.
+  terrainStaticBytes: 64 * 1024 * 1024,
   terrainJsBytes: 1100 * 1024,
   terrainJsGzipBytes: 300 * 1024,
   terrainWorkerBytes: 550 * 1024,
@@ -28,8 +31,14 @@ const walk = root => fs.readdirSync(root, { withFileTypes: true }).flatMap(entry
   return entry.isDirectory() ? walk(location) : [location];
 });
 
-if (!fs.existsSync(TERRAIN) || !fs.existsSync(ASSETS)) {
+if (!fs.existsSync(TERRAIN) || !fs.existsSync(ASSETS) || !fs.existsSync(TILEJSON)) {
   throw new Error('Run the production build before measuring the R3 terrain budget.');
+}
+
+const manifest = JSON.parse(fs.readFileSync(TILEJSON, 'utf8'));
+const manifestTileCount = manifest?.futureConquest?.stats?.tiles;
+if (!Number.isInteger(manifestTileCount) || manifestTileCount <= 0) {
+  fail(`terrain manifest has invalid futureConquest.stats.tiles: ${String(manifestTileCount)}`);
 }
 
 const terrainFiles = walk(TERRAIN);
@@ -38,17 +47,18 @@ const tileFiles = fs.existsSync(TILE_ROOT)
   : [];
 const terrainStaticBytes = terrainFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0);
 
+if (tileFiles.length !== manifestTileCount) {
+  fail(`Terrain-RGB tile count ${tileFiles.length} does not match manifest count ${manifestTileCount}`);
+}
+if (terrainStaticBytes > limits.terrainStaticBytes) {
+  fail(`static terrain is ${terrainStaticBytes} bytes; hosted Europe budget is ${limits.terrainStaticBytes}`);
+}
+
 const emittedAssets = fs.readdirSync(ASSETS);
 const terrainJsFiles = emittedAssets.filter(name => /^TerrainMapPrototype-.*\.js$/.test(name));
 const terrainWorkerFiles = emittedAssets.filter(name => /^maplibre-gl-worker-.*\.js$/.test(name));
 const terrainCssFiles = emittedAssets.filter(name => /^TerrainMapPrototype-.*\.css$/.test(name));
 
-if (tileFiles.length !== limits.tileCount) {
-  fail(`expected ${limits.tileCount} Terrain-RGB tiles, found ${tileFiles.length}`);
-}
-if (terrainStaticBytes > limits.terrainStaticBytes) {
-  fail(`static terrain is ${terrainStaticBytes} bytes; budget is ${limits.terrainStaticBytes}`);
-}
 if (terrainJsFiles.length !== 1) {
   fail(`expected exactly one lazy TerrainMapPrototype JS chunk, found ${terrainJsFiles.length}`);
 }
@@ -89,6 +99,7 @@ const result = {
   limits,
   measured: {
     terrainTiles: tileFiles.length,
+    manifestTerrainTiles: manifestTileCount,
     terrainStaticBytes,
     terrainJs,
     terrainWorker,
