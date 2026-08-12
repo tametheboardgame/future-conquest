@@ -1,0 +1,24 @@
+name: R3 WP2B apply MapLibre worker fix
+on:
+  push:
+    branches:
+      - agent/r3-wp2b-browser-runtime-fix
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2b-browser-runtime-fix
+      - run: python scripts/apply-r3-wp2b-maplibre-worker-fix.py
+      - run: node --test tests/r3-wp2b-maplibre-worker-contract.test.cjs tests/r3-wp2b-maplibre-expression-contract.test.cjs tests/r3-wp2b-maplibre-dem-source-contract.test.cjs
+      - run: npm ci && npm run build
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/TerrainMapPrototypeImpl.tsx tests/r3-wp2b-maplibre-worker-contract.test.cjs
+          git commit -m 'Bundle MapLibre v6 worker for Vite terrain runtime'
+          git push origin HEAD:agent/r3-wp2b-browser-runtime-fix
