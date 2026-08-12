@@ -1,0 +1,204 @@
+name: R3 WP2D visual runtime probe
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/components/TerrainMapPrototype*.tsx'
+      - 'src/presentation/r3-terrain-*.ts'
+      - 'src/r3-terrain-prototype.css'
+      - 'public/generated/r3-terrain/**'
+      - 'tests/r3-wp2d-*.test.cjs'
+      - '.github/workflows/r3-wp2d-visual-runtime-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-visual-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install game dependencies
+        run: npm ci
+      - name: Run WP2D focused regressions
+        run: node --test tests/r3-wp2d-*.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Install Chromium probe
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/future-conquest-wp2d-vite.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/future-conquest-wp2d-vite.log
+          exit 1
+      - name: Verify WP2D visual hierarchy and safe area in Chromium
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+          const terrainResponses = new Map();
+          page.on('response', response => {
+            const url = response.url();
+            if (!url.includes('/generated/r3-terrain/tiles/')) return;
+            const length = Number(response.headers()['content-length'] ?? 0);
+            terrainResponses.set(url, Number.isFinite(length) ? length : 0);
+          });
+          page.on('console', message => console.log(`[browser console ${message.type()}] ${message.text()}`));
+          page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
+          page.on('requestfailed', request => console.log(`[request failed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`));
+
+          await page.addInitScript(() => {
+            localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+            localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
+          });
+          await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+          await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15000 });
+          await page.waitForFunction(
+            () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
+            null,
+            { timeout: 5000 }
+          );
+          await page.locator('[data-command-view="map"]').click();
+          await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 20000 });
+
+          const terrain = page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first();
+          const fallback = page.locator('.r3-terrain-fallback-notice');
+          const outcome = await Promise.race([
+            terrain.waitFor({ state: 'visible', timeout: 45000 }).then(() => 'terrain'),
+            fallback.waitFor({ state: 'visible', timeout: 45000 }).then(() => 'fallback')
+          ]).catch(() => 'timeout');
+
+          if (outcome === 'fallback' || await fallback.isVisible()) {
+            const text = await fallback.innerText();
+            await browser.close();
+            throw new Error(`WP2D visual probe hit terrain fallback: ${text}`);
+          }
+          if (outcome !== 'terrain' || !(await terrain.isVisible())) {
+            const state = await page.evaluate(() => ({
+              terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
+              terrainPrototype: Boolean(document.querySelector('.r3-terrain-prototype')),
+              fallback: document.querySelector('.r3-terrain-fallback-notice')?.textContent ?? null,
+              canvasCount: document.querySelectorAll('.maplibregl-canvas').length
+            }));
+            console.log('WP2D terrain startup state:', JSON.stringify(state));
+            await browser.close();
+            throw new Error('WP2D terrain renderer neither became visible nor surfaced fallback diagnostics.');
+          }
+          await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
+
+          const verifyView = async (viewName, expectedLod, expectedRelief) => {
+            const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
+            if (viewName === 'selected' && await button.isDisabled()) {
+              throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
+            }
+            const beforeTiles = new Set(terrainResponses.keys());
+            await button.click();
+            await page.waitForFunction(
+              expected => {
+                const host = document.querySelector('.r3-terrain-prototype');
+                return host?.getAttribute('data-overlay-lod') === expected.lod
+                  && host?.getAttribute('data-terrain-relief') === expected.relief;
+              },
+              { lod: expectedLod, relief: expectedRelief },
+              { timeout: 6000 }
+            );
+            await page.waitForTimeout(180);
+
+            const result = await page.evaluate(expected => {
+              const host = document.querySelector('.r3-terrain-prototype');
+              const toolbar = document.querySelector('.r3-terrain-prototype-toolbar');
+              if (!(host instanceof HTMLElement) || !(toolbar instanceof HTMLElement)) {
+                throw new Error('Terrain host or toolbar unavailable.');
+              }
+              const toolbarRect = toolbar.getBoundingClientRect();
+              const markers = [...host.querySelectorAll('[data-r3-marker-id]')].filter(element => element instanceof HTMLElement);
+              const visible = markers.filter(element => {
+                const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return !element.hidden && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0 && rect.width > 3 && rect.height > 3;
+              });
+              const protectedKinds = new Set(['selected-formation', 'operation', 'live-threat', 'selected-territory', 'portal']);
+              const protectedMarkers = markers.filter(element => protectedKinds.has(element.dataset.r3MarkerKind ?? ''));
+              const hiddenProtected = protectedMarkers.filter(element => element.hidden || getComputedStyle(element).display === 'none')
+                .map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
+              const overlaps = visible.filter(element => {
+                const rect = element.getBoundingClientRect();
+                return rect.right > toolbarRect.left && rect.left < toolbarRect.right && rect.bottom > toolbarRect.top && rect.top < toolbarRect.bottom;
+              }).map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
+              const count = kind => visible.filter(element => element.dataset.r3MarkerKind === kind).length;
+              return {
+                lod: host.dataset.overlayLod ?? null,
+                relief: host.dataset.terrainRelief ?? null,
+                zoom: Number(host.dataset.overlayZoom ?? Number.NaN),
+                expected,
+                visible: visible.length,
+                hidden: markers.length - visible.length,
+                hiddenProtected,
+                overlaps,
+                selectedFormations: count('selected-formation'),
+                selectedTerritories: count('selected-territory'),
+                portals: count('portal'),
+                formations: count('formation'),
+                territoryLabels: count('territory'),
+                majorNodes: count('node-major')
+              };
+            }, { lod: expectedLod, relief: expectedRelief });
+
+            const newTiles = [...terrainResponses.entries()].filter(([url]) => !beforeTiles.has(url));
+            const requestedBytes = newTiles.reduce((sum, [, bytes]) => sum + bytes, 0);
+            console.log(`WP2D ${viewName} state:`, JSON.stringify({ ...result, newTerrainTiles: newTiles.length, requestedBytes }));
+
+            if (result.lod !== expectedLod) throw new Error(`${viewName} expected ${expectedLod} LOD but got ${result.lod}.`);
+            if (result.relief !== expectedRelief) throw new Error(`${viewName} expected ${expectedRelief} terrain but got ${result.relief}.`);
+            if (!Number.isFinite(result.zoom)) throw new Error(`${viewName} did not expose a settled camera zoom.`);
+            if (result.hiddenProtected.length) throw new Error(`${viewName} hid protected command markers: ${result.hiddenProtected.join(', ')}`);
+            if (result.overlaps.length) throw new Error(`${viewName} markers overlap terrain HUD: ${result.overlaps.join(', ')}`);
+            if (result.selectedFormations < 1) throw new Error(`${viewName} lost the selected formation.`);
+            if (result.selectedTerritories < 1) throw new Error(`${viewName} lost selected-territory context.`);
+            if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);
+            if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
+            if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
+
+            await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png` });
+          };
+
+          await verifyView('campaign', 'campaign', 'physical');
+          await verifyView('theatre', 'theatre', 'strategic-flat');
+          await verifyView('selected', 'local', 'physical');
+
+          console.log('WP2D unique terrain requests:', terrainResponses.size, 'tiles /', [...terrainResponses.values()].reduce((a, b) => a + b, 0), 'declared bytes');
+          await browser.close();
+          NODE
+      - name: Upload WP2D visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp2d-visual-evidence
+          path: |
+            /tmp/r3-wp2d-campaign.png
+            /tmp/r3-wp2d-theatre.png
+            /tmp/r3-wp2d-selected.png
+          if-no-files-found: ignore
+      - name: Print preview log on failure
+        if: failure()
+        run: cat /tmp/future-conquest-wp2d-vite.log || true

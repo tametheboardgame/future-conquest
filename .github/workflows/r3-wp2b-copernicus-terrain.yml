@@ -1,7 +1,12 @@
-name: R3 WP2B Copernicus terrain build
+name: R3 WP2D Europe Copernicus terrain build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - '.github/workflows/r3-wp2b-copernicus-terrain.yml'
 
 permissions:
   contents: write
@@ -9,7 +14,7 @@ permissions:
 jobs:
   build-copernicus-terrain:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 90
     steps:
       - name: Checkout requested branch
         uses: actions/checkout@v4
@@ -24,7 +29,7 @@ jobs:
           cache-dependency-path: scripts/r3-terrain-requirements.txt
       - name: Install terrain build dependencies
         run: python -m pip install -r scripts/r3-terrain-requirements.txt
-      - name: Build representative Copernicus terrain tiles
+      - name: Build Europe Copernicus terrain tiles
         env:
           GDAL_DISABLE_READDIR_ON_OPEN: EMPTY_DIR
           CPL_VSIL_CURL_ALLOWED_EXTENSIONS: .tif
@@ -33,7 +38,7 @@ jobs:
         run: >-
           python scripts/build-r3-copernicus-terrain.py
           --output public/generated/r3-terrain
-          --bounds -5.8 44.0 14.8 53.8
+          --bounds -25.0 33.0 50.0 72.0
           --min-zoom 4
           --max-zoom 7
           --primary glo30
@@ -45,10 +50,12 @@ jobs:
           from pathlib import Path
           manifest = json.loads(Path('public/generated/r3-terrain/tiles.json').read_text())
           stats = manifest['futureConquest']['stats']
-          assert stats['tiles'] > 0, stats
+          assert stats['tiles'] >= 900, stats
           assert stats['primaryTiles'] > 0, stats
           assert stats['maximumElevationMetres'] > 2500, stats
-          assert manifest['bounds'] == [-5.8, 44.0, 14.8, 53.8], manifest['bounds']
+          assert manifest['bounds'] == [-25.0, 33.0, 50.0, 72.0], manifest['bounds']
+          assert manifest['minzoom'] == 4, manifest['minzoom']
+          assert manifest['maxzoom'] == 7, manifest['maxzoom']
           print(json.dumps(stats, indent=2))
           PY
       - name: Report generated footprint
@@ -64,5 +71,5 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Generate Copernicus terrain prototype assets'
+          git commit -m 'Expand Copernicus terrain to Europe theatre'
           git push origin HEAD:${{ github.ref_name }}

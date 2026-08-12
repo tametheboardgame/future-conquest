@@ -7,8 +7,10 @@ on:
     paths:
       - 'src/components/TerrainMapPrototype*.tsx'
       - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'src/presentation/r3-terrain-marker-declutter.ts'
       - 'src/r3-terrain-prototype.css'
       - 'tests/r3-wp2c-terrain-overlay-parity.test.cjs'
+      - 'tests/r3-wp2d-marker-declutter*.test.cjs'
       - '.github/workflows/r3-wp2c-overlay-runtime-probe.yml'
 
 permissions:
@@ -30,8 +32,8 @@ jobs:
           cache: npm
       - name: Install game dependencies
         run: npm ci
-      - name: Run WP2C focused regression
-        run: node --test tests/r3-wp2c-terrain-overlay-parity.test.cjs
+      - name: Run overlay focused regressions
+        run: node --test tests/r3-wp2c-terrain-overlay-parity.test.cjs tests/r3-wp2d-marker-declutter*.test.cjs
       - name: Build production game
         run: npm run build
       - name: Install Chromium probe
@@ -64,6 +66,11 @@ jobs:
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
+          await page.waitForFunction(
+            () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
+            null,
+            { timeout: 5000 }
+          );
           await page.locator('[data-command-view="map"]').click();
           await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
           await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
@@ -75,11 +82,12 @@ jobs:
               if (!(element instanceof HTMLElement)) return false;
               const rect = element.getBoundingClientRect();
               const style = getComputedStyle(element);
-              return rect.width > 4 && rect.height > 4 && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0;
+              return !element.hidden && rect.width > 4 && rect.height > 4 && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0;
             }).length;
             const host = document.querySelector('.r3-terrain-prototype');
             return {
               overlayLod: host instanceof HTMLElement ? host.dataset.overlayLod ?? null : null,
+              overlayZoom: host instanceof HTMLElement ? Number(host.dataset.overlayZoom ?? Number.NaN) : Number.NaN,
               taskGroups: document.querySelectorAll('.r3-terrain-task-group-marker').length,
               visibleTaskGroups: visibleCount('.r3-terrain-task-group-marker'),
               selectedTaskGroups: document.querySelectorAll('.r3-terrain-task-group-marker.selected').length,
@@ -94,21 +102,42 @@ jobs:
               portal: document.querySelectorAll('.r3-terrain-portal-marker').length
             };
           });
-          console.log('WP2C terrain overlay state:', JSON.stringify(overlayState));
+          console.log('WP2D terrain overlay state:', JSON.stringify(overlayState));
 
           if (overlayState.visibleTaskGroups < 1) throw new Error('Terrain map has no visible friendly formation counters.');
           if (overlayState.selectedTaskGroups < 1) throw new Error('Terrain map does not distinguish the selected formation.');
-          if (overlayState.visibleTerritoryLabels < 10) throw new Error(`Terrain map has insufficient visible territory/location labels: ${overlayState.visibleTerritoryLabels}.`);
+          if (overlayState.visibleTerritoryLabels < 4) throw new Error(`Terrain map has insufficient visible territory/location labels after declutter: ${overlayState.visibleTerritoryLabels}.`);
+          if (overlayState.visibleTerritoryLabels >= overlayState.territoryLabels) throw new Error('Campaign view did not declutter any territory labels.');
           if (overlayState.visibleStrategicNodes < 3) throw new Error(`Terrain map has insufficient visible city/network cues: ${overlayState.visibleStrategicNodes}.`);
+          if (overlayState.visibleStrategicNodes >= overlayState.strategicNodes) throw new Error('Campaign view did not declutter any strategic nodes.');
           if (overlayState.enemyContacts > 0 && overlayState.visibleEnemyContacts < 1) throw new Error('Player-visible enemy contacts exist but none are visible on terrain.');
           if (!overlayState.overlayLod) throw new Error('Terrain operational overlay LOD was not initialised.');
+          if (!Number.isFinite(overlayState.overlayZoom)) throw new Error('Terrain operational overlay zoom metadata was not initialised.');
 
           const secondGroup = page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"]');
           await secondGroup.click();
           await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'visible', timeout: 5000 });
-          console.log('WP2C formation counter selection verified for TG-2.');
+          console.log('WP2D formation counter selection verified for TG-2.');
 
-          await page.locator('.r3-terrain-prototype-canvas').screenshot({ path: '/tmp/r3-wp2c-overlay.png' });
+          const selectedCamera = page.locator('.r3-terrain-prototype-toolbar button', { hasText: 'selected' }).first();
+          await selectedCamera.click();
+          await page.waitForFunction(
+            () => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'local',
+            null,
+            { timeout: 6000 }
+          );
+          const selectedCameraState = await page.evaluate(() => {
+            const host = document.querySelector('.r3-terrain-prototype');
+            return host instanceof HTMLElement ? {
+              lod: host.dataset.overlayLod ?? null,
+              zoom: Number(host.dataset.overlayZoom ?? Number.NaN)
+            } : { lod: null, zoom: Number.NaN };
+          });
+          console.log('WP2D selected camera state:', JSON.stringify(selectedCameraState));
+          if (!Number.isFinite(selectedCameraState.zoom)) throw new Error('Selected camera did not expose a settled zoom.');
+          if (selectedCameraState.zoom <= overlayState.overlayZoom + 0.5) throw new Error(`Selected camera did not zoom materially closer: ${overlayState.overlayZoom} -> ${selectedCameraState.zoom}.`);
+
+          await page.locator('.r3-terrain-prototype').screenshot({ path: '/tmp/r3-wp2c-overlay.png' });
           await browser.close();
           NODE
       - name: Upload overlay screenshot

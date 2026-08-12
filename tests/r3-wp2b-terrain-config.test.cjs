@@ -11,12 +11,32 @@ const moduleRecord = { exports: {} };
 new Function('module', 'exports', compiled)(moduleRecord, moduleRecord.exports);
 const terrain = moduleRecord.exports;
 
-test('R3 WP2B defines a continuous real-terrain prototype across England to the Alps', () => {
-  assert.deepEqual(terrain.R3_TERRAIN_PROTOTYPE_BOUNDS, [-5.8, 44, 14.8, 53.8]);
+const inside = (point, bounds) => {
+  const [west, south, east, north] = bounds;
+  const [longitude, latitude] = point;
+  return longitude >= west && longitude <= east && latitude >= south && latitude <= north;
+};
+
+test('R3 WP2D expands the continuous real-terrain envelope to the mature Europe theatre', () => {
+  assert.deepEqual(terrain.R3_TERRAIN_EUROPE_BOUNDS, [-25, 33, 50, 72]);
+  assert.deepEqual(terrain.R3_TERRAIN_PROTOTYPE_BOUNDS, terrain.R3_TERRAIN_EUROPE_BOUNDS);
+  assert.deepEqual(terrain.R3_TERRAIN_MANIFEST.theatreBounds, terrain.R3_TERRAIN_EUROPE_BOUNDS);
   assert.equal(terrain.R3_TERRAIN_MANIFEST.sourceFamily, 'copernicus-dem');
   assert.equal(terrain.R3_TERRAIN_MANIFEST.preferredDataset, 'COP-DEM-GLO-30');
   assert.equal(terrain.R3_TERRAIN_MANIFEST.fallbackDataset, 'COP-DEM-GLO-90');
   assert.equal(terrain.R3_TERRAIN_MANIFEST.initialExaggeration, 2);
+
+  for (const point of [
+    [-18.6, 64.9], // Iceland
+    [-3.1, 56.2], // United Kingdom
+    [-3.4, 40.2], // Spain
+    [12.6, 42.6], // Italy
+    [19.1, 52.0], // Poland
+    [22.2, 39.1], // Greece
+    [31.3, 49.0], // Ukraine
+    [39.0, 56.0], // western Russia
+    [47.5, 40.4] // Azerbaijan
+  ]) assert.equal(inside(point, terrain.R3_TERRAIN_EUROPE_BOUNDS), true, `Expected ${point} inside Europe terrain envelope`);
 });
 
 test('R3 WP2B keeps authenticated terrain acquisition out of the browser runtime', () => {
@@ -54,7 +74,7 @@ test('R3 WP2B-D compact terrain reduces camera and relief pressure without chang
   assert.equal(terrain.terrainExaggerationForProfile('compact'), 1.6);
 });
 
-test('R3 WP2B camera presets are geospatial presentation state only', () => {
+test('R3 WP2D camera presets preserve a wide theatre and more dramatic campaign/selected views', () => {
   for (const id of ['theatre', 'campaign', 'selected']) {
     const preset = terrain.terrainCameraPreset(id);
     assert.equal(preset.id, id);
@@ -62,6 +82,8 @@ test('R3 WP2B camera presets are geospatial presentation state only', () => {
     assert.ok(preset.pitch >= 0 && preset.pitch <= 85);
     assert.ok(Number.isFinite(preset.zoom));
   }
+  assert.ok(terrain.terrainCameraPreset('theatre').zoom < terrain.terrainCameraPreset('campaign').zoom);
+  assert.ok(terrain.terrainCameraPreset('theatre').pitch < terrain.terrainCameraPreset('campaign').pitch);
   assert.ok(terrain.terrainCameraPreset('selected').zoom > terrain.terrainCameraPreset('campaign').zoom);
 });
 

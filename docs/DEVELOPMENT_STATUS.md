@@ -10,7 +10,7 @@ Authoritative roadmap: `docs/roadmap/R3-ROADMAP.md`.
 
 Approved sequence:
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
 The simulation/gameplay layer remains mechanically frozen from the validated R2.5 baseline unless R3 exposes a genuine integration defect.
 
@@ -36,109 +36,112 @@ Merge commit: `7ad39d5d75889cf05b6af8f54f61eafb09ef033b`
 
 WP2 proved political/control hierarchy, deterministic front derivation, crowded-region zoom hierarchy, non-interactive presentation layers, geometry/hit-testing preservation, mobile/reduced-motion simplification, 393/393 tests, production build and 720-campaign balance parity.
 
-Human visual review immediately after merge identified that the political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons no longer serve as the physical terrain surface.
-
-## Current active work
+Human visual review immediately after merge identified that political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons no longer serve as the physical terrain surface.
 
 ### R3-WP2B - Real Terrain Foundation
 
-Status: A/B/C VALIDATED; D ACTIVE / TECHNICAL GATE
-PR: #117
-Branch: `agent/r3-wp2b-real-terrain`
+Status: COMPLETE / MERGED
+Primary PR: #117
+Runtime hotfix PRs: #118, #119, #120
 Package definition: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`
 
-Product-owner decision: replace ownership-driven territory extrusion with one continuous real-elevation landscape.
+WP2B replaced ownership-driven extrusion with a continuous Copernicus/MapLibre landscape and proved the technical terrain path end-to-end.
 
-Selected technical direction:
+Delivered and validated:
 
-- MapLibre GL JS for geospatial camera, terrain, tile/LOD and map interaction;
-- Copernicus DEM as source direction, preferring GLO-30 material where practical/permitted and allowing GLO-90/downsampled production terrain where appropriate;
-- stylised real-earth surface rather than raw Google imagery;
-- territory ownership/borders/fronts/routes as overlays on terrain, never terrain geometry;
-- initial prototype terrain exaggeration around 2×, tuned visually;
-- Three.js reserved for physical pieces/effects through a MapLibre custom 3D layer when WP3 resumes;
-- no Copernicus/API client secret in browser code;
-- existing SVG/DOM map retained as accessibility/reduced-effects/renderer-failure fallback.
+- MapLibre GL JS 6 geospatial terrain renderer behind the `?terrain=1` review path;
+- public Copernicus GLO-30 source material preprocessed into self-hosted Mapbox Terrain-RGB assets;
+- representative terrain set of 82 PNG tiles / approximately 6.1 MB across z4-z7;
+- stylised colour relief, hillshade, land wash, coastline and subdued sea;
+- explicit MapLibre/Vite worker bundling required for production GeoJSON source loading;
+- production browser runtime probe that enters the campaign and verifies a real visible MapLibre canvas;
+- `full`, `compact` and `svg-fallback` renderer profiles;
+- compact terrain exaggeration/pitch/render-pressure reduction;
+- keyboard/reduced-motion behaviour and a visible `2D accessible map` escape;
+- exact production terrain asset/chunk budgets;
+- GitHub Pages production deployment and live verifier;
+- deterministic 720-campaign parity on validated package heads;
+- renderer failure remains non-blocking and falls back to SVG.
 
-Prototype theatre: southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps.
+Important implementation lesson recorded by the browser probes: TypeScript/build success is not enough for WebGL terrain. Runtime browser coverage now guards worker bundling, actual canvas visibility, terrain source readiness and production pathing.
 
-#### WP2B-A - Platform and data boundary
+### R3-WP2C - Terrain Operational Overlay Parity
 
-Status: COMPLETE
+Status: COMPLETE / MERGED
+PR: #121
+Merge commit: `205e5e0ec154b49c4c01cd47b0eedf85c2fcc74c`
 
-- MapLibre GL JS 6 is isolated behind a lazy `?terrain=1` prototype path;
-- WGS84 political geometry remains authoritative;
-- terrain/WebGL/data failure returns to the stable SVG command map;
-- camera, attribution and no-secret runtime boundaries are established.
+Live product-owner review of the first stable terrain build confirmed the terrain direction but showed that the new renderer had not inherited enough of the mature SVG command-map information surface.
 
-#### WP2B-B - Representative real-terrain scene
+WP2C restored:
 
-Status: COMPLETE / VALIDATED
-Validated head: `21d2e43f5d43f55f4bc934225eea83438aa0b911`
+- friendly formation counters with strength/readiness language;
+- selected-formation distinction and click-selection parity;
+- territory/location labels;
+- strategic city/node cues;
+- player-visible recon contacts;
+- threat markers;
+- active-operation markers;
+- portal marker;
+- screen-space operational-marker LOD over pitched terrain;
+- hidden-information boundaries by reusing the existing player-visible intelligence adapters rather than raw enemy formation state.
 
-- public Copernicus DEM COGs preprocess into self-hosted Terrain-RGB assets;
-- representative set is 82 PNG tiles / approximately 6.1 MB across z4-z7;
-- 81 generated tiles use GLO-30, zero require GLO-90 fallback, one is sea-only;
-- measured prototype relief spans approximately -248.6 m to 4,535.8 m;
-- stylised colour relief, hillshade, land wash, coastline and subdued sea replace consumer-map imagery;
-- exact-head terrain smoke, production build and 720-campaign balance/trace workflow passed.
+The exact-head Chromium overlay gate verified the real campaign map contains visible friendly formations, territory/location labels, strategic nodes and player-visible recon contacts, then physically clicked `TG-2` and verified that formation became selected.
 
-#### WP2B-C - Strategic overlays on terrain
+Product-owner visual review of the deployed WP2C build explicitly approved the broad **real terrain + operational command information + top-down/pitched camera** direction as substantially closer to the intended game.
 
-Status: COMPLETE / VALIDATED
-Validated head: `c2bb9a568eaa04456369eafffc5d732636e95af5`
+## Current active work
 
-- ownership wash, administrative borders, control borders and opposing-control fronts remain separate concepts;
-- threat/combat presentation reuses existing player-visible operational-clarity helpers and does not expose hidden enemy strength;
-- routes and nodes reuse the authoritative strategic-network definitions and coordinates;
-- dense Benelux/Rhine LOD keeps ordinary infrastructure restrained while critical state, fronts and active threats remain prominent;
-- representative tests exercise real Wallonia/Rhine geometry under simultaneous threat, operation, front and bottleneck state;
-- exact-head focused terrain smoke, full repository build/tests and 720-campaign balance/trace workflow passed.
+### R3-WP2D - Terrain Refinement & Presentation Polish
 
-#### WP2B-D - Interaction, performance and fallback gate
+Status: TECHNICALLY VALIDATED / AWAITING LIVE PRODUCT-OWNER VISUAL ACCEPTANCE
+PR: #122
+Branch: `agent/r3-wp2d-terrain-refinement`
+Package definition: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`
+Base main: `205e5e0ec154b49c4c01cd47b0eedf85c2fcc74c`
+Validated code-bearing head: `ea3adc1becd89074e642871ed6b7fc663f4ee445`
 
-Status: ACTIVE / TECHNICAL VALIDATION
+WP2D has completed its autonomous technical and visual-refinement pass. The candidate now provides:
 
-Implemented:
+- a 960-tile self-hosted Copernicus Terrain-RGB Europe theatre footprint;
+- resilient terrain-source/error handling with the supported camera envelope free of the earlier missing-tile warning path;
+- formal Theatre, Campaign and Selected camera presets with dynamic persistent-HUD safe padding;
+- a deliberate LOD split: clean strategic-flat Theatre overview and physical 2.5D terrain at Campaign/Selected decision scales;
+- quiet administrative borders, stronger control/front hierarchy and reduced ordinary route noise while critical supply/bottleneck state remains legible;
+- deterministic projected-screen marker declutter with protected priority for selected formations, active operations/live threats, selected territory and portal state;
+- deterministic toolbar exclusion zones so non-critical markers yield rather than sit beneath persistent terrain controls;
+- restrained bevel/contact-shadow grounding for formations, contacts and operations without movement or authoritative-coordinate distortion;
+- a reproducible build-time Europe-only land mask clipped from World Atlas rather than browser-side world geometry, removing the large diagonal/global polygon artefacts exposed during close visual inspection;
+- non-wrapping Europe-only MapLibre behaviour while preserving the SVG/accessible fallback and reduced-effects path.
 
-- `full`, `compact` and `svg-fallback` presentation profiles;
-- compact profile preserves authoritative geography while reducing terrain exaggeration (2.0 -> 1.6), pitch, hillshade pressure, antialiasing and route/node density;
-- very small coarse-pointer displays return deliberately to the stable SVG map;
-- profile selection adapts to viewport/orientation changes and remounts the presentation renderer when required;
-- visible keyboard-focusable `2D accessible map` escape is available from the terrain renderer;
-- MapLibre keyboard pan/zoom remains enabled and accessible help is attached to the terrain canvas;
-- Selected camera now uses the selected territory's existing WGS84 centre;
-- reduced-motion camera transitions remain immediate;
-- all renderer/data failures remain non-blocking and fall back to SVG;
-- exact production output keeps MapLibre in a separate lazy terrain chunk.
+Exact-head validation on `ea3adc1becd89074e642871ed6b7fc663f4ee445`:
 
-Performance budget gate:
+- full engine regression suite: PASS, including current v14 persistence and legacy v7/v6/v4/v3/v2 save migrations;
+- TypeScript + Vite production build and generated-asset verification: PASS;
+- R3 WP2B terrain smoke: PASS;
+- R3 WP2B Chromium runtime probe: PASS;
+- R3 WP2C operational-overlay Chromium probe: PASS;
+- R3 WP2D three-view Chromium visual/runtime gate: PASS;
+- Campaign view settled at zoom 5.35 / physical relief with zero protected-marker losses and zero HUD overlaps;
+- Theatre view settled at zoom 3.60 / strategic-flat relief with deterministic declutter and zero HUD overlaps;
+- Selected view settled at zoom 7.10 / physical relief with zero protected-marker losses and zero HUD overlaps;
+- manual inspection of the exact-head Campaign/Theatre/Selected evidence confirmed the previous diagonal/global land-polygon artefacts are removed;
+- deterministic day-120 balance run: **720 campaigns, exact frozen R2.5 parity — Story 50.0%, Standard 29.6%, Hard 7.9%**;
+- no `src/game/**` authority changes, no save-schema/topology changes, no review threads/comments and no temporary applicator machinery remaining in the final PR diff.
 
-- exactly 82 representative Terrain-RGB tiles;
-- generated terrain <= 8 MiB (measured 6,108,110 bytes);
-- lazy terrain JS <= 1.1 MiB raw / 300 KiB gzip (measured 949,750 / 249,054 bytes);
-- lazy terrain CSS <= 90 KiB raw / 20 KiB gzip (measured 69,918 / 9,987 bytes);
-- MapLibre implementation markers must not leak into eager `index-*.js` chunks;
-- production smoke enforces these limits after the real Vite build.
+The next gate is deliberately human: deploy the hidden `?terrain=1` candidate from main and obtain product-owner visual acceptance. WP3 remains paused until that acceptance is given.
 
-Remaining D gate:
-
-1. complete exact-head full build and deterministic 720-campaign parity on the final D candidate;
-2. perform final diff/review/save-topology-information-boundary check;
-3. merge the technically accepted prototype while keeping terrain behind `?terrain=1` and the normal live game on SVG;
-4. verify GitHub Pages deployment;
-5. surface the live hidden terrain prototype for product-owner visual review;
-6. do not make terrain primary and do not resume WP3 until that visual review approves the direction.
-
-## Paused / superseded work
+## Paused work
 
 ### R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED UNTIL WP2B VISUAL APPROVAL
+Status: PAUSED UNTIL WP2D VISUAL APPROVAL
 
-Exploratory PR #116 was closed unmerged after the terrain art-direction correction. Its early piece styling may be selectively reused later, but movement animation will not be built around the superseded raised-territory map.
+Exploratory PR #116 was closed unmerged after the terrain art-direction correction. Its early piece styling may be selectively reused later, but substantial movement animation will not resume until WP2D accepts the terrain foundation.
 
-## Next approved work after WP2B visual approval
+Once accepted, WP3 should build physical formation pieces/movement on the MapLibre terrain using Three.js/custom 3D layers where useful, while preserving the SVG fallback and intelligence uncertainty.
+
+## Next approved work after WP2D visual approval
 
 1. R3-WP3 - Formation Pieces & Animated Movement
 2. R3-WP4 - Battle, Front & Strategic Event Feedback
@@ -150,9 +153,9 @@ Exploratory PR #116 was closed unmerged after the terrain art-direction correcti
 
 ## Product-owner stop conditions
 
-Product-owner input is required for fundamental mechanic changes, narrative changes, materially different art direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed WP2B terrain prototype that materially benefits from human visual review.
+Product-owner input is required for fundamental mechanic changes, narrative changes, materially different art direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed WP2D visual milestone that materially benefits from human review.
 
-Routine renderer integration, data-pipeline architecture, projection, testing, CI, save compatibility, deployment, performance work, accessibility, attribution and evidence-based technical choices within the approved MapLibre/Copernicus/Three.js direction remain autonomous.
+Routine terrain source hardening, terrain-footprint generation, map-camera/framing work, safe-area logic, overlay hierarchy, marker collision/LOD, projection, testing, CI, save compatibility, deployment, performance work, accessibility, attribution and evidence-based technical choices within the approved MapLibre/Copernicus/Three.js direction remain autonomous.
 
 ## Source-of-truth rule
 

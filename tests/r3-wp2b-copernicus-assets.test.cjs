@@ -13,24 +13,25 @@ function pngFiles(directory) {
   });
 }
 
-test('R3 WP2B commits a bounded Copernicus Terrain-RGB prototype asset set', () => {
+test('R3 terrain commits a bounded Copernicus Terrain-RGB Europe asset set', () => {
   const tiles = pngFiles(path.join(root, 'tiles'));
   assert.equal(tiles.length, manifest.futureConquest.stats.tiles);
-  assert.equal(tiles.length, 82);
+  assert.ok(tiles.length >= 900 && tiles.length <= 1200, `unexpected Europe terrain tile count: ${tiles.length}`);
   assert.equal(manifest.minzoom, 4);
   assert.equal(manifest.maxzoom, 7);
-  assert.deepEqual(manifest.bounds, [-5.8, 44, 14.8, 53.8]);
+  assert.deepEqual(manifest.bounds, [-25, 33, 50, 72]);
   assert.equal(manifest.futureConquest.encoding, 'mapbox-terrain-rgb');
 });
 
-test('R3 WP2B terrain evidence proves real representative relief and GLO-30 coverage', () => {
+test('R3 terrain evidence proves real Europe relief and primarily GLO-30 coverage', () => {
   const stats = manifest.futureConquest.stats;
   assert.equal(manifest.futureConquest.preferredDataset, 'COP-DEM-GLO-30');
   assert.equal(manifest.futureConquest.fallbackDataset, 'COP-DEM-GLO-90');
-  assert.equal(stats.primaryTiles, 81);
-  assert.equal(stats.fallbackTiles, 0);
-  assert.equal(stats.seaOnlyTiles, 1);
-  assert.ok(stats.maximumElevationMetres > 4500);
+  assert.ok(stats.primaryTiles > 600, stats);
+  assert.ok(stats.fallbackTiles >= 0 && stats.fallbackTiles < 50, stats);
+  assert.ok(stats.seaOnlyTiles > 0, stats);
+  assert.equal(stats.primaryTiles + stats.fallbackTiles + stats.seaOnlyTiles, stats.tiles);
+  assert.ok(stats.maximumElevationMetres > 5000);
 });
 
 test('R3 WP2B generated terrain carries the required Copernicus attribution', () => {

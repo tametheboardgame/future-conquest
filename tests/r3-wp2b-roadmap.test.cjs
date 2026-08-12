@@ -6,11 +6,13 @@ const roadmap = fs.readFileSync('docs/roadmap/R3-ROADMAP.md', 'utf8');
 const packageDoc = fs.readFileSync('docs/roadmap/R3-WP2B-REAL-TERRAIN.md', 'utf8');
 const dataDoc = fs.readFileSync('docs/architecture/R3-WP2B-TERRAIN-DATA.md', 'utf8');
 
-test('R3 programme inserts WP2B before formation animation', () => {
+test('R3 programme keeps terrain refinement before formation animation', () => {
   const wp2b = roadmap.indexOf('## R3-WP2B - Real Terrain Foundation');
+  const wp2c = roadmap.indexOf('## R3-WP2C - Terrain Operational Overlay Parity');
+  const wp2d = roadmap.indexOf('## R3-WP2D - Terrain Refinement & Presentation Polish');
   const wp3 = roadmap.indexOf('## R3-WP3 - Formation Pieces & Animated Movement');
-  assert.ok(wp2b >= 0 && wp3 > wp2b);
-  assert.match(roadmap, /WP3 is paused until WP2B/i);
+  assert.ok(wp2b >= 0 && wp2c > wp2b && wp2d > wp2c && wp3 > wp2d);
+  assert.match(roadmap, /WP3 remains paused until WP2D/i);
 });
 
 test('R3 WP2B explicitly replaces political slab elevation with continuous terrain', () => {

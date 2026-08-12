@@ -17,14 +17,14 @@ Entry state: R2-WP1 through R2-WP7 and the R2.5 Balance Stabilisation Gate are c
 - 3D/2.5D geography is presentation only unless a later gameplay change is separately approved.
 - Real elevation must describe geography, never political ownership: political territories are overlays on one continuous landscape.
 - Runtime browser code must not contain private geospatial-service credentials.
-- The stable SVG/DOM campaign map remains an accessibility/reduced-effects/failure fallback while the real-terrain renderer is proved.
+- The stable SVG/DOM campaign map remains an accessibility/reduced-effects/failure fallback while the real-terrain renderer matures.
 - Major new mechanics, narrative changes or art-direction changes outside the approved broad direction require product-owner approval.
 
 ## R3 sequence
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
-WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP3 is paused until WP2B is visually approved.
+WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP2C followed after the first deployed terrain build proved the landscape but lacked command-map information parity. WP2D was approved on 2026-08-12 after the restored-overlay build confirmed the overall terrain direction while also exposing the need for an intensive Europe-coverage, robustness, safe-area, hierarchy and declutter pass before WP3 resumes.
 
 ---
 
@@ -59,7 +59,7 @@ Human visual review then identified a flaw: making political territory polygons 
 
 ## R3-WP2B - Real Terrain Foundation
 
-Status: APPROVED / ACTIVE
+Status: COMPLETE / MERGED (#117 plus runtime hotfixes #118-#120)
 
 Authoritative package detail: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`.
 
@@ -74,17 +74,68 @@ Selected direction:
 - territory ownership, borders, fronts, routes and warnings are strategic overlays on the landscape;
 - terrain begins with an approximately 2× vertical-exaggeration prototype and is tuned by visual evidence;
 - **Three.js** is reserved for 3D game pieces/effects through a MapLibre custom 3D layer when WP3 resumes;
-- the existing SVG/DOM map remains the fallback until the new renderer passes interaction, accessibility, performance and deployment gates.
+- the existing SVG/DOM map remains the fallback.
 
-Prototype theatre: southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps, intentionally covering sea, plains, dense political geography, river corridors and major relief.
+WP2B proved the self-hosted Copernicus Terrain-RGB pipeline, MapLibre/Vite worker integration, real browser rendering, compact/mobile fallback policy, terrain performance budgets, camera/navigation, production GitHub Pages deployment and deterministic balance parity. The representative footprint intentionally began as southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps rather than the whole intended theatre.
 
-Acceptance requires continuous-landscape readability, no ownership-driven terrain deformation, strategic-overlay clarity, exact gameplay/save/balance parity, no client secrets, documented attribution, graceful SVG fallback, compact/mobile viability, production deployment and product-owner visual approval before WP3 resumes.
+---
+
+## R3-WP2C - Terrain Operational Overlay Parity
+
+Status: COMPLETE / MERGED (#121)
+
+Objective: restore the mature command-map information hierarchy over the accepted real-terrain renderer after live review showed that the first terrain build had removed too much operational information.
+
+WP2C restored:
+
+- friendly formation counters and selection parity;
+- territory/location labels;
+- strategic city/node cues;
+- player-visible recon contacts and threat markers;
+- active-operation and portal cues;
+- screen-space marker LOD over pitched terrain;
+- hidden-information safeguards using existing intelligence adapters;
+- Chromium runtime coverage proving overlays are visible in the actual campaign map and that formation-counter selection works.
+
+WP2C established that the combination of **real terrain + operational command information** is the accepted broad visual direction. It did not attempt the final terrain/overlay refinement pass.
+
+---
+
+## R3-WP2D - Terrain Refinement & Presentation Polish
+
+Status: APPROVED / ACTIVE
+
+Authoritative package detail: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`.
+
+Objective: intensively refine the accepted real-terrain command map until it is robust, Europe-scaled, safe around persistent HUD surfaces, decluttered and visually coherent enough to become the stable foundation for WP3.
+
+Product-owner review of the live WP2C build explicitly approved the broad direction and highlighted the next issues:
+
+- the current static terrain footprint does not yet cover the intended Europe theatre cleanly;
+- a deployed tile request can produce a terrain-source warning;
+- political/territory lines remain visually messy in some views;
+- dense map markers need stronger priority/collision behaviour;
+- operational markers can intrude beneath the terrain status/control box;
+- the strong top-down <-> pitched 2.5D camera capability should be retained and refined rather than simplified away.
+
+WP2D therefore owns:
+
+- terrain tile/source robustness;
+- expansion/regeneration of the terrain footprint for the intended Europe theatre;
+- formal Theatre/Campaign/Selected camera framing;
+- map safe-area insets and marker/HUD collision prevention;
+- political/front/route hierarchy cleanup;
+- marker declutter and priority rules;
+- intensive browser visual/runtime validation across top-down and pitched views;
+- performance/accessibility/fallback preservation and exact simulation parity.
+
+WP3 remains paused until WP2D receives product-owner visual acceptance.
 
 ---
 
 ## R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED PENDING WP2B VISUAL APPROVAL
+Status: PAUSED PENDING WP2D VISUAL APPROVAL
 
 Objective: make armies visibly exist on the accepted terrain map as readable board-game-like pieces and make movement understandable as a physical change in campaign state.
 
@@ -99,9 +150,9 @@ Key requirements:
 - animation never delays or changes deterministic resolution;
 - enemy pieces continue to respect intelligence uncertainty;
 - reduced-motion/performance settings can simplify or disable movement animation;
-- Three.js may be used for physical pieces through the approved MapLibre custom 3D layer once WP2B establishes the terrain surface.
+- Three.js may be used for physical pieces through the approved MapLibre custom 3D layer once WP2D accepts the terrain surface.
 
-Any exploratory WP3 work made against the raised-territory renderer is non-authoritative and may be reused only if it fits the accepted WP2B surface.
+Any exploratory WP3 work made against the raised-territory renderer is non-authoritative and may be reused only if it fits the accepted WP2D surface.
 
 ---
 

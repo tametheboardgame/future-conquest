@@ -8,8 +8,7 @@ import {
   type RasterDEMSourceSpecification,
   type StyleSpecification
 } from 'maplibre-gl';
-import { feature as topojsonFeature } from 'topojson-client';
-import worldAtlas from 'world-atlas/countries-110m.json';
+import europeLandMask from '../assets/r3-europe-land-mask.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import activeGeojson from '../assets/vertical-slice-map.json';
@@ -39,7 +38,9 @@ import {
   generatedTerrainManifestUrl,
   type GeneratedTerrainTileJson
 } from '../presentation/r3-terrain-source';
+import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-error';
 import {
+  applyTerrainOperationalMarkerDeclutter,
   buildTerrainOperationalMarkers,
   removeTerrainOperationalMarkers
 } from '../presentation/r3-terrain-operational-markers';
@@ -64,9 +65,22 @@ interface TerrainSourceResolution {
 setWorkerUrl(mapLibreWorkerUrl);
 
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
-const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
-const terrainLandGeoJSON = topojsonFeature(atlas, atlas.objects.countries) as unknown as GeoJSONSourceSpecification['data'];
+const terrainLandGeoJSON = europeLandMask as unknown as GeoJSONSourceSpecification['data'];
 const COPERNICUS_ATTRIBUTION = 'produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved';
+
+function terrainViewportPadding(
+  toolbar: HTMLElement | null,
+  presentationProfile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
+) {
+  const measuredToolbarHeight = toolbar?.getBoundingClientRect().height ?? 0;
+  const minimumToolbarHeight = presentationProfile === 'compact' ? 72 : 52;
+  return {
+    top: Math.ceil(Math.max(measuredToolbarHeight, minimumToolbarHeight) + 24),
+    right: presentationProfile === 'compact' ? 52 : 72,
+    bottom: 40,
+    left: 18
+  };
+}
 
 function browserSupportsTerrain(): boolean {
   if (typeof document === 'undefined') return false;
@@ -173,7 +187,7 @@ function mapStyle(
             3400, '#d0cfca',
             4500, '#eceeeb'
           ],
-          'color-relief-opacity': compact ? 0.9 : 0.96
+          'color-relief-opacity': 0
         }
       },
       {
@@ -182,13 +196,19 @@ function mapStyle(
         source: 'r3-wp2b-land',
         paint: {
           'fill-color': '#6c805b',
-          'fill-opacity': compact ? 0.29 : 0.34
+          'fill-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            3.6, 0,
+            4.72, 0,
+            4.8, compact ? 0.29 : 0.34
+          ]
         }
       },
       {
         id: 'r3-wp2b-hillshade',
         type: 'hillshade',
         source: 'r3-wp2b-hillshade-dem',
+        minzoom: 4.8,
         paint: {
           'hillshade-exaggeration': compact ? 0.48 : 0.72,
           'hillshade-shadow-color': '#161b18',
@@ -202,8 +222,8 @@ function mapStyle(
         source: 'r3-wp2b-land',
         paint: {
           'line-color': '#a6b7a8',
-          'line-opacity': 0.32,
-          'line-width': 0.8
+          'line-opacity': 0.24,
+          'line-width': 0.65
         }
       },
       {
@@ -275,9 +295,9 @@ function mapStyle(
         type: 'line',
         source: 'campaign-territories',
         paint: {
-          'line-color': '#d6d8c9',
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.18, 5.5, 0.23, 7, 0.31, 9, 0.4],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.45, 6, 0.7, 8, 1.05]
+          'line-color': '#d7d9cf',
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.07, 5.5, 0.1, 7, 0.16, 9, 0.23],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.3, 6, 0.45, 8, 0.68]
         }
       },
       {
@@ -303,7 +323,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 0.58,
               ['==', ['get', 'status'], 'blocked'], 0.62,
               ['==', ['get', 'status'], 'damaged'], 0.55,
-              0.1
+              0.04
             ],
             5.8, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 0.92,
@@ -311,7 +331,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 0.58,
               ['==', ['get', 'status'], 'blocked'], 0.62,
               ['==', ['get', 'status'], 'damaged'], 0.55,
-              0.25
+              0.12
             ],
             7, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 0.92,
@@ -319,7 +339,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 0.58,
               ['==', ['get', 'status'], 'blocked'], 0.62,
               ['==', ['get', 'status'], 'damaged'], 0.55,
-              0.44
+              0.26
             ],
             9, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 0.92,
@@ -327,7 +347,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 0.58,
               ['==', ['get', 'status'], 'blocked'], 0.62,
               ['==', ['get', 'status'], 'damaged'], 0.55,
-              0.58
+              0.42
             ]
           ],
           'line-width': [
@@ -338,7 +358,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 1.4,
               ['==', ['get', 'status'], 'blocked'], 1.8,
               ['==', ['get', 'status'], 'damaged'], 1.6,
-              0.75
+              0.5
             ],
             6, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 3.2,
@@ -346,7 +366,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 1.4,
               ['==', ['get', 'status'], 'blocked'], 1.8,
               ['==', ['get', 'status'], 'damaged'], 1.6,
-              1.05
+              0.7
             ],
             8, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 3.2,
@@ -354,7 +374,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 1.4,
               ['==', ['get', 'status'], 'blocked'], 1.8,
               ['==', ['get', 'status'], 'damaged'], 1.6,
-              1.45
+              1.0
             ],
             10, ['case',
               ['boolean', ['get', 'selected_supply_path'], false], 3.2,
@@ -362,7 +382,7 @@ function mapStyle(
               ['==', ['get', 'status'], 'destroyed'], 1.4,
               ['==', ['get', 'status'], 'blocked'], 1.8,
               ['==', ['get', 'status'], 'damaged'], 1.6,
-              1.7
+              1.25
             ]
           ]
         }
@@ -377,8 +397,8 @@ function mapStyle(
             ['==', ['get', 'controller'], 'player'], '#70d9cb',
             '#b99194'
           ],
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.48, 6, 0.62, 8, 0.74, 10, 0.8],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 6, 1.2, 8, 1.8]
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.3, 6, 0.44, 8, 0.58, 10, 0.68],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.58, 6, 0.82, 8, 1.2]
         }
       },
       {
@@ -389,9 +409,9 @@ function mapStyle(
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#3c2623',
-          'line-opacity': 0.9,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 4.6, 6, 5.8, 8, 7.1, 10, 8.2]
+          'line-color': '#332322',
+          'line-opacity': 0.72,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 3.6, 6, 4.6, 8, 5.4, 10, 6.0]
         }
       },
       {
@@ -402,9 +422,9 @@ function mapStyle(
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#f3a15d',
+          'line-color': '#ffad66',
           'line-opacity': 0.98,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.8, 6, 2.4, 8, 3.1, 10, 3.5]
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.65, 6, 2.15, 8, 2.7, 10, 3.0]
         }
       },
       {
@@ -425,23 +445,23 @@ function mapStyle(
           ],
           'line-opacity': [
             'case',
-            ['boolean', ['get', 'active_combat'], false], 0.98,
-            ['==', ['get', 'threat_stage'], 'under-attack'], 0.98,
-            ['==', ['get', 'threat_stage'], 'imminent'], 0.94,
-            ['==', ['get', 'threat_stage'], 'preparing'], 0.82,
-            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.62,
-            ['boolean', ['get', 'targeted'], false], 0.94,
-            ['boolean', ['get', 'selected'], false], 0.95,
+            ['boolean', ['get', 'active_combat'], false], 0.96,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 0.94,
+            ['==', ['get', 'threat_stage'], 'imminent'], 0.86,
+            ['==', ['get', 'threat_stage'], 'preparing'], 0.68,
+            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.42,
+            ['boolean', ['get', 'targeted'], false], 0.88,
+            ['boolean', ['get', 'selected'], false], 0.92,
             0
           ],
           'line-width': [
             'case',
-            ['boolean', ['get', 'active_combat'], false], 4,
-            ['==', ['get', 'threat_stage'], 'under-attack'], 3.6,
-            ['boolean', ['get', 'selected'], false], 3.2,
-            ['boolean', ['get', 'targeted'], false], 2.8,
-            ['==', ['get', 'threat_stage'], 'imminent'], 2.8,
-            2.2
+            ['boolean', ['get', 'active_combat'], false], 3.1,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 2.8,
+            ['boolean', ['get', 'selected'], false], 2.6,
+            ['boolean', ['get', 'targeted'], false], 2.3,
+            ['==', ['get', 'threat_stage'], 'imminent'], 2.3,
+            1.8
           ]
         }
       },
@@ -500,6 +520,7 @@ export function TerrainMapPrototypeImpl({
   presentationProfile = 'full'
 }: TerrainMapPrototypeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
   const selectRef = useRef(onSelect);
@@ -548,6 +569,7 @@ export function TerrainMapPrototypeImpl({
 
     let disposed = false;
     let ownedMap: Map | null = null;
+    let toolbarResizeObserver: ResizeObserver | null = null;
 
     const initialise = async () => {
       const terrainSource = await resolveTerrainSource();
@@ -567,6 +589,7 @@ export function TerrainMapPrototypeImpl({
         maxZoom: 10.5,
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
+        renderWorldCopies: false,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
@@ -575,14 +598,44 @@ export function TerrainMapPrototypeImpl({
       mapRef.current = map;
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
+      const applySafePadding = () => {
+        map.setPadding(terrainViewportPadding(toolbarRef.current, presentationProfile));
+      };
+      applySafePadding();
+      if (typeof ResizeObserver !== 'undefined' && toolbarRef.current) {
+        toolbarResizeObserver = new ResizeObserver(applySafePadding);
+        toolbarResizeObserver.observe(toolbarRef.current);
+      }
+
+      let terrainMeshMode: 'physical' | 'strategic-flat' = 'physical';
       const updateOverlayLod = () => {
         const host = containerRef.current?.parentElement;
         if (!host) return;
         const zoom = map.getZoom();
+        host.dataset.overlayZoom = zoom.toFixed(2);
         host.dataset.overlayLod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local';
       };
+      const updateTerrainMeshLod = () => {
+        const host = containerRef.current?.parentElement;
+        if (!host) return;
+        const nextMode = map.getZoom() < 4.8 ? 'strategic-flat' : 'physical';
+        if (nextMode !== terrainMeshMode) {
+          map.setTerrain(nextMode === 'physical' ? {
+            source: 'r3-wp2b-terrain-dem',
+            exaggeration: terrainExaggerationForProfile(presentationProfile)
+          } : null);
+          terrainMeshMode = nextMode;
+        }
+        host.dataset.terrainRelief = terrainMeshMode;
+      };
+      const refreshOperationalPresentation = () => {
+        updateOverlayLod();
+        updateTerrainMeshLod();
+        applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
+      };
       map.on('zoom', updateOverlayLod);
-      updateOverlayLod();
+      map.on('moveend', refreshOperationalPresentation);
+      refreshOperationalPresentation();
 
       map.on('load', () => {
         loadedRef.current = true;
@@ -612,16 +665,25 @@ export function TerrainMapPrototypeImpl({
       }, 3000);
 
       map.on('error', event => {
-        const runtimeDetail = event.error instanceof Error
-          ? event.error.message
-          : String(event.error ?? 'Unknown MapLibre runtime error');
-        console.error(`R3 terrain MapLibre error: ${runtimeDetail}`, event.error);
+        const runtimeError = classifyTerrainRuntimeError(event.error);
         if (!loadedRef.current) {
-          fallbackRef.current(`Terrain renderer error: ${runtimeDetail}`);
-        } else {
-          setStatus('warning');
-          setMessage(`Terrain source warning · ${runtimeDetail}`);
+          console.error(`R3 terrain initialisation error: ${runtimeError.detail}`, event.error);
+          fallbackRef.current(`Terrain renderer error: ${runtimeError.detail}`);
+          return;
         }
+
+        if (runtimeError.kind === 'transient-tile-request') {
+          console.info('R3 terrain transient tile request ignored', {
+            status: runtimeError.status,
+            url: runtimeError.url,
+            detail: runtimeError.detail
+          });
+          return;
+        }
+
+        console.error(`R3 terrain source warning: ${runtimeError.detail}`, event.error);
+        setStatus('warning');
+        setMessage(`Terrain source warning · ${runtimeError.detail}`);
       });
 
       map.on('mouseenter', 'campaign-territories-fill', () => {
@@ -645,6 +707,7 @@ export function TerrainMapPrototypeImpl({
       loadedRef.current = false;
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
+      toolbarResizeObserver?.disconnect();
       mapRef.current = null;
       ownedMap?.remove();
     };
@@ -677,6 +740,7 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
+    applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
 
     return () => {
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
@@ -692,12 +756,13 @@ export function TerrainMapPrototypeImpl({
       zoom: profiled.zoom,
       pitch: profiled.pitch,
       bearing: profiled.bearing,
+      padding: terrainViewportPadding(toolbarRef.current, presentationProfile),
       duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 850
     });
   };
 
   return <div className="r3-terrain-prototype" data-status={status} data-terrain-profile={presentationProfile}>
-    <div className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
+    <div ref={toolbarRef} className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
       <span aria-live="polite"><strong>R3 TERRAIN SPIKE</strong>{message}</span>
       <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button
         key={preset.id}
