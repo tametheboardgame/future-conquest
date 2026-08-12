@@ -1,0 +1,35 @@
+name: Apply R3 WP2D declutter visibility
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - 'scripts/apply-r3-wp2d-declutter-visibility.mjs'
+      - '.github/workflows/r3-wp2d-apply-declutter-visibility.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-declutter-visibility:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2d-terrain-refinement
+          fetch-depth: 0
+      - name: Apply declutter visibility rule
+        run: node scripts/apply-r3-wp2d-declutter-visibility.mjs
+      - name: Commit declutter visibility rule
+        run: |
+          git add src/r3-terrain-prototype.css
+          if git diff --cached --quiet; then
+            echo 'Declutter visibility rule already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Make terrain marker declutter browser-effective'
+          git push origin HEAD:agent/r3-wp2d-terrain-refinement
