@@ -3,6 +3,7 @@ import {
   GeoJSONSource,
   Map,
   NavigationControl,
+  setWorkerUrl,
   type GeoJSONSourceSpecification,
   type RasterDEMSourceSpecification,
   type StyleSpecification
@@ -10,6 +11,7 @@ import {
 import { feature as topojsonFeature } from 'topojson-client';
 import worldAtlas from 'world-atlas/countries-110m.json';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import { TERRITORIES } from '../game/data';
 import { getThreatenedTerritories } from '../game/operational-clarity';
@@ -52,6 +54,9 @@ interface TerrainSourceResolution {
   label: string;
   attribution: string;
 }
+
+// MapLibre v6 ESM requires Vite's worker pipeline for GeoJSON/vector worker tasks.
+setWorkerUrl(mapLibreWorkerUrl);
 
 const terrainGeoJSON = activeGeojson as unknown as Parameters<typeof buildTerrainPoliticalGeoJSON>[0];
 const atlas = worldAtlas as unknown as { objects: { countries: unknown } };
@@ -109,7 +114,9 @@ function mapStyle(
         type: 'geojson',
         data: terrainLandGeoJSON
       },
-      'r3-wp2b-dem': demSource,
+      'r3-wp2b-terrain-dem': demSource,
+      'r3-wp2b-relief-dem': { ...demSource },
+      'r3-wp2b-hillshade-dem': { ...demSource },
       'campaign-territories': {
         type: 'geojson',
         data: politicalData
@@ -128,7 +135,7 @@ function mapStyle(
       }
     },
     terrain: {
-      source: 'r3-wp2b-dem',
+      source: 'r3-wp2b-terrain-dem',
       exaggeration: terrainExaggerationForProfile(presentationProfile)
     },
     layers: [
@@ -142,7 +149,7 @@ function mapStyle(
       {
         id: 'r3-wp2b-relief',
         type: 'color-relief',
-        source: 'r3-wp2b-dem',
+        source: 'r3-wp2b-relief-dem',
         paint: {
           'color-relief-color': [
             'interpolate',
@@ -176,7 +183,7 @@ function mapStyle(
       {
         id: 'r3-wp2b-hillshade',
         type: 'hillshade',
-        source: 'r3-wp2b-dem',
+        source: 'r3-wp2b-hillshade-dem',
         paint: {
           'hillshade-exaggeration': compact ? 0.48 : 0.72,
           'hillshade-shadow-color': '#161b18',
@@ -205,10 +212,27 @@ function mapStyle(
             '#7c6669'
           ],
           'fill-opacity': [
-            'case',
-            ['boolean', ['get', 'selected'], false], 0.18,
-            ['boolean', ['get', 'targeted'], false], 0.17,
-            ['interpolate', ['linear'], ['zoom'], 4, 0.07, 5.5, 0.09, 7, 0.12, 9, 0.13]
+            'interpolate', ['linear'], ['zoom'],
+            4, ['case',
+              ['boolean', ['get', 'selected'], false], 0.18,
+              ['boolean', ['get', 'targeted'], false], 0.17,
+              0.07
+            ],
+            5.5, ['case',
+              ['boolean', ['get', 'selected'], false], 0.18,
+              ['boolean', ['get', 'targeted'], false], 0.17,
+              0.09
+            ],
+            7, ['case',
+              ['boolean', ['get', 'selected'], false], 0.18,
+              ['boolean', ['get', 'targeted'], false], 0.17,
+              0.12
+            ],
+            9, ['case',
+              ['boolean', ['get', 'selected'], false], 0.18,
+              ['boolean', ['get', 'targeted'], false], 0.17,
+              0.13
+            ]
           ]
         }
       },
@@ -267,22 +291,74 @@ function mapStyle(
             '#9ba58f'
           ],
           'line-opacity': [
-            'case',
-            ['boolean', ['get', 'selected_supply_path'], false], 0.92,
-            ['boolean', ['get', 'bottleneck'], false], 0.82,
-            ['==', ['get', 'status'], 'destroyed'], 0.58,
-            ['==', ['get', 'status'], 'blocked'], 0.62,
-            ['==', ['get', 'status'], 'damaged'], 0.55,
-            ['interpolate', ['linear'], ['zoom'], 5, 0.1, 5.8, 0.25, 7, 0.44, 9, 0.58]
+            'interpolate', ['linear'], ['zoom'],
+            5, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 0.92,
+              ['boolean', ['get', 'bottleneck'], false], 0.82,
+              ['==', ['get', 'status'], 'destroyed'], 0.58,
+              ['==', ['get', 'status'], 'blocked'], 0.62,
+              ['==', ['get', 'status'], 'damaged'], 0.55,
+              0.1
+            ],
+            5.8, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 0.92,
+              ['boolean', ['get', 'bottleneck'], false], 0.82,
+              ['==', ['get', 'status'], 'destroyed'], 0.58,
+              ['==', ['get', 'status'], 'blocked'], 0.62,
+              ['==', ['get', 'status'], 'damaged'], 0.55,
+              0.25
+            ],
+            7, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 0.92,
+              ['boolean', ['get', 'bottleneck'], false], 0.82,
+              ['==', ['get', 'status'], 'destroyed'], 0.58,
+              ['==', ['get', 'status'], 'blocked'], 0.62,
+              ['==', ['get', 'status'], 'damaged'], 0.55,
+              0.44
+            ],
+            9, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 0.92,
+              ['boolean', ['get', 'bottleneck'], false], 0.82,
+              ['==', ['get', 'status'], 'destroyed'], 0.58,
+              ['==', ['get', 'status'], 'blocked'], 0.62,
+              ['==', ['get', 'status'], 'damaged'], 0.55,
+              0.58
+            ]
           ],
           'line-width': [
-            'case',
-            ['boolean', ['get', 'selected_supply_path'], false], 3.2,
-            ['boolean', ['get', 'bottleneck'], false], 2.4,
-            ['==', ['get', 'status'], 'destroyed'], 1.4,
-            ['==', ['get', 'status'], 'blocked'], 1.8,
-            ['==', ['get', 'status'], 'damaged'], 1.6,
-            ['interpolate', ['linear'], ['zoom'], 5, 0.75, 6, 1.05, 8, 1.45, 10, 1.7]
+            'interpolate', ['linear'], ['zoom'],
+            5, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 3.2,
+              ['boolean', ['get', 'bottleneck'], false], 2.4,
+              ['==', ['get', 'status'], 'destroyed'], 1.4,
+              ['==', ['get', 'status'], 'blocked'], 1.8,
+              ['==', ['get', 'status'], 'damaged'], 1.6,
+              0.75
+            ],
+            6, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 3.2,
+              ['boolean', ['get', 'bottleneck'], false], 2.4,
+              ['==', ['get', 'status'], 'destroyed'], 1.4,
+              ['==', ['get', 'status'], 'blocked'], 1.8,
+              ['==', ['get', 'status'], 'damaged'], 1.6,
+              1.05
+            ],
+            8, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 3.2,
+              ['boolean', ['get', 'bottleneck'], false], 2.4,
+              ['==', ['get', 'status'], 'destroyed'], 1.4,
+              ['==', ['get', 'status'], 'blocked'], 1.8,
+              ['==', ['get', 'status'], 'damaged'], 1.6,
+              1.45
+            ],
+            10, ['case',
+              ['boolean', ['get', 'selected_supply_path'], false], 3.2,
+              ['boolean', ['get', 'bottleneck'], false], 2.4,
+              ['==', ['get', 'status'], 'destroyed'], 1.4,
+              ['==', ['get', 'status'], 'blocked'], 1.8,
+              ['==', ['get', 'status'], 'damaged'], 1.6,
+              1.7
+            ]
           ]
         }
       },
@@ -457,7 +533,7 @@ export function TerrainMapPrototypeImpl({
   useEffect(() => {
     if (!containerRef.current) return;
     if (!browserSupportsTerrain()) {
-      fallbackRef.current('WebGL2 terrain rendering is unavailable; using the stable SVG command map.');
+      fallbackRef.current('WebGL terrain rendering is unavailable; using the stable SVG command map.');
       return;
     }
 
@@ -496,12 +572,37 @@ export function TerrainMapPrototypeImpl({
         setMessage(`${terrainSource.label} · ${presentationProfile === 'compact' ? 'compact terrain' : 'continuous relief'} · operational overlays projected from campaign state`);
       });
 
-      map.on('error', () => {
+      window.setTimeout(() => {
+        if (disposed || loadedRef.current) return;
+        const sourceIds = [
+          'r3-wp2b-land',
+          'r3-wp2b-terrain-dem',
+          'r3-wp2b-relief-dem',
+          'r3-wp2b-hillshade-dem',
+          'campaign-territories',
+          'campaign-fronts',
+          'campaign-strategic-routes',
+          'campaign-strategic-nodes'
+        ];
+        const sourceLoaded = Object.fromEntries(sourceIds.map(id => [id, map.getSource(id)?.loaded() ?? null]));
+        console.info('R3 terrain readiness diagnostic', JSON.stringify({
+          mapLoaded: map.loaded(),
+          styleLoaded: map.isStyleLoaded(),
+          tilesLoaded: map.areTilesLoaded(),
+          sourceLoaded
+        }));
+      }, 3000);
+
+      map.on('error', event => {
+        const runtimeDetail = event.error instanceof Error
+          ? event.error.message
+          : String(event.error ?? 'Unknown MapLibre runtime error');
+        console.error(`R3 terrain MapLibre error: ${runtimeDetail}`, event.error);
         if (!loadedRef.current) {
-          fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
+          fallbackRef.current(`Terrain renderer error: ${runtimeDetail}`);
         } else {
           setStatus('warning');
-          setMessage('Terrain source warning · the SVG fallback remains available');
+          setMessage(`Terrain source warning · ${runtimeDetail}`);
         }
       });
 

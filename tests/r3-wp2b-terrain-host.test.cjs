@@ -25,8 +25,10 @@ test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the st
 });
 
 test('R3 WP2B prototype uses continuous raster-dem terrain and never raises political polygons', () => {
-  assert.match(impl, /r3-wp2b-dem/);
-  assert.match(impl, /terrain:[\s\S]*source: 'r3-wp2b-dem'/);
+  assert.match(impl, /r3-wp2b-terrain-dem/);
+  assert.match(impl, /r3-wp2b-relief-dem/);
+  assert.match(impl, /r3-wp2b-hillshade-dem/);
+  assert.match(impl, /terrain:[\s\S]*source: 'r3-wp2b-terrain-dem'/);
   assert.match(impl, /exaggeration: terrainExaggerationForProfile\(presentationProfile\)/);
   assert.match(impl, /campaign-territories-fill/);
   assert.match(impl, /campaign-administrative-borders/);
@@ -136,7 +138,8 @@ test('R3 WP2B-D exposes keyboard help and keeps MapLibre keyboard navigation ena
 
 test('R3 WP2B renderer failure collapses to SVG and reduced motion collapses camera transitions', () => {
   assert.match(impl, /onFallback: \(reason: string\) => void/);
-  assert.match(impl, /fallbackRef\.current\('WebGL2 terrain rendering is unavailable/);
+  assert.match(impl, /fallbackRef\.current\('WebGL terrain rendering is unavailable/);
+  assert.match(impl, /fallbackRef\.current\(`Terrain renderer error: \$\{runtimeDetail\}`\)/);
   assert.match(app, /setTerrainPrototypeFailed\(true\)/);
   assert.match(impl, /prefers-reduced-motion: reduce/);
   assert.match(impl, /duration: window\.matchMedia[\s\S]*\? 0 : 850/);
