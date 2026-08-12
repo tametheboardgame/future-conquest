@@ -205,6 +205,7 @@ function mapStyle(
         id: 'r3-wp2b-hillshade',
         type: 'hillshade',
         source: 'r3-wp2b-hillshade-dem',
+        minzoom: 4.8,
         paint: {
           'hillshade-exaggeration': compact ? 0.48 : 0.72,
           'hillshade-shadow-color': '#161b18',
