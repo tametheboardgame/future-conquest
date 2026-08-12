@@ -1,0 +1,35 @@
+name: Apply R3 WP2D command-piece grounding
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - 'scripts/apply-r3-wp2d-command-piece-grounding.mjs'
+      - '.github/workflows/r3-wp2d-apply-command-piece-grounding.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-command-piece-grounding:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2d-terrain-refinement
+          fetch-depth: 0
+      - name: Apply command-piece grounding
+        run: node scripts/apply-r3-wp2d-command-piece-grounding.mjs
+      - name: Commit command-piece grounding
+        run: |
+          git add src/r3-terrain-prototype.css
+          if git diff --cached --quiet; then
+            echo 'Command-piece grounding already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Ground terrain command pieces visually'
+          git push origin HEAD:agent/r3-wp2d-terrain-refinement
