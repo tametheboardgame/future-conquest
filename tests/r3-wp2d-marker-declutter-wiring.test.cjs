@@ -7,10 +7,8 @@ const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', '
 const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 
 test('WP2D-D tags every terrain marker with stable priority metadata and explicit screen offset', () => {
-  assert.match(markers, /element\.dataset\.r3MarkerKind = kind/);
-  assert.match(markers, /element\.dataset\.r3MarkerId = markerId/);
-  assert.match(markers, /element\.dataset\.r3MarkerOffsetX = String\(offset\[0\]\)/);
-  assert.match(markers, /element\.dataset\.r3MarkerOffsetY = String\(offset\[1\]\)/);
+  assert.match(markers, /Object\.assign\(element\.dataset, \{[\s\S]*r3MarkerKind: kind,[\s\S]*r3MarkerId: markerId,[\s\S]*r3MarkerOffsetX: String\(offset\[0\]\),[\s\S]*r3MarkerOffsetY: String\(offset\[1\]\)[\s\S]*\}\)/);
+  assert.match(markers, /Object\.assign\(element\.dataset, descriptor\.dataset\)/);
   for (const kind of [
     'selected-formation',
     'formation',
