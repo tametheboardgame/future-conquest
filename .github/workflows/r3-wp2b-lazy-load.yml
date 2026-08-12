@@ -11,6 +11,7 @@ on:
       - 'public/generated/r3-terrain/**'
       - 'scripts/measure-r3-terrain-budget.mjs'
       - 'tests/r3-wp2b-*.test.cjs'
+      - 'tests/r3-wp2d-*.test.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/r3-wp2b-lazy-load.yml'
@@ -32,13 +33,26 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Run WP2B focused regressions
-        run: node --test tests/r3-wp2b-*.test.cjs
+      - name: Run WP2B/WP2D focused regressions
+        run: node --test tests/r3-wp2b-*.test.cjs tests/r3-wp2d-*.test.cjs
       - name: Build production game
         run: npm run build
       - name: Verify Copernicus terrain ships in production output
         run: |
           test -f dist/generated/r3-terrain/tiles.json
-          test "$(find dist/generated/r3-terrain/tiles -type f -name '*.png' | wc -l)" -eq 82
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const manifest = JSON.parse(fs.readFileSync('dist/generated/r3-terrain/tiles.json', 'utf8'));
+          const expected = manifest?.futureConquest?.stats?.tiles;
+          const walk = root => fs.readdirSync(root, { withFileTypes: true }).flatMap(entry => {
+            const location = path.join(root, entry.name);
+            return entry.isDirectory() ? walk(location) : [location];
+          });
+          const actual = walk('dist/generated/r3-terrain/tiles').filter(file => file.endsWith('.png')).length;
+          if (!Number.isInteger(expected) || expected <= 0) throw new Error(`Invalid manifest tile count: ${expected}`);
+          if (actual !== expected) throw new Error(`Expected ${expected} terrain tiles from manifest; found ${actual}`);
+          console.log(`Verified ${actual} Terrain-RGB tiles from production manifest.`);
+          NODE
       - name: Enforce terrain production budget
         run: node scripts/measure-r3-terrain-budget.mjs
