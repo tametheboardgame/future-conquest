@@ -12,43 +12,44 @@ const layerSlice = (id, nextId) => {
   return impl.slice(start, end);
 };
 
-test('R3 WP2B-C keeps ordinary political detail restrained at theatre scale', () => {
+test('R3 terrain keeps ordinary political detail restrained at theatre scale', () => {
   const territoryFill = layerSlice('campaign-territories-fill', 'campaign-territory-state-wash');
   const administrative = layerSlice('campaign-administrative-borders', 'campaign-strategic-routes');
   assert.match(territoryFill, /'fill-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
   assert.match(territoryFill, /4, \['case'[\s\S]*?0\.07[\s\S]*?5\.5, \['case'[\s\S]*?0\.09[\s\S]*?7, \['case'[\s\S]*?0\.12[\s\S]*?9, \['case'[\s\S]*?0\.13/);
-  assert.match(administrative, /'line-opacity': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.18, 5\.5, 0\.23, 7, 0\.31, 9, 0\.4\]/);
+  assert.match(administrative, /'line-opacity': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.07, 5\.5, 0\.1, 7, 0\.16, 9, 0\.23\]/);
+  assert.match(administrative, /'line-width': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.3, 6, 0\.45, 8, 0\.68\]/);
 });
 
-test('R3 WP2B-C lets critical network state beat ordinary route clutter', () => {
+test('R3 terrain lets critical network state beat ordinary route clutter', () => {
   const routes = layerSlice('campaign-strategic-routes', 'campaign-control-borders');
   assert.match(routes, /minzoom: compact \? 5\.6 : 5/);
   assert.match(routes, /'line-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
-  assert.match(routes, /5, \['case'[\s\S]*?selected_supply_path[\s\S]*?0\.92[\s\S]*?bottleneck[\s\S]*?0\.82[\s\S]*?status'\], 'blocked'\], 0\.62[\s\S]*?0\.1/);
-  assert.match(routes, /5\.8, \['case'[\s\S]*?0\.25[\s\S]*?7, \['case'[\s\S]*?0\.44[\s\S]*?9, \['case'[\s\S]*?0\.58/);
+  assert.match(routes, /5, \['case'[\s\S]*?selected_supply_path[\s\S]*?0\.92[\s\S]*?bottleneck[\s\S]*?0\.82[\s\S]*?status'\], 'blocked'\], 0\.62[\s\S]*?0\.04/);
+  assert.match(routes, /5\.8, \['case'[\s\S]*?0\.12[\s\S]*?7, \['case'[\s\S]*?0\.26[\s\S]*?9, \['case'[\s\S]*?0\.42/);
 });
 
-test('R3 WP2B-C keeps fronts visually stronger than ordinary control boundaries', () => {
+test('R3 terrain keeps fronts visually stronger than ordinary control boundaries', () => {
   const control = layerSlice('campaign-control-borders', 'campaign-fronts-underlay');
   const frontUnderlay = layerSlice('campaign-fronts-underlay', 'campaign-fronts-core');
   const frontCore = layerSlice('campaign-fronts-core', 'campaign-state-outline');
-  assert.match(control, /4, 0\.8, 6, 1\.2, 8, 1\.8/);
-  assert.match(frontUnderlay, /4, 4\.6, 6, 5\.8, 8, 7\.1, 10, 8\.2/);
+  assert.match(control, /4, 0\.58, 6, 0\.82, 8, 1\.2/);
+  assert.match(frontUnderlay, /4, 3\.6, 6, 4\.6, 8, 5\.4, 10, 6\.0/);
   assert.match(frontCore, /'line-opacity': 0\.98/);
-  assert.match(frontCore, /4, 1\.8, 6, 2\.4, 8, 3\.1, 10, 3\.5/);
+  assert.match(frontCore, /4, 1\.65, 6, 2\.15, 8, 2\.7, 10, 3\.0/);
 });
 
-test('R3 WP2B-C prioritises active threats over stale combat residue', () => {
+test('R3 terrain prioritises active threats over stale combat residue', () => {
   const wash = layerSlice('campaign-territory-state-wash', 'campaign-administrative-borders');
   const outline = layerSlice('campaign-state-outline', 'campaign-strategic-nodes');
   assert.match(wash, /active_combat[\s\S]*0\.24/);
   assert.match(wash, /under-attack[\s\S]*0\.22/);
   assert.match(wash, /recent-combat[\s\S]*0\.07/);
-  assert.match(outline, /under-attack[\s\S]*0\.98/);
-  assert.match(outline, /recent-combat[\s\S]*0\.62/);
+  assert.match(outline, /under-attack[\s\S]*0\.94/);
+  assert.match(outline, /recent-combat[\s\S]*0\.42/);
 });
 
-test('R3 WP2B-C reveals major strategic nodes before minor nodes in dense regions', () => {
+test('R3 terrain reveals major strategic nodes before minor nodes in dense regions', () => {
   const nodes = layerSlice('campaign-strategic-nodes');
   assert.match(nodes, /minzoom: compact \? 6 : 5\.4/);
   assert.match(nodes, /filter: \['>=', \['get', 'importance'\], compact \? 2 : 1\]/);
