@@ -46,14 +46,18 @@ function terrainRuntimeErrorStatus(error: unknown, detail: string): number | und
 
 /**
  * MapLibre cancels/abandons tile requests during normal camera movement and
- * source reprioritisation. In Chromium these can surface as AJAXError status 0.
- * A cancelled request for one of our generated Terrain-RGB PNGs is not evidence
- * that the static asset is missing, so it must not replace useful map status
- * with a scary player-facing warning after the renderer is already healthy.
+ * source reprioritisation. Explicit cancellation signals for our generated
+ * Terrain-RGB PNGs are expected and must not replace useful map status with a
+ * player-facing warning after the renderer is already healthy.
  *
- * Real HTTP/source errors remain warnings. Before initial map readiness the host
- * still treats every runtime source error as an initialisation failure and falls
- * back to SVG; this classifier only controls the post-load presentation policy.
+ * Status 0 by itself is not an abort signal: connectivity loss, CORS rejection
+ * and other failures before an HTTP response can also produce status 0. Those
+ * failures remain source warnings so the host can surface the problem and use
+ * its established fallback behaviour where appropriate.
+ *
+ * Before initial map readiness the host still treats every runtime source error
+ * as an initialisation failure and falls back to SVG; this classifier only
+ * controls the post-load presentation policy.
  */
 export function classifyTerrainRuntimeError(error: unknown): TerrainRuntimeErrorClassification {
   const detail = terrainRuntimeErrorDetail(error);
@@ -61,13 +65,11 @@ export function classifyTerrainRuntimeError(error: unknown): TerrainRuntimeError
   const status = terrainRuntimeErrorStatus(error, detail);
   const name = asRuntimeError(error).name;
   const generatedTerrainTile = typeof url === 'string' && GENERATED_TERRAIN_TILE.test(url);
-  const cancelledOrStatusZero = status === 0
-    || FAILED_FETCH_STATUS_ZERO.test(detail)
-    || (typeof name === 'string' && ABORTED_REQUEST.test(name))
+  const explicitlyCancelled = (typeof name === 'string' && ABORTED_REQUEST.test(name))
     || ABORTED_REQUEST.test(detail);
 
   return {
-    kind: generatedTerrainTile && cancelledOrStatusZero ? 'transient-tile-request' : 'source-warning',
+    kind: generatedTerrainTile && explicitlyCancelled ? 'transient-tile-request' : 'source-warning',
     detail,
     ...(status !== undefined ? { status } : {}),
     ...(url ? { url } : {})
