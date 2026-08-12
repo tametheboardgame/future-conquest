@@ -24,6 +24,18 @@
   inset: 0;
 }
 
+.r3-terrain-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .r3-terrain-use-svg {
   position: absolute;
   z-index: 9;
@@ -112,6 +124,11 @@
 .r3-terrain-prototype-toolbar button:focus-visible {
   border-color: #8fe1d4;
   outline: none;
+}
+
+.r3-terrain-prototype-toolbar button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
 }
 
 .r3-terrain-prototype-attribution {
