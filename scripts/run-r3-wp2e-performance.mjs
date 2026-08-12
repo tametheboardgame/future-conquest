@@ -4,7 +4,11 @@ import { chromium } from 'playwright';
 
 const origin = process.env.R3_WP2E_ORIGIN ?? 'http://127.0.0.1:4173';
 const output = process.env.R3_WP2E_EVIDENCE ?? 'artifacts/r3-wp2e-performance.json';
-const head = process.env.GITHUB_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+// Do not use GITHUB_SHA here: pull_request workflows set it to GitHub's
+// synthetic merge commit unless every caller remembers to override it.
+const buildSha = process.env.R3_WP2E_BUILD_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+const variant = process.env.R3_WP2E_VARIANT ?? 'local';
+const tileCancellation = process.env.R3_WP2E_TILE_CANCELLATION ?? 'default';
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const page = await context.newPage();
@@ -13,6 +17,7 @@ await session.send('Network.enable');
 await session.send('Network.setCacheDisabled', { cacheDisabled: true });
 
 const requests = [];
+let lastTerrainResponseAt = 0;
 page.on('response', response => {
   if (!response.url().includes('/generated/r3-terrain/tiles/')) return;
   requests.push({
@@ -20,6 +25,7 @@ page.on('response', response => {
     status: response.status(),
     bytes: Number(response.headers()['content-length'] ?? 0)
   });
+  lastTerrainResponseAt = performance.now();
 });
 page.on('requestfailed', request => {
   if (request.url().includes('/generated/r3-terrain/')) {
@@ -32,7 +38,8 @@ await page.addInitScript(() => {
 });
 
 const started = performance.now();
-await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+const query = tileCancellation === 'retain' ? '?terrain=1&tileCancellation=retain' : '?terrain=1';
+await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
 await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15_000 });
 await page.locator('[data-command-view="map"]').click();
@@ -40,14 +47,21 @@ await page.locator('.r3-terrain-prototype-canvas canvas').waitFor({ state: 'visi
 const firstUsefulPaintMs = performance.now() - started;
 await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').waitFor({ state: 'visible', timeout: 45_000 });
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'campaign');
-await page.waitForTimeout(250);
+const waitForTerrainSettlement = async () => {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('.r3-terrain-prototype');
+    return host?.getAttribute('data-map-moving') !== 'true' && Boolean(host?.getAttribute('data-map-idle-at'));
+  }, undefined, { timeout: 30_000 });
+  while (performance.now() - lastTerrainResponseAt < 500) await page.waitForTimeout(100);
+};
+await waitForTerrainSettlement();
 const campaignSettledMs = performance.now() - started;
 
 const transition = async (name, expectedLod) => {
   const before = performance.now();
   await page.locator('.r3-terrain-prototype-toolbar button', { hasText: name }).click();
   await page.waitForFunction(lod => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === lod, expectedLod);
-  await page.waitForTimeout(950); // exceeds the normal 850ms ease and includes a render turn
+  await waitForTerrainSettlement();
   return performance.now() - before;
 };
 const campaignToTheatreMs = await transition('theatre', 'theatre');
@@ -64,7 +78,9 @@ const transferredBytes = resourceEntries.reduce((sum, entry) => sum + entry.tran
 const encodedBodyBytes = resourceEntries.reduce((sum, entry) => sum + entry.encodedBodySize, 0);
 const evidence = {
   schemaVersion: 1,
-  head,
+  buildSha,
+  variant,
+  tileCancellation,
   measuredAt: new Date().toISOString(),
   browser: await browser.version(),
   viewport: { width: 1600, height: 1000 },

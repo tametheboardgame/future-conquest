@@ -100,15 +100,24 @@ After WP2E acceptance, resume R3-WP3 Formation Pieces & Animated Movement on thi
 
 ## Implementation evidence (2026-08-12)
 
-The permanent exact-head Chromium job now publishes schema-versioned JSON for
+The permanent Chromium job now runs the identical head-owned probe against the
+exact PR base and head SHAs, asserts those artifact identities, and publishes
+base, head, comparison, and retained-tile A/B JSON. Camera timings wait for
+MapLibre movement/idle plus a quiet terrain-response window rather than a fixed
+delay. The retained-tile variant sets
+`cancelPendingTileRequestsWhileZooming: false`; production retains MapLibre's
+default until the A/B shows that smoother progressive arrival does not
+materially regress settle time or resource pressure.
+
+The job publishes schema-versioned JSON for
 cold first useful paint/readiness, Campaign/Theatre/Selected settles, unique and
 total Terrain-RGB requests, duplicates, declared/transfer/body bytes, fallback
 and warning state. A local cold-cache-disabled production run of the WP2E
 implementation recorded 96 total / 61 unique requests and 7,333,102 declared
-bytes. Against the WP2D journey's 97 unique requests and 6,946,795 declared
-bytes, this is 36 fewer unique URLs (37.1% fewer); declared bytes were 5.6%
-higher because the cold-disabled run exposes repeat transfers from the two
-deliberately independent DEM consumers rather than browser-cache reuse.
+bytes. That historical run is retained only as diagnostic evidence: its older
+journey and settle semantics are not comparable to the new gate, so no
+improvement claim is made from it. The next CI artifact supplies the valid
+like-for-like base-versus-head result and tile-cancellation A/B.
 
 That run measured 35 repeated requests. A shared service worker or custom
 MapLibre protocol cache was deliberately deferred: the browser normally

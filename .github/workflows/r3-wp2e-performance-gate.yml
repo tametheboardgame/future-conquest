@@ -18,35 +18,83 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout exact PR head
+      - name: Preserve the head-owned measurement probe
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+      - run: |
+          cp scripts/run-r3-wp2e-performance.mjs /tmp/run-r3-wp2e-performance.mjs
+          cp scripts/compare-r3-wp2e-performance.mjs /tmp/compare-r3-wp2e-performance.mjs
+      - name: Checkout exact PR base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - name: Restore identical probe for base measurement
+        run: cp /tmp/run-r3-wp2e-performance.mjs scripts/run-r3-wp2e-performance.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Focused WP2E contracts
-        run: node --test tests/r3-wp2e-*.test.cjs
       - run: npm run build
-      - run: node scripts/measure-r3-terrain-budget.mjs
       - name: Install exact Chromium probe
         run: |
           npm install --no-save --ignore-scripts playwright@1.55.0
           npx playwright install --with-deps chromium
+      - name: Start exact production base
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp2e-vite.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/r3-wp2e-vite.log; exit 1
+      - name: Record exact base evidence
+        env:
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.base.sha }}
+          R3_WP2E_VARIANT: base
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-base.json
+        run: node scripts/run-r3-wp2e-performance.mjs
+      - name: Stop base preview
+        run: pkill -f 'vite preview' || true
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: false
+      - run: npm ci
+      - name: Restore exact Chromium probe dependency
+        run: npm install --no-save --ignore-scripts playwright@1.55.0
+      - name: Focused WP2E contracts
+        run: node --test tests/r3-wp2e-*.test.cjs
+      - run: npm run build
+      - run: node scripts/measure-r3-terrain-budget.mjs
       - name: Start exact production head
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp2e-vite.log 2>&1 &
           for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
           cat /tmp/r3-wp2e-vite.log; exit 1
-      - name: Record cold startup, streaming and transitions
+      - name: Record exact head evidence
         env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npm run performance:r3-wp2e
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+          R3_WP2E_VARIANT: head
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head.json
+        run: node scripts/run-r3-wp2e-performance.mjs
+      - name: Record MapLibre retained-tile A/B evidence
+        env:
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+          R3_WP2E_VARIANT: head-retained-tiles
+          R3_WP2E_TILE_CANCELLATION: retain
+          R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head-retained-tiles.json
+        run: node scripts/run-r3-wp2e-performance.mjs
+      - name: Assert identities and compare base with head
+        run: >-
+          node scripts/compare-r3-wp2e-performance.mjs
+          artifacts/r3-wp2e-performance-base.json
+          artifacts/r3-wp2e-performance-head.json
+          artifacts/r3-wp2e-performance-comparison.json
+          '${{ github.event.pull_request.base.sha }}'
+          '${{ github.event.pull_request.head.sha }}'
       - name: Upload machine-readable evidence
         uses: actions/upload-artifact@v4
         with:
           name: r3-wp2e-performance-${{ github.event.pull_request.head.sha }}
-          path: artifacts/r3-wp2e-performance.json
+          path: artifacts/r3-wp2e-performance-*.json
           if-no-files-found: error
