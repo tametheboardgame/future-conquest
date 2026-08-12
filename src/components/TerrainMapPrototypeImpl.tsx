@@ -17,11 +17,13 @@ import { STRATEGIC_NODES, STRATEGIC_ROUTES } from '../game/strategic-network-dat
 import type { GameState } from '../game/types';
 import {
   R3_TERRAIN_CAMERA_PRESETS,
-  R3_TERRAIN_MANIFEST,
   R3_TERRAIN_PROTOTYPE_BOUNDS,
   chooseCampaignMapRenderer,
+  terrainCameraForProfile,
   terrainCameraPreset,
-  type TerrainCameraPreset
+  terrainExaggerationForProfile,
+  type TerrainCameraPreset,
+  type TerrainPresentationProfile
 } from '../presentation/r3-terrain-config';
 import { deriveR3FrontSegments } from '../presentation/r3-map-visual-state';
 import {
@@ -40,6 +42,7 @@ export interface TerrainMapPrototypeProps {
   state: GameState;
   onSelect: (territoryId: string) => void;
   onFallback: (reason: string) => void;
+  presentationProfile?: Exclude<TerrainPresentationProfile, 'svg-fallback'>;
 }
 
 type PrototypeStatus = 'initialising' | 'ready' | 'warning';
@@ -64,6 +67,19 @@ function browserSupportsTerrain(): boolean {
   }) === 'real-terrain';
 }
 
+function territoryCentre(territoryId: string | null): readonly [number, number] | undefined {
+  if (!territoryId) return undefined;
+  const features = (activeGeojson as unknown as {
+    features: Array<{ properties?: { territory_id?: unknown; centre?: unknown } }>
+  }).features;
+  const centre = features.find(feature => feature.properties?.territory_id === territoryId)?.properties?.centre;
+  if (!Array.isArray(centre) || centre.length !== 2) return undefined;
+  const [longitude, latitude] = centre;
+  if (typeof longitude !== 'number' || typeof latitude !== 'number') return undefined;
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return undefined;
+  return [longitude, latitude] as const;
+}
+
 async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
   const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
   const response = await fetch(manifestUrl, { cache: 'no-store' });
@@ -81,8 +97,10 @@ function mapStyle(
   frontData: GeoJSONSourceSpecification['data'],
   routeData: GeoJSONSourceSpecification['data'],
   nodeData: GeoJSONSourceSpecification['data'],
-  demSource: RasterDEMSourceSpecification
+  demSource: RasterDEMSourceSpecification,
+  presentationProfile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
 ): StyleSpecification {
+  const compact = presentationProfile === 'compact';
   return {
     version: 8,
     sources: {
@@ -110,7 +128,7 @@ function mapStyle(
     },
     terrain: {
       source: 'r3-wp2b-dem',
-      exaggeration: R3_TERRAIN_MANIFEST.initialExaggeration
+      exaggeration: terrainExaggerationForProfile(presentationProfile)
     },
     layers: [
       {
@@ -142,7 +160,7 @@ function mapStyle(
             3400, '#d0cfca',
             4500, '#eceeeb'
           ],
-          'color-relief-opacity': 0.96
+          'color-relief-opacity': compact ? 0.9 : 0.96
         }
       },
       {
@@ -151,7 +169,7 @@ function mapStyle(
         source: 'r3-wp2b-land',
         paint: {
           'fill-color': '#6c805b',
-          'fill-opacity': 0.34
+          'fill-opacity': compact ? 0.29 : 0.34
         }
       },
       {
@@ -159,7 +177,7 @@ function mapStyle(
         type: 'hillshade',
         source: 'r3-wp2b-dem',
         paint: {
-          'hillshade-exaggeration': 0.72,
+          'hillshade-exaggeration': compact ? 0.48 : 0.72,
           'hillshade-shadow-color': '#161b18',
           'hillshade-highlight-color': '#d5d8ca',
           'hillshade-accent-color': '#6c6759'
@@ -236,7 +254,7 @@ function mapStyle(
         id: 'campaign-strategic-routes',
         type: 'line',
         source: 'campaign-strategic-routes',
-        minzoom: 5,
+        minzoom: compact ? 5.6 : 5,
         paint: {
           'line-color': [
             'case',
@@ -349,7 +367,8 @@ function mapStyle(
         id: 'campaign-strategic-nodes',
         type: 'circle',
         source: 'campaign-strategic-nodes',
-        minzoom: 5.4,
+        minzoom: compact ? 6 : 5.4,
+        filter: ['>=', ['get', 'importance'], compact ? 2 : 1],
         paint: {
           'circle-color': [
             'case',
@@ -391,7 +410,12 @@ function mapStyle(
   };
 }
 
-export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: TerrainMapPrototypeProps) {
+export function TerrainMapPrototypeImpl({
+  state,
+  onSelect,
+  onFallback,
+  presentationProfile = 'full'
+}: TerrainMapPrototypeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const selectRef = useRef(onSelect);
@@ -409,6 +433,7 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
     () => Object.values(state.operations).map(operation => operation.target),
     [state.operations]
   );
+  const selectedCentre = useMemo(() => territoryCentre(state.selectedTerritory), [state.selectedTerritory]);
   const politicalData = useMemo(() => (
     buildTerrainPoliticalGeoJSON(terrainGeoJSON, state, {
       threatenedTerritories: visibleThreats,
@@ -443,30 +468,31 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
       if (disposed || !containerRef.current) return;
 
       setSourceAttribution(terrainSource.attribution);
-      const initial = terrainCameraPreset('campaign');
+      const initial = terrainCameraForProfile(terrainCameraPreset('campaign'), presentationProfile);
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
       const map = new Map({
         container: containerRef.current,
-        style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source),
+        style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
         center: [initial.center[0], initial.center[1]],
         zoom: initial.zoom,
         pitch: initial.pitch,
         bearing: initial.bearing,
         minZoom: 3.6,
         maxZoom: 10.5,
-        maxPitch: 70,
+        maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
-        canvasContextAttributes: { antialias: true },
+        keyboard: true,
+        canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
       });
       ownedMap = map;
       mapRef.current = map;
-      map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+      map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
       map.on('load', () => {
         loadedRef.current = true;
         setStatus('ready');
-        setMessage(`${terrainSource.label} · continuous relief · operational overlays projected from campaign state`);
+        setMessage(`${terrainSource.label} · ${presentationProfile === 'compact' ? 'compact terrain' : 'continuous relief'} · operational overlays projected from campaign state`);
       });
 
       map.on('error', () => {
@@ -521,21 +547,36 @@ export function TerrainMapPrototypeImpl({ state, onSelect, onFallback }: Terrain
   }, [politicalData, frontData, routeData, nodeData]);
 
   const goTo = (preset: TerrainCameraPreset) => {
+    const profiled = terrainCameraForProfile(preset, presentationProfile);
+    const center = preset.id === 'selected' && selectedCentre ? selectedCentre : profiled.center;
     mapRef.current?.easeTo({
-      center: [preset.center[0], preset.center[1]],
-      zoom: preset.zoom,
-      pitch: preset.pitch,
-      bearing: preset.bearing,
+      center: [center[0], center[1]],
+      zoom: profiled.zoom,
+      pitch: profiled.pitch,
+      bearing: profiled.bearing,
       duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 850
     });
   };
 
-  return <div className="r3-terrain-prototype" data-status={status}>
+  return <div className="r3-terrain-prototype" data-status={status} data-terrain-profile={presentationProfile}>
     <div className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
-      <span><strong>R3 TERRAIN SPIKE</strong>{message}</span>
-      <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button key={preset.id} type="button" onClick={() => goTo(preset)}>{preset.id}</button>)}</div>
+      <span aria-live="polite"><strong>R3 TERRAIN SPIKE</strong>{message}</span>
+      <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button
+        key={preset.id}
+        type="button"
+        disabled={preset.id === 'selected' && !state.selectedTerritory}
+        onClick={() => goTo(preset)}
+      >{preset.id}</button>)}</div>
     </div>
-    <div ref={containerRef} className="r3-terrain-prototype-canvas" role="application" aria-label="Experimental real-elevation campaign map" />
+    <div
+      ref={containerRef}
+      className="r3-terrain-prototype-canvas"
+      role="application"
+      tabIndex={0}
+      aria-describedby="r3-terrain-keyboard-help"
+      aria-label="Experimental real-elevation campaign map"
+    />
+    <p id="r3-terrain-keyboard-help" className="r3-terrain-sr-only">Use arrow keys to pan and plus or minus to zoom. Use the theatre, campaign and selected buttons to restore strategic camera views.</p>
     <div className="r3-terrain-prototype-attribution">{sourceAttribution}</div>
   </div>;
 }
