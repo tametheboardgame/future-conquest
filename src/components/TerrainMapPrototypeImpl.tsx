@@ -496,12 +496,16 @@ export function TerrainMapPrototypeImpl({
         setMessage(`${terrainSource.label} · ${presentationProfile === 'compact' ? 'compact terrain' : 'continuous relief'} · operational overlays projected from campaign state`);
       });
 
-      map.on('error', () => {
+      map.on('error', event => {
+        const runtimeDetail = event.error instanceof Error
+          ? event.error.message
+          : String(event.error ?? 'Unknown MapLibre runtime error');
+        console.error(`R3 terrain MapLibre error: ${runtimeDetail}`, event.error);
         if (!loadedRef.current) {
-          fallbackRef.current('The experimental terrain renderer failed to initialise; using the stable SVG command map.');
+          fallbackRef.current(`Terrain renderer error: ${runtimeDetail}`);
         } else {
           setStatus('warning');
-          setMessage('Terrain source warning · the SVG fallback remains available');
+          setMessage(`Terrain source warning · ${runtimeDetail}`);
         }
       });
 
