@@ -9,6 +9,13 @@ const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 const budget = fs.readFileSync('scripts/measure-r3-terrain-budget.mjs', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('public/generated/r3-terrain/tiles.json', 'utf8'));
 
+function layerBlock(id) {
+  const start = renderer.indexOf(`id: '${id}'`);
+  assert.ok(start >= 0, `layer ${id} was not found`);
+  const next = renderer.indexOf("\n      {\n        id: '", start + 1);
+  return renderer.slice(start, next >= 0 ? next : undefined);
+}
+
 test('WP2D terrain manifest and runtime config use the Europe theatre envelope', () => {
   assert.deepEqual(manifest.bounds, [-25, 33, 50, 72]);
   assert.equal(manifest.futureConquest.stats.tiles, 960);
@@ -48,4 +55,41 @@ test('WP2D camera presets use dynamic toolbar safe padding and respond to toolba
   assert.match(renderer, /new ResizeObserver\(applySafePadding\)/);
   assert.match(renderer, /padding: terrainViewportPadding\(toolbarRef\.current, presentationProfile\)/);
   assert.match(renderer, /ref=\{toolbarRef\}/);
+});
+
+test('WP2D-C makes administrative borders quieter than control boundaries', () => {
+  const administrative = layerBlock('campaign-administrative-borders');
+  const control = layerBlock('campaign-control-borders');
+  assert.match(administrative, /4, 0\.07, 5\.5, 0\.1, 7, 0\.16, 9, 0\.23/);
+  assert.match(administrative, /4, 0\.3, 6, 0\.45, 8, 0\.68/);
+  assert.match(control, /4, 0\.3, 6, 0\.44, 8, 0\.58, 10, 0\.68/);
+  assert.match(control, /4, 0\.58, 6, 0\.82, 8, 1\.2/);
+});
+
+test('WP2D-C keeps opposing fronts unmistakable without the old oversized underlay', () => {
+  const underlay = layerBlock('campaign-fronts-underlay');
+  const core = layerBlock('campaign-fronts-core');
+  assert.match(underlay, /'line-opacity': 0\.72/);
+  assert.match(underlay, /4, 3\.6, 6, 4\.6, 8, 5\.4, 10, 6\.0/);
+  assert.match(core, /'line-color': '#ffad66'/);
+  assert.match(core, /4, 1\.65, 6, 2\.15, 8, 2\.7, 10, 3\.0/);
+});
+
+test('WP2D-C lets critical routes beat ordinary infrastructure clutter', () => {
+  const routes = layerBlock('campaign-strategic-routes');
+  assert.match(routes, /\['boolean', \['get', 'selected_supply_path'\], false\], 0\.92/);
+  assert.match(routes, /\['boolean', \['get', 'bottleneck'\], false\], 0\.82/);
+  assert.match(routes, /\n\s+0\.04\n\s+\],\n\s+5\.8/);
+  assert.match(routes, /\n\s+0\.12\n\s+\],\n\s+7/);
+  assert.match(routes, /\n\s+0\.26\n\s+\],\n\s+9/);
+  assert.match(routes, /\n\s+0\.42\n\s+\]\n\s+\]/);
+});
+
+test('WP2D-C reduces stale and preparatory state outlines while keeping live combat strongest', () => {
+  const stateOutline = layerBlock('campaign-state-outline');
+  assert.match(stateOutline, /active_combat'\], false\], 0\.96/);
+  assert.match(stateOutline, /recent-combat'\], 0\.42/);
+  assert.match(stateOutline, /preparing'\], 0\.68/);
+  assert.match(stateOutline, /active_combat'\], false\], 3\.1/);
+  assert.match(stateOutline, /recent-combat/);
 });
