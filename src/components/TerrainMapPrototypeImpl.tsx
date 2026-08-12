@@ -41,6 +41,7 @@ import {
 } from '../presentation/r3-terrain-source';
 import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-error';
 import {
+  applyTerrainOperationalMarkerDeclutter,
   buildTerrainOperationalMarkers,
   removeTerrainOperationalMarkers
 } from '../presentation/r3-terrain-operational-markers';
@@ -607,7 +608,12 @@ export function TerrainMapPrototypeImpl({
         const zoom = map.getZoom();
         host.dataset.overlayLod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local';
       };
+      const refreshOperationalPresentation = () => {
+        updateOverlayLod();
+        applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
+      };
       map.on('zoom', updateOverlayLod);
+      map.on('moveend', refreshOperationalPresentation);
       updateOverlayLod();
 
       map.on('load', () => {
@@ -713,6 +719,7 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
+    applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
 
     return () => {
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
