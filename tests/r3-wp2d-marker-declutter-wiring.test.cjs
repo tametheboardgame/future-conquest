@@ -31,9 +31,18 @@ test('WP2D-D tags every terrain marker with stable priority metadata and explici
 
 test('WP2D-D declutters from projected screen coordinates without altering authoritative marker geography', () => {
   assert.match(markers, /map\.project\(marker\.getLngLat\(\)\)/);
-  assert.match(markers, /visibleTerrainMarkerIds\(candidates, terrainMarkerLodForZoom\(map\.getZoom\(\)\)\)/);
+  assert.match(markers, /visibleTerrainMarkerIds\([\s\S]*candidates,[\s\S]*terrainMarkerLodForZoom\(map\.getZoom\(\)\),[\s\S]*reservedRects[\s\S]*\)/);
   assert.match(markers, /element\.hidden = hidden/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*declutter/i);
+});
+
+test('WP2D-D converts the persistent terrain toolbar into a local screen-space reserved rectangle', () => {
+  assert.match(markers, /map\.getContainer\(\)\.getBoundingClientRect\(\)/);
+  assert.match(markers, /querySelector\('\.r3-terrain-prototype-toolbar'\)/);
+  assert.match(markers, /left: toolbarRect\.left - mapRect\.left/);
+  assert.match(markers, /top: toolbarRect\.top - mapRect\.top/);
+  assert.match(markers, /right: toolbarRect\.right - mapRect\.left/);
+  assert.match(markers, /bottom: toolbarRect\.bottom - mapRect\.top/);
 });
 
 test('WP2D-D hidden declutter state beats marker display rules in the real browser cascade', () => {
