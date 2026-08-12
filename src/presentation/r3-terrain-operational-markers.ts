@@ -3,7 +3,7 @@ import activeGeojson from '../assets/vertical-slice-map.json';
 import { TERRITORIES } from '../game/data';
 import { getEnemyContacts, getThreatenedTerritories } from '../game/operational-clarity';
 import { STRATEGIC_NODES } from '../game/strategic-network-data';
-import type { GameState } from '../game/types';
+import type { GameState, TaskGroup } from '../game/types';
 
 interface MarkerCallbacks {
   onSelectTerritory: (territoryId: string) => void;
@@ -132,7 +132,7 @@ export function buildTerrainOperationalMarkers(
     addMarker(markers, map, element, node.position);
   }
 
-  const groupsByTerritory = Object.values(state.taskGroups).reduce<Record<string, typeof state.taskGroups[string][]>>((groups, group) => {
+  const groupsByTerritory = Object.values(state.taskGroups).reduce<Record<string, TaskGroup[]>>((groups, group) => {
     (groups[group.location] ??= []).push(group);
     return groups;
   }, {});
