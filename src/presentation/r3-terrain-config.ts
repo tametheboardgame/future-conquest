@@ -1,4 +1,5 @@
 export type CampaignMapRenderer = 'real-terrain' | 'svg-fallback';
+export type TerrainPresentationProfile = 'full' | 'compact' | 'svg-fallback';
 
 export interface TerrainCameraPreset {
   id: 'theatre' | 'campaign' | 'selected';
@@ -54,6 +55,12 @@ export interface TerrainRendererCapability {
   forceFallback?: boolean;
 }
 
+export interface TerrainPresentationEnvironment {
+  viewportWidth: number;
+  coarsePointer: boolean;
+  forceFallback?: boolean;
+}
+
 /**
  * The real-terrain renderer is progressive enhancement. Failure to support the
  * required GPU/terrain path must keep the game playable through the stable SVG map.
@@ -61,6 +68,41 @@ export interface TerrainRendererCapability {
 export function chooseCampaignMapRenderer(capability: TerrainRendererCapability): CampaignMapRenderer {
   if (capability.forceFallback || !capability.webgl || !capability.terrainEnabled) return 'svg-fallback';
   return 'real-terrain';
+}
+
+/**
+ * WP2B-D mobile policy. Normal phones/tablets keep the terrain renderer but use
+ * a compact presentation profile. Very small coarse-pointer displays fall back
+ * to the stable SVG map rather than forcing a cramped/high-pressure 3D canvas.
+ */
+export function chooseTerrainPresentationProfile(environment: TerrainPresentationEnvironment): TerrainPresentationProfile {
+  if (environment.forceFallback) return 'svg-fallback';
+  const width = Number.isFinite(environment.viewportWidth) ? Math.max(0, environment.viewportWidth) : 0;
+  if (environment.coarsePointer && width > 0 && width <= 420) return 'svg-fallback';
+  if (environment.coarsePointer || (width > 0 && width <= 900)) return 'compact';
+  return 'full';
+}
+
+/**
+ * Compact terrain keeps the same geographic framing but reduces camera pitch
+ * and a little zoom pressure. This is presentation state only.
+ */
+export function terrainCameraForProfile(
+  preset: TerrainCameraPreset,
+  profile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
+): TerrainCameraPreset {
+  if (profile === 'full') return { ...preset };
+  return {
+    ...preset,
+    zoom: Math.max(3.6, preset.zoom - 0.15),
+    pitch: Math.min(preset.pitch, 42)
+  };
+}
+
+export function terrainExaggerationForProfile(
+  profile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
+): number {
+  return profile === 'compact' ? 1.6 : R3_TERRAIN_MANIFEST.initialExaggeration;
 }
 
 /** Normalize an authoritative WGS84 point before handing it to MapLibre. */
