@@ -12,8 +12,23 @@ const OUTPUT = path.resolve('src/assets/r3-europe-land-mask.json');
 export const R3_EUROPE_LAND_MASK_BOUNDS = [-30, 28, 55, 76];
 
 const atlas = worldLand;
-const worldFeature = topojsonFeature(atlas, atlas.objects.land);
-const clipped = bboxClip(worldFeature, R3_EUROPE_LAND_MASK_BOUNDS);
+const worldGeoJSON = topojsonFeature(atlas, atlas.objects.land);
+const worldFeatures = worldGeoJSON.type === 'FeatureCollection'
+  ? worldGeoJSON.features
+  : [worldGeoJSON];
+
+const clippedFeatures = worldFeatures
+  .filter(feature => feature?.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon'))
+  .map(feature => bboxClip(feature, R3_EUROPE_LAND_MASK_BOUNDS))
+  .filter(feature => {
+    if (!feature.geometry) return false;
+    if (feature.geometry.type === 'Polygon') return feature.geometry.coordinates.length > 0;
+    return feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates.length > 0;
+  });
+
+if (!clippedFeatures.length) {
+  throw new Error('Europe land-mask clipping produced no polygon features.');
+}
 
 const output = {
   type: 'FeatureCollection',
@@ -23,9 +38,9 @@ const output = {
     purpose: 'presentation-only physical land wash and coastline',
     clipBounds: R3_EUROPE_LAND_MASK_BOUNDS
   },
-  features: [clipped]
+  features: clippedFeatures
 };
 
 fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
 fs.writeFileSync(OUTPUT, `${JSON.stringify(output)}\n`);
-console.log(`Wrote Europe-only land mask to ${OUTPUT}.`);
+console.log(`Wrote ${clippedFeatures.length} Europe-only land features to ${OUTPUT}.`);
