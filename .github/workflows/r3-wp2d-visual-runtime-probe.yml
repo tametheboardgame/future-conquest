@@ -106,7 +106,7 @@ jobs:
           }
           await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
-          const verifyView = async (viewName, expectedLod) => {
+          const verifyView = async (viewName, expectedLod, expectedRelief) => {
             const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
             if (viewName === 'selected' && await button.isDisabled()) {
               throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
@@ -114,8 +114,12 @@ jobs:
             const beforeTiles = new Set(terrainResponses.keys());
             await button.click();
             await page.waitForFunction(
-              expected => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === expected,
-              expectedLod,
+              expected => {
+                const host = document.querySelector('.r3-terrain-prototype');
+                return host?.getAttribute('data-overlay-lod') === expected.lod
+                  && host?.getAttribute('data-terrain-relief') === expected.relief;
+              },
+              { lod: expectedLod, relief: expectedRelief },
               { timeout: 6000 }
             );
             await page.waitForTimeout(180);
@@ -144,6 +148,7 @@ jobs:
               const count = kind => visible.filter(element => element.dataset.r3MarkerKind === kind).length;
               return {
                 lod: host.dataset.overlayLod ?? null,
+                relief: host.dataset.terrainRelief ?? null,
                 zoom: Number(host.dataset.overlayZoom ?? Number.NaN),
                 expected,
                 visible: visible.length,
@@ -157,13 +162,14 @@ jobs:
                 territoryLabels: count('territory'),
                 majorNodes: count('node-major')
               };
-            }, expectedLod);
+            }, { lod: expectedLod, relief: expectedRelief });
 
             const newTiles = [...terrainResponses.entries()].filter(([url]) => !beforeTiles.has(url));
             const requestedBytes = newTiles.reduce((sum, [, bytes]) => sum + bytes, 0);
             console.log(`WP2D ${viewName} state:`, JSON.stringify({ ...result, newTerrainTiles: newTiles.length, requestedBytes }));
 
             if (result.lod !== expectedLod) throw new Error(`${viewName} expected ${expectedLod} LOD but got ${result.lod}.`);
+            if (result.relief !== expectedRelief) throw new Error(`${viewName} expected ${expectedRelief} terrain but got ${result.relief}.`);
             if (!Number.isFinite(result.zoom)) throw new Error(`${viewName} did not expose a settled camera zoom.`);
             if (result.hiddenProtected.length) throw new Error(`${viewName} hid protected command markers: ${result.hiddenProtected.join(', ')}`);
             if (result.overlaps.length) throw new Error(`${viewName} markers overlap terrain HUD: ${result.overlaps.join(', ')}`);
@@ -176,9 +182,9 @@ jobs:
             await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png` });
           };
 
-          await verifyView('campaign', 'campaign');
-          await verifyView('theatre', 'theatre');
-          await verifyView('selected', 'local');
+          await verifyView('campaign', 'campaign', 'physical');
+          await verifyView('theatre', 'theatre', 'strategic-flat');
+          await verifyView('selected', 'local', 'physical');
 
           console.log('WP2D unique terrain requests:', terrainResponses.size, 'tiles /', [...terrainResponses.values()].reduce((a, b) => a + b, 0), 'declared bytes');
           await browser.close();
