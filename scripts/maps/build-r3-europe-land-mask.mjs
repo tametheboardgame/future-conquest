@@ -17,14 +17,26 @@ const worldFeatures = worldGeoJSON.type === 'FeatureCollection'
   ? worldGeoJSON.features
   : [worldGeoJSON];
 
+const validRing = ring => Array.isArray(ring) && ring.length >= 4;
+const cleanClippedFeature = feature => {
+  if (!feature.geometry) return null;
+  if (feature.geometry.type === 'Polygon') {
+    const coordinates = feature.geometry.coordinates.filter(validRing);
+    return coordinates.length ? { ...feature, geometry: { ...feature.geometry, coordinates } } : null;
+  }
+  if (feature.geometry.type === 'MultiPolygon') {
+    const coordinates = feature.geometry.coordinates
+      .map(polygon => polygon.filter(validRing))
+      .filter(polygon => polygon.length > 0);
+    return coordinates.length ? { ...feature, geometry: { ...feature.geometry, coordinates } } : null;
+  }
+  return null;
+};
+
 const clippedFeatures = worldFeatures
   .filter(feature => feature?.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon'))
-  .map(feature => bboxClip(feature, R3_EUROPE_LAND_MASK_BOUNDS))
-  .filter(feature => {
-    if (!feature.geometry) return false;
-    if (feature.geometry.type === 'Polygon') return feature.geometry.coordinates.length > 0;
-    return feature.geometry.type === 'MultiPolygon' && feature.geometry.coordinates.length > 0;
-  });
+  .map(feature => cleanClippedFeature(bboxClip(feature, R3_EUROPE_LAND_MASK_BOUNDS)))
+  .filter(Boolean);
 
 if (!clippedFeatures.length) {
   throw new Error('Europe land-mask clipping produced no polygon features.');
