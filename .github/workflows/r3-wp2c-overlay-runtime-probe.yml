@@ -59,6 +59,7 @@ jobs:
 
           await page.addInitScript(() => {
             localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+            localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
           });
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
