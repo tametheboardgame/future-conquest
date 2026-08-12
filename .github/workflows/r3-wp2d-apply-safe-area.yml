@@ -1,0 +1,35 @@
+name: Apply R3 WP2D safe area
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - 'scripts/apply-r3-wp2d-safe-area.mjs'
+      - '.github/workflows/r3-wp2d-apply-safe-area.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-safe-area:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2d-terrain-refinement
+          fetch-depth: 0
+      - name: Apply safe-area patch
+        run: node scripts/apply-r3-wp2d-safe-area.mjs
+      - name: Commit safe-area implementation
+        run: |
+          git add src/components/TerrainMapPrototypeImpl.tsx src/r3-terrain-prototype.css
+          if git diff --cached --quiet; then
+            echo 'Safe-area patch already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Add WP2D terrain HUD safe area'
+          git push origin HEAD:agent/r3-wp2d-terrain-refinement
