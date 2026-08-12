@@ -1,0 +1,91 @@
+name: R3 WP2B browser runtime probe
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2b-browser-runtime-fix
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-terrain-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install game dependencies
+        run: npm ci
+      - name: Build game
+        run: npm run build
+      - name: Install Chromium runtime probe
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/future-conquest-vite.log 2>&1 &
+          echo $! > /tmp/future-conquest-vite.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/future-conquest-vite.log
+          exit 1
+      - name: Exercise terrain renderer in Chromium
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+          page.on('console', message => console.log(`[browser console ${message.type()}] ${message.text()}`));
+          page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? error.message}`));
+          page.on('requestfailed', request => console.log(`[request failed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`));
+
+          await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'networkidle' });
+          const capability = await page.evaluate(() => {
+            const canvas = document.createElement('canvas');
+            const webgl2 = canvas.getContext('webgl2');
+            const webgl = webgl2 ? null : canvas.getContext('webgl');
+            return {
+              webgl2: Boolean(webgl2),
+              webgl: Boolean(webgl2 || webgl),
+              userAgent: navigator.userAgent
+            };
+          });
+          console.log('Browser capability:', JSON.stringify(capability));
+
+          const ready = page.locator('.r3-terrain-prototype[data-status="ready"]');
+          const fallback = page.locator('.r3-terrain-fallback-notice');
+          await Promise.race([
+            ready.waitFor({ state: 'visible', timeout: 30000 }).catch(() => undefined),
+            fallback.waitFor({ state: 'visible', timeout: 30000 }).catch(() => undefined)
+          ]);
+
+          if (await fallback.isVisible()) {
+            const text = await fallback.innerText();
+            console.log(`Terrain fallback visible: ${text}`);
+            await browser.close();
+            throw new Error(`Terrain renderer fell back in Chromium: ${text}`);
+          }
+          if (!(await ready.isVisible())) {
+            console.log('Page body:', (await page.locator('body').innerText()).slice(0, 4000));
+            await browser.close();
+            throw new Error('Terrain renderer neither became ready nor surfaced fallback diagnostics.');
+          }
+
+          const canvasCount = await page.locator('.maplibregl-canvas').count();
+          console.log(`MapLibre terrain ready with ${canvasCount} canvas element(s).`);
+          if (canvasCount < 1) throw new Error('Terrain reported ready without a MapLibre canvas.');
+          await browser.close();
+          NODE
+      - name: Print preview log on failure
+        if: failure()
+        run: cat /tmp/future-conquest-vite.log || true
