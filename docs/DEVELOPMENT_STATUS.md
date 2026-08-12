@@ -94,32 +94,42 @@ Product-owner visual review of the deployed WP2C build explicitly approved the b
 
 ### R3-WP2D - Terrain Refinement & Presentation Polish
 
-Status: ACTIVE / PACKAGE OPENED
+Status: TECHNICALLY VALIDATED / AWAITING LIVE PRODUCT-OWNER VISUAL ACCEPTANCE
+PR: #122
 Branch: `agent/r3-wp2d-terrain-refinement`
 Package definition: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`
 Base main: `205e5e0ec154b49c4c01cd47b0eedf85c2fcc74c`
+Validated code-bearing head: `ea3adc1becd89074e642871ed6b7fc663f4ee445`
 
-Product-owner direction: perform an intensive second terrain pass now, before WP3, and fine-tune the accepted map foundation as far as practical rather than carrying obvious presentation debt into formation-animation work.
+WP2D has completed its autonomous technical and visual-refinement pass. The candidate now provides:
 
-Immediate live-review findings driving WP2D:
+- a 960-tile self-hosted Copernicus Terrain-RGB Europe theatre footprint;
+- resilient terrain-source/error handling with the supported camera envelope free of the earlier missing-tile warning path;
+- formal Theatre, Campaign and Selected camera presets with dynamic persistent-HUD safe padding;
+- a deliberate LOD split: clean strategic-flat Theatre overview and physical 2.5D terrain at Campaign/Selected decision scales;
+- quiet administrative borders, stronger control/front hierarchy and reduced ordinary route noise while critical supply/bottleneck state remains legible;
+- deterministic projected-screen marker declutter with protected priority for selected formations, active operations/live threats, selected territory and portal state;
+- deterministic toolbar exclusion zones so non-critical markers yield rather than sit beneath persistent terrain controls;
+- restrained bevel/contact-shadow grounding for formations, contacts and operations without movement or authoritative-coordinate distortion;
+- a reproducible build-time Europe-only land mask clipped from World Atlas rather than browser-side world geometry, removing the large diagonal/global polygon artefacts exposed during close visual inspection;
+- non-wrapping Europe-only MapLibre behaviour while preserving the SVG/accessible fallback and reduced-effects path.
 
-- current Terrain-RGB footprint is still the original representative corridor and does not present the intended Europe theatre cleanly;
-- a live request for `./generated/r3-terrain/tiles/7/65/46.png` produced a terrain-source warning;
-- political/territory lines remain visually noisy and insufficiently hierarchical in some views;
-- operational markers and map labels need stronger deterministic declutter/priority rules;
-- markers can sit beneath the terrain status/control box and need a formal safe-area constraint;
-- the top-down <-> pitched 2.5D camera behaviour is a strong feature and should be retained/refined;
-- terrain colouring, contrast, framing, line weight and marker grounding all warrant a deliberate second visual pass.
+Exact-head validation on `ea3adc1becd89074e642871ed6b7fc663f4ee445`:
 
-Approved WP2D order:
+- full engine regression suite: PASS, including current v14 persistence and legacy v7/v6/v4/v3/v2 save migrations;
+- TypeScript + Vite production build and generated-asset verification: PASS;
+- R3 WP2B terrain smoke: PASS;
+- R3 WP2B Chromium runtime probe: PASS;
+- R3 WP2C operational-overlay Chromium probe: PASS;
+- R3 WP2D three-view Chromium visual/runtime gate: PASS;
+- Campaign view settled at zoom 5.35 / physical relief with zero protected-marker losses and zero HUD overlaps;
+- Theatre view settled at zoom 3.60 / strategic-flat relief with deterministic declutter and zero HUD overlaps;
+- Selected view settled at zoom 7.10 / physical relief with zero protected-marker losses and zero HUD overlaps;
+- manual inspection of the exact-head Campaign/Theatre/Selected evidence confirmed the previous diagonal/global land-polygon artefacts are removed;
+- deterministic day-120 balance run: **720 campaigns, exact frozen R2.5 parity — Story 50.0%, Standard 29.6%, Hard 7.9%**;
+- no `src/game/**` authority changes, no save-schema/topology changes, no review threads/comments and no temporary applicator machinery remaining in the final PR diff.
 
-1. **WP2D-A — Terrain source robustness & Europe theatre footprint**
-2. **WP2D-B — Camera, framing & safe viewport**
-3. **WP2D-C — Political/front/route hierarchy cleanup**
-4. **WP2D-D — Marker declutter & command-piece presentation**
-5. **WP2D-E — Intensive visual/performance/accessibility validation**
-
-WP2D acceptance requires no supported terrain-source warning in the intended Europe camera envelope, a credible Europe Theatre view, persistent-HUD safe areas, clear political/front/route hierarchy, readable dense-region markers, preserved intelligence boundaries, exact gameplay/save/topology parity, green browser/runtime/build/balance gates and product-owner visual acceptance.
+The next gate is deliberately human: deploy the hidden `?terrain=1` candidate from main and obtain product-owner visual acceptance. WP3 remains paused until that acceptance is given.
 
 ## Paused work
 
