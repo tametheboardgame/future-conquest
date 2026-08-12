@@ -102,6 +102,11 @@ jobs:
           if (overlayState.enemyContacts > 0 && overlayState.visibleEnemyContacts < 1) throw new Error('Player-visible enemy contacts exist but none are visible on terrain.');
           if (!overlayState.overlayLod) throw new Error('Terrain operational overlay LOD was not initialised.');
 
+          const secondGroup = page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"]');
+          await secondGroup.click();
+          await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'visible', timeout: 5000 });
+          console.log('WP2C formation counter selection verified for TG-2.');
+
           await page.locator('.r3-terrain-prototype-canvas').screenshot({ path: '/tmp/r3-wp2c-overlay.png' });
           await browser.close();
           NODE
