@@ -17,34 +17,46 @@ export interface TerrainDataManifest {
   runtimeDelivery: 'preprocessed-static-assets';
   attribution: string;
   requiresBrowserSecret: false;
+  theatreBounds: readonly [number, number, number, number];
+  /** Compatibility alias retained while WP2B-era tests/consumers migrate. */
   prototypeBounds: readonly [number, number, number, number];
   initialExaggeration: number;
 }
 
 /**
- * Representative WP2B theatre: southern England through France/Benelux/Rhine
- * into Switzerland and the Alps. Coordinates are WGS84 [west, south, east, north].
+ * WP2D Europe theatre envelope. This mirrors the mature SVG theatre contract:
+ * Iceland/western approaches through the Caucasus/western Russia, and the
+ * Mediterranean through Scandinavia. Coordinates are WGS84
+ * [west, south, east, north].
  */
-export const R3_TERRAIN_PROTOTYPE_BOUNDS = [-5.8, 44.0, 14.8, 53.8] as const;
+export const R3_TERRAIN_EUROPE_BOUNDS = [-25.0, 33.0, 50.0, 72.0] as const;
+
+/**
+ * WP2B compatibility name. The physical terrain is no longer a small prototype
+ * corridor; all runtime bounds now point at the WP2D Europe envelope.
+ */
+export const R3_TERRAIN_PROTOTYPE_BOUNDS = R3_TERRAIN_EUROPE_BOUNDS;
 
 export const R3_TERRAIN_MANIFEST: TerrainDataManifest = {
-  id: 'r3-wp2b-europe-prototype-v1',
+  id: 'r3-wp2d-europe-theatre-v1',
   sourceFamily: 'copernicus-dem',
   preferredDataset: 'COP-DEM-GLO-30',
   fallbackDataset: 'COP-DEM-GLO-90',
   runtimeDelivery: 'preprocessed-static-assets',
   attribution: 'Elevation: Copernicus DEM',
   requiresBrowserSecret: false,
-  prototypeBounds: R3_TERRAIN_PROTOTYPE_BOUNDS,
+  theatreBounds: R3_TERRAIN_EUROPE_BOUNDS,
+  prototypeBounds: R3_TERRAIN_EUROPE_BOUNDS,
   initialExaggeration: 2
 };
 
 /**
- * MapLibre owns geographic camera state. These presets are deliberately
- * renderer-only and do not alter authoritative campaign selection or game state.
+ * MapLibre owns geographic camera state. Theatre deliberately shows the wider
+ * Europe envelope with a restrained pitch; campaign/selected retain the more
+ * dramatic command-table angle that product-owner review approved.
  */
 export const R3_TERRAIN_CAMERA_PRESETS: readonly TerrainCameraPreset[] = [
-  { id: 'theatre', center: [4.6, 49.1], zoom: 4.45, pitch: 42, bearing: -7 },
+  { id: 'theatre', center: [12.0, 56.0], zoom: 3.45, pitch: 28, bearing: -3 },
   { id: 'campaign', center: [5.3, 49.2], zoom: 5.35, pitch: 51, bearing: -9 },
   { id: 'selected', center: [5.3, 49.2], zoom: 7.1, pitch: 57, bearing: -8 }
 ] as const;
@@ -94,7 +106,7 @@ export function terrainCameraForProfile(
   if (profile === 'full') return { ...preset };
   return {
     ...preset,
-    zoom: Math.max(3.6, preset.zoom - 0.15),
+    zoom: Math.max(3.2, preset.zoom - 0.15),
     pitch: Math.min(preset.pitch, 42)
   };
 }
