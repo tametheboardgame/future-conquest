@@ -303,7 +303,20 @@ export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readon
     }];
   });
 
-  const visible = visibleTerrainMarkerIds(candidates, terrainMarkerLodForZoom(map.getZoom()));
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const toolbar = map.getContainer().parentElement?.querySelector('.r3-terrain-prototype-toolbar');
+  const toolbarRect = toolbar instanceof HTMLElement ? toolbar.getBoundingClientRect() : undefined;
+  const reservedRects = toolbarRect ? [{
+    left: toolbarRect.left - mapRect.left,
+    top: toolbarRect.top - mapRect.top,
+    right: toolbarRect.right - mapRect.left,
+    bottom: toolbarRect.bottom - mapRect.top
+  }] : [];
+  const visible = visibleTerrainMarkerIds(
+    candidates,
+    terrainMarkerLodForZoom(map.getZoom()),
+    reservedRects
+  );
   for (const marker of markers) {
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
