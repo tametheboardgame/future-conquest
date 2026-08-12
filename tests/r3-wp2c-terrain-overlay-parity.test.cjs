@@ -42,3 +42,12 @@ test('WP2C terrain markers are rebuilt from current campaign state and cleaned u
   assert.match(renderer, /\[state, status\]/);
   assert.match(renderer, /operationalMarkersRef\.current = \[\]/);
 });
+
+
+test('WP2C friendly terrain counters preserve formation selection semantics', () => {
+  const app = fs.readFileSync('src/App.tsx', 'utf8');
+  assert.match(app, /onSelectGroup=\{openGroupOnMap\}/);
+  assert.match(renderer, /onSelectGroup\?: \(groupId: string\) => void/);
+  assert.match(renderer, /selectGroupRef\.current\?\.\(groupId\)/);
+  assert.match(markers, /callbacks\.onSelectGroup\(group\.id\)/);
+});

@@ -47,6 +47,7 @@ import {
 export interface TerrainMapPrototypeProps {
   state: GameState;
   onSelect: (territoryId: string) => void;
+  onSelectGroup?: (groupId: string) => void;
   onFallback: (reason: string) => void;
   presentationProfile?: Exclude<TerrainPresentationProfile, 'svg-fallback'>;
 }
@@ -494,6 +495,7 @@ function mapStyle(
 export function TerrainMapPrototypeImpl({
   state,
   onSelect,
+  onSelectGroup,
   onFallback,
   presentationProfile = 'full'
 }: TerrainMapPrototypeProps) {
@@ -501,6 +503,7 @@ export function TerrainMapPrototypeImpl({
   const mapRef = useRef<Map | null>(null);
   const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
   const selectRef = useRef(onSelect);
+  const selectGroupRef = useRef(onSelectGroup);
   const fallbackRef = useRef(onFallback);
   const loadedRef = useRef(false);
   const [status, setStatus] = useState<PrototypeStatus>('initialising');
@@ -508,6 +511,7 @@ export function TerrainMapPrototypeImpl({
   const [sourceAttribution, setSourceAttribution] = useState(COPERNICUS_ATTRIBUTION);
 
   selectRef.current = onSelect;
+  selectGroupRef.current = onSelectGroup;
   fallbackRef.current = onFallback;
 
   const visibleThreats = useMemo(() => getThreatenedTerritories(state), [state]);
@@ -670,7 +674,8 @@ export function TerrainMapPrototypeImpl({
 
     removeTerrainOperationalMarkers(operationalMarkersRef.current);
     operationalMarkersRef.current = buildTerrainOperationalMarkers(map, state, {
-      onSelectTerritory: territoryId => selectRef.current(territoryId)
+      onSelectTerritory: territoryId => selectRef.current(territoryId),
+      onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
 
     return () => {
