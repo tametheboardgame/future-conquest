@@ -39,6 +39,10 @@ import {
   generatedTerrainManifestUrl,
   type GeneratedTerrainTileJson
 } from '../presentation/r3-terrain-source';
+import {
+  buildTerrainOperationalMarkers,
+  removeTerrainOperationalMarkers
+} from '../presentation/r3-terrain-operational-markers';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -495,6 +499,7 @@ export function TerrainMapPrototypeImpl({
 }: TerrainMapPrototypeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
   const selectRef = useRef(onSelect);
   const fallbackRef = useRef(onFallback);
   const loadedRef = useRef(false);
@@ -566,6 +571,15 @@ export function TerrainMapPrototypeImpl({
       mapRef.current = map;
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
+      const updateOverlayLod = () => {
+        const host = containerRef.current?.parentElement;
+        if (!host) return;
+        const zoom = map.getZoom();
+        host.dataset.overlayLod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local';
+      };
+      map.on('zoom', updateOverlayLod);
+      updateOverlayLod();
+
       map.on('load', () => {
         loadedRef.current = true;
         setStatus('ready');
@@ -625,6 +639,8 @@ export function TerrainMapPrototypeImpl({
     return () => {
       disposed = true;
       loadedRef.current = false;
+      removeTerrainOperationalMarkers(operationalMarkersRef.current);
+      operationalMarkersRef.current = [];
       mapRef.current = null;
       ownedMap?.remove();
     };
@@ -647,6 +663,21 @@ export function TerrainMapPrototypeImpl({
       if (source instanceof GeoJSONSource) source.setData(data);
     }
   }, [politicalData, frontData, routeData, nodeData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current || status === 'initialising') return;
+
+    removeTerrainOperationalMarkers(operationalMarkersRef.current);
+    operationalMarkersRef.current = buildTerrainOperationalMarkers(map, state, {
+      onSelectTerritory: territoryId => selectRef.current(territoryId)
+    });
+
+    return () => {
+      removeTerrainOperationalMarkers(operationalMarkersRef.current);
+      operationalMarkersRef.current = [];
+    };
+  }, [state, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {
     const profiled = terrainCameraForProfile(preset, presentationProfile);
