@@ -189,7 +189,7 @@ function mapStyle(
             'case',
             ['boolean', ['get', 'selected'], false], 0.18,
             ['boolean', ['get', 'targeted'], false], 0.17,
-            0.11
+            ['interpolate', ['linear'], ['zoom'], 4, 0.07, 5.5, 0.09, 7, 0.12, 9, 0.13]
           ]
         }
       },
@@ -211,11 +211,11 @@ function mapStyle(
           ],
           'fill-opacity': [
             'case',
-            ['boolean', ['get', 'active_combat'], false], 0.22,
-            ['==', ['get', 'threat_stage'], 'under-attack'], 0.2,
-            ['==', ['get', 'threat_stage'], 'imminent'], 0.15,
-            ['==', ['get', 'threat_stage'], 'preparing'], 0.1,
-            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.09,
+            ['boolean', ['get', 'active_combat'], false], 0.24,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 0.22,
+            ['==', ['get', 'threat_stage'], 'imminent'], 0.16,
+            ['==', ['get', 'threat_stage'], 'preparing'], 0.09,
+            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.07,
             ['boolean', ['get', 'targeted'], false], 0.11,
             ['boolean', ['get', 'selected'], false], 0.08,
             0
@@ -228,15 +228,15 @@ function mapStyle(
         source: 'campaign-territories',
         paint: {
           'line-color': '#d6d8c9',
-          'line-opacity': 0.34,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.55, 8, 1.05]
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.18, 5.5, 0.23, 7, 0.31, 9, 0.4],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.45, 6, 0.7, 8, 1.05]
         }
       },
       {
         id: 'campaign-strategic-routes',
         type: 'line',
         source: 'campaign-strategic-routes',
-        minzoom: 5.1,
+        minzoom: 5,
         paint: {
           'line-color': [
             'case',
@@ -249,17 +249,21 @@ function mapStyle(
           ],
           'line-opacity': [
             'case',
-            ['boolean', ['get', 'selected_supply_path'], false], 0.9,
-            ['boolean', ['get', 'bottleneck'], false], 0.78,
-            ['==', ['get', 'status'], 'destroyed'], 0.42,
-            0.5
+            ['boolean', ['get', 'selected_supply_path'], false], 0.92,
+            ['boolean', ['get', 'bottleneck'], false], 0.82,
+            ['==', ['get', 'status'], 'destroyed'], 0.58,
+            ['==', ['get', 'status'], 'blocked'], 0.62,
+            ['==', ['get', 'status'], 'damaged'], 0.55,
+            ['interpolate', ['linear'], ['zoom'], 5, 0.1, 5.8, 0.25, 7, 0.44, 9, 0.58]
           ],
           'line-width': [
             'case',
             ['boolean', ['get', 'selected_supply_path'], false], 3.2,
             ['boolean', ['get', 'bottleneck'], false], 2.4,
-            ['==', ['get', 'status'], 'destroyed'], 1.1,
-            1.45
+            ['==', ['get', 'status'], 'destroyed'], 1.4,
+            ['==', ['get', 'status'], 'blocked'], 1.8,
+            ['==', ['get', 'status'], 'damaged'], 1.6,
+            ['interpolate', ['linear'], ['zoom'], 5, 0.75, 6, 1.05, 8, 1.45, 10, 1.7]
           ]
         }
       },
@@ -273,8 +277,8 @@ function mapStyle(
             ['==', ['get', 'controller'], 'player'], '#70d9cb',
             '#b99194'
           ],
-          'line-opacity': 0.72,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 2]
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.48, 6, 0.62, 8, 0.74, 10, 0.8],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 6, 1.2, 8, 1.8]
         }
       },
       {
@@ -286,8 +290,8 @@ function mapStyle(
         },
         paint: {
           'line-color': '#3c2623',
-          'line-opacity': 0.88,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 5.2, 8, 8.4]
+          'line-opacity': 0.9,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 4.6, 6, 5.8, 8, 7.1, 10, 8.2]
         }
       },
       {
@@ -299,8 +303,8 @@ function mapStyle(
         },
         paint: {
           'line-color': '#f3a15d',
-          'line-opacity': 0.96,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 2.1, 8, 3.6]
+          'line-opacity': 0.98,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.8, 6, 2.4, 8, 3.1, 10, 3.5]
         }
       },
       {
@@ -314,28 +318,30 @@ function mapStyle(
             ['==', ['get', 'threat_stage'], 'under-attack'], '#ff695e',
             ['==', ['get', 'threat_stage'], 'imminent'], '#ffaf67',
             ['==', ['get', 'threat_stage'], 'preparing'], '#f1d37e',
+            ['==', ['get', 'threat_stage'], 'recent-combat'], '#a96f67',
             ['boolean', ['get', 'targeted'], false], '#ffd58a',
             ['boolean', ['get', 'selected'], false], '#effffc',
             '#000000'
           ],
           'line-opacity': [
             'case',
-            ['any',
-              ['boolean', ['get', 'active_combat'], false],
-              ['!=', ['get', 'threat_stage'], 'none'],
-              ['boolean', ['get', 'targeted'], false],
-              ['boolean', ['get', 'selected'], false]
-            ],
-            0.96,
+            ['boolean', ['get', 'active_combat'], false], 0.98,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 0.98,
+            ['==', ['get', 'threat_stage'], 'imminent'], 0.94,
+            ['==', ['get', 'threat_stage'], 'preparing'], 0.82,
+            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.62,
+            ['boolean', ['get', 'targeted'], false], 0.94,
+            ['boolean', ['get', 'selected'], false], 0.95,
             0
           ],
           'line-width': [
             'case',
-            ['boolean', ['get', 'active_combat'], false], 4.2,
-            ['==', ['get', 'threat_stage'], 'under-attack'], 3.8,
-            ['boolean', ['get', 'selected'], false], 3.4,
-            ['boolean', ['get', 'targeted'], false], 3,
-            2.5
+            ['boolean', ['get', 'active_combat'], false], 4,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 3.6,
+            ['boolean', ['get', 'selected'], false], 3.2,
+            ['boolean', ['get', 'targeted'], false], 2.8,
+            ['==', ['get', 'threat_stage'], 'imminent'], 2.8,
+            2.2
           ]
         }
       },
@@ -343,7 +349,7 @@ function mapStyle(
         id: 'campaign-strategic-nodes',
         type: 'circle',
         source: 'campaign-strategic-nodes',
-        minzoom: 5.5,
+        minzoom: 5.4,
         paint: {
           'circle-color': [
             'case',
@@ -361,14 +367,24 @@ function mapStyle(
             ['==', ['get', 'importance'], 2], 4,
             3
           ],
-          'circle-opacity': 0.86,
+          'circle-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            5.4, ['case', ['==', ['get', 'importance'], 3], 0.72, 0],
+            6.2, ['case', ['>=', ['get', 'importance'], 2], 0.82, 0.16],
+            7.2, 0.88
+          ],
           'circle-stroke-color': [
             'case',
             ['==', ['get', 'controller'], 'player'], '#6de2d2',
             '#c39a9e'
           ],
           'circle-stroke-width': 1.4,
-          'circle-stroke-opacity': 0.92
+          'circle-stroke-opacity': [
+            'interpolate', ['linear'], ['zoom'],
+            5.4, ['case', ['==', ['get', 'importance'], 3], 0.8, 0],
+            6.2, ['case', ['>=', ['get', 'importance'], 2], 0.88, 0.18],
+            7.2, 0.94
+          ]
         }
       }
     ]
