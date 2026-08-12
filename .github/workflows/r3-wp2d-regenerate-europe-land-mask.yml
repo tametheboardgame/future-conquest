@@ -1,0 +1,39 @@
+name: Regenerate R3 WP2D Europe land mask
+
+on:
+  push:
+    branches:
+      - agent/r3-wp2d-terrain-refinement
+    paths:
+      - 'scripts/maps/build-r3-europe-land-mask.mjs'
+      - '.github/workflows/r3-wp2d-regenerate-europe-land-mask.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate-europe-land-mask:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/r3-wp2d-terrain-refinement
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Regenerate Europe land mask
+        run: npm run build:r3-europe-land-mask
+      - name: Commit regenerated mask
+        run: |
+          git add src/assets/r3-europe-land-mask.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Regenerate clean Europe land mask'
+          git push origin HEAD:agent/r3-wp2d-terrain-refinement
