@@ -444,13 +444,19 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
 }
 
 /** Keep intelligence cards legible without moving their authoritative WGS84 position. */
-function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[]) {
-  const obstacles = markers.flatMap(marker => {
+function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Element | null | undefined) {
+  const placeLabelObstacles = markers.flatMap(marker => {
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
     if (element.hidden || !['territory', 'selected-territory', 'node-major', 'node-secondary'].includes(kind ?? '')) return [];
     return [element.getBoundingClientRect()];
   });
+  // Declutter protects the contact's base offset from the HUD. Keep that same
+  // safe area forbidden during this later collision pass so a label-avoidance
+  // displacement cannot move an otherwise visible contact into the toolbar.
+  const obstacles: Rect[] = toolbar instanceof HTMLElement
+    ? [toolbar.getBoundingClientRect(), ...placeLabelObstacles]
+    : placeLabelObstacles;
   const occupied: Rect[] = [];
   const deltas: Array<readonly [number, number]> = [[0, 0]];
   for (let distance = 8; distance <= 64; distance += 8) {
@@ -520,7 +526,7 @@ export function applyTerrainOperationalMarkerLayout(
   }
   avoidTerritoryToolbarCollisions(markers, toolbar);
   avoidFormationLabelCollisions(markers);
-  avoidEnemyPlaceLabelCollisions(markers);
+  avoidEnemyPlaceLabelCollisions(markers, toolbar);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {

@@ -52,7 +52,17 @@ test('WP2D-D shifts visible protected territory names clear of the actual toolba
   assert.match(markers, /toolbarDisplacementX/);
   assert.match(markers, /toolbarDisplacementY/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*toolbar/i);
-  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar\);\s*avoidFormationLabelCollisions\(markers\);\s*avoidEnemyPlaceLabelCollisions\(markers\);/);
+  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar\);\s*avoidFormationLabelCollisions\(markers\);\s*avoidEnemyPlaceLabelCollisions\(markers, toolbar\);/);
+});
+
+test('WP2D-D post-declutter enemy displacement keeps the actual toolbar forbidden', () => {
+  assert.match(markers, /function avoidEnemyPlaceLabelCollisions\(markers: readonly Marker\[\], toolbar: Element \| null \| undefined\)/);
+  assert.match(markers, /toolbar instanceof HTMLElement\s*\? \[toolbar\.getBoundingClientRect\(\), \.\.\.placeLabelObstacles\]/);
+  assert.match(markers, /\[\.\.\.obstacles, \.\.\.occupied\]\.every\(obstacle => !overlaps/);
+  assert.match(markers, /\)\)\) \?\? \[0, 0\]/);
+  assert.match(markers, /for \(let distance = 8; distance <= 64; distance \+= 8\)/);
+  assert.match(markers, /baseX \+ delta\[0\], baseY \+ delta\[1\]/);
+  assert.doesNotMatch(markers, /setLngLat\([^\n]*contact/i);
 });
 
 test('WP2D-D hidden declutter state beats marker display rules in the real browser cascade', () => {
