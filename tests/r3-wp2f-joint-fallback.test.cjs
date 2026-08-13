@@ -63,7 +63,9 @@ test('WP2F deterministic dense four-formation cluster uses the joint visible-lab
   ].map(item => makeMarker({ ...item, kind: item.id.startsWith('node:') ? 'node-major' : 'territory' }));
   const earlierFormation = makeMarker({
     id: 'formation:earlier', kind: 'formation', territoryId: 'BE-01',
-    rect: { left: 26, top: 48, right: 30, bottom: 52 }
+    // The original LU label begins at x=34, so this formation is initially clear.
+    // The old later-cluster fallback moved that label left by one pixel onto it.
+    rect: { left: 30, top: 48, right: 34, bottom: 52 }
   });
   // In insertion order this independent cluster settles before LU-01. Its
   // accepted rectangle must constrain the later cluster's label backtracking.
