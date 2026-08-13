@@ -1,7 +1,11 @@
 import type { Marker } from 'maplibre-gl';
 import { TERRITORIES } from '../game/data';
 import type { GameState } from '../game/types';
-import { formationPresentationPosition, type FormationGeoPoint } from './r3-formation-movement';
+import {
+  formationPresentationPath,
+  formationPresentationPosition,
+  type FormationGeoPoint
+} from './r3-formation-movement';
 
 const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
 const MOVEMENT_ANIMATION_MS = 520;
@@ -74,10 +78,12 @@ export function applyMovingFormationMarkers(
       delete element.dataset.movementProgress;
       delete element.dataset.movementTarget;
       delete element.dataset.movementRouteId;
+      delete element.dataset.movementPath;
       continue;
     }
 
     const progress = clampProgress(group.order!.progress);
+    const path = formationPresentationPath(group, territoryCentres);
     const position = formationPresentationPosition(group, territoryCentres);
     if (position) setMarkerPresentationPosition(marker, position, animate);
 
@@ -92,6 +98,7 @@ export function applyMovingFormationMarkers(
 
     element.dataset.movementProgress = String(progress);
     element.dataset.movementTarget = group.order!.target;
+    if (path?.length) element.dataset.movementPath = JSON.stringify(path);
     if (group.order!.routeId) element.dataset.movementRouteId = group.order!.routeId;
     const targetName = TERRITORIES[group.order!.target]?.centre ?? group.order!.target;
     element.setAttribute(
