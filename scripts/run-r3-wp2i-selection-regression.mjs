@@ -94,7 +94,8 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
     await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
     // Exercise the canonical saved-game launcher transaction. continueCampaign()
     // briefly opens Campaign and invokes Load Manual Save; a successful App.load()
-    // finishes on Map, which is the stable completed-transaction state.
+    // finishes on Map, which is the stable completed-transaction state. Campaign
+    // below refers to the map's initial camera LOD, not the Campaign command view.
     await page.getByRole('button', { name: 'CONTINUE CAMPAIGN' }).click();
     await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
     await page.locator('[data-command-view="map"][aria-current="page"]').waitFor({ state: 'visible' });
@@ -102,8 +103,8 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
     await host.waitFor({ state: 'visible', timeout: 45_000 });
     await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
     await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
-    await page.locator('[data-command-view="campaign"]').click();
-    await page.locator('[data-command-view="campaign"][aria-current="page"]').waitFor({ state: 'visible' });
+    // Stay on Map: selecting the Campaign command view unmounts the terrain host.
+    // The loaded save initializes this map from the Campaign camera preset.
     await page.waitForFunction(() => {
       const host = document.querySelector('.r3-terrain-prototype');
       return host?.getAttribute('data-overlay-lod') === 'campaign'
@@ -121,7 +122,20 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
       launcherContinueVisible: await page.getByRole('button', { name: 'CONTINUE CAMPAIGN' }).isVisible().catch(() => false),
       activeCommandView: await page.locator('[data-command-view][aria-current="page"]').getAttribute('data-command-view').catch(() => null),
       terrainStatus: await page.locator('.r3-terrain-prototype').getAttribute('data-status').catch(() => null),
-      dusseldorfPortalPresent: await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').count().catch(() => 0)
+      dusseldorfPortalPresent: await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').count().catch(() => 0),
+      overlayLod: await page.locator('.r3-terrain-prototype').getAttribute('data-overlay-lod').catch(() => null),
+      terrainRelief: await page.locator('.r3-terrain-prototype').getAttribute('data-terrain-relief').catch(() => null),
+      mapCamera: await page.evaluate(() => {
+        const map = window.__r3TerrainMap;
+        if (!map) return null;
+        const center = map.getCenter();
+        return {
+          center: [center.lng, center.lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing()
+        };
+      }).catch(() => null)
     };
     fs.writeFileSync(`${scenarioDir}/setup-diagnostic.json`, `${JSON.stringify(diagnostic, null, 2)}\n`);
     await page.screenshot({ path: `${scenarioDir}/setup-failure.png`, fullPage: true }).catch(() => {});

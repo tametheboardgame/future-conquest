@@ -55,8 +55,11 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(continueFlow, /\[data-command-view="map"\]\[aria-current="page"\][^\n]+waitFor/);
   assert.doesNotMatch(continueFlow, /locator\('\[data-command-view="map"\]'\)\.click/);
   assert.match(continueFlow, /r3-terrain-portal-marker\[data-territory-id="DE-02"\][^\n]+waitFor/);
-  assert.match(continueFlow, /\[data-command-view="campaign"\][^\n]+\.click/);
-  assert.match(continueFlow, /\[data-command-view="campaign"\]\[aria-current="page"\][^\n]+waitFor/);
+  assert.doesNotMatch(continueFlow, /locator\('\[data-command-view="campaign"\]'\)\.click/);
+  assert.match(continueFlow, /Stay on Map: selecting the Campaign command view unmounts the terrain host/);
+  assert.match(continueFlow, /data-overlay-lod'\) === 'campaign'/);
+  assert.match(continueFlow, /data-terrain-relief'\) === 'physical'/);
+  assert.match(continueFlow, /mapCamera:[\s\S]+zoom: map\.getZoom\(\)/);
   assert.match(selectionReplay, /const savedCampaign = await findAndSaveNaturalDusseldorfCampaign/);
   assert.match(selectionReplay, /Persist the complete transaction before evaluating a single invariant/);
   assert.match(selectionReplay, /after\.zoom < 4\.8/);
