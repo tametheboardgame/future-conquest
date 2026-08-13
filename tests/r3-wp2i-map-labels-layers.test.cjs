@@ -20,8 +20,10 @@ test('WP2I terrain layers use persistent presentation-only defaults', () => {
   assert.match(renderer, /setLayoutProperty\('campaign-strategic-routes', 'visibility'/);
 });
 
-test('WP2I selection cannot remount the terrain renderer or move contact authority', () => {
-  assert.doesNotMatch(host, /TerrainMapPrototypeImpl key=\{profile\}/);
+test('WP2I selection preserves the profile-key lifecycle and does not move contact authority', () => {
+  assert.match(host, /TerrainMapPrototypeImpl key=\{profile\}/);
+  assert.match(renderer, /containerResizeObserver/);
+  assert.match(renderer, /map\.resize\(\)/);
   assert.match(markers, /avoidEnemyPlaceLabelCollisions/);
   assert.match(markers, /contactDisplacementX/);
   assert.match(markers, /distance <= 64/);

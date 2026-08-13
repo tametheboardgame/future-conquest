@@ -541,6 +541,8 @@ export function TerrainMapPrototypeImpl({
     let disposed = false;
     let ownedMap: Map | null = null;
     let toolbarResizeObserver: ResizeObserver | null = null;
+    let containerResizeObserver: ResizeObserver | null = null;
+    let resizeFrame = 0;
 
     const initialise = async () => {
       const terrainSource = await loadTerrainSource();
@@ -592,6 +594,31 @@ export function TerrainMapPrototypeImpl({
       if (typeof ResizeObserver !== 'undefined' && toolbarRef.current) {
         toolbarResizeObserver = new ResizeObserver(applySafePadding);
         toolbarResizeObserver.observe(toolbarRef.current);
+      }
+      // MapLibre's window listener cannot see command-sidebar changes that
+      // resize this flex/grid child. Resize on the next frame, after layout has
+      // settled; Map#resize updates the backing store without changing camera.
+      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+        let observedWidth: number | undefined;
+        let observedHeight: number | undefined;
+        containerResizeObserver = new ResizeObserver(entries => {
+          const entry = entries[0];
+          if (!entry) return;
+          const { width, height } = entry.contentRect;
+          if (observedWidth === undefined || observedHeight === undefined) {
+            observedWidth = width;
+            observedHeight = height;
+            return;
+          }
+          if (width === observedWidth && height === observedHeight) return;
+          observedWidth = width;
+          observedHeight = height;
+          window.cancelAnimationFrame(resizeFrame);
+          resizeFrame = window.requestAnimationFrame(() => {
+            if (!disposed) map.resize();
+          });
+        });
+        containerResizeObserver.observe(containerRef.current);
       }
 
       let terrainMeshMode: 'physical' | 'strategic-flat' = 'physical';
@@ -708,6 +735,8 @@ export function TerrainMapPrototypeImpl({
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
       toolbarResizeObserver?.disconnect();
+      containerResizeObserver?.disconnect();
+      window.cancelAnimationFrame(resizeFrame);
       mapRef.current = null;
       delete (window as typeof window & { __r3TerrainMap?: Map }).__r3TerrainMap;
       delete (window as typeof window & { __r3StrategicNodes?: typeof STRATEGIC_NODES }).__r3StrategicNodes;
