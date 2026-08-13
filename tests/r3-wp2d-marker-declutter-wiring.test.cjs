@@ -47,6 +47,8 @@ test('WP2D-D shifts visible protected territory names clear of the actual toolba
   assert.match(markers, /function avoidTerritoryToolbarCollisions\(markers: readonly Marker\[\], toolbar: Element \| null \| undefined\)/);
   assert.match(markers, /kind !== 'territory' && kind !== 'selected-territory'/);
   assert.match(markers, /toolbarRect\.bottom - rect\.top \+ gap/);
+  assert.match(markers, /maximumDisplacement = 128/);
+  assert.match(markers, /Math\.hypot\(\.\.\.candidate\) <= maximumDisplacement/);
   assert.match(markers, /toolbarDisplacementX/);
   assert.match(markers, /toolbarDisplacementY/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*toolbar/i);

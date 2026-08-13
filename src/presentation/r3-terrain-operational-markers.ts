@@ -414,6 +414,7 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
   if (!(toolbar instanceof HTMLElement)) return;
   const toolbarRect = toolbar.getBoundingClientRect();
   const gap = 4;
+  const maximumDisplacement = 128;
   for (const marker of markers) {
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
@@ -429,7 +430,7 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
       ];
       candidates.sort((a, b) => Math.hypot(...a) - Math.hypot(...b)
         || a[1] - b[1] || a[0] - b[0]);
-      delta = candidates[0];
+      delta = candidates.find(candidate => Math.hypot(...candidate) <= maximumDisplacement) ?? delta;
     }
     const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
     const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
