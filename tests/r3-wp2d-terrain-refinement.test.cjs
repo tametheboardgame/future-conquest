@@ -73,11 +73,11 @@ test('WP2D camera presets use dynamic toolbar safe padding and respond to toolba
   assert.match(renderer, /ref=\{toolbarRef\}/);
 });
 
-test('WP2D-C makes administrative borders quieter than control boundaries', () => {
+test('WP2F strengthens administrative borders while keeping them quieter than control boundaries', () => {
   const administrative = layerBlock('campaign-administrative-borders');
   const control = layerBlock('campaign-control-borders');
-  assert.match(administrative, /4, 0\.07, 5\.5, 0\.1, 7, 0\.16, 9, 0\.23/);
-  assert.match(administrative, /4, 0\.3, 6, 0\.45, 8, 0\.68/);
+  assert.match(administrative, /4, 0\.18, 5\.5, 0\.23, 7, 0\.3, 9, 0\.38/);
+  assert.match(administrative, /4, 0\.42, 6, 0\.58, 8, 0\.78/);
   assert.match(control, /4, 0\.3, 6, 0\.44, 8, 0\.58, 10, 0\.68/);
   assert.match(control, /4, 0\.58, 6, 0\.82, 8, 1\.2/);
 });
