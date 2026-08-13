@@ -52,8 +52,10 @@ for (let y = 0.25; y <= 0.75 && !hovered; y += 0.1) {
 }
 if (!hovered) throw new Error('pointer sweep did not encounter a territory');
 evidence.hover.entered = true;
-await page.mouse.move(box.x + 2, box.y + 2);
-await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype-canvas canvas')?.style.cursor !== 'pointer');
+// Move genuinely outside the MapLibre canvas. The previous canvas-edge probe could
+// still land on a territory polygon and therefore correctly retain pointer hover.
+await page.mouse.move(1, 1);
+await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype-canvas canvas')?.style.cursor !== 'pointer', undefined, { timeout: 5_000 });
 evidence.hover.cleared = await canvas.evaluate(node => node.style.cursor !== 'pointer');
 evidence.hover.selectionUnchanged = selectedBefore === await page.locator('.r3-terrain-territory-label.selected').getAttribute('data-territory-id');
 evidence.identity = await page.evaluate(() => {
