@@ -12,6 +12,8 @@ const tileCancellation = process.env.R3_WP2E_TILE_CANCELLATION ?? 'default';
 const TERRAIN_QUIET_MS = 500;
 const INITIAL_SETTLE_MINIMUM_MS = 250;
 const CAMERA_SETTLE_MINIMUM_MS = 950;
+const SETTLEMENT_TIMEOUT_MS = 45_000;
+const TERRAIN_TILE_PATH = '/generated/r3-terrain/tiles/';
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
@@ -22,19 +24,40 @@ await session.send('Network.setCacheDisabled', { cacheDisabled: true });
 
 const requests = [];
 const diagnostics = [];
-let lastTerrainResponseAt = 0;
+const inFlightTerrainRequests = new Set();
+let lastTerrainActivityAt = 0;
+let peakInFlightTerrainRequests = 0;
+const isTerrainTileUrl = url => url.includes(TERRAIN_TILE_PATH);
+const noteTerrainActivity = () => {
+  lastTerrainActivityAt = performance.now();
+  peakInFlightTerrainRequests = Math.max(peakInFlightTerrainRequests, inFlightTerrainRequests.size);
+};
+
 page.on('console', message => diagnostics.push(`[console:${message.type()}] ${message.text()}`));
 page.on('pageerror', error => diagnostics.push(`[pageerror] ${error.stack ?? error.message}`));
+page.on('request', request => {
+  if (!isTerrainTileUrl(request.url())) return;
+  inFlightTerrainRequests.add(request);
+  noteTerrainActivity();
+});
 page.on('response', response => {
-  if (!response.url().includes('/generated/r3-terrain/tiles/')) return;
+  if (!isTerrainTileUrl(response.url())) return;
   requests.push({
     url: response.url(),
     status: response.status(),
     bytes: Number(response.headers()['content-length'] ?? 0)
   });
-  lastTerrainResponseAt = performance.now();
+});
+page.on('requestfinished', request => {
+  if (!isTerrainTileUrl(request.url())) return;
+  inFlightTerrainRequests.delete(request);
+  noteTerrainActivity();
 });
 page.on('requestfailed', request => {
+  if (isTerrainTileUrl(request.url())) {
+    inFlightTerrainRequests.delete(request);
+    noteTerrainActivity();
+  }
   if (request.url().includes('/generated/r3-terrain/')) {
     diagnostics.push(`[requestfailed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`);
   }
@@ -80,16 +103,21 @@ await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')
 
 /**
  * Build-neutral settlement rule used identically for WP2D base and WP2E head:
- * allow the normal camera/render window to elapse, then require Terrain-RGB
- * network activity to have been quiet for a bounded period. Head-only MapLibre
- * idle instrumentation is intentionally not required here.
+ * allow the normal camera/render window to elapse, then require every observed
+ * Terrain-RGB request body to have completed and terrain network activity to
+ * have remained quiet for a bounded period. Head-only MapLibre idle
+ * instrumentation is intentionally not required here.
  */
 const waitForTerrainSettlement = async (phaseStartedAt, minimumMs) => {
   for (;;) {
     const now = performance.now();
     const minimumElapsed = now - phaseStartedAt >= minimumMs;
-    const terrainQuiet = lastTerrainResponseAt === 0 || now - lastTerrainResponseAt >= TERRAIN_QUIET_MS;
-    if (minimumElapsed && terrainQuiet) return;
+    const noTerrainInFlight = inFlightTerrainRequests.size === 0;
+    const terrainQuiet = lastTerrainActivityAt === 0 || now - lastTerrainActivityAt >= TERRAIN_QUIET_MS;
+    if (minimumElapsed && noTerrainInFlight && terrainQuiet) return;
+    if (now - phaseStartedAt >= SETTLEMENT_TIMEOUT_MS) {
+      throw new Error(`terrain did not settle within ${SETTLEMENT_TIMEOUT_MS}ms; ${inFlightTerrainRequests.size} tile request(s) still in flight`);
+    }
     await page.waitForTimeout(100);
   }
 };
@@ -130,6 +158,8 @@ const evidence = {
     initialMinimumMs: INITIAL_SETTLE_MINIMUM_MS,
     cameraMinimumMs: CAMERA_SETTLE_MINIMUM_MS,
     terrainQuietMs: TERRAIN_QUIET_MS,
+    requiresCompletedTerrainBodies: true,
+    peakInFlightTerrainRequests,
     buildNeutral: true
   },
   timingsMs: { firstUsefulPaintMs, campaignSettledMs, campaignToTheatreMs, theatreToSelectedMs },
