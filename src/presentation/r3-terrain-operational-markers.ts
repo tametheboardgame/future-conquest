@@ -4,6 +4,7 @@ import {
   applyMovingFormationMarkers,
   withIndependentMovingFormationClusters
 } from './r3-formation-marker-presentation';
+import { syncFormationMovementRouteOverlay } from './r3-formation-route-overlay';
 import {
   applyTerrainOperationalMarkerLayout as applyCoreTerrainOperationalMarkerLayout,
   buildTerrainOperationalMarkers as buildCoreTerrainOperationalMarkers,
@@ -22,12 +23,14 @@ interface MarkerCallbacks {
 }
 
 export function buildTerrainOperationalMarkers(map: Map, state: GameState, callbacks: MarkerCallbacks): Marker[] {
-  return applyMovingFormationMarkers(
+  const markers = applyMovingFormationMarkers(
     buildCoreTerrainOperationalMarkers(map, state, callbacks),
     state,
     terrainOperationalTerritoryCentres,
     false
   ) as Marker[];
+  syncFormationMovementRouteOverlay(map, markers);
+  return markers;
 }
 
 export function reconcileTerrainOperationalMarkers(
@@ -36,12 +39,14 @@ export function reconcileTerrainOperationalMarkers(
   state: GameState,
   callbacks: MarkerCallbacks
 ): Marker[] {
-  return applyMovingFormationMarkers(
+  const markers = applyMovingFormationMarkers(
     reconcileCoreTerrainOperationalMarkers(map, previous, state, callbacks),
     state,
     terrainOperationalTerritoryCentres,
     true
   ) as Marker[];
+  syncFormationMovementRouteOverlay(map, markers);
+  return markers;
 }
 
 export function applyTerrainOperationalMarkerLayout(
@@ -52,4 +57,5 @@ export function applyTerrainOperationalMarkerLayout(
   withIndependentMovingFormationClusters(markers, () => {
     applyCoreTerrainOperationalMarkerLayout(map, markers, layers);
   });
+  syncFormationMovementRouteOverlay(map, markers);
 }
