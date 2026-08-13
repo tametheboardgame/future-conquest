@@ -6,6 +6,7 @@ const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', '
 const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const declutter = fs.readFileSync('src/presentation/r3-terrain-marker-declutter.ts', 'utf8');
+const selectionReplay = fs.readFileSync('scripts/run-r3-wp2i-selection-regression.mjs', 'utf8');
 
 test('WP2I terrain layers use persistent presentation-only defaults', () => {
   for (const enabled of ['territoryNames', 'friendlyFormations', 'enemyContacts', 'operations', 'citiesHubs', 'ports']) {
@@ -27,6 +28,19 @@ test('WP2I selection preserves the profile-key lifecycle and does not move conta
   assert.match(markers, /contactDisplacementX/);
   assert.match(markers, /distance <= 64/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
+});
+
+test('WP2I browser replay covers every live Frankfurt selection surface on clean product-sized pages', () => {
+  assert.match(selectionReplay, /width: 1792, height: 858/);
+  assert.match(selectionReplay, /territory-html-label/);
+  assert.match(selectionReplay, /enemy-contact-card/);
+  assert.match(selectionReplay, /campaign-territories-fill/);
+  assert.match(selectionReplay, /map\.project\(coordinate\)/);
+  assert.match(selectionReplay, /page\.mouse\.click/);
+  assert.match(selectionReplay, /Persist the complete transaction before evaluating a single invariant/);
+  assert.match(selectionReplay, /after\.zoom < 4\.8/);
+  assert.match(selectionReplay, /after\.lod !== 'campaign'/);
+  assert.match(selectionReplay, /after\.terrainRelief !== 'physical'/);
 });
 
 test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
