@@ -135,9 +135,7 @@ test('R3 WP2B-D remounts MapLibre only when its responsive renderer profile chan
   assert.match(host, /window\.addEventListener\('resize', refreshProfile\)/);
   assert.match(host, /window\.removeEventListener\('resize', refreshProfile\)/);
   assert.match(host, /TerrainMapPrototypeImpl key=\{profile\}/);
-  assert.match(impl, /new ResizeObserver\(entries => \{/);
-  assert.match(impl, /containerResizeObserver\.observe\(containerRef\.current\)/);
-  assert.match(impl, /map\.resize\(\)/);
+  assert.doesNotMatch(impl, /containerResizeObserver/);
 });
 
 test('R3 WP2B-D keeps a deliberate SVG path for very small touch displays and manual accessibility choice', () => {
