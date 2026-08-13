@@ -11,7 +11,7 @@ test('player formations stay geographically anchored instead of using large fixe
   assert.match(markers, /const verticalPitch = 44/);
   assert.match(markers, /formationOffset\(index, ordered\.length\)/);
   assert.doesNotMatch(markers, /42 \+ row \* 52/);
-  assert.match(markers, /dx \* dx \+ dy \* dy <= 96 \* 96/);
+  assert.match(markers, /dx \* dx \+ dy \* dy <= 49 \* 49/);
   assert.match(markers, /formationDisplacementX/);
 });
 
