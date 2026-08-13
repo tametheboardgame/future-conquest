@@ -25,3 +25,120 @@
     font-size: 16px;
   }
 }
+
+/* R3-WP3: friendly MapLibre formations become physical command-table pieces.
+   These terrain-scoped selectors are intentionally more specific than the later
+   base terrain stylesheet, while retaining its dimensions, marker identity and
+   authoritative WGS84 position. */
+.r3-terrain-prototype .r3-terrain-task-group-marker {
+  --r3-piece-edge: #081f23;
+  --r3-piece-face-top: #17646a;
+  --r3-piece-face-bottom: #0a3d42;
+  --r3-piece-accent: #8af5e7;
+  position: relative;
+  isolation: isolate;
+  border-color: var(--r3-piece-accent);
+  border-radius: 5px 5px 7px 7px;
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, .13), transparent 34%),
+    linear-gradient(180deg, var(--r3-piece-face-top), var(--r3-piece-face-bottom));
+  box-shadow:
+    0 3px 0 var(--r3-piece-edge),
+    0 6px 0 rgba(2, 12, 14, .78),
+    0 10px 14px rgba(0, 0, 0, .48),
+    inset 0 1px 0 rgba(255, 255, 255, .17),
+    inset 0 -2px 0 rgba(0, 0, 0, .28);
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  right: 3px;
+  bottom: -5px;
+  left: 3px;
+  height: 6px;
+  border-radius: 0 0 5px 5px;
+  background: linear-gradient(180deg, #12383b, #061719);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.ready {
+  --r3-piece-face-top: #17646a;
+  --r3-piece-face-bottom: #0a3d42;
+  --r3-piece-accent: #8af5e7;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.garrison {
+  --r3-piece-face-top: #52683c;
+  --r3-piece-face-bottom: #334527;
+  --r3-piece-accent: #e4ef91;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.moving {
+  --r3-piece-face-top: #315f78;
+  --r3-piece-face-bottom: #183f55;
+  --r3-piece-accent: #a8dcff;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.attacking {
+  --r3-piece-face-top: #82473e;
+  --r3-piece-face-bottom: #542924;
+  --r3-piece-accent: #ffb28f;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.recovering {
+  --r3-piece-face-top: #4c5559;
+  --r3-piece-face-bottom: #30393d;
+  --r3-piece-accent: #c4d1d5;
+  opacity: .82;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.engineering {
+  --r3-piece-face-top: #59616a;
+  --r3-piece-face-bottom: #384047;
+  --r3-piece-accent: #d2d9df;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.interdicting {
+  --r3-piece-face-top: #594c6b;
+  --r3-piece-face-bottom: #382f49;
+  --r3-piece-accent: #d9c1ff;
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker.selected {
+  z-index: 14;
+  border-color: #fff;
+  box-shadow:
+    0 0 0 3px rgba(133, 255, 239, .3),
+    0 3px 0 var(--r3-piece-edge),
+    0 6px 0 rgba(2, 12, 14, .82),
+    0 0 15px rgba(104, 255, 235, .6),
+    0 12px 17px rgba(0, 0, 0, .6),
+    inset 0 1px 0 rgba(255, 255, 255, .24);
+}
+
+.r3-terrain-prototype .r3-terrain-task-group-marker:hover,
+.r3-terrain-prototype .r3-terrain-task-group-marker:focus-visible {
+  border-color: #fff;
+  outline: none;
+}
+
+.r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-task-group-marker {
+  box-shadow:
+    0 2px 0 var(--r3-piece-edge),
+    0 5px 8px rgba(0, 0, 0, .5),
+    inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+
+.r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-task-group-marker::before {
+  bottom: -3px;
+  height: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r3-terrain-prototype .r3-terrain-task-group-marker {
+    transition: none !important;
+  }
+}
