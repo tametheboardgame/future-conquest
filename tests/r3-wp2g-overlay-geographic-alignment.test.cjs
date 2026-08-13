@@ -11,7 +11,8 @@ test('player formations stay geographically anchored instead of using large fixe
   assert.match(markers, /const verticalPitch = 44/);
   assert.match(markers, /formationOffset\(index, ordered\.length\)/);
   assert.doesNotMatch(markers, /42 \+ row \* 52/);
-  assert.doesNotMatch(markers, /\[dx, dy\]/);
+  assert.match(markers, /distance <= 48/);
+  assert.match(markers, /formationDisplacementX/);
 });
 
 test('all player formations are protected from declutter hiding', () => {
@@ -23,7 +24,9 @@ test('browser visual probe guards formation visibility, viewport presence and te
   const probe = read('scripts/run-r3-wp2f-visual-runtime.mjs');
   assert.match(probe, /visibleFormationCount !== profile\.formationCount/);
   assert.match(probe, /profile\.collisions\.length/);
-  assert.match(probe, /centroidDistancePx > 2/);
+  assert.match(probe, /displacementPx > 49/);
+  assert.match(probe, /placeLabelCollisions\.length/);
+  assert.match(probe, /visibleTerritoryCount !== profile\.territoryCount/);
   assert.match(probe, /formationsInCanvas !== profile\.formationCount/);
   assert.match(probe, /data-territory-id/);
   assert.match(probe, /duplicateNodeLayerPresent/);

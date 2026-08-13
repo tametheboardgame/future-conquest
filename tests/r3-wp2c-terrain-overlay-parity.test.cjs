@@ -39,7 +39,7 @@ test('WP2C terrain operational markers are screen-space MapLibre markers with LO
 
 test('WP2C terrain markers reconcile from current campaign state and clean up on renderer disposal', () => {
   assert.match(renderer, /removeTerrainOperationalMarkers\(operationalMarkersRef\.current\)/);
-  assert.match(renderer, /\[state, status\]/);
+  assert.match(renderer, /\[state, status, layers\]/);
   assert.match(renderer, /operationalMarkersRef\.current = \[\]/);
 });
 

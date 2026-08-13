@@ -40,12 +40,13 @@ import {
 } from '../presentation/r3-terrain-source';
 import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-error';
 import {
-  applyTerrainOperationalMarkerDeclutter,
+  applyTerrainOperationalMarkerLayout,
   buildTerrainOperationalMarkers,
   reconcileTerrainOperationalMarkers,
   removeTerrainOperationalMarkers,
   terrainOperationalTerritoryCentres
 } from '../presentation/r3-terrain-operational-markers';
+import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -62,6 +63,34 @@ interface TerrainSourceResolution {
   label: string;
   attribution: string;
 }
+
+interface TerrainMapLayers extends TerrainOperationalLayers {
+  strategicRoutes: boolean;
+}
+
+const TERRAIN_MAP_LAYER_OPTIONS: Array<{ id: keyof TerrainMapLayers; label: string }> = [
+  { id: 'territoryNames', label: 'Territory names' },
+  { id: 'friendlyFormations', label: 'Friendly formations' },
+  { id: 'enemyContacts', label: 'Enemy contacts' },
+  { id: 'operations', label: 'Operations, threats and fronts' },
+  { id: 'strategicRoutes', label: 'Strategic routes' },
+  { id: 'citiesHubs', label: 'Cities and hubs' },
+  { id: 'ports', label: 'Ports' },
+  { id: 'airports', label: 'Airports' }
+];
+
+const DEFAULT_TERRAIN_MAP_LAYERS: TerrainMapLayers = {
+  territoryNames: true,
+  friendlyFormations: true,
+  enemyContacts: true,
+  operations: true,
+  strategicRoutes: false,
+  citiesHubs: true,
+  ports: true,
+  airports: false
+};
+
+let retainedTerrainMapLayers: TerrainMapLayers = DEFAULT_TERRAIN_MAP_LAYERS;
 
 // MapLibre v6 ESM requires Vite's worker pipeline for GeoJSON/vector worker tasks.
 setWorkerUrl(mapLibreWorkerUrl);
@@ -282,6 +311,7 @@ function mapStyle(
         type: 'line',
         source: 'campaign-strategic-routes',
         minzoom: compact ? 5.6 : 5,
+        layout: { visibility: 'none' },
         paint: {
           'line-color': [
             'case',
@@ -461,6 +491,8 @@ export function TerrainMapPrototypeImpl({
   const selectGroupRef = useRef(onSelectGroup);
   const fallbackRef = useRef(onFallback);
   const loadedRef = useRef(false);
+  const [layers, setLayers] = useState<TerrainMapLayers>(() => retainedTerrainMapLayers);
+  const layersRef = useRef(layers);
   const [status, setStatus] = useState<PrototypeStatus>('initialising');
   const [message, setMessage] = useState('Initialising continuous terrain…');
   const [sourceAttribution, setSourceAttribution] = useState(COPERNICUS_ATTRIBUTION);
@@ -468,6 +500,11 @@ export function TerrainMapPrototypeImpl({
   selectRef.current = onSelect;
   selectGroupRef.current = onSelectGroup;
   fallbackRef.current = onFallback;
+  layersRef.current = layers;
+
+  useEffect(() => {
+    retainedTerrainMapLayers = layers;
+  }, [layers]);
 
   const visibleThreats = useMemo(() => getThreatenedTerritories(state), [state]);
   const activeCombatTerritoryIds = useMemo(
@@ -581,7 +618,7 @@ export function TerrainMapPrototypeImpl({
       const refreshOperationalPresentation = () => {
         updateOverlayLod();
         updateTerrainMeshLod();
-        applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
+        applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layersRef.current);
       };
       map.on('zoom', updateOverlayLod);
       map.on('moveend', refreshOperationalPresentation);
@@ -718,9 +755,19 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
-    applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
+    applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
 
-  }, [state, status]);
+  }, [state, status, layers]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    map.setLayoutProperty('campaign-strategic-routes', 'visibility', layers.strategicRoutes ? 'visible' : 'none');
+    for (const layerId of ['campaign-fronts-underlay', 'campaign-fronts-core']) {
+      map.setLayoutProperty(layerId, 'visibility', layers.operations ? 'visible' : 'none');
+    }
+    applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
+  }, [layers, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {
     const profiled = terrainCameraForProfile(preset, presentationProfile);
@@ -735,6 +782,11 @@ export function TerrainMapPrototypeImpl({
     });
   };
 
+  const activeLayerCount = Object.values(layers).filter(Boolean).length;
+  const toggleLayer = (layer: keyof TerrainMapLayers) => {
+    setLayers(current => ({ ...current, [layer]: !current[layer] }));
+  };
+
   return <div className="r3-terrain-prototype" data-status={status} data-terrain-profile={presentationProfile}>
     <div ref={toolbarRef} className="r3-terrain-prototype-toolbar" aria-label="Experimental terrain camera controls">
       <span aria-live="polite"><strong>R3 TERRAIN SPIKE</strong>{message}</span>
@@ -743,7 +795,18 @@ export function TerrainMapPrototypeImpl({
         type="button"
         disabled={preset.id === 'selected' && !state.selectedTerritory}
         onClick={() => goTo(preset)}
-      >{preset.id}</button>)}</div>
+      >{preset.id}</button>)}
+        <details className="map-layer-control r3-terrain-layer-control">
+          <summary><span>Layers</span><b>{activeLayerCount}/{TERRAIN_MAP_LAYER_OPTIONS.length}</b></summary>
+          <div className="map-layer-options">
+            <p>Operational layers default · network detail on demand</p>
+            {TERRAIN_MAP_LAYER_OPTIONS.map(option => <label key={option.id}>
+              <input type="checkbox" checked={layers[option.id]} onChange={() => toggleLayer(option.id)} />
+              <span>{option.label}</span>
+            </label>)}
+          </div>
+        </details>
+      </div>
     </div>
     <div
       ref={containerRef}

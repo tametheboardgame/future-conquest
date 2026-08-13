@@ -121,6 +121,32 @@
   pointer-events: auto;
 }
 
+.r3-terrain-prototype-toolbar .r3-terrain-layer-control {
+  pointer-events: auto;
+}
+
+.r3-terrain-prototype-toolbar .r3-terrain-layer-control summary {
+  min-height: 27px;
+  padding: 4px 7px;
+  border-color: rgba(132, 194, 188, .35);
+  border-radius: 5px;
+  background: rgba(16, 51, 54, .82);
+}
+
+.r3-terrain-prototype-toolbar .r3-terrain-layer-control summary span,
+.r3-terrain-prototype-toolbar .r3-terrain-layer-control .map-layer-options span {
+  display: inline;
+  max-width: none;
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+
+.r3-terrain-prototype-toolbar .r3-terrain-layer-control .map-layer-options {
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 40;
+}
+
 .r3-terrain-prototype-toolbar button {
   padding: 5px 8px;
   border: 1px solid rgba(132, 194, 188, .35);

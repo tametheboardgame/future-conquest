@@ -15,14 +15,14 @@ test('WP2D-D marker LOD thresholds match theatre campaign and local command scal
   assert.equal(terrainMarkerScaleForLod('local'), 1.05);
 });
 
-test('WP2F declutter footprint grows with the tightly clamped rendered marker scale', async () => {
+test('WP2I territory names remain visible independent of declutter footprint', async () => {
   const { visibleTerrainMarkerIds } = await load();
   const candidates = [
     { id: 'a', kind: 'territory', x: 0, y: 0 },
     { id: 'b', kind: 'territory', x: 50, y: 0 }
   ];
   assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 2);
-  assert.equal(visibleTerrainMarkerIds(candidates, 'campaign').size, 1);
+  assert.equal(visibleTerrainMarkerIds(candidates, 'campaign').size, 2);
 });
 
 test('WP2G protects every player formation plus operations live threats selected ground and the portal', async () => {
@@ -48,7 +48,7 @@ test('WP2D-D deterministically lets higher priority markers displace ordinary cl
   ];
   const forward = [...visibleTerrainMarkerIds(candidates, 'campaign')];
   const reverse = [...visibleTerrainMarkerIds([...candidates].reverse(), 'campaign')];
-  assert.deepEqual(forward, ['formation']);
+  assert.deepEqual(forward, ['formation', 'ordinary-label']);
   assert.deepEqual(reverse, forward);
 });
 
@@ -65,13 +65,13 @@ test('WP2D-D suppresses low-confidence and secondary context at theatre scale', 
   assert.deepEqual([...visibleTerrainMarkerIds(candidates, 'theatre')], ['confirmed', 'major-node']);
 });
 
-test('WP2D-D relaxes spacing as the player zooms into local command detail', async () => {
+test('WP2I keeps colliding province names at every zoom', async () => {
   const { visibleTerrainMarkerIds } = await load();
   const candidates = [
     { id: 'a', kind: 'territory', x: 0, y: 0 },
     { id: 'b', kind: 'territory', x: 45, y: 0 }
   ];
-  assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 1);
+  assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 2);
   assert.equal(visibleTerrainMarkerIds(candidates, 'local').size, 2);
 });
 

@@ -49,7 +49,7 @@ test('WP2D-D hidden declutter state beats marker display rules in the real brows
 });
 
 test('WP2D-D reapplies declutter after state rebuilds and camera movement', () => {
-  assert.match(renderer, /applyTerrainOperationalMarkerDeclutter\(map, operationalMarkersRef\.current\)/);
+  assert.match(renderer, /applyTerrainOperationalMarkerLayout\(map, operationalMarkersRef\.current, layers/);
   assert.match(renderer, /map\.on\('moveend', refreshOperationalPresentation\)/);
-  assert.match(renderer, /const refreshOperationalPresentation = \(\) => \{[\s\S]*updateOverlayLod\(\);[\s\S]*applyTerrainOperationalMarkerDeclutter/);
+  assert.match(renderer, /const refreshOperationalPresentation = \(\) => \{[\s\S]*updateOverlayLod\(\);[\s\S]*applyTerrainOperationalMarkerLayout/);
 });
