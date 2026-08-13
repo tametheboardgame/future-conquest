@@ -37,6 +37,10 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /campaign-territories-fill/);
   assert.match(selectionReplay, /map\.project\(coordinate\)/);
   assert.match(selectionReplay, /page\.mouse\.click/);
+  assert.match(selectionReplay, /future-conquest-slice-v0\.14/);
+  assert.match(selectionReplay, /Manual Save/);
+  assert.match(selectionReplay, /Load Manual Save/);
+  assert.match(selectionReplay, /const savedCampaign = await findAndSaveNaturalDusseldorfCampaign/);
   assert.match(selectionReplay, /Persist the complete transaction before evaluating a single invariant/);
   assert.match(selectionReplay, /after\.zoom < 4\.8/);
   assert.match(selectionReplay, /after\.lod !== 'campaign'/);
@@ -49,7 +53,8 @@ test('WP2I protects province names and lays out complete formation clusters arou
   assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
   assert.match(markers, /clusters\.values\(\)/);
   assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /distance <= 48/);
+  assert.match(markers, /dx \* dx \+ dy \* dy <= 49 \* 49/);
+  assert.match(markers, /deltas\.sort/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
   assert.match(markers, /marker\.setLngLat|setLngLat/);
 });

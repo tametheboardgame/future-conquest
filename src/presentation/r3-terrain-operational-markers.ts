@@ -378,12 +378,17 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     }
   }
 
-  const deltas: Array<readonly [number, number]> = [[0, 0]];
-  for (let distance = 8; distance <= 48; distance += 8) {
-    const diagonal = Math.round(distance / Math.SQRT2);
-    deltas.push([0, distance], [distance, 0], [-distance, 0], [0, -distance],
-      [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
+  // Search the complete bounded pixel lattice rather than only eight rays. The
+  // latter can miss valid gaps between neighbouring labels and then incorrectly
+  // fall back to a collision at the origin. Squared distance plus a stable
+  // direction preference makes this deterministic and keeps every presentation-
+  // only displacement within the existing 49px readability contract.
+  const deltas: Array<readonly [number, number]> = [];
+  for (let dy = -49; dy <= 49; dy += 1) for (let dx = -49; dx <= 49; dx += 1) {
+    if (dx * dx + dy * dy <= 49 * 49) deltas.push([dx, dy]);
   }
+  deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
+    || b[1] - a[1] || b[0] - a[0]);
   for (const cluster of clusters.values()) {
     const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
     const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({

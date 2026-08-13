@@ -4,6 +4,8 @@ import { chromium } from 'playwright';
 const origin = process.env.R3_WP2I_ORIGIN ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.R3_WP2I_ARTIFACTS ?? 'artifacts/r3-wp2i-selection';
 const viewport = { width: 1792, height: 858 };
+const manualSaveKey = 'future-conquest-slice-v0.14';
+const manualSaveMetadataKey = `${manualSaveKey}-metadata`;
 fs.mkdirSync(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
@@ -16,11 +18,11 @@ const visibleText = () => [...document.querySelectorAll('*')].some(element => {
     && rect.width > 0 && rect.height > 0;
 });
 
-async function openNaturalDusseldorfCampaign(scenario) {
+async function findAndSaveNaturalDusseldorfCampaign() {
   const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
   const page = await context.newPage();
-  page.on('console', message => console.log(`[${scenario} console ${message.type()}] ${message.text()}`));
-  page.on('pageerror', error => console.log(`[${scenario} pageerror] ${error.stack ?? error.message}`));
+  page.on('console', message => console.log(`[campaign-setup console ${message.type()}] ${message.text()}`));
+  page.on('pageerror', error => console.log(`[campaign-setup pageerror] ${error.stack ?? error.message}`));
   await page.addInitScript(() => {
     localStorage.setItem('future-conquest:intro-seen:v3', 'true');
     localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
@@ -36,10 +38,12 @@ async function openNaturalDusseldorfCampaign(scenario) {
   await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
   await page.locator('.r3-terrain-portal-marker').waitFor({ state: 'attached' });
 
-  // Each surface starts from its own unseeded page and naturally generated Day 1.
+  // Generate one campaign through the real new-campaign path. Once the naturally
+  // random Düsseldorf start is found, use the product's Manual Save path so each
+  // surface can replay the identical campaign without repeating this search.
   let campaignAttempts = 1;
   while (await page.locator('.r3-terrain-portal-marker').getAttribute('data-territory-id') !== 'DE-02') {
-    if (campaignAttempts >= 200) throw new Error(`${scenario}: no natural Day-1 Düsseldorf portal after 200 campaigns.`);
+    if (campaignAttempts >= 200) throw new Error('No natural Day-1 Düsseldorf portal after 200 campaigns.');
     await page.locator('[data-command-view="campaign"]').click();
     await page.getByRole('button', { name: 'New campaign', exact: true }).click();
     campaignAttempts += 1;
@@ -47,9 +51,41 @@ async function openNaturalDusseldorfCampaign(scenario) {
     await page.locator('.r3-terrain-portal-marker').waitFor({ state: 'attached' });
     await page.waitForTimeout(50);
   }
+  await page.locator('[data-command-view="campaign"]').click();
+  await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
+  await page.waitForFunction(key => Boolean(localStorage.getItem(key)), manualSaveKey);
+  const savedStorage = await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), [manualSaveKey, manualSaveMetadataKey]);
+  if (!savedStorage[manualSaveKey]) throw new Error('Manual Save UI did not populate the current save slot.');
+  await context.close();
+  return { savedStorage, campaignAttempts };
+}
+
+async function openSavedDusseldorfCampaign(scenario, savedStorage) {
+  const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  page.on('console', message => console.log(`[${scenario} console ${message.type()}] ${message.text()}`));
+  page.on('pageerror', error => console.log(`[${scenario} pageerror] ${error.stack ?? error.message}`));
+  await page.addInitScript(({ storage, saveKey, metadataKey }) => {
+    localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+    localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
+    localStorage.setItem(saveKey, storage[saveKey]);
+    if (storage[metadataKey]) localStorage.setItem(metadataKey, storage[metadataKey]);
+    window.__wp2iMapIdentities = new WeakMap();
+    window.__wp2iNextMapIdentity = 1;
+  }, { storage: savedStorage, saveKey: manualSaveKey, metadataKey: manualSaveMetadataKey });
+  await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+  await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+  await page.locator('[data-command-view="campaign"]').click();
+  await page.getByRole('button', { name: 'Load Manual Save', exact: true }).click();
+  await page.locator('[data-command-view="map"]').click();
+  const host = page.locator('.r3-terrain-prototype');
+  await host.waitFor({ state: 'visible', timeout: 45_000 });
+  await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
+  await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
   await page.getByRole('button', { name: 'campaign', exact: true }).click();
   await page.waitForTimeout(1200);
-  return { context, page, campaignAttempts };
+  return { context, page };
 }
 
 async function installRecorder(page) {
@@ -180,10 +216,10 @@ async function assertInvariant(scenario, before, after, transitionError) {
   if (after.enemyPlaceIntersections.length) throw new Error(`${scenario}: enemy contacts overlap visible place labels: ${JSON.stringify(after.enemyPlaceIntersections)}`);
 }
 
-async function runScenario({ name, activate }) {
+async function runScenario({ name, activate }, savedCampaign) {
   const scenarioDir = `${outputDir}/${name}`;
   fs.mkdirSync(scenarioDir, { recursive: true });
-  const { context, page, campaignAttempts } = await openNaturalDusseldorfCampaign(name);
+  const { context, page } = await openSavedDusseldorfCampaign(name, savedCampaign.savedStorage);
   let transitionError = null;
   let activation = null;
   let skipped = false;
@@ -200,7 +236,7 @@ async function runScenario({ name, activate }) {
     }
     // Persist the complete transaction before evaluating a single invariant.
     const after = await snapshot(page, skipped ? 'frankfurt-surface-not-present' : 'immediate-after-frankfurt-selection');
-    const evidence = { scenario: name, viewport, campaignAttempts, naturalPortal: 'DE-02', target: 'DE-03', activation, skipped, transitionError, before, after };
+    const evidence = { scenario: name, viewport, campaignAttempts: savedCampaign.campaignAttempts, setup: 'existing-manual-save-slot', naturalPortal: 'DE-02', target: 'DE-03', activation, skipped, transitionError, before, after };
     fs.writeFileSync(`${scenarioDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
     await page.screenshot({ path: `${scenarioDir}/after-frankfurt-selection.png`, fullPage: true });
     console.log(`WP2I ${name} evidence:`, JSON.stringify(evidence, null, 2));
@@ -210,13 +246,15 @@ async function runScenario({ name, activate }) {
   }
 }
 
+const savedCampaign = await findAndSaveNaturalDusseldorfCampaign();
+
 await runScenario({
   name: 'territory-html-label',
   activate: async page => {
     await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"]').click({ force: true });
     return { method: 'territory-html-label' };
   }
-});
+}, savedCampaign);
 
 await runScenario({
   name: 'enemy-contact-card',
@@ -227,11 +265,11 @@ await runScenario({
     await contact.first().click();
     return { method: 'enemy-contact-card', markerId };
   }
-});
+}, savedCampaign);
 
 await runScenario({
   name: 'maplibre-territory-polygon',
   activate: async page => ({ method: 'campaign-territories-fill', projectedPoint: await clickPolygon(page) })
-});
+}, savedCampaign);
 
 await browser.close();
