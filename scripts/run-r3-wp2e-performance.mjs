@@ -97,9 +97,13 @@ if (startupOutcome !== 'terrain') {
   process.exit(75);
 }
 
-const firstUsefulPaintMs = performance.now() - started;
+// A visible MapLibre canvas can still be blank while the style is loading.
+// Define useful paint build-neutrally: renderer ready/warning, Campaign LOD
+// applied, then allow two animation frames for that ready state to be painted.
 await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').waitFor({ state: 'visible', timeout: 45_000 });
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'campaign');
+await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const firstUsefulPaintMs = performance.now() - started;
 
 /**
  * Build-neutral settlement rule used identically for WP2D base and WP2E head:
@@ -154,6 +158,11 @@ const evidence = {
   browser: await browser.version(),
   viewport: { width: 1600, height: 1000 },
   cacheMode: 'cold-disabled',
+  usefulPaint: {
+    requiresRendererReady: true,
+    requiresCampaignLod: true,
+    animationFramesAfterReady: 2
+  },
   settlement: {
     initialMinimumMs: INITIAL_SETTLE_MINIMUM_MS,
     cameraMinimumMs: CAMERA_SETTLE_MINIMUM_MS,
