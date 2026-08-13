@@ -5,6 +5,8 @@ export type FormationGeoPoint = readonly [number, number];
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
+// WP3 derives a display coordinate only. Engine-owned location, route progress
+// and arrival timing remain unchanged and continue to resolve in game state.
 const pointDistance = (a: FormationGeoPoint, b: FormationGeoPoint) => {
   const meanLatitude = ((a[1] + b[1]) / 2) * Math.PI / 180;
   const longitudeDistance = (b[0] - a[0]) * Math.cos(meanLatitude);
