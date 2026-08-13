@@ -25,7 +25,8 @@ export function buildTerrainOperationalMarkers(map: Map, state: GameState, callb
   return applyMovingFormationMarkers(
     buildCoreTerrainOperationalMarkers(map, state, callbacks),
     state,
-    terrainOperationalTerritoryCentres
+    terrainOperationalTerritoryCentres,
+    false
   ) as Marker[];
 }
 
@@ -38,7 +39,8 @@ export function reconcileTerrainOperationalMarkers(
   return applyMovingFormationMarkers(
     reconcileCoreTerrainOperationalMarkers(map, previous, state, callbacks),
     state,
-    terrainOperationalTerritoryCentres
+    terrainOperationalTerritoryCentres,
+    true
   ) as Marker[];
 }
 
