@@ -42,6 +42,7 @@ import { classifyTerrainRuntimeError } from '../presentation/r3-terrain-runtime-
 import {
   applyTerrainOperationalMarkerDeclutter,
   buildTerrainOperationalMarkers,
+  reconcileTerrainOperationalMarkers,
   removeTerrainOperationalMarkers
 } from '../presentation/r3-terrain-operational-markers';
 
@@ -107,7 +108,9 @@ function territoryCentre(territoryId: string | null): readonly [number, number] 
 
 async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
   const manifestUrl = generatedTerrainManifestUrl(import.meta.env.BASE_URL);
-  const response = await fetch(manifestUrl, { cache: 'no-store' });
+  // The manifest URL is stable between deployments, so allow normal HTTP
+  // revalidation rather than pinning a potentially stale cached response.
+  const response = await fetch(manifestUrl, { cache: 'default' });
   if (!response.ok) throw new Error(`terrain manifest returned ${response.status}`);
   const manifest = await response.json() as GeneratedTerrainTileJson;
   return {
@@ -115,6 +118,21 @@ async function resolveTerrainSource(): Promise<TerrainSourceResolution> {
     label: 'Copernicus GLO-30 static terrain',
     attribution: manifest.attribution
   };
+}
+
+let terrainSourcePromise: Promise<TerrainSourceResolution> | undefined;
+
+function loadTerrainSource(): Promise<TerrainSourceResolution> {
+  terrainSourcePromise ??= resolveTerrainSource().catch(error => {
+    terrainSourcePromise = undefined;
+    throw error;
+  });
+  return terrainSourcePromise;
+}
+
+/** Opportunistically warm the versioned manifest; failure remains owned by normal fallback. */
+export function prewarmTerrainRuntime(): void {
+  void loadTerrainSource().catch(() => undefined);
 }
 
 function mapStyle(
@@ -134,7 +152,6 @@ function mapStyle(
         data: terrainLandGeoJSON
       },
       'r3-wp2b-terrain-dem': demSource,
-      'r3-wp2b-relief-dem': { ...demSource },
       'r3-wp2b-hillshade-dem': { ...demSource },
       'campaign-territories': {
         type: 'geojson',
@@ -166,31 +183,6 @@ function mapStyle(
         }
       },
       {
-        id: 'r3-wp2b-relief',
-        type: 'color-relief',
-        source: 'r3-wp2b-relief-dem',
-        paint: {
-          'color-relief-color': [
-            'interpolate',
-            ['linear'],
-            ['elevation'],
-            -250, '#15313a',
-            0, '#29413c',
-            80, '#53684b',
-            250, '#657550',
-            500, '#737650',
-            850, '#80765a',
-            1200, '#887964',
-            1700, '#8d8273',
-            2200, '#9f9789',
-            2800, '#b8b2a8',
-            3400, '#d0cfca',
-            4500, '#eceeeb'
-          ],
-          'color-relief-opacity': 0
-        }
-      },
-      {
         id: 'r3-wp2b-land-wash',
         type: 'fill',
         source: 'r3-wp2b-land',
@@ -198,9 +190,10 @@ function mapStyle(
           'fill-color': '#6c805b',
           'fill-opacity': [
             'interpolate', ['linear'], ['zoom'],
-            3.6, 0,
-            4.72, 0,
-            4.8, compact ? 0.29 : 0.34
+            3.6, compact ? 0.25 : 0.3,
+            4.8, compact ? 0.23 : 0.27,
+            6.4, compact ? 0.16 : 0.18,
+            8.5, compact ? 0.1 : 0.12
           ]
         }
       },
@@ -546,7 +539,7 @@ export function TerrainMapPrototypeImpl({
       threatenedTerritories: visibleThreats,
       activeCombatTerritoryIds
     }) as unknown as GeoJSONSourceSpecification['data']
-  ), [state, visibleThreats, activeCombatTerritoryIds]);
+  ), [state.territories, state.selectedTerritory, state.targetTerritory, visibleThreats, activeCombatTerritoryIds]);
   const frontData = useMemo(() => (
     buildTerrainFrontGeoJSON(
       terrainGeoJSON,
@@ -555,7 +548,7 @@ export function TerrainMapPrototypeImpl({
   ), [state.territories]);
   const routeData = useMemo(() => (
     buildTerrainStrategicRouteGeoJSON(STRATEGIC_NODES, STRATEGIC_ROUTES, state) as unknown as GeoJSONSourceSpecification['data']
-  ), [state]);
+  ), [state.routeStates, state.logistics, state.selectedTaskGroupId]);
   const nodeData = useMemo(() => (
     buildTerrainStrategicNodeGeoJSON(STRATEGIC_NODES, state) as unknown as GeoJSONSourceSpecification['data']
   ), [state.territories]);
@@ -572,12 +565,15 @@ export function TerrainMapPrototypeImpl({
     let toolbarResizeObserver: ResizeObserver | null = null;
 
     const initialise = async () => {
-      const terrainSource = await resolveTerrainSource();
+      const terrainSource = await loadTerrainSource();
       if (disposed || !containerRef.current) return;
 
       setSourceAttribution(terrainSource.attribution);
       const initial = terrainCameraForProfile(terrainCameraPreset('campaign'), presentationProfile);
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
+      const tileCancellationOverride = new URLSearchParams(window.location.search).get('tileCancellation');
+      const cancelTilesWhileZooming = presentationProfile === 'compact'
+        || tileCancellationOverride === 'cancel';
       const map = new Map({
         container: containerRef.current,
         style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
@@ -590,12 +586,20 @@ export function TerrainMapPrototypeImpl({
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
         renderWorldCopies: false,
+        // Full presentation retains prior-zoom tiles for a smoother progressive
+        // reveal. Compact remains conservative; ?tileCancellation=cancel keeps
+        // an explicit full-profile comparison/debug path.
+        cancelPendingTileRequestsWhileZooming: cancelTilesWhileZooming,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },
         attributionControl: {}
       });
       ownedMap = map;
       mapRef.current = map;
+      const host = containerRef.current.parentElement;
+      map.on('movestart', () => { if (host) host.dataset.mapMoving = 'true'; });
+      map.on('moveend', () => { if (host) host.dataset.mapMoving = 'false'; });
+      map.on('idle', () => { if (host) host.dataset.mapIdleAt = String(performance.now()); });
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
 
       const applySafePadding = () => {
@@ -648,7 +652,6 @@ export function TerrainMapPrototypeImpl({
         const sourceIds = [
           'r3-wp2b-land',
           'r3-wp2b-terrain-dem',
-          'r3-wp2b-relief-dem',
           'r3-wp2b-hillshade-dem',
           'campaign-territories',
           'campaign-fronts',
@@ -719,33 +722,41 @@ export function TerrainMapPrototypeImpl({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
-    const updates: Array<[string, GeoJSONSourceSpecification['data']]> = [
-      ['campaign-territories', politicalData],
-      ['campaign-fronts', frontData],
-      ['campaign-strategic-routes', routeData],
-      ['campaign-strategic-nodes', nodeData]
-    ];
-    for (const [sourceId, data] of updates) {
-      const source = map.getSource(sourceId);
-      if (source instanceof GeoJSONSource) source.setData(data);
-    }
-  }, [politicalData, frontData, routeData, nodeData]);
+    const source = map.getSource('campaign-territories');
+    if (source instanceof GeoJSONSource) source.setData(politicalData);
+  }, [politicalData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-fronts');
+    if (source instanceof GeoJSONSource) source.setData(frontData);
+  }, [frontData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-strategic-routes');
+    if (source instanceof GeoJSONSource) source.setData(routeData);
+  }, [routeData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource('campaign-strategic-nodes');
+    if (source instanceof GeoJSONSource) source.setData(nodeData);
+  }, [nodeData]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loadedRef.current || status === 'initialising') return;
 
-    removeTerrainOperationalMarkers(operationalMarkersRef.current);
-    operationalMarkersRef.current = buildTerrainOperationalMarkers(map, state, {
+    operationalMarkersRef.current = reconcileTerrainOperationalMarkers(map, operationalMarkersRef.current, state, {
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
     applyTerrainOperationalMarkerDeclutter(map, operationalMarkersRef.current);
 
-    return () => {
-      removeTerrainOperationalMarkers(operationalMarkersRef.current);
-      operationalMarkersRef.current = [];
-    };
   }, [state, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {

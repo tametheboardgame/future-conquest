@@ -22,7 +22,7 @@ Entry state: R2-WP1 through R2-WP7 and the R2.5 Balance Stabilisation Gate are c
 
 ## R3 sequence
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
 WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP2C followed after the first deployed terrain build proved the landscape but lacked command-map information parity. WP2D was approved on 2026-08-12 after the restored-overlay build confirmed the overall terrain direction while also exposing the need for an intensive Europe-coverage, robustness, safe-area, hierarchy and declutter pass before WP3 resumes.
 
@@ -103,7 +103,7 @@ WP2C established that the combination of **real terrain + operational command in
 
 ## R3-WP2D - Terrain Refinement & Presentation Polish
 
-Status: APPROVED / ACTIVE
+Status: COMPLETE / MERGED (#122), VISUALLY ACCEPTED
 
 Authoritative package detail: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`.
 
@@ -129,13 +129,25 @@ WP2D therefore owns:
 - intensive browser visual/runtime validation across top-down and pitched views;
 - performance/accessibility/fallback preservation and exact simulation parity.
 
-WP3 remains paused until WP2D receives product-owner visual acceptance.
+The product owner visually accepted WP2D on 2026-08-12. WP3 remains paused while the focused WP2E terrain performance and streaming pass is active.
+
+---
+
+## R3-WP2E - Terrain Performance & Streaming Optimisation
+
+Status: APPROVED / ACTIVE
+
+Authoritative package detail: `docs/roadmap/R3-WP2E-TERRAIN-PERFORMANCE.md`.
+
+Objective: reduce sporadic terrain loading and camera-change lag on the accepted WP2D terrain build, backed by permanent exact-browser performance evidence, without changing gameplay or the accepted visual direction.
+
+WP3 remains paused pending WP2E acceptance.
 
 ---
 
 ## R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED PENDING WP2D VISUAL APPROVAL
+Status: PAUSED PENDING WP2E ACCEPTANCE
 
 Objective: make armies visibly exist on the accepted terrain map as readable board-game-like pieces and make movement understandable as a physical change in campaign state.
 

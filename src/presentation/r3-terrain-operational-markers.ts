@@ -47,43 +47,70 @@ const territoryCentres = Object.fromEntries(
   })
 ) as Record<string, readonly [number, number]>;
 
-const makeElement = (className: string, label?: string) => {
-  const element = document.createElement('button');
-  element.type = 'button';
-  element.className = className;
-  if (label) element.setAttribute('aria-label', label);
-  return element;
+interface MarkerElementDescriptor {
+  tag: 'button' | 'div';
+  className: string;
+  label?: string;
+  ariaHidden?: boolean;
+  dataset: Record<string, string>;
+  innerHTML: string;
+  textContent?: string;
+  action?: () => void;
+}
+
+interface TerrainMarkerDescriptor {
+  id: string;
+  kind: TerrainMarkerKind;
+  position: readonly [number, number];
+  offset: readonly [number, number];
+  element: MarkerElementDescriptor;
+}
+
+const makeElement = (className: string, label?: string): MarkerElementDescriptor => ({
+  tag: 'button', className, label, dataset: {}, innerHTML: ''
+});
+
+const materializeElement = (descriptor: MarkerElementDescriptor) => {
+  const element = document.createElement(descriptor.tag);
+  if (descriptor.tag === 'button') element.setAttribute('type', 'button');
+  return updateElement(element, descriptor);
 };
 
 const addMarker = (
-  markers: Marker[],
-  map: Map,
-  element: HTMLElement,
+  markers: TerrainMarkerDescriptor[],
+  _map: Map,
+  element: MarkerElementDescriptor,
   position: readonly [number, number],
   kind: TerrainMarkerKind,
   markerId: string,
   offset: readonly [number, number] = [0, 0]
 ) => {
-  element.dataset.r3MarkerKind = kind;
-  element.dataset.r3MarkerId = markerId;
-  element.dataset.r3MarkerOffsetX = String(offset[0]);
-  element.dataset.r3MarkerOffsetY = String(offset[1]);
-  const marker = new Marker({
-    element,
-    anchor: 'center',
-    offset: [offset[0], offset[1]]
-  })
-    .setLngLat([position[0], position[1]])
-    .addTo(map);
-  markers.push(marker);
-  return marker;
+  Object.assign(element.dataset, {
+    r3MarkerKind: kind, r3MarkerId: markerId,
+    r3MarkerOffsetX: String(offset[0]), r3MarkerOffsetY: String(offset[1])
+  });
+  markers.push({ id: markerId, kind, position, offset, element });
 };
 
-const stopMapClick = (element: HTMLElement, action: () => void) => {
-  element.addEventListener('click', event => {
+const stopMapClick = (element: MarkerElementDescriptor, action: () => void) => {
+  element.action = action;
+};
+
+const updateElement = (element: HTMLElement, descriptor: MarkerElementDescriptor) => {
+  element.className = descriptor.className;
+  if (descriptor.label) element.setAttribute('aria-label', descriptor.label);
+  else element.removeAttribute('aria-label');
+  if (descriptor.ariaHidden) element.setAttribute('aria-hidden', 'true');
+  else element.removeAttribute('aria-hidden');
+  element.innerHTML = descriptor.textContent === undefined ? descriptor.innerHTML : '';
+  if (descriptor.textContent !== undefined) element.textContent = descriptor.textContent;
+  for (const key of Object.keys(element.dataset)) delete element.dataset[key];
+  Object.assign(element.dataset, descriptor.dataset);
+  element.onclick = descriptor.action ? event => {
     event.stopPropagation();
-    action();
-  });
+    descriptor.action!();
+  } : null;
+  return element;
 };
 
 const contactConfidenceLabel = (confidence: string) => {
@@ -121,7 +148,18 @@ export function buildTerrainOperationalMarkers(
   state: GameState,
   callbacks: MarkerCallbacks
 ): Marker[] {
-  const markers: Marker[] = [];
+  return buildTerrainOperationalMarkerDescriptors(map, state, callbacks).map(descriptor => new Marker({
+    element: materializeElement(descriptor.element), anchor: 'center',
+    offset: [descriptor.offset[0], descriptor.offset[1]]
+  }).setLngLat([descriptor.position[0], descriptor.position[1]]).addTo(map));
+}
+
+function buildTerrainOperationalMarkerDescriptors(
+  map: Map,
+  state: GameState,
+  callbacks: MarkerCallbacks
+): TerrainMarkerDescriptor[] {
+  const markers: TerrainMarkerDescriptor[] = [];
 
   for (const [territoryId, position] of Object.entries(territoryCentres)) {
     const territory = state.territories[territoryId];
@@ -270,10 +308,10 @@ export function buildTerrainOperationalMarkers(
   if (state.portalTerritory) {
     const position = territoryCentres[state.portalTerritory];
     if (position) {
-      const element = document.createElement('div');
-      element.className = 'r3-terrain-portal-marker';
-      element.setAttribute('aria-hidden', 'true');
-      element.innerHTML = '<i></i><i></i>';
+      const element: MarkerElementDescriptor = {
+        tag: 'div', className: 'r3-terrain-portal-marker', ariaHidden: true,
+        dataset: {}, innerHTML: '<i></i><i></i>'
+      };
       addMarker(markers, map, element, position, 'portal', `portal:${state.portalTerritory}`, [0, -8]);
     }
   }
@@ -329,4 +367,37 @@ export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readon
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
   for (const marker of markers) marker.remove();
+}
+
+/**
+ * Reconcile detached presentation descriptors before allocating MapLibre
+ * markers. Existing markers retain their DOM node (and focus); only genuinely
+ * new identities enter MapLibre's add/layout path.
+ */
+export function reconcileTerrainOperationalMarkers(
+  map: Map,
+  previous: readonly Marker[],
+  state: GameState,
+  callbacks: MarkerCallbacks
+): Marker[] {
+  const priorById = new globalThis.Map(previous.flatMap(marker => {
+    const id = marker.getElement().dataset.r3MarkerId;
+    return id ? [[id, marker] as const] : [];
+  }));
+  const next = buildTerrainOperationalMarkerDescriptors(map, state, callbacks);
+  const reconciled = next.map(descriptor => {
+    const prior = priorById.get(descriptor.id);
+    if (!prior) return new Marker({
+      element: materializeElement(descriptor.element), anchor: 'center',
+      offset: [descriptor.offset[0], descriptor.offset[1]]
+    }).setLngLat([descriptor.position[0], descriptor.position[1]]).addTo(map);
+
+    updateElement(prior.getElement(), descriptor.element);
+    prior.setLngLat([descriptor.position[0], descriptor.position[1]]);
+    prior.setOffset([descriptor.offset[0], descriptor.offset[1]]);
+    priorById.delete(descriptor.id);
+    return prior;
+  });
+  for (const removed of priorById.values()) removed.remove();
+  return reconciled;
 }

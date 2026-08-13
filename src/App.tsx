@@ -10,8 +10,9 @@ import { StrategicCollapseDecision } from './components/StrategicCollapseDecisio
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { useLiveGlobalSettings } from './components/StartupExperience';
 import { MapView } from './components/MapView';
+import { loadTerrainMapModule, prewarmTerrainMapModule } from './presentation/r3-terrain-loader';
 
-const TerrainMapPrototype = lazy(() => import('./components/TerrainMapPrototype').then(module => ({ default: module.TerrainMapPrototype })));
+const TerrainMapPrototype = lazy(() => loadTerrainMapModule().then(module => ({ default: module.TerrainMapPrototype })));
 import { TERRAIN_LABELS, TERRITORIES } from './game/data';
 import { STRATEGIC_ROUTE_BY_ID } from './game/strategic-network-data';
 import { NODE_TYPE_LABELS, ROUTE_TYPE_LABELS, nodesForTerritory, routeStatusLabel, routesForTerritory } from './game/strategic-network';
@@ -73,6 +74,10 @@ export default function App() {
   const terrainPrototypeRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('terrain') === '1';
   const [terrainPrototypeFailed, setTerrainPrototypeFailed] = useState(false);
   const [terrainPrototypeFailureReason, setTerrainPrototypeFailureReason] = useState('');
+
+  useEffect(() => {
+    if (terrainPrototypeRequested) prewarmTerrainMapModule();
+  }, [terrainPrototypeRequested]);
 
   useEffect(() => {
     setNavigationContext(current => revalidateNavigationContext(state, current));

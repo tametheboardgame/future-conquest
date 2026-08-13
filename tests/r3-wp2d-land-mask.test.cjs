@@ -30,13 +30,13 @@ test('WP2D-E disables repeated world copies on the bounded Europe command map', 
   assert.match(renderer, /renderWorldCopies: false/);
 });
 
-test('WP2D-E suppresses filled land geometry at Theatre scale and restores it before Campaign scale', () => {
+test('WP2E keeps a coherent land surface visible while detailed terrain progressively settles', () => {
   const start = renderer.indexOf("id: 'r3-wp2b-land-wash'");
   const end = renderer.indexOf("id: 'r3-wp2b-hillshade'", start);
   assert.ok(start >= 0 && end > start, 'land-wash layer block was not found');
   const landWash = renderer.slice(start, end);
   assert.match(landWash, /'fill-opacity': \[/);
-  assert.match(landWash, /3\.6, 0/);
-  assert.match(landWash, /4\.72, 0/);
-  assert.match(landWash, /4\.8, compact \? 0\.29 : 0\.34/);
+  assert.match(landWash, /3\.6, compact \? 0\.25 : 0\.3/);
+  assert.match(landWash, /4\.8, compact \? 0\.23 : 0\.27/);
+  assert.match(landWash, /8\.5, compact \? 0\.1 : 0\.12/);
 });

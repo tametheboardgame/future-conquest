@@ -7,6 +7,7 @@ const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const impl = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const terrainSource = fs.readFileSync('src/presentation/r3-terrain-source.ts', 'utf8');
 const app = fs.readFileSync('src/App.tsx', 'utf8');
+const loader = fs.readFileSync('src/presentation/r3-terrain-loader.ts', 'utf8');
 const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 const main = fs.readFileSync('src/main.tsx', 'utf8');
 
@@ -26,7 +27,8 @@ test('R3 WP2B keeps authenticated terrain acquisition out of the browser runtime
 test('R3 WP2B treats the real-terrain renderer as progressive enhancement', () => {
   assert.match(config, /chooseCampaignMapRenderer/);
   assert.match(config, /'svg-fallback'/);
-  assert.match(app, /lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
+  assert.match(app, /lazy\(\(\) => loadTerrainMapModule\(\)/);
+  assert.match(loader, /import\('\.\.\/components\/TerrainMapPrototype'\)/);
   assert.match(host, /if \(profile === 'svg-fallback'\)/);
   assert.match(host, /onFallback\('Compact touch display selected the stable SVG command map\.'\)/);
 });
@@ -60,7 +62,7 @@ test('R3 WP2B normalises authoritative WGS84 points without inventing gameplay g
 });
 
 test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the stable SVG map', () => {
-  assert.match(app, /lazy\(\(\) => import\('\.\/components\/TerrainMapPrototype'\)/);
+  assert.match(app, /lazy\(\(\) => loadTerrainMapModule\(\)/);
   assert.match(host, /TerrainMapPrototypeImpl/);
   assert.match(app, /terrainPrototypeRequested/);
   assert.match(app, /terrainPrototypeFailed/);
@@ -89,7 +91,6 @@ test('R3 WP2B runtime uses generated Copernicus terrain and no external terrain 
 });
 
 test('R3 WP2B stylises real relief rather than depending on a consumer web-map surface', () => {
-  assert.match(impl, /type: 'color-relief'/);
   assert.match(impl, /type: 'hillshade'/);
   assert.match(impl, /r3-wp2b-land-wash/);
   assert.match(impl, /r3-wp2b-coastline/);
