@@ -95,7 +95,7 @@ jobs:
           R3_WP2E_TILE_CANCELLATION: cancel
           R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head-cancel-pending-tiles.json
         run: node scripts/run-r3-wp2e-performance.mjs
-      - name: Assert identities and compare base with head
+      - name: Assert identities, compare base with head and enforce regression budgets
         run: >-
           node scripts/compare-r3-wp2e-performance.mjs
           artifacts/r3-wp2e-performance-base.json
@@ -104,6 +104,7 @@ jobs:
           '${{ github.event.pull_request.base.sha }}'
           '${{ github.event.pull_request.head.sha }}'
       - name: Upload machine-readable evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: r3-wp2e-performance-${{ github.event.pull_request.head.sha }}
