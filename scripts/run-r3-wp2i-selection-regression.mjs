@@ -13,8 +13,12 @@ page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? 
 await page.addInitScript(() => {
   localStorage.setItem('future-conquest:intro-seen:v3', 'true');
   localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
-  // Force newGame() to choose seed 9, whose portal is DE-02 / Düsseldorf.
+  // App creates the initial GameState synchronously while the module script is
+  // running. Override randomness only for that render, then restore the browser
+  // implementation before MapLibre workers/terrain initialise.
+  const nativeRandom = Math.random;
   Math.random = () => 9.5 / 999999;
+  window.addEventListener('DOMContentLoaded', () => { Math.random = nativeRandom; }, { once: true });
 });
 
 await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
