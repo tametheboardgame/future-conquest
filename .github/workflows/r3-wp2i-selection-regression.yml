@@ -1,0 +1,58 @@
+name: R3 WP2I selection camera regression
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/components/TerrainMapPrototype*.tsx'
+      - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'scripts/run-r3-wp2i-selection-regression.mjs'
+      - '.github/workflows/r3-wp2i-selection-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install game dependencies
+        run: npm ci
+      - name: Install Chromium probe
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Build production game
+        run: npm run build
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/future-conquest-wp2i-vite.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/future-conquest-wp2i-vite.log
+          exit 1
+      - name: Reproduce province target selection
+        run: node scripts/run-r3-wp2i-selection-regression.mjs
+      - name: Upload selection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp2i-selection-regression
+          path: artifacts/r3-wp2i-selection
+          if-no-files-found: ignore
+      - name: Print preview log on failure
+        if: failure()
+        run: cat /tmp/future-conquest-wp2i-vite.log || true
