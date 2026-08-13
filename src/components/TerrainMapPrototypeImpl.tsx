@@ -541,6 +541,8 @@ export function TerrainMapPrototypeImpl({
     let disposed = false;
     let ownedMap: Map | null = null;
     let toolbarResizeObserver: ResizeObserver | null = null;
+    let containerResizeObserver: ResizeObserver | null = null;
+    let resizeFrame: number | null = null;
 
     const initialise = async () => {
       const terrainSource = await loadTerrainSource();
@@ -584,6 +586,24 @@ export function TerrainMapPrototypeImpl({
       map.on('moveend', () => { if (host) host.dataset.mapMoving = 'false'; });
       map.on('idle', () => { if (host) host.dataset.mapIdleAt = String(performance.now()); });
       map.addControl(new NavigationControl({ visualizePitch: presentationProfile === 'full' }), 'top-right');
+
+      // The command sidebar can grow when a target becomes attack-ready without
+      // causing a window resize. Keep MapLibre's backing store in step with that
+      // flex-layout change; resize() retains the current camera, including user
+      // pan/zoom, while triggerRepaint() prevents a stale WebGL frame/transform.
+      const synchroniseContainerSize = () => {
+        if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+        resizeFrame = window.requestAnimationFrame(() => {
+          resizeFrame = null;
+          if (disposed) return;
+          map.resize();
+          map.triggerRepaint();
+        });
+      };
+      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+        containerResizeObserver = new ResizeObserver(synchroniseContainerSize);
+        containerResizeObserver.observe(containerRef.current);
+      }
 
       const applySafePadding = () => {
         map.setPadding(terrainViewportPadding(toolbarRef.current, presentationProfile));
@@ -708,6 +728,8 @@ export function TerrainMapPrototypeImpl({
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
       toolbarResizeObserver?.disconnect();
+      containerResizeObserver?.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
       mapRef.current = null;
       delete (window as typeof window & { __r3TerrainMap?: Map }).__r3TerrainMap;
       delete (window as typeof window & { __r3StrategicNodes?: typeof STRATEGIC_NODES }).__r3StrategicNodes;

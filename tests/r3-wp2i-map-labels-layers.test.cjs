@@ -20,12 +20,19 @@ test('WP2I terrain layers use persistent presentation-only defaults', () => {
   assert.match(renderer, /setLayoutProperty\('campaign-strategic-routes', 'visibility'/);
 });
 
-test('WP2I selection cannot remount the terrain renderer or move contact authority', () => {
-  assert.doesNotMatch(host, /TerrainMapPrototypeImpl key=\{profile\}/);
+test('WP2I retains the profile lifecycle and keeps contact authority presentation-only', () => {
+  assert.match(host, /TerrainMapPrototypeImpl key=\{profile\}/);
   assert.match(markers, /avoidEnemyPlaceLabelCollisions/);
   assert.match(markers, /contactDisplacementX/);
   assert.match(markers, /distance <= 64/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
+});
+
+test('WP2I synchronises attack-ready container changes without mutating the camera', () => {
+  assert.match(renderer, /new ResizeObserver\(synchroniseContainerSize\)/);
+  assert.match(renderer, /containerResizeObserver\.observe\(containerRef\.current\)/);
+  assert.match(renderer, /map\.resize\(\)/);
+  assert.match(renderer, /map\.triggerRepaint\(\)/);
 });
 
 test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
