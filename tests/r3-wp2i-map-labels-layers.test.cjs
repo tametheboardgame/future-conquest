@@ -53,7 +53,7 @@ test('WP2I protects province names and lays out complete formation clusters arou
   assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
   assert.match(markers, /clusters\.values\(\)/);
   assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /dx \* dx \+ dy \* dy <= 49 \* 49/);
+  assert.match(markers, /dx \* dx \+ dy \* dy <= 72 \* 72/);
   assert.match(markers, /deltas\.sort/);
   assert.match(markers, /obstacle, 0/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);

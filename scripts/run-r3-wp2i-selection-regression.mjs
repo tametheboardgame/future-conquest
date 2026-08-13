@@ -32,6 +32,7 @@ async function findAndSaveNaturalDusseldorfCampaign() {
   await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+  await page.waitForFunction(() => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page');
 
   // Generate one campaign through the real new-campaign path. Once the naturally
   // random Düsseldorf start is found, use the product's Manual Save path so each
@@ -69,9 +70,8 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
   await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  const load = page.getByRole('button', { name: 'Load Manual Save', exact: true });
-  if (!await load.isVisible()) await page.locator('[data-command-view="campaign"]').click();
-  await load.click();
+  await page.waitForFunction(() => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page');
+  await page.getByRole('button', { name: 'Load Manual Save', exact: true }).click();
   await page.locator('[data-command-view="map"]').click();
   const host = page.locator('.r3-terrain-prototype');
   await host.waitFor({ state: 'visible', timeout: 45_000 });
