@@ -385,10 +385,10 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   // only displacement within the bounded readability contract. Exact-head
   // evidence showed the former 49px disk can be mathematically exhausted by
   // dense neighbouring territory labels, so the narrow fallback envelope is
-  // 72px rather than silently returning a colliding [0, 0] placement.
+  // 96px rather than silently returning a colliding [0, 0] placement.
   const deltas: Array<readonly [number, number]> = [];
-  for (let dy = -72; dy <= 72; dy += 1) for (let dx = -72; dx <= 72; dx += 1) {
-    if (dx * dx + dy * dy <= 72 * 72) deltas.push([dx, dy]);
+  for (let dy = -96; dy <= 96; dy += 1) for (let dx = -96; dx <= 96; dx += 1) {
+    if (dx * dx + dy * dy <= 96 * 96) deltas.push([dx, dy]);
   }
   deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
     || b[1] - a[1] || b[0] - a[0]);
