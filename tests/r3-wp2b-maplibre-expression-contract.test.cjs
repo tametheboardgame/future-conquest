@@ -12,10 +12,11 @@ function layerBlock(id, nextId) {
   return source.slice(start, end);
 }
 
-test('territory zoom opacity uses a top-level interpolate', () => {
+test('territory opacity uses a feature-state case without invalid nested zoom expressions', () => {
   const layer = layerBlock('campaign-territories-fill', 'campaign-territory-state-wash');
-  assert.match(layer, /'fill-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
-  assert.doesNotMatch(layer, /'fill-opacity': \[\s*'case'[\s\S]*\['zoom'\]/);
+  assert.match(layer, /'fill-opacity': \[\s*'case'/);
+  assert.match(layer, /\['feature-state', 'hover'\]/);
+  assert.doesNotMatch(layer, /\['zoom'\]/);
 });
 
 test('strategic route zoom opacity and width use top-level interpolate', () => {

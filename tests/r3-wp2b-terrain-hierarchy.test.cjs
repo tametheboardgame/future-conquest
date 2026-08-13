@@ -15,10 +15,10 @@ const layerSlice = (id, nextId) => {
 test('R3 terrain keeps ordinary political detail restrained at theatre scale', () => {
   const territoryFill = layerSlice('campaign-territories-fill', 'campaign-territory-state-wash');
   const administrative = layerSlice('campaign-administrative-borders', 'campaign-strategic-routes');
-  assert.match(territoryFill, /'fill-opacity': \[\s*'interpolate', \['linear'\], \['zoom'\]/);
-  assert.match(territoryFill, /4, \['case'[\s\S]*?0\.07[\s\S]*?5\.5, \['case'[\s\S]*?0\.09[\s\S]*?7, \['case'[\s\S]*?0\.12[\s\S]*?9, \['case'[\s\S]*?0\.13/);
-  assert.match(administrative, /'line-opacity': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.07, 5\.5, 0\.1, 7, 0\.16, 9, 0\.23\]/);
-  assert.match(administrative, /'line-width': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.3, 6, 0\.45, 8, 0\.68\]/);
+  assert.match(territoryFill, /\['feature-state', 'hover'\], false\], 0\.075/);
+  assert.match(territoryFill, /\n\s+0\n/);
+  assert.match(administrative, /'line-opacity': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.18, 5\.5, 0\.23, 7, 0\.3, 9, 0\.38\]/);
+  assert.match(administrative, /'line-width': \['interpolate', \['linear'\], \['zoom'\], 4, 0\.42, 6, 0\.58, 8, 0\.78\]/);
 });
 
 test('R3 terrain lets critical network state beat ordinary route clutter', () => {
@@ -42,9 +42,9 @@ test('R3 terrain keeps fronts visually stronger than ordinary control boundaries
 test('R3 terrain prioritises active threats over stale combat residue', () => {
   const wash = layerSlice('campaign-territory-state-wash', 'campaign-administrative-borders');
   const outline = layerSlice('campaign-state-outline', 'campaign-strategic-nodes');
-  assert.match(wash, /active_combat[\s\S]*0\.24/);
-  assert.match(wash, /under-attack[\s\S]*0\.22/);
-  assert.match(wash, /recent-combat[\s\S]*0\.07/);
+  assert.match(wash, /active_combat[\s\S]*0\.2/);
+  assert.match(wash, /under-attack[\s\S]*0\.18/);
+  assert.match(wash, /recent-combat[\s\S]*0\.055/);
   assert.match(outline, /under-attack[\s\S]*0\.94/);
   assert.match(outline, /recent-combat[\s\S]*0\.42/);
 });

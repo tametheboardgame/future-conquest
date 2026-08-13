@@ -22,7 +22,7 @@ Entry state: R2-WP1 through R2-WP7 and the R2.5 Balance Stabilisation Gate are c
 
 ## R3 sequence
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
 WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP2C followed after the first deployed terrain build proved the landscape but lacked command-map information parity. WP2D was approved on 2026-08-12 after the restored-overlay build confirmed the overall terrain direction while also exposing the need for an intensive Europe-coverage, robustness, safe-area, hierarchy and declutter pass before WP3 resumes.
 
@@ -145,9 +145,21 @@ WP3 remains paused pending WP2E acceptance.
 
 ---
 
+## R3-WP2F - Overlay Readability & Marker Scaling
+
+Status: ACTIVE / LIVE ACCEPTANCE PENDING
+
+Authoritative package detail: `docs/roadmap/R3-WP2F-OVERLAY-READABILITY-MARKER-SCALING.md`.
+
+Objective: restore terrain-first political presentation and introduce a coherent, tightly-clamped screen-space marker detail and footprint policy.
+
+WP3 remains paused pending WP2F live visual acceptance.
+
+---
+
 ## R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED PENDING WP2E ACCEPTANCE
+Status: PAUSED PENDING WP2F LIVE ACCEPTANCE
 
 Objective: make armies visibly exist on the accepted terrain map as readable board-game-like pieces and make movement understandable as a physical change in campaign state.
 
