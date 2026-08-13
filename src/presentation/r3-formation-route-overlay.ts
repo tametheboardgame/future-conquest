@@ -34,6 +34,15 @@ const ensureOverlay = (map: Map) => {
   overlay.classList.add('r3-wp3-movement-routes');
   overlay.setAttribute('aria-hidden', 'true');
   overlay.setAttribute('focusable', 'false');
+  Object.assign(overlay.style, {
+    position: 'absolute',
+    zIndex: '2',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    pointerEvents: 'none'
+  });
   map.getContainer().appendChild(overlay);
   overlays.set(map, overlay);
   return overlay;
@@ -60,6 +69,13 @@ const renderMovementRoutes = (map: Map, markers: readonly Marker[]) => {
   overlay.setAttribute('viewBox', `0 0 ${Math.max(1, rect.width)} ${Math.max(1, rect.height)}`);
   overlay.replaceChildren();
 
+  const host = map.getContainer().closest('.r3-terrain-prototype') as HTMLElement | null;
+  const theatre = host?.dataset.overlayLod === 'theatre';
+  const compact = host?.dataset.terrainProfile === 'compact';
+  const routeWidth = theatre || compact ? '1.5' : '2';
+  const routeOpacity = theatre ? '0.58' : compact ? '0.62' : '0.72';
+  const routeDash = theatre ? '5 5' : '7 5';
+
   const seen = new Set<string>();
   for (const route of routes) {
     const key = JSON.stringify(route.path);
@@ -70,6 +86,15 @@ const renderMovementRoutes = (map: Map, markers: readonly Marker[]) => {
     polyline.classList.add('r3-wp3-movement-route');
     polyline.dataset.groupId = route.groupId;
     polyline.setAttribute('points', projected.map(point => `${point.x},${point.y}`).join(' '));
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', '#8fe1d4');
+    polyline.setAttribute('stroke-width', routeWidth);
+    polyline.setAttribute('stroke-linecap', 'round');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    polyline.setAttribute('stroke-dasharray', routeDash);
+    polyline.setAttribute('opacity', routeOpacity);
+    polyline.setAttribute('vector-effect', 'non-scaling-stroke');
+    polyline.style.filter = 'drop-shadow(0 1px 2px rgba(0, 0, 0, .8))';
     overlay.appendChild(polyline);
 
     const target = projected[projected.length - 1];
@@ -77,7 +102,12 @@ const renderMovementRoutes = (map: Map, markers: readonly Marker[]) => {
     targetMarker.classList.add('r3-wp3-movement-target');
     targetMarker.setAttribute('cx', String(target.x));
     targetMarker.setAttribute('cy', String(target.y));
-    targetMarker.setAttribute('r', '4');
+    targetMarker.setAttribute('r', theatre || compact ? '3.5' : '4');
+    targetMarker.setAttribute('fill', '#dffdf8');
+    targetMarker.setAttribute('stroke', '#163f43');
+    targetMarker.setAttribute('stroke-width', '2');
+    targetMarker.setAttribute('opacity', '0.88');
+    targetMarker.setAttribute('vector-effect', 'non-scaling-stroke');
     overlay.appendChild(targetMarker);
   }
 };
