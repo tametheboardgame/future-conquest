@@ -37,7 +37,7 @@ const finitePoint = (value: unknown): readonly [number, number] | undefined => {
   return [longitude, latitude] as const;
 };
 
-const territoryCentres = Object.fromEntries(
+export const terrainOperationalTerritoryCentres = Object.fromEntries(
   (activeGeojson as unknown as { features: TerrainFeature[] }).features.flatMap(feature => {
     const territoryId = typeof feature.properties?.territory_id === 'string'
       ? feature.properties.territory_id
@@ -142,18 +142,21 @@ const nodeSymbol = (type: string) => {
 /**
  * Player formations are geographic state, not floating annotations. A lone
  * formation therefore sits exactly on the territory centre. Multiple groups in
- * one territory fan out only enough to remain individually clickable.
+ * one territory fan out using the rendered card footprint plus a visible gap.
  */
 const formationOffset = (index: number, count: number): readonly [number, number] => {
   if (count <= 1) return [0, 0];
-  const columns = Math.min(2, count);
+  const columns = count === 3 ? 3 : Math.ceil(Math.sqrt(count));
   const rows = Math.ceil(count / columns);
   const column = index % columns;
   const row = Math.floor(index / columns);
-  const spacing = 24;
+  // Offsets are transformed with the marker by MapLibre, so these dimensions
+  // follow the existing LOD scale while remaining wider/taller than the card.
+  const horizontalPitch = 64;
+  const verticalPitch = 44;
   return [
-    (column - (columns - 1) / 2) * spacing,
-    (row - (rows - 1) / 2) * spacing
+    (column - (columns - 1) / 2) * horizontalPitch,
+    (row - (rows - 1) / 2) * verticalPitch
   ];
 };
 
@@ -182,7 +185,7 @@ function buildTerrainOperationalMarkerDescriptors(
 ): TerrainMarkerDescriptor[] {
   const markers: TerrainMarkerDescriptor[] = [];
 
-  for (const [territoryId, position] of Object.entries(territoryCentres)) {
+  for (const [territoryId, position] of Object.entries(terrainOperationalTerritoryCentres)) {
     const territory = state.territories[territoryId];
     const definition = TERRITORIES[territoryId];
     if (!territory || !definition) continue;
@@ -231,7 +234,7 @@ function buildTerrainOperationalMarkerDescriptors(
   }, {});
 
   for (const [territoryId, groups] of Object.entries(groupsByTerritory)) {
-    const position = territoryCentres[territoryId];
+    const position = terrainOperationalTerritoryCentres[territoryId];
     if (!position) continue;
     const ordered = [...groups].sort((a, b) => a.id.localeCompare(b.id));
     ordered.forEach((group, index) => {
@@ -260,7 +263,7 @@ function buildTerrainOperationalMarkerDescriptors(
   }
 
   for (const contact of getEnemyContacts(state)) {
-    const position = territoryCentres[contact.territoryId];
+    const position = terrainOperationalTerritoryCentres[contact.territoryId];
     if (!position) continue;
     const confidence = contactConfidenceLabel(contact.confidence);
     const symbol = contact.confidence === 'confirmed'
@@ -289,7 +292,7 @@ function buildTerrainOperationalMarkerDescriptors(
   }
 
   for (const threat of getThreatenedTerritories(state)) {
-    const position = territoryCentres[threat.territoryId];
+    const position = terrainOperationalTerritoryCentres[threat.territoryId];
     if (!position) continue;
     const element = makeElement(
       `r3-terrain-threat-marker ${threat.stage}`,
@@ -310,7 +313,7 @@ function buildTerrainOperationalMarkerDescriptors(
   }
 
   for (const operation of Object.values(state.operations)) {
-    const position = territoryCentres[operation.target];
+    const position = terrainOperationalTerritoryCentres[operation.target];
     if (!position) continue;
     const element = makeElement(
       'r3-terrain-operation-marker',
@@ -324,7 +327,7 @@ function buildTerrainOperationalMarkerDescriptors(
   }
 
   if (state.portalTerritory) {
-    const position = territoryCentres[state.portalTerritory];
+    const position = terrainOperationalTerritoryCentres[state.portalTerritory];
     if (position) {
       const element: MarkerElementDescriptor = {
         tag: 'div',

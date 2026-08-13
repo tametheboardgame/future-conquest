@@ -41,7 +41,7 @@ test('R3 terrain keeps fronts visually stronger than ordinary control boundaries
 
 test('R3 terrain prioritises active threats over stale combat residue', () => {
   const wash = layerSlice('campaign-territory-state-wash', 'campaign-administrative-borders');
-  const outline = layerSlice('campaign-state-outline', 'campaign-strategic-nodes');
+  const outline = layerSlice('campaign-state-outline');
   assert.match(wash, /active_combat[\s\S]*0\.2/);
   assert.match(wash, /under-attack[\s\S]*0\.18/);
   assert.match(wash, /recent-combat[\s\S]*0\.055/);
@@ -49,11 +49,7 @@ test('R3 terrain prioritises active threats over stale combat residue', () => {
   assert.match(outline, /recent-combat[\s\S]*0\.42/);
 });
 
-test('R3 terrain reveals major strategic nodes before minor nodes in dense regions', () => {
-  const nodes = layerSlice('campaign-strategic-nodes');
-  assert.match(nodes, /minzoom: compact \? 6 : 5\.4/);
-  assert.match(nodes, /filter: \['>=', \['get', 'importance'\], compact \? 2 : 1\]/);
-  assert.match(nodes, /5\.4, \['case', \['==', \['get', 'importance'\], 3\], 0\.72, 0\]/);
-  assert.match(nodes, /6\.2, \['case', \['>=', \['get', 'importance'\], 2\], 0\.82, 0\.16\]/);
-  assert.match(nodes, /7\.2, 0\.88/);
+test('R3 terrain uses one interactive strategic-node renderer', () => {
+  assert.doesNotMatch(impl, /id: 'campaign-strategic-nodes'/);
+  assert.match(impl, /__r3StrategicNodes: STRATEGIC_NODES/);
 });

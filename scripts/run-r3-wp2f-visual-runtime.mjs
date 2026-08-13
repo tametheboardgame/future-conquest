@@ -3,6 +3,7 @@ import { chromium } from 'playwright';
 
 const origin = process.env.R3_WP2F_ORIGIN ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.R3_WP2F_ARTIFACTS ?? 'artifacts/r3-wp2f';
+const diagnosticNodeIds = ['N-DOVER', 'N-CALAIS'];
 fs.mkdirSync(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
@@ -20,73 +21,161 @@ await host.waitFor({ state: 'visible', timeout: 45_000 });
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
 
 const evidence = { profiles: {}, hover: {}, identity: {} };
+const persistEvidence = () => fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
+
 for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], ['campaign', 'campaign', 'campaign.png'], ['selected', 'local', 'selected-local.png']]) {
   const control = page.getByRole('button', { name: button, exact: true });
-  if (button === 'selected' && await control.isDisabled()) {
-    await page.locator('.r3-terrain-territory-label').first().click();
-  }
+  if (button === 'selected' && await control.isDisabled()) await page.locator('.r3-terrain-territory-label').first().click();
   await control.click();
   await page.waitForFunction(lod => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === lod, expected);
   await page.waitForTimeout(900);
-  evidence.profiles[expected] = await page.evaluate(() => {
+
+  const profile = await page.evaluate(nodeIds => {
     const root = document.querySelector('.r3-terrain-prototype');
     const canvas = document.querySelector('.r3-terrain-prototype-canvas canvas');
+    const map = window.__r3TerrainMap;
+    const nodes = window.__r3StrategicNodes ?? [];
+    if (!map || !(canvas instanceof HTMLCanvasElement)) throw new Error('terrain diagnostic API unavailable');
+    const canvasRect = canvas.getBoundingClientRect();
     const markers = [...document.querySelectorAll('[data-r3-marker-id]')];
-    const formations = markers.filter(marker => marker.dataset.r3MarkerKind === 'formation' || marker.dataset.r3MarkerKind === 'selected-formation');
-    const scale = Number.parseFloat(getComputedStyle(root).getPropertyValue('--r3-marker-scale'));
-    const canvasRect = canvas?.getBoundingClientRect();
-
-    const formationAlignment = formations.map(marker => {
-      const territoryId = marker.dataset.territoryId;
-      const territoryLabel = territoryId
-        ? document.querySelector(`.r3-terrain-territory-label[data-territory-id="${CSS.escape(territoryId)}"]`)
-        : null;
-      if (!(territoryLabel instanceof HTMLElement)) {
-        return { id: marker.dataset.r3MarkerId, territoryId, distancePx: Number.POSITIVE_INFINITY, inCanvas: false };
+    const formations = markers.filter(marker => ['formation', 'selected-formation'].includes(marker.dataset.r3MarkerKind));
+    const rect = marker => {
+      const box = marker.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: box.right,
+        top: box.top,
+        bottom: box.bottom,
+        x: box.left + box.width / 2,
+        y: box.top + box.height / 2
+      };
+    };
+    const formationRects = formations.map(marker => ({
+      id: marker.dataset.r3MarkerId,
+      territoryId: marker.dataset.territoryId,
+      offsetX: Number(marker.dataset.r3MarkerOffsetX ?? 0),
+      offsetY: Number(marker.dataset.r3MarkerOffsetY ?? 0),
+      ...rect(marker)
+    }));
+    const collisions = [];
+    for (let i = 0; i < formationRects.length; i += 1) {
+      for (let j = i + 1; j < formationRects.length; j += 1) {
+        const a = formationRects[i];
+        const b = formationRects[j];
+        if (a.territoryId !== b.territoryId) continue;
+        const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (overlapX > 1 && overlapY > 1) collisions.push({ a: a.id, b: b.id, overlapX, overlapY });
       }
-      const wasHidden = territoryLabel.hidden;
-      territoryLabel.hidden = false;
-      const markerRect = marker.getBoundingClientRect();
-      const territoryRect = territoryLabel.getBoundingClientRect();
-      territoryLabel.hidden = wasHidden;
-      const markerX = markerRect.left + markerRect.width / 2;
-      const markerY = markerRect.top + markerRect.height / 2;
-      const territoryX = territoryRect.left + territoryRect.width / 2;
-      const territoryY = territoryRect.top + territoryRect.height / 2;
-      const distancePx = Math.hypot(markerX - territoryX, markerY - territoryY);
-      const inCanvas = Boolean(canvasRect)
-        && markerRect.right >= canvasRect.left
-        && markerRect.left <= canvasRect.right
-        && markerRect.bottom >= canvasRect.top
-        && markerRect.top <= canvasRect.bottom;
-      return { id: marker.dataset.r3MarkerId, territoryId, distancePx, inCanvas };
+    }
+    const clusters = formationRects.reduce((result, item) => {
+      (result[item.territoryId] ??= []).push(item);
+      return result;
+    }, {});
+    const formationAlignment = Object.entries(clusters).map(([territoryId, items]) => {
+      const anchors = items.map(item => ({
+        x: item.x - canvasRect.left - item.offsetX,
+        y: item.y - canvasRect.top - item.offsetY
+      }));
+      const anchor = {
+        x: anchors.reduce((sum, item) => sum + item.x, 0) / anchors.length,
+        y: anchors.reduce((sum, item) => sum + item.y, 0) / anchors.length
+      };
+      const meanOffset = {
+        x: items.reduce((sum, item) => sum + item.offsetX, 0) / items.length,
+        y: items.reduce((sum, item) => sum + item.offsetY, 0) / items.length
+      };
+      return {
+        territoryId,
+        count: items.length,
+        centroidDistancePx: Math.hypot(meanOffset.x, meanOffset.y),
+        anchorSpreadPx: Math.max(0, ...anchors.map(item => Math.hypot(item.x - anchor.x, item.y - anchor.y))),
+        terrainAwareAnchor: anchor
+      };
     });
-
+    const nodeDiagnostics = nodeIds.map(id => {
+      const node = nodes.find(item => item.id === id);
+      const nodeMarkers = [...document.querySelectorAll(`[data-node-id="${CSS.escape(id)}"]`)];
+      const marker = nodeMarkers[0];
+      if (!node || !(marker instanceof HTMLElement)) return { id, missing: true, markerCount: nodeMarkers.length };
+      const projected = map.project(node.position);
+      const box = rect(marker);
+      const domCentre = { x: box.x - canvasRect.left, y: box.y - canvasRect.top };
+      return {
+        id,
+        markerCount: nodeMarkers.length,
+        visible: box.right > box.left && box.bottom > box.top,
+        position: node.position,
+        projected: { x: projected.x, y: projected.y },
+        domCentre,
+        flatProjectionDistanceWhilePitchedPx: Math.hypot(projected.x - domCentre.x, projected.y - domCentre.y),
+        terrainElevation: map.queryTerrainElevation?.(node.position) ?? null
+      };
+    });
     return {
       lod: root?.getAttribute('data-overlay-lod'),
-      scale,
+      scale: Number.parseFloat(getComputedStyle(root).getPropertyValue('--r3-marker-scale')),
+      camera: { zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() },
       markerCount: markers.length,
-      visibleCount: markers.filter(marker => !marker.hidden).length,
-      maximumRenderedScale: scale,
       formationCount: formations.length,
       visibleFormationCount: formations.filter(marker => !marker.hidden).length,
-      formationsInCanvas: formationAlignment.filter(item => item.inCanvas).length,
-      maxFormationTerritoryDistancePx: Math.max(0, ...formationAlignment.map(item => item.distancePx)),
-      formationAlignment
+      formationsInCanvas: formationRects.filter(item => item.right >= canvasRect.left && item.left <= canvasRect.right && item.bottom >= canvasRect.top && item.top <= canvasRect.bottom).length,
+      collisions,
+      formationAlignment,
+      nodeDiagnostics,
+      duplicateNodeLayerPresent: Boolean(map.getLayer('campaign-strategic-nodes'))
     };
-  });
-  const profile = evidence.profiles[expected];
-  if (profile.maximumRenderedScale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
-  if (profile.visibleFormationCount !== profile.formationCount) {
-    throw new Error(`player formation hidden by declutter in ${expected}: ${profile.visibleFormationCount}/${profile.formationCount}`);
-  }
-  if (profile.maxFormationTerritoryDistancePx > 36) {
-    throw new Error(`formation/territory alignment drifted in ${expected}: ${profile.maxFormationTerritoryDistancePx.toFixed(1)}px`);
-  }
-  if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) {
-    throw new Error(`player formation fell outside ${expected} command-map canvas: ${profile.formationsInCanvas}/${profile.formationCount}`);
-  }
+  }, diagnosticNodeIds);
+
+  const flatProjection = await page.evaluate(async nodeIds => {
+    const map = window.__r3TerrainMap;
+    const nodes = window.__r3StrategicNodes ?? [];
+    const canvas = document.querySelector('.r3-terrain-prototype-canvas canvas');
+    if (!map || !(canvas instanceof HTMLCanvasElement)) throw new Error('terrain diagnostic API unavailable for flat projection');
+    const originalPitch = map.getPitch();
+    map.jumpTo({ pitch: 0 });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const canvasRect = canvas.getBoundingClientRect();
+    const diagnostics = nodeIds.map(id => {
+      const node = nodes.find(item => item.id === id);
+      const marker = document.querySelector(`[data-node-id="${CSS.escape(id)}"]`);
+      if (!node || !(marker instanceof HTMLElement)) return { id, missing: true };
+      const previousDisplay = marker.style.getPropertyValue('display');
+      const previousPriority = marker.style.getPropertyPriority('display');
+      marker.style.setProperty('display', 'flex', 'important');
+      const box = marker.getBoundingClientRect();
+      const domCentre = {
+        x: box.left + box.width / 2 - canvasRect.left,
+        y: box.top + box.height / 2 - canvasRect.top
+      };
+      const projected = map.project(node.position);
+      if (previousDisplay) marker.style.setProperty('display', previousDisplay, previousPriority);
+      else marker.style.removeProperty('display');
+      return {
+        id,
+        projected: { x: projected.x, y: projected.y },
+        domCentre,
+        distancePx: Math.hypot(projected.x - domCentre.x, projected.y - domCentre.y)
+      };
+    });
+    map.jumpTo({ pitch: originalPitch });
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return { pitch: 0, diagnostics };
+  }, diagnosticNodeIds);
+
+  evidence.profiles[expected] = { ...profile, flatProjection };
   await page.screenshot({ path: `${outputDir}/${file}`, fullPage: true });
+  persistEvidence();
+
+  if (profile.scale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
+  if (profile.visibleFormationCount !== profile.formationCount) throw new Error(`player formation hidden by declutter in ${expected}`);
+  if (profile.collisions.length) throw new Error(`formation rectangles intersect in ${expected}: ${JSON.stringify(profile.collisions)}`);
+  if (profile.formationAlignment.some(item => item.centroidDistancePx > 2)) throw new Error(`formation cluster centroid drifted in ${expected}`);
+  if (profile.formationAlignment.some(item => item.anchorSpreadPx > 2)) throw new Error(`formation terrain anchors diverged in ${expected}`);
+  if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) throw new Error(`formation outside ${expected} canvas`);
+  if (profile.duplicateNodeLayerPresent) throw new Error(`duplicate strategic-node layer remains in ${expected}`);
+  if (profile.nodeDiagnostics.some(node => node.missing || node.markerCount !== 1)) throw new Error(`strategic node duplication/missing marker failed in ${expected}`);
+  if (flatProjection.diagnostics.some(node => node.missing || node.distancePx > 3)) throw new Error(`strategic node flat projection failed in ${expected}: ${JSON.stringify(flatProjection.diagnostics)}`);
 }
 
 await page.evaluate(() => { window.__wp2fMarkerNodes = new Map([...document.querySelectorAll('[data-r3-marker-id]')].map(node => [node.dataset.r3MarkerId, node])); });
@@ -115,6 +204,6 @@ evidence.identity = await page.evaluate(() => {
 });
 if (!evidence.hover.selectionUnchanged || evidence.identity.unchanged !== evidence.identity.current) throw new Error('hover/zoom replaced identity or changed selection');
 evidence.territoryFillPolicy = 'ordinary:0;hover:0.075;selected:0.13;targeted:0.16';
-fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
+persistEvidence();
 await browser.close();
 console.log(JSON.stringify(evidence, null, 2));
