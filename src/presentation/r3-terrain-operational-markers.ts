@@ -354,18 +354,65 @@ const markerEnabled = (element: HTMLElement, layers: TerrainOperationalLayers) =
 };
 
 type Rect = { left: number; top: number; right: number; bottom: number };
+type MarkerBaseRects = ReadonlyMap<Marker, Rect>;
+const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
+  left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
+});
+
+// MapLibre 6 updates a marker transform synchronously in Marker#setOffset().
+// Always restore descriptor offsets first and measure that real DOM geometry;
+// subtracting a recorded prior displacement manufactures an incorrect origin.
+const resetAndCaptureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => {
+  for (const marker of markers) {
+    const element = marker.getElement();
+    marker.setOffset([
+      Number(element.dataset.r3MarkerOffsetX ?? 0),
+      Number(element.dataset.r3MarkerOffsetY ?? 0)
+    ]);
+    element.dataset.formationDisplacementX = '0';
+    element.dataset.formationDisplacementY = '0';
+    element.dataset.contactDisplacementX = '0';
+    element.dataset.contactDisplacementY = '0';
+    element.dataset.toolbarDisplacementX = '0';
+    element.dataset.toolbarDisplacementY = '0';
+    element.dataset.placeAvoidanceDisplacementX = '0';
+    element.dataset.placeAvoidanceDisplacementY = '0';
+  }
+  return new globalThis.Map(markers.map(marker => [marker, marker.getElement().getBoundingClientRect()] as const));
+};
 const overlaps = (a: Rect, b: Rect, gap = 4) => (
   a.right + gap > b.left && a.left - gap < b.right
   && a.bottom + gap > b.top && a.top - gap < b.bottom
 );
 
-function avoidFormationLabelCollisions(markers: readonly Marker[]) {
-  const obstacles = markers.flatMap(marker => {
-    const element = marker.getElement();
-    const kind = element.dataset.r3MarkerKind;
-    if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory' && kind !== 'node-major' && kind !== 'node-secondary')) return [];
-    return [element.getBoundingClientRect()];
-  });
+const formationDeltas = (() => {
+  const deltas: Array<readonly [number, number]> = [];
+  for (let dy = -96; dy <= 96; dy += 1) for (let dx = -96; dx <= 96; dx += 1) {
+    if (dx * dx + dy * dy <= 96 * 96) deltas.push([dx, dy]);
+  }
+  return deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
+    || b[1] - a[1] || b[0] - a[0]);
+})();
+
+const placeLabelRect = (marker: Marker, baseRects: MarkerBaseRects) => {
+  const element = marker.getElement();
+  return translateRect(baseRects.get(marker) ?? element.getBoundingClientRect(),
+    Number(element.dataset.toolbarDisplacementX ?? 0) + Number(element.dataset.placeAvoidanceDisplacementX ?? 0),
+    Number(element.dataset.toolbarDisplacementY ?? 0) + Number(element.dataset.placeAvoidanceDisplacementY ?? 0));
+};
+
+const placeLabelMarkers = (markers: readonly Marker[]) => markers.filter(marker => {
+  const element = marker.getElement();
+  return !element.hidden && ['territory', 'selected-territory', 'node-major', 'node-secondary'].includes(element.dataset.r3MarkerKind ?? '');
+});
+
+function avoidFormationLabelCollisions(
+  markers: readonly Marker[], baseRects: MarkerBaseRects, toolbar: Element | null | undefined, canvasRect: Rect
+) {
+  const labels = placeLabelMarkers(markers);
+  const obstacles = () => labels.map(marker => placeLabelRect(marker, baseRects));
+  const hudRect = toolbar instanceof HTMLElement ? toolbar.getBoundingClientRect() : undefined;
+  const placedFormationRects: Rect[] = [];
   const clusters = new globalThis.Map<string, Marker[]>();
   for (const marker of markers) {
     const element = marker.getElement();
@@ -378,17 +425,83 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     }
   }
 
-  const deltas: Array<readonly [number, number]> = [[0, 0]];
-  for (let distance = 8; distance <= 48; distance += 8) {
-    const diagonal = Math.round(distance / Math.SQRT2);
-    deltas.push([0, distance], [distance, 0], [-distance, 0], [0, -distance],
-      [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
-  }
   for (const cluster of clusters.values()) {
-    const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
-    const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
-      left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
-    }, obstacle)))) ?? [0, 0];
+    const rects = cluster.map(marker => baseRects.get(marker) ?? marker.getElement().getBoundingClientRect());
+    const validDelta = ([dx, dy]: readonly [number, number]) => rects.every(rect => {
+      const candidate = translateRect(rect, dx, dy);
+      return obstacles().every(obstacle => !overlaps(candidate, obstacle, 0))
+        && placedFormationRects.every(placed => !overlaps(candidate, placed, 0))
+        && (!hudRect || !overlaps(candidate, hudRect, 0))
+        && candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+        && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom;
+    });
+    let delta = formationDeltas.find(validDelta);
+
+    if (!delta) {
+      // Joint fallback: only labels intersecting this cluster's feasible 96px
+      // screen-space area may move. Try modest label offsets together with each
+      // common formation candidate; labels remain visible, in-canvas, HUD-safe,
+      // mutually separated, and anchored to their unchanged WGS84 positions.
+      const conflicting = labels.filter(label => {
+        const labelRect = placeLabelRect(label, baseRects);
+        return formationDeltas.some(([dx, dy]) => rects.some(rect => overlaps(translateRect(rect, dx, dy), labelRect, 0)));
+      }).sort((a, b) => (a.getElement().dataset.r3MarkerId ?? '').localeCompare(b.getElement().dataset.r3MarkerId ?? ''));
+      const fixedLabels = labels.filter(label => !conflicting.includes(label)).map(label => placeLabelRect(label, baseRects));
+      const labelDeltas: Array<readonly [number, number]> = [];
+      for (let dy = -48; dy <= 48; dy += 4) for (let dx = -48; dx <= 48; dx += 4) {
+        if (dx * dx + dy * dy <= 48 * 48) labelDeltas.push([dx, dy]);
+      }
+      labelDeltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
+        || b[1] - a[1] || b[0] - a[0]);
+
+      for (const candidateDelta of formationDeltas) {
+        const formationRects = rects.map(rect => translateRect(rect, candidateDelta[0], candidateDelta[1]));
+        if (formationRects.some(rect => placedFormationRects.some(placed => overlaps(rect, placed, 0)))) continue;
+        if (formationRects.some(rect => (hudRect && overlaps(rect, hudRect, 0))
+          || rect.left < canvasRect.left || rect.top < canvasRect.top
+          || rect.right > canvasRect.right || rect.bottom > canvasRect.bottom)) continue;
+        const moved: Array<{ marker: Marker; delta: readonly [number, number]; rect: Rect }> = [];
+        const placeLabel = (index: number): boolean => {
+          if (index >= conflicting.length) return true;
+          const marker = conflicting[index];
+          const start = placeLabelRect(marker, baseRects);
+          for (const labelDelta of labelDeltas) {
+            const [dx, dy] = labelDelta;
+            const candidate = translateRect(start, dx, dy);
+            const valid = candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+              && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom
+              && (!hudRect || !overlaps(candidate, hudRect, 0))
+              && fixedLabels.every(other => !overlaps(candidate, other, 0))
+              && moved.every(other => !overlaps(candidate, other.rect, 0))
+              && placedFormationRects.every(formation => !overlaps(candidate, formation, 0))
+              && formationRects.every(formation => !overlaps(candidate, formation, 0));
+            if (!valid) continue;
+            moved.push({ marker, delta: labelDelta, rect: candidate });
+            if (placeLabel(index + 1)) return true;
+            moved.pop();
+          }
+          return false;
+        };
+        const success = placeLabel(0);
+        if (!success) continue;
+        for (const move of moved) {
+          const element = move.marker.getElement();
+          const toolbarX = Number(element.dataset.toolbarDisplacementX ?? 0);
+          const toolbarY = Number(element.dataset.toolbarDisplacementY ?? 0);
+          move.marker.setOffset([
+            Number(element.dataset.r3MarkerOffsetX ?? 0) + toolbarX + move.delta[0],
+            Number(element.dataset.r3MarkerOffsetY ?? 0) + toolbarY + move.delta[1]
+          ]);
+          element.dataset.placeAvoidanceDisplacementX = String(move.delta[0]);
+          element.dataset.placeAvoidanceDisplacementY = String(move.delta[1]);
+        }
+        // Re-evaluate against the final displaced-label rectangles rather than
+        // trusting the joint trial's intermediate geometry.
+        delta = formationDeltas.find(validDelta);
+        if (delta) break;
+      }
+    }
+    delta ??= [0, 0];
     for (const marker of cluster) {
       const element = marker.getElement();
       const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
@@ -396,7 +509,94 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
       marker.setOffset([baseX + delta[0], baseY + delta[1]]);
       element.dataset.formationDisplacementX = String(delta[0]);
       element.dataset.formationDisplacementY = String(delta[1]);
+      placedFormationRects.push(translateRect(baseRects.get(marker) ?? element.getBoundingClientRect(), delta[0], delta[1]));
     }
+  }
+}
+
+/** Move protected territory names clear of the HUD without changing geography. */
+function avoidTerritoryToolbarCollisions(
+  markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects, canvasRect: Rect
+) {
+  if (!(toolbar instanceof HTMLElement)) return;
+  const toolbarRect = toolbar.getBoundingClientRect();
+  const gap = 4;
+  const maximumDisplacement = 128;
+  for (const marker of markers) {
+    const element = marker.getElement();
+    const kind = element.dataset.r3MarkerKind;
+    if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory')) continue;
+    const rect = baseRects.get(marker) ?? element.getBoundingClientRect();
+    let delta: readonly [number, number] = [0, 0];
+    if (overlaps(rect, toolbarRect, 0)) {
+      const candidates: Array<readonly [number, number]> = [
+        [0, toolbarRect.bottom - rect.top + gap],
+        [toolbarRect.right - rect.left + gap, 0],
+        [toolbarRect.left - rect.right - gap, 0],
+        [0, toolbarRect.top - rect.bottom - gap]
+      ];
+      candidates.sort((a, b) => Math.hypot(...a) - Math.hypot(...b)
+        || a[1] - b[1] || a[0] - b[0]);
+      delta = candidates.find(([dx, dy]) => {
+        const candidate = translateRect(rect, dx, dy);
+        return Math.hypot(dx, dy) <= maximumDisplacement
+          && candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+          && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom;
+      }) ?? delta;
+    }
+    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    marker.setOffset([baseX + delta[0], baseY + delta[1]]);
+    element.dataset.toolbarDisplacementX = String(delta[0]);
+    element.dataset.toolbarDisplacementY = String(delta[1]);
+  }
+}
+
+/** Keep intelligence cards legible without moving their authoritative WGS84 position. */
+function avoidEnemyPlaceLabelCollisions(
+  markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects, canvasRect: Rect
+) {
+  const placeLabelObstacles = markers.flatMap(marker => {
+    const element = marker.getElement();
+    const kind = element.dataset.r3MarkerKind;
+    if (element.hidden || !['territory', 'selected-territory', 'node-major', 'node-secondary'].includes(kind ?? '')) return [];
+    const baseRect = baseRects.get(marker) ?? element.getBoundingClientRect();
+    return [translateRect(baseRect,
+      Number(element.dataset.toolbarDisplacementX ?? 0) + Number(element.dataset.placeAvoidanceDisplacementX ?? 0),
+      Number(element.dataset.toolbarDisplacementY ?? 0) + Number(element.dataset.placeAvoidanceDisplacementY ?? 0))];
+  });
+  // Declutter protects the contact's base offset from the HUD. Keep that same
+  // safe area forbidden during this later collision pass so a label-avoidance
+  // displacement cannot move an otherwise visible contact into the toolbar.
+  const obstacles: Rect[] = toolbar instanceof HTMLElement
+    ? [toolbar.getBoundingClientRect(), ...placeLabelObstacles]
+    : placeLabelObstacles;
+  const occupied: Rect[] = [];
+  const deltas: Array<readonly [number, number]> = [[0, 0]];
+  for (let distance = 8; distance <= 64; distance += 8) {
+    const diagonal = Math.round(distance / Math.SQRT2);
+    deltas.push([distance, 0], [0, distance], [-distance, 0], [0, -distance],
+      [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
+  }
+  const enemies = markers.filter(marker => {
+    const element = marker.getElement();
+    return !element.hidden && element.dataset.r3MarkerKind?.startsWith('enemy-');
+  }).sort((a, b) => (a.getElement().dataset.r3MarkerId ?? '').localeCompare(b.getElement().dataset.r3MarkerId ?? ''));
+  for (const marker of enemies) {
+    const element = marker.getElement();
+    const rect = baseRects.get(marker) ?? element.getBoundingClientRect();
+    const delta = deltas.find(([dx, dy]) => {
+      const candidate = translateRect(rect, dx, dy);
+      return candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+        && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom
+        && [...obstacles, ...occupied].every(obstacle => !overlaps(candidate, obstacle, 0));
+    }) ?? [0, 0];
+    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    marker.setOffset([baseX + delta[0], baseY + delta[1]]);
+    element.dataset.contactDisplacementX = String(delta[0]);
+    element.dataset.contactDisplacementY = String(delta[1]);
+    occupied.push({ left: rect.left + delta[0], right: rect.right + delta[0], top: rect.top + delta[1], bottom: rect.bottom + delta[1] });
   }
 }
 
@@ -405,13 +605,7 @@ export function applyTerrainOperationalMarkerLayout(
   markers: readonly Marker[],
   layers: TerrainOperationalLayers
 ) {
-  for (const marker of markers) {
-    const element = marker.getElement();
-    marker.setOffset([
-      Number(element.dataset.r3MarkerOffsetX ?? 0),
-      Number(element.dataset.r3MarkerOffsetY ?? 0)
-    ]);
-  }
+  const baseRects = resetAndCaptureMarkerBaseRects(markers);
   const candidates = markers.flatMap(marker => {
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
@@ -441,7 +635,9 @@ export function applyTerrainOperationalMarkerLayout(
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
-  avoidFormationLabelCollisions(markers);
+  avoidTerritoryToolbarCollisions(markers, toolbar, baseRects, mapRect);
+  avoidFormationLabelCollisions(markers, baseRects, toolbar, mapRect);
+  avoidEnemyPlaceLabelCollisions(markers, toolbar, baseRects, mapRect);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {

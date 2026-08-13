@@ -130,11 +130,12 @@ test('R3 WP2B-D gives compact displays real reduced-pressure terrain rather than
   assert.match(impl, /presentationProfile === 'compact' \? 'compact terrain' : 'continuous relief'/);
 });
 
-test('R3 WP2B-D adapts compact/full terrain when the viewport changes', () => {
+test('R3 WP2B-D remounts MapLibre only when its responsive renderer profile changes', () => {
   assert.match(host, /const refreshProfile = \(\) => setProfile\(browserTerrainProfile\(\)\)/);
   assert.match(host, /window\.addEventListener\('resize', refreshProfile\)/);
   assert.match(host, /window\.removeEventListener\('resize', refreshProfile\)/);
-  assert.match(host, /key=\{profile\}/);
+  assert.match(host, /TerrainMapPrototypeImpl key=\{profile\}/);
+  assert.doesNotMatch(impl, /containerResizeObserver/);
 });
 
 test('R3 WP2B-D keeps a deliberate SVG path for very small touch displays and manual accessibility choice', () => {

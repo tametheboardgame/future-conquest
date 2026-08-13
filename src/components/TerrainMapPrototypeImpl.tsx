@@ -593,7 +593,6 @@ export function TerrainMapPrototypeImpl({
         toolbarResizeObserver = new ResizeObserver(applySafePadding);
         toolbarResizeObserver.observe(toolbarRef.current);
       }
-
       let terrainMeshMode: 'physical' | 'strategic-flat' = 'physical';
       const updateOverlayLod = () => {
         const host = containerRef.current?.parentElement;
