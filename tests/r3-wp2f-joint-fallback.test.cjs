@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { stripTypeScriptTypes } = require('node:module');
 
-const source = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
+const source = fs.readFileSync('src/presentation/r3-terrain-operational-markers-core.ts', 'utf8');
 
 // Execute the production geometry at a reduced, equivalent scale so this dense
 // four-formation case remains a fast deterministic unit contract.
