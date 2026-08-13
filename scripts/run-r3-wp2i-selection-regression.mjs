@@ -32,29 +32,22 @@ async function findAndSaveNaturalDusseldorfCampaign() {
   await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  await page.locator('[data-command-view="map"]').click();
-  const host = page.locator('.r3-terrain-prototype');
-  await host.waitFor({ state: 'visible', timeout: 45_000 });
-  await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
-  await page.locator('.r3-terrain-portal-marker').waitFor({ state: 'attached' });
 
   // Generate one campaign through the real new-campaign path. Once the naturally
   // random Düsseldorf start is found, use the product's Manual Save path so each
   // surface can replay the identical campaign without repeating this search.
   let campaignAttempts = 1;
-  while (await page.locator('.r3-terrain-portal-marker').getAttribute('data-territory-id') !== 'DE-02') {
+  let savedStorage;
+  for (;;) {
+    await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
+    await page.waitForFunction(key => Boolean(localStorage.getItem(key)), manualSaveKey);
+    savedStorage = await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), [manualSaveKey, manualSaveMetadataKey]);
+    const savedState = JSON.parse(savedStorage[manualSaveKey]);
+    if (savedState.portalTerritory === 'DE-02') break;
     if (campaignAttempts >= 200) throw new Error('No natural Day-1 Düsseldorf portal after 200 campaigns.');
-    await page.locator('[data-command-view="campaign"]').click();
     await page.getByRole('button', { name: 'New campaign', exact: true }).click();
     campaignAttempts += 1;
-    await page.locator('[data-command-view="map"]').click();
-    await page.locator('.r3-terrain-portal-marker').waitFor({ state: 'attached' });
-    await page.waitForTimeout(50);
   }
-  await page.locator('[data-command-view="campaign"]').click();
-  await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
-  await page.waitForFunction(key => Boolean(localStorage.getItem(key)), manualSaveKey);
-  const savedStorage = await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), [manualSaveKey, manualSaveMetadataKey]);
   if (!savedStorage[manualSaveKey]) throw new Error('Manual Save UI did not populate the current save slot.');
   await context.close();
   return { savedStorage, campaignAttempts };
@@ -76,8 +69,9 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
   await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  await page.locator('[data-command-view="campaign"]').click();
-  await page.getByRole('button', { name: 'Load Manual Save', exact: true }).click();
+  const load = page.getByRole('button', { name: 'Load Manual Save', exact: true });
+  if (!await load.isVisible()) await page.locator('[data-command-view="campaign"]').click();
+  await load.click();
   await page.locator('[data-command-view="map"]').click();
   const host = page.locator('.r3-terrain-prototype');
   await host.waitFor({ state: 'visible', timeout: 45_000 });
