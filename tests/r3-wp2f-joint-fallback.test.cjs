@@ -9,7 +9,7 @@ const source = fs.readFileSync('src/presentation/r3-terrain-operational-markers.
 // Execute the production geometry at a reduced, equivalent scale so this dense
 // four-formation case remains a fast deterministic unit contract.
 const start = source.indexOf('type Rect =');
-const end = source.indexOf('/** Move protected territory names', start);
+const end = source.indexOf('export function applyTerrainOperationalMarkerLayout', start);
 const scaledSource = source.slice(start, end)
   .replaceAll('96', '12')
   .replace('for (let dy = -48; dy <= 48; dy += 4) for (let dx = -48; dx <= 48; dx += 4)',
@@ -21,7 +21,8 @@ class FakeHTMLElement {}
 const context = vm.createContext({ Map, HTMLElement: FakeHTMLElement, globalThis: null });
 context.globalThis = context;
 vm.runInContext(`${stripTypeScriptTypes(scaledSource)}\n`
-  + 'globalThis.layout = avoidFormationLabelCollisions; globalThis.capture = resetAndCaptureMarkerBaseRects;', context);
+  + 'globalThis.layout = avoidFormationLabelCollisions; globalThis.toolbarLayout = avoidTerritoryToolbarCollisions; '
+  + 'globalThis.contactLayout = avoidEnemyPlaceLabelCollisions; globalThis.capture = resetAndCaptureMarkerBaseRects;', context);
 
 const makeMarker = ({ id, kind, territoryId, rect }) => {
   const base = { ...rect };
@@ -60,7 +61,13 @@ test('WP2F deterministic dense four-formation cluster uses the joint visible-lab
     { id: 'territory:BE-01', rect: { left: 49, top: 34, right: 57, bottom: 49 } },
     { id: 'node:LUX', rect: { left: 49, top: 57, right: 57, bottom: 72 } }
   ].map(item => makeMarker({ ...item, kind: item.id.startsWith('node:') ? 'node-major' : 'territory' }));
-  const markers = [...formations, ...labels];
+  const earlierFormation = makeMarker({
+    id: 'formation:earlier', kind: 'formation', territoryId: 'BE-01',
+    rect: { left: 26, top: 48, right: 30, bottom: 52 }
+  });
+  // In insertion order this independent cluster settles before LU-01. Its
+  // accepted rectangle must constrain the later cluster's label backtracking.
+  const markers = [earlierFormation, ...formations, ...labels];
   const anchors = markers.map(marker => marker.getLngLat());
   const baseRects = context.capture(markers);
   const toolbar = new FakeHTMLElement();
@@ -82,9 +89,59 @@ test('WP2F deterministic dense four-formation cluster uses the joint visible-lab
   assert.ok(Math.hypot(...displacements[0]) <= 12, 'scaled formation displacement stays within its budget');
   assert.equal(formationRects.some((rect, i) => formationRects.slice(i + 1).some(other => intersects(rect, other))), false);
   assert.equal(formationRects.some(rect => labelRects.some(label => intersects(rect, label))), false);
+  assert.equal(labelRects.some(label => intersects(label, earlierFormation.getElement().rect)), false,
+    'later label fallback cannot cover an already placed formation');
   assert.equal(labelRects.some((rect, i) => labelRects.slice(i + 1).some(other => intersects(rect, other))), false);
   assert.equal(labelRects.some(rect => intersects(rect, toolbar.getBoundingClientRect())), false);
   assert.ok(labelRects.every(rect => rect.left >= 0 && rect.top >= 0 && rect.right <= 100 && rect.bottom <= 100));
   assert.deepEqual(markers.map(marker => marker.getLngLat()), anchors, 'authoritative geographic anchors are unchanged');
   assert.ok(markers.every(marker => marker.getElement().dataset.r3MarkerId), 'all protected markers remain visible and identifiable');
+});
+
+test('toolbar avoidance keeps an edge-of-canvas protected label fully visible', () => {
+  const label = makeMarker({
+    id: 'territory:edge', kind: 'territory',
+    rect: { left: 30, top: 2, right: 40, bottom: 10 }
+  });
+  const toolbar = new FakeHTMLElement();
+  toolbar.getBoundingClientRect = () => ({ left: 20, top: 0, right: 80, bottom: 20 });
+  const canvas = { left: 0, top: 0, right: 100, bottom: 100 };
+  const anchors = label.getLngLat();
+
+  context.toolbarLayout([label], toolbar, context.capture([label]), canvas);
+
+  const rect = label.getElement().rect;
+  assert.ok(rect.left >= canvas.left && rect.top >= canvas.top && rect.right <= canvas.right && rect.bottom <= canvas.bottom);
+  assert.equal(intersects(rect, toolbar.getBoundingClientRect()), false);
+  assert.notEqual(Number(label.getElement().dataset.toolbarDisplacementY), -14,
+    'the shortest upward candidate is rejected because it would leave the canvas');
+  assert.deepEqual(label.getLngLat(), anchors, 'toolbar layout does not change the geographic anchor');
+});
+
+test('contact avoidance rejects an outward edge-of-canvas displacement', () => {
+  const contact = makeMarker({
+    id: 'enemy:edge', kind: 'enemy-estimated',
+    rect: { left: 90, top: 10, right: 100, bottom: 20 }
+  });
+  const label = makeMarker({
+    id: 'territory:edge', kind: 'territory',
+    rect: { left: 82, top: 10, right: 92, bottom: 20 }
+  });
+  const canvas = { left: 0, top: 0, right: 100, bottom: 100 };
+  const anchors = contact.getLngLat();
+
+  context.contactLayout([contact, label], null, context.capture([contact, label]), canvas);
+
+  const rect = contact.getElement().rect;
+  assert.ok(rect.left >= canvas.left && rect.top >= canvas.top && rect.right <= canvas.right && rect.bottom <= canvas.bottom);
+  assert.equal(intersects(rect, label.getElement().rect), false);
+  assert.notEqual(Number(contact.getElement().dataset.contactDisplacementX), 8,
+    'the first outward collision-free candidate is rejected');
+  assert.ok(Math.hypot(Number(contact.getElement().dataset.contactDisplacementX),
+    Number(contact.getElement().dataset.contactDisplacementY)) <= 64);
+  assert.deepEqual(contact.getLngLat(), anchors, 'contact layout does not change the geographic anchor');
+});
+
+test('later dense-cluster label fallback predicate includes earlier formations', () => {
+  assert.match(source, /moved\.every\([\s\S]*placedFormationRects\.every\(formation => !overlaps\(candidate, formation, 0\)\)[\s\S]*formationRects\.every/);
 });

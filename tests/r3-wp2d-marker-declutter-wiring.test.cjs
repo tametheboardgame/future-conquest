@@ -44,22 +44,22 @@ test('WP2D-D converts the persistent terrain toolbar into a local screen-space r
 });
 
 test('WP2D-D shifts visible protected territory names clear of the actual toolbar before other collision passes', () => {
-  assert.match(markers, /function avoidTerritoryToolbarCollisions\(markers: readonly Marker\[\], toolbar: Element \| null \| undefined, baseRects: MarkerBaseRects\)/);
+  assert.match(markers, /function avoidTerritoryToolbarCollisions\([\s\S]*baseRects: MarkerBaseRects, canvasRect: Rect/);
   assert.match(markers, /kind !== 'territory' && kind !== 'selected-territory'/);
   assert.match(markers, /toolbarRect\.bottom - rect\.top \+ gap/);
   assert.match(markers, /maximumDisplacement = 128/);
-  assert.match(markers, /Math\.hypot\(\.\.\.candidate\) <= maximumDisplacement/);
+  assert.match(markers, /Math\.hypot\(dx, dy\) <= maximumDisplacement/);
+  assert.match(markers, /candidate\.left >= canvasRect\.left[\s\S]*candidate\.bottom <= canvasRect\.bottom/);
   assert.match(markers, /toolbarDisplacementX/);
   assert.match(markers, /toolbarDisplacementY/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*toolbar/i);
-  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar, baseRects\);\s*avoidFormationLabelCollisions\(markers, baseRects, toolbar, map\.getContainer\(\)\.getBoundingClientRect\(\)\);\s*avoidEnemyPlaceLabelCollisions\(markers, toolbar, baseRects\);/);
+  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar, baseRects, mapRect\);\s*avoidFormationLabelCollisions\(markers, baseRects, toolbar, mapRect\);\s*avoidEnemyPlaceLabelCollisions\(markers, toolbar, baseRects, mapRect\);/);
 });
 
 test('WP2D-D post-declutter enemy displacement keeps the actual toolbar forbidden', () => {
-  assert.match(markers, /function avoidEnemyPlaceLabelCollisions\(markers: readonly Marker\[\], toolbar: Element \| null \| undefined, baseRects: MarkerBaseRects\)/);
+  assert.match(markers, /function avoidEnemyPlaceLabelCollisions\([\s\S]*baseRects: MarkerBaseRects, canvasRect: Rect/);
   assert.match(markers, /toolbar instanceof HTMLElement\s*\? \[toolbar\.getBoundingClientRect\(\), \.\.\.placeLabelObstacles\]/);
-  assert.match(markers, /\[\.\.\.obstacles, \.\.\.occupied\]\.every\(obstacle => !overlaps/);
-  assert.match(markers, /\)\)\) \?\? \[0, 0\]/);
+  assert.match(markers, /candidate\.left >= canvasRect\.left[\s\S]*\[\.\.\.obstacles, \.\.\.occupied\]\.every\(obstacle => !overlaps/);
   assert.match(markers, /for \(let distance = 8; distance <= 64; distance \+= 8\)/);
   assert.match(markers, /baseX \+ delta\[0\], baseY \+ delta\[1\]/);
   assert.doesNotMatch(markers, /setLngLat\([^\n]*contact/i);
@@ -78,7 +78,7 @@ test('WP2F measures synchronous MapLibre base geometry and provides a bounded jo
   assert.match(markers, /!hudRect \|\| !overlaps\(candidate, hudRect, 0\)/);
   assert.match(markers, /fixedLabels\.every[\s\S]*moved\.every[\s\S]*formationRects\.every/);
   assert.match(markers, /delta = formationDeltas\.find\(validDelta\)/);
-  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar, baseRects\);\s*avoidFormationLabelCollisions\(markers, baseRects, toolbar/);
+  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar, baseRects, mapRect\);\s*avoidFormationLabelCollisions\(markers, baseRects, toolbar/);
 });
 
 test('WP2D-D hidden declutter state beats marker display rules in the real browser cascade', () => {

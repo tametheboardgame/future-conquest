@@ -473,6 +473,7 @@ function avoidFormationLabelCollisions(
               && (!hudRect || !overlaps(candidate, hudRect, 0))
               && fixedLabels.every(other => !overlaps(candidate, other, 0))
               && moved.every(other => !overlaps(candidate, other.rect, 0))
+              && placedFormationRects.every(formation => !overlaps(candidate, formation, 0))
               && formationRects.every(formation => !overlaps(candidate, formation, 0));
             if (!valid) continue;
             moved.push({ marker, delta: labelDelta, rect: candidate });
@@ -514,7 +515,9 @@ function avoidFormationLabelCollisions(
 }
 
 /** Move protected territory names clear of the HUD without changing geography. */
-function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects) {
+function avoidTerritoryToolbarCollisions(
+  markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects, canvasRect: Rect
+) {
   if (!(toolbar instanceof HTMLElement)) return;
   const toolbarRect = toolbar.getBoundingClientRect();
   const gap = 4;
@@ -534,7 +537,12 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
       ];
       candidates.sort((a, b) => Math.hypot(...a) - Math.hypot(...b)
         || a[1] - b[1] || a[0] - b[0]);
-      delta = candidates.find(candidate => Math.hypot(...candidate) <= maximumDisplacement) ?? delta;
+      delta = candidates.find(([dx, dy]) => {
+        const candidate = translateRect(rect, dx, dy);
+        return Math.hypot(dx, dy) <= maximumDisplacement
+          && candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+          && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom;
+      }) ?? delta;
     }
     const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
     const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
@@ -545,7 +553,9 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
 }
 
 /** Keep intelligence cards legible without moving their authoritative WGS84 position. */
-function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects) {
+function avoidEnemyPlaceLabelCollisions(
+  markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects, canvasRect: Rect
+) {
   const placeLabelObstacles = markers.flatMap(marker => {
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
@@ -575,9 +585,12 @@ function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Ele
   for (const marker of enemies) {
     const element = marker.getElement();
     const rect = baseRects.get(marker) ?? element.getBoundingClientRect();
-    const delta = deltas.find(([dx, dy]) => [...obstacles, ...occupied].every(obstacle => !overlaps({
-      left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
-    }, obstacle, 0))) ?? [0, 0];
+    const delta = deltas.find(([dx, dy]) => {
+      const candidate = translateRect(rect, dx, dy);
+      return candidate.left >= canvasRect.left && candidate.top >= canvasRect.top
+        && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom
+        && [...obstacles, ...occupied].every(obstacle => !overlaps(candidate, obstacle, 0));
+    }) ?? [0, 0];
     const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
     const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
     marker.setOffset([baseX + delta[0], baseY + delta[1]]);
@@ -622,9 +635,9 @@ export function applyTerrainOperationalMarkerLayout(
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
-  avoidTerritoryToolbarCollisions(markers, toolbar, baseRects);
-  avoidFormationLabelCollisions(markers, baseRects, toolbar, map.getContainer().getBoundingClientRect());
-  avoidEnemyPlaceLabelCollisions(markers, toolbar, baseRects);
+  avoidTerritoryToolbarCollisions(markers, toolbar, baseRects, mapRect);
+  avoidFormationLabelCollisions(markers, baseRects, toolbar, mapRect);
+  avoidEnemyPlaceLabelCollisions(markers, toolbar, baseRects, mapRect);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
