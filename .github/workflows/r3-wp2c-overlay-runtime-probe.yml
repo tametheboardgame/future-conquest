@@ -102,12 +102,11 @@ jobs:
               portal: document.querySelectorAll('.r3-terrain-portal-marker').length
             };
           });
-          console.log('WP2D terrain overlay state:', JSON.stringify(overlayState));
+          console.log('WP2I terrain overlay state:', JSON.stringify(overlayState));
 
           if (overlayState.visibleTaskGroups < 1) throw new Error('Terrain map has no visible friendly formation counters.');
           if (overlayState.selectedTaskGroups < 1) throw new Error('Terrain map does not distinguish the selected formation.');
-          if (overlayState.visibleTerritoryLabels < 4) throw new Error(`Terrain map has insufficient visible territory/location labels after declutter: ${overlayState.visibleTerritoryLabels}.`);
-          if (overlayState.visibleTerritoryLabels >= overlayState.territoryLabels) throw new Error('Campaign view did not declutter any territory labels.');
+          if (overlayState.visibleTerritoryLabels !== overlayState.territoryLabels) throw new Error(`Terrain map hid enabled territory/location labels: ${overlayState.visibleTerritoryLabels}/${overlayState.territoryLabels}.`);
           if (overlayState.visibleStrategicNodes < 3) throw new Error(`Terrain map has insufficient visible city/network cues: ${overlayState.visibleStrategicNodes}.`);
           if (overlayState.visibleStrategicNodes >= overlayState.strategicNodes) throw new Error('Campaign view did not declutter any strategic nodes.');
           if (overlayState.enemyContacts > 0 && overlayState.visibleEnemyContacts < 1) throw new Error('Player-visible enemy contacts exist but none are visible on terrain.');
@@ -117,7 +116,7 @@ jobs:
           const secondGroup = page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"]');
           await secondGroup.click();
           await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'visible', timeout: 5000 });
-          console.log('WP2D formation counter selection verified for TG-2.');
+          console.log('WP2I formation counter selection verified for TG-2.');
 
           const selectedCamera = page.locator('.r3-terrain-prototype-toolbar button', { hasText: 'selected' }).first();
           await selectedCamera.click();
@@ -133,7 +132,7 @@ jobs:
               zoom: Number(host.dataset.overlayZoom ?? Number.NaN)
             } : { lod: null, zoom: Number.NaN };
           });
-          console.log('WP2D selected camera state:', JSON.stringify(selectedCameraState));
+          console.log('WP2I selected camera state:', JSON.stringify(selectedCameraState));
           if (!Number.isFinite(selectedCameraState.zoom)) throw new Error('Selected camera did not expose a settled zoom.');
           if (selectedCameraState.zoom <= overlayState.overlayZoom + 0.5) throw new Error(`Selected camera did not zoom materially closer: ${overlayState.overlayZoom} -> ${selectedCameraState.zoom}.`);
 
