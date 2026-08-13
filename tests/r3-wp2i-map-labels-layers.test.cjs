@@ -24,7 +24,7 @@ test('WP2I protects province names and lays out complete formation clusters arou
   assert.match(markers, /avoidFormationLabelCollisions/);
   assert.match(markers, /clusters\.values\(\)/);
   assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /distance <= 48/);
+  assert.match(markers, /distance <= 80/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
   assert.match(markers, /marker\.setLngLat|setLngLat/);
 });
