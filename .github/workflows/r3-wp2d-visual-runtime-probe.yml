@@ -137,7 +137,7 @@ jobs:
                 const rect = element.getBoundingClientRect();
                 return !element.hidden && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0 && rect.width > 3 && rect.height > 3;
               });
-              const protectedKinds = new Set(['selected-formation', 'operation', 'live-threat', 'selected-territory', 'portal']);
+              const protectedKinds = new Set(['selected-formation', 'operation', 'live-threat', 'selected-territory', 'territory', 'portal']);
               const protectedMarkers = markers.filter(element => protectedKinds.has(element.dataset.r3MarkerKind ?? ''));
               const hiddenProtected = protectedMarkers.filter(element => element.hidden || getComputedStyle(element).display === 'none')
                 .map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
