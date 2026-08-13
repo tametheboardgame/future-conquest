@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
+const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers-core.ts', 'utf8');
 const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
 
