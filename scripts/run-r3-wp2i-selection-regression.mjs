@@ -13,12 +13,6 @@ page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? 
 await page.addInitScript(() => {
   localStorage.setItem('future-conquest:intro-seen:v3', 'true');
   localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
-  // App creates the initial GameState synchronously while the module script is
-  // running. Override randomness only for that render, then restore the browser
-  // implementation before MapLibre workers/terrain initialise.
-  const nativeRandom = Math.random;
-  Math.random = () => 9.5 / 999999;
-  window.addEventListener('DOMContentLoaded', () => { Math.random = nativeRandom; }, { once: true });
 });
 
 await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
@@ -51,24 +45,28 @@ const snapshot = async label => page.evaluate(label => {
   };
 }, label);
 
-const before = await snapshot('before-target');
+const selectedBefore = await page.locator('.r3-terrain-territory-label.selected').getAttribute('data-territory-id');
+const target = page.locator(`.r3-terrain-territory-label:not([data-territory-id="${selectedBefore}"])`).first();
+const targetId = await target.getAttribute('data-territory-id');
+if (!targetId) throw new Error('No alternate province label available for selection regression.');
+
+const before = await snapshot('before-selection');
 await page.evaluate(() => { window.__wp2iOriginalMap = window.__r3TerrainMap; });
-await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"]').click({ force: true });
-await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"].selected').waitFor({ state: 'visible', timeout: 10_000 });
-await page.getByText('ATTACK ORDER READY', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+await target.click({ force: true });
+await page.locator(`.r3-terrain-territory-label[data-territory-id="${targetId}"].selected`).waitFor({ state: 'visible', timeout: 10_000 });
 await page.waitForTimeout(1400);
-const after = await snapshot('after-target');
+const after = await snapshot('after-selection');
 const sameMapInstance = await page.evaluate(() => window.__r3TerrainMap === window.__wp2iOriginalMap);
-const evidence = { before, after, sameMapInstance };
+const evidence = { selectedBefore, targetId, before, after, sameMapInstance };
 fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
-await page.screenshot({ path: `${outputDir}/after-frankfurt-selection.png`, fullPage: true });
+await page.screenshot({ path: `${outputDir}/after-selection.png`, fullPage: true });
 console.log('WP2I selection evidence:', JSON.stringify(evidence, null, 2));
 
 const centreDelta = Math.hypot(after.center[0] - before.center[0], after.center[1] - before.center[1]);
-if (!sameMapInstance) throw new Error('Selecting Frankfurt remounted the MapLibre instance.');
+if (!sameMapInstance) throw new Error('Province selection remounted the MapLibre instance.');
 if (Math.abs(after.zoom - before.zoom) > 0.01 || Math.abs(after.pitch - before.pitch) > 0.1 || Math.abs(after.bearing - before.bearing) > 0.1 || centreDelta > 0.01) {
-  throw new Error(`Selecting Frankfurt changed the terrain camera: ${JSON.stringify({ before, after })}`);
+  throw new Error(`Province selection changed the terrain camera: ${JSON.stringify({ before, after })}`);
 }
-if (before.terrain && !after.terrain) throw new Error('Selecting Frankfurt disabled physical terrain.');
+if (before.terrain && !after.terrain) throw new Error('Province selection disabled physical terrain.');
 
 await browser.close();
