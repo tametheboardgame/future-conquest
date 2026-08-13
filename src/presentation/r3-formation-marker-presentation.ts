@@ -11,6 +11,7 @@ const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
 const MOVEMENT_ANIMATION_MS = 520;
 const renderedPositions = new WeakMap<Marker, FormationGeoPoint>();
 const animationFrames = new WeakMap<Marker, number>();
+const movingMarkers = new WeakSet<Marker>();
 
 const cancelMarkerAnimation = (marker: Marker) => {
   const frame = animationFrames.get(marker);
@@ -70,10 +71,13 @@ export function applyMovingFormationMarkers(
     const group = state.taskGroups[groupId];
     const moving = group?.status === 'moving' && group.order?.type === 'move';
     if (!group || !moving) {
-      cancelMarkerAnimation(marker);
+      const wasMoving = movingMarkers.has(marker);
+      movingMarkers.delete(marker);
       if (group) {
         const settled = territoryCentres[group.location];
-        if (settled) renderedPositions.set(marker, settled);
+        if (settled) setMarkerPresentationPosition(marker, settled, animate && wasMoving);
+      } else {
+        cancelMarkerAnimation(marker);
       }
       delete element.dataset.movementProgress;
       delete element.dataset.movementTarget;
@@ -82,6 +86,7 @@ export function applyMovingFormationMarkers(
       continue;
     }
 
+    movingMarkers.add(marker);
     const progress = clampProgress(group.order!.progress);
     const path = formationPresentationPath(group, territoryCentres);
     const position = formationPresentationPosition(group, territoryCentres);
@@ -92,8 +97,6 @@ export function applyMovingFormationMarkers(
     const originalY = Number(element.dataset.r3MarkerOffsetY ?? 0);
     const offsetX = originalX * scale;
     const offsetY = originalY * scale;
-    element.dataset.r3MarkerOffsetX = String(offsetX);
-    element.dataset.r3MarkerOffsetY = String(offsetY);
     marker.setOffset([offsetX, offsetY]);
 
     element.dataset.movementProgress = String(progress);
