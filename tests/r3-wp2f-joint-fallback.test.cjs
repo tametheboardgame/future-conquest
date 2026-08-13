@@ -72,6 +72,13 @@ test('WP2F deterministic dense four-formation cluster uses the joint visible-lab
   const markers = [earlierFormation, ...formations, ...labels];
   const anchors = markers.map(marker => marker.getLngLat());
   const baseRects = context.capture(markers);
+  // Model a move accepted for this label by an earlier cluster. The LU dense
+  // cluster must validate its next fallback from this already-displaced rect
+  // and preserve that displacement when it commits the later move.
+  const repeatedlyMovedLabel = labels[0];
+  repeatedlyMovedLabel.setOffset([2, 0]);
+  repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementX = '2';
+  repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementY = '0';
   const toolbar = new FakeHTMLElement();
   toolbar.getBoundingClientRect = () => ({ left: 0, top: 0, right: 20, bottom: 12 });
 
@@ -96,8 +103,37 @@ test('WP2F deterministic dense four-formation cluster uses the joint visible-lab
   assert.equal(labelRects.some((rect, i) => labelRects.slice(i + 1).some(other => intersects(rect, other))), false);
   assert.equal(labelRects.some(rect => intersects(rect, toolbar.getBoundingClientRect())), false);
   assert.ok(labelRects.every(rect => rect.left >= 0 && rect.top >= 0 && rect.right <= 100 && rect.bottom <= 100));
+  assert.notEqual(Number(repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementX), 2,
+    'the same label participates in the later cluster fallback');
+  assert.deepEqual(repeatedlyMovedLabel.getElement().rect, {
+    left: 34 + Number(repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementX),
+    right: 49 + Number(repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementX),
+    top: 34 + Number(repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementY),
+    bottom: 72 + Number(repeatedlyMovedLabel.getElement().dataset.placeAvoidanceDisplacementY)
+  }, 'the rendered rectangle includes both sequential fallback displacements');
   assert.deepEqual(markers.map(marker => marker.getLngLat()), anchors, 'authoritative geographic anchors are unchanged');
   assert.ok(markers.every(marker => marker.getElement().dataset.r3MarkerId), 'all protected markers remain visible and identifiable');
+});
+
+test('newly visible marker base geometry is captured on its first visible pass', () => {
+  const marker = makeMarker({
+    id: 'formation:newly-visible', kind: 'formation', territoryId: 'LU-01',
+    rect: { left: 40, top: 40, right: 52, bottom: 48 }
+  });
+  const element = marker.getElement();
+  element.hidden = true;
+  const realGeometry = element.getBoundingClientRect;
+  element.getBoundingClientRect = () => element.hidden
+    ? { left: 0, top: 0, right: 0, bottom: 0 }
+    : realGeometry();
+
+  // This is the ordering contract used by applyTerrainOperationalMarkerLayout:
+  // current visibility is committed before reset/capture happens.
+  element.hidden = false;
+  const captured = context.capture([marker]).get(marker);
+
+  assert.deepEqual(captured, { left: 40, top: 40, right: 52, bottom: 48 });
+  assert.ok(captured.right > captured.left && captured.bottom > captured.top);
 });
 
 test('toolbar avoidance keeps an edge-of-canvas protected label fully visible', () => {
@@ -146,4 +182,12 @@ test('contact avoidance rejects an outward edge-of-canvas displacement', () => {
 
 test('later dense-cluster label fallback predicate includes earlier formations', () => {
   assert.match(source, /moved\.every\([\s\S]*placedFormationRects\.every\(formation => !overlaps\(candidate, formation, 0\)\)[\s\S]*formationRects\.every/);
+  assert.match(source, /const placeX = Number\(element\.dataset\.placeAvoidanceDisplacementX \?\? 0\) \+ move\.delta\[0\]/);
+  assert.match(source, /const placeY = Number\(element\.dataset\.placeAvoidanceDisplacementY \?\? 0\) \+ move\.delta\[1\]/);
+});
+
+test('layout commits visibility before capturing collision geometry', () => {
+  const layoutStart = source.indexOf('export function applyTerrainOperationalMarkerLayout');
+  const layout = source.slice(layoutStart, source.indexOf('export function removeTerrainOperationalMarkers', layoutStart));
+  assert.ok(layout.indexOf('element.hidden = hidden') < layout.indexOf('resetAndCaptureMarkerBaseRects(markers)'));
 });
