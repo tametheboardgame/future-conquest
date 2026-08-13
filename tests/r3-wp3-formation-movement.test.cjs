@@ -37,9 +37,13 @@ test('WP3 formation movement is presentation-only and route-aware', () => {
   assert.doesNotMatch(source, /group\.order\s*=/);
 });
 
-test('WP3 reconciled movement animates only presentation and honours reduced motion', () => {
+test('WP3 reconciled movement animates presentation, including completed one-turn moves', () => {
   assert.match(presentation, /MOVEMENT_ANIMATION_MS = 520/);
   assert.match(presentation, /new WeakMap<Marker, FormationGeoPoint>/);
+  assert.match(presentation, /new WeakSet<Marker>/);
+  assert.match(presentation, /movingMarkers\.add\(marker\)/);
+  assert.match(presentation, /const wasMoving = movingMarkers\.has\(marker\)/);
+  assert.match(presentation, /setMarkerPresentationPosition\(marker, settled, animate && wasMoving\)/);
   assert.match(presentation, /requestAnimationFrame/);
   assert.match(presentation, /cancelAnimationFrame/);
   assert.match(presentation, /prefers-reduced-motion: reduce/);
@@ -49,6 +53,8 @@ test('WP3 reconciled movement animates only presentation and honours reduced mot
   assert.match(presentation, /movementPath/);
   assert.doesNotMatch(presentation, /group\.location\s*=/);
   assert.doesNotMatch(presentation, /group\.order\s*=/);
+  assert.doesNotMatch(presentation, /element\.dataset\.r3MarkerOffsetX\s*=/);
+  assert.doesNotMatch(presentation, /element\.dataset\.r3MarkerOffsetY\s*=/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*false/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*true/);
 });
