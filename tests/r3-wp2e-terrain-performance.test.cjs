@@ -10,6 +10,9 @@ test('terrain has one reusable lazy/prewarm boundary and a cacheable shared mani
   const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
   assert.match(app, /prewarmTerrainMapModule/);
   assert.match(loader, /terrainModulePromise \?\?= import/);
+  assert.match(loader, /terrainModulePromise = undefined/);
+  assert.match(loader, /TerrainMapModuleHost/);
+  assert.match(loader, /onFallback\(`The terrain renderer could not be loaded/);
   assert.match(implementation, /cache: 'default'/);
   assert.match(implementation, /terrainSourcePromise \?\?= resolveTerrainSource/);
   assert.doesNotMatch(implementation, /no-store/);
@@ -50,7 +53,10 @@ test('exact-head Chromium gate writes comparable request, byte and transition ev
   assert.match(probe, /waitForTerrainSettlement/);
   assert.match(probe, /TERRAIN_QUIET_MS = 500/);
   assert.match(probe, /CAMERA_SETTLE_MINIMUM_MS = 950/);
-  assert.match(probe, /minimumElapsed && terrainQuiet/);
+  assert.match(probe, /inFlightTerrainRequests/);
+  assert.match(probe, /page\.on\('requestfinished'/);
+  assert.match(probe, /requiresCompletedTerrainBodies: true/);
+  assert.match(probe, /minimumElapsed && noTerrainInFlight && terrainQuiet/);
   assert.match(probe, /waitForTerrainSettlement\(before, CAMERA_SETTLE_MINIMUM_MS\)/);
   assert.doesNotMatch(probe, /data-map-idle-at|data-map-moving/);
   assert.match(probe, /startupOutcome/);
