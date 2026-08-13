@@ -354,17 +354,37 @@ const markerEnabled = (element: HTMLElement, layers: TerrainOperationalLayers) =
 };
 
 type Rect = { left: number; top: number; right: number; bottom: number };
+type MarkerBaseRects = ReadonlyMap<Marker, Rect>;
+const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
+  left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
+});
+
+// Marker#setOffset queues MapLibre's DOM transform update. Layout can run again
+// before that task is painted, so getBoundingClientRect() may still include the
+// displacement from the preceding pass. Recover each marker's base-offset rect
+// once, before changing offsets, and make every collision pass predict from the
+// same settled screen-space origin rather than adding a new delta to stale DOM.
+const captureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => new globalThis.Map(markers.map(marker => {
+  const element = marker.getElement();
+  const rect = element.getBoundingClientRect();
+  const dx = Number(element.dataset.formationDisplacementX ?? element.dataset.contactDisplacementX ?? element.dataset.toolbarDisplacementX ?? 0);
+  const dy = Number(element.dataset.formationDisplacementY ?? element.dataset.contactDisplacementY ?? element.dataset.toolbarDisplacementY ?? 0);
+  return [marker, translateRect(rect, -dx, -dy)] as const;
+}));
 const overlaps = (a: Rect, b: Rect, gap = 4) => (
   a.right + gap > b.left && a.left - gap < b.right
   && a.bottom + gap > b.top && a.top - gap < b.bottom
 );
 
-function avoidFormationLabelCollisions(markers: readonly Marker[]) {
+function avoidFormationLabelCollisions(markers: readonly Marker[], baseRects: MarkerBaseRects) {
   const obstacles = markers.flatMap(marker => {
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
     if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory' && kind !== 'node-major' && kind !== 'node-secondary')) return [];
-    return [element.getBoundingClientRect()];
+    const baseRect = baseRects.get(marker) ?? element.getBoundingClientRect();
+    const dx = Number(element.dataset.toolbarDisplacementX ?? 0);
+    const dy = Number(element.dataset.toolbarDisplacementY ?? 0);
+    return [translateRect(baseRect, dx, dy)];
   });
   const clusters = new globalThis.Map<string, Marker[]>();
   for (const marker of markers) {
@@ -393,7 +413,7 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
     || b[1] - a[1] || b[0] - a[0]);
   for (const cluster of clusters.values()) {
-    const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
+    const rects = cluster.map(marker => baseRects.get(marker) ?? marker.getElement().getBoundingClientRect());
     const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
       left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
     // The acceptance contract is zero intersection. Requiring an additional
@@ -413,7 +433,7 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
 }
 
 /** Move protected territory names clear of the HUD without changing geography. */
-function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: Element | null | undefined) {
+function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects) {
   if (!(toolbar instanceof HTMLElement)) return;
   const toolbarRect = toolbar.getBoundingClientRect();
   const gap = 4;
@@ -422,7 +442,7 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
     if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory')) continue;
-    const rect = element.getBoundingClientRect();
+    const rect = baseRects.get(marker) ?? element.getBoundingClientRect();
     let delta: readonly [number, number] = [0, 0];
     if (overlaps(rect, toolbarRect, 0)) {
       const candidates: Array<readonly [number, number]> = [
@@ -444,12 +464,13 @@ function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: El
 }
 
 /** Keep intelligence cards legible without moving their authoritative WGS84 position. */
-function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Element | null | undefined) {
+function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Element | null | undefined, baseRects: MarkerBaseRects) {
   const placeLabelObstacles = markers.flatMap(marker => {
     const element = marker.getElement();
     const kind = element.dataset.r3MarkerKind;
     if (element.hidden || !['territory', 'selected-territory', 'node-major', 'node-secondary'].includes(kind ?? '')) return [];
-    return [element.getBoundingClientRect()];
+    const baseRect = baseRects.get(marker) ?? element.getBoundingClientRect();
+    return [translateRect(baseRect, Number(element.dataset.toolbarDisplacementX ?? 0), Number(element.dataset.toolbarDisplacementY ?? 0))];
   });
   // Declutter protects the contact's base offset from the HUD. Keep that same
   // safe area forbidden during this later collision pass so a label-avoidance
@@ -470,7 +491,7 @@ function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[], toolbar: Ele
   }).sort((a, b) => (a.getElement().dataset.r3MarkerId ?? '').localeCompare(b.getElement().dataset.r3MarkerId ?? ''));
   for (const marker of enemies) {
     const element = marker.getElement();
-    const rect = element.getBoundingClientRect();
+    const rect = baseRects.get(marker) ?? element.getBoundingClientRect();
     const delta = deltas.find(([dx, dy]) => [...obstacles, ...occupied].every(obstacle => !overlaps({
       left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
     }, obstacle, 0))) ?? [0, 0];
@@ -488,6 +509,7 @@ export function applyTerrainOperationalMarkerLayout(
   markers: readonly Marker[],
   layers: TerrainOperationalLayers
 ) {
+  const baseRects = captureMarkerBaseRects(markers);
   for (const marker of markers) {
     const element = marker.getElement();
     marker.setOffset([
@@ -524,9 +546,9 @@ export function applyTerrainOperationalMarkerLayout(
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
-  avoidTerritoryToolbarCollisions(markers, toolbar);
-  avoidFormationLabelCollisions(markers);
-  avoidEnemyPlaceLabelCollisions(markers, toolbar);
+  avoidTerritoryToolbarCollisions(markers, toolbar, baseRects);
+  avoidFormationLabelCollisions(markers, baseRects);
+  avoidEnemyPlaceLabelCollisions(markers, toolbar, baseRects);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
