@@ -93,17 +93,17 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
   try {
     await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
     // Exercise the canonical saved-game launcher transaction. continueCampaign()
-    // opens Campaign and invokes Load Manual Save; reselecting Campaign here would
-    // deliberately toggle the command surface back to Map.
+    // briefly opens Campaign and invokes Load Manual Save; a successful App.load()
+    // finishes on Map, which is the stable completed-transaction state.
     await page.getByRole('button', { name: 'CONTINUE CAMPAIGN' }).click();
     await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page');
-    await page.locator('[data-command-view="map"]').click();
+    await page.locator('[data-command-view="map"][aria-current="page"]').waitFor({ state: 'visible' });
     const host = page.locator('.r3-terrain-prototype');
     await host.waitFor({ state: 'visible', timeout: 45_000 });
     await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
     await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
-    await page.getByRole('button', { name: 'campaign', exact: true }).click();
+    await page.locator('[data-command-view="campaign"]').click();
+    await page.locator('[data-command-view="campaign"][aria-current="page"]').waitFor({ state: 'visible' });
     await page.waitForFunction(() => {
       const host = document.querySelector('.r3-terrain-prototype');
       return host?.getAttribute('data-overlay-lod') === 'campaign'

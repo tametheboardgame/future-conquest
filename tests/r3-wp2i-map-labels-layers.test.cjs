@@ -41,6 +41,7 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /Manual Save/);
   assert.match(selectionReplay, /Load Manual Save/);
   assert.match(selectionReplay, /CONTINUE CAMPAIGN/);
+  assert.match(selectionReplay, /successful App\.load\(\)\s*\/\/ finishes on Map/);
   assert.match(selectionReplay, /startCampaign\(\) intentionally returns to Map/);
   assert.match(selectionReplay, /\[data-command-view="campaign"\]\[aria-current="page"\]/);
   assert.match(selectionReplay, /\[data-command-view="map"\]\[aria-current="page"\]/);
@@ -49,6 +50,13 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /phase: 'natural-dusseldorf-search'/);
   assert.match(selectionReplay, /setup-diagnostic\.json/);
   assert.match(selectionReplay, /setup-failure\.png/);
+  const continueFlow = selectionReplay.slice(selectionReplay.indexOf("name: 'CONTINUE CAMPAIGN'"), selectionReplay.indexOf('async function installRecorder'));
+  assert.match(continueFlow, /\.startup-game-shell[^\n]+waitFor/);
+  assert.match(continueFlow, /\[data-command-view="map"\]\[aria-current="page"\][^\n]+waitFor/);
+  assert.doesNotMatch(continueFlow, /locator\('\[data-command-view="map"\]'\)\.click/);
+  assert.match(continueFlow, /r3-terrain-portal-marker\[data-territory-id="DE-02"\][^\n]+waitFor/);
+  assert.match(continueFlow, /\[data-command-view="campaign"\][^\n]+\.click/);
+  assert.match(continueFlow, /\[data-command-view="campaign"\]\[aria-current="page"\][^\n]+waitFor/);
   assert.match(selectionReplay, /const savedCampaign = await findAndSaveNaturalDusseldorfCampaign/);
   assert.match(selectionReplay, /Persist the complete transaction before evaluating a single invariant/);
   assert.match(selectionReplay, /after\.zoom < 4\.8/);
