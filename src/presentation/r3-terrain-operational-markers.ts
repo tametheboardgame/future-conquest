@@ -393,7 +393,11 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
     const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
       left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
-    }, obstacle)))) ?? [0, 0];
+    // The acceptance contract is zero intersection. Requiring an additional
+    // four-pixel halo made the 49px displacement disk needlessly infeasible in
+    // dense Theatre layouts even when a genuinely non-overlapping placement
+    // existed within the established bound.
+    }, obstacle, 0)))) ?? [0, 0];
     for (const marker of cluster) {
       const element = marker.getElement();
       const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
