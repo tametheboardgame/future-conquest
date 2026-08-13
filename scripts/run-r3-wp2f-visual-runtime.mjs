@@ -39,6 +39,8 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
     const canvasRect = canvas.getBoundingClientRect();
     const markers = [...document.querySelectorAll('[data-r3-marker-id]')];
     const formations = markers.filter(marker => ['formation', 'selected-formation'].includes(marker.dataset.r3MarkerKind));
+    const territories = markers.filter(marker => ['territory', 'selected-territory'].includes(marker.dataset.r3MarkerKind));
+    const places = markers.filter(marker => ['node-major', 'node-secondary'].includes(marker.dataset.r3MarkerKind) && !marker.hidden);
     const rect = marker => {
       const box = marker.getBoundingClientRect();
       return {
@@ -55,9 +57,12 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
       territoryId: marker.dataset.territoryId,
       offsetX: Number(marker.dataset.r3MarkerOffsetX ?? 0),
       offsetY: Number(marker.dataset.r3MarkerOffsetY ?? 0),
+      displacementX: Number(marker.dataset.formationDisplacementX ?? 0),
+      displacementY: Number(marker.dataset.formationDisplacementY ?? 0),
       ...rect(marker)
     }));
     const collisions = [];
+    const placeLabelCollisions = [];
     for (let i = 0; i < formationRects.length; i += 1) {
       for (let j = i + 1; j < formationRects.length; j += 1) {
         const a = formationRects[i];
@@ -66,6 +71,15 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
         const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
         const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
         if (overlapX > 1 && overlapY > 1) collisions.push({ a: a.id, b: b.id, overlapX, overlapY });
+      }
+    }
+    for (const formation of formationRects) {
+      for (const label of [...territories.filter(item => !item.hidden), ...places]) {
+        const place = rect(label);
+        if (Math.min(formation.right, place.right) - Math.max(formation.left, place.left) > 0
+          && Math.min(formation.bottom, place.bottom) - Math.max(formation.top, place.top) > 0) {
+          placeLabelCollisions.push({ formation: formation.id, label: label.dataset.r3MarkerId });
+        }
       }
     }
     const clusters = formationRects.reduce((result, item) => {
@@ -89,6 +103,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
         territoryId,
         count: items.length,
         centroidDistancePx: Math.hypot(meanOffset.x, meanOffset.y),
+        displacementPx: Math.max(...items.map(item => Math.hypot(item.displacementX, item.displacementY))),
         anchorSpreadPx: Math.max(0, ...anchors.map(item => Math.hypot(item.x - anchor.x, item.y - anchor.y))),
         terrainAwareAnchor: anchor
       };
@@ -119,8 +134,11 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
       markerCount: markers.length,
       formationCount: formations.length,
       visibleFormationCount: formations.filter(marker => !marker.hidden).length,
+      territoryCount: territories.length,
+      visibleTerritoryCount: territories.filter(marker => !marker.hidden).length,
       formationsInCanvas: formationRects.filter(item => item.right >= canvasRect.left && item.left <= canvasRect.right && item.bottom >= canvasRect.top && item.top <= canvasRect.bottom).length,
       collisions,
+      placeLabelCollisions,
       formationAlignment,
       nodeDiagnostics,
       duplicateNodeLayerPresent: Boolean(map.getLayer('campaign-strategic-nodes'))
@@ -169,13 +187,37 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
 
   if (profile.scale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
   if (profile.visibleFormationCount !== profile.formationCount) throw new Error(`player formation hidden by declutter in ${expected}`);
+  if (profile.visibleTerritoryCount !== profile.territoryCount) throw new Error(`territory label hidden by declutter in ${expected}`);
   if (profile.collisions.length) throw new Error(`formation rectangles intersect in ${expected}: ${JSON.stringify(profile.collisions)}`);
-  if (profile.formationAlignment.some(item => item.centroidDistancePx > 2)) throw new Error(`formation cluster centroid drifted in ${expected}`);
+  if (profile.placeLabelCollisions.length) throw new Error(`formation intersects a place label in ${expected}: ${JSON.stringify(profile.placeLabelCollisions)}`);
+  if (profile.formationAlignment.some(item => item.displacementPx > 49)) throw new Error(`formation displacement exceeded budget in ${expected}`);
   if (profile.formationAlignment.some(item => item.anchorSpreadPx > 2)) throw new Error(`formation terrain anchors diverged in ${expected}`);
   if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) throw new Error(`formation outside ${expected} canvas`);
   if (profile.duplicateNodeLayerPresent) throw new Error(`duplicate strategic-node layer remains in ${expected}`);
   if (profile.nodeDiagnostics.some(node => node.missing || node.markerCount !== 1)) throw new Error(`strategic node duplication/missing marker failed in ${expected}`);
   if (flatProjection.diagnostics.some(node => node.missing || node.distancePx > 3)) throw new Error(`strategic node flat projection failed in ${expected}: ${JSON.stringify(flatProjection.diagnostics)}`);
+}
+
+// Presentation controls must persist independently of camera and campaign-state
+// reconciliation, then restore every default information category on request.
+const layersControl = page.locator('.r3-terrain-layer-control');
+if (!(await layersControl.isVisible())) throw new Error('terrain Layers control is not visible');
+await layersControl.locator('summary').click();
+const toggles = ['Territory names', 'Friendly formations', 'Cities and hubs', 'Ports'];
+for (const label of toggles) await layersControl.getByLabel(label, { exact: true }).uncheck();
+await page.getByRole('button', { name: 'campaign', exact: true }).click();
+await page.waitForTimeout(900);
+for (const label of toggles) {
+  if (await layersControl.getByLabel(label, { exact: true }).isChecked()) throw new Error(`${label} did not remain disabled through camera refresh`);
+}
+for (const label of toggles) await layersControl.getByLabel(label, { exact: true }).check();
+await page.locator('.r3-terrain-territory-label:not([hidden])').nth(1).click();
+await page.waitForTimeout(100);
+for (const label of toggles) {
+  if (!(await layersControl.getByLabel(label, { exact: true }).isChecked())) throw new Error(`${label} did not remain enabled through state reconciliation`);
+}
+if (await page.locator('.r3-terrain-territory-label:not([hidden])').count() !== await page.locator('.r3-terrain-territory-label').count()) {
+  throw new Error('unselected territory labels disappeared after selection');
 }
 
 await page.evaluate(() => { window.__wp2fMarkerNodes = new Map([...document.querySelectorAll('[data-r3-marker-id]')].map(node => [node.dataset.r3MarkerId, node])); });

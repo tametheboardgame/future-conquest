@@ -70,7 +70,9 @@ const RULES: Record<TerrainMarkerKind, TerrainMarkerRule> = {
   'enemy-confirmed': { priority: 820, radius: 27, minimumLod: 'theatre' },
   'enemy-estimated': { priority: 760, radius: 26, minimumLod: 'theatre' },
   'node-major': { priority: 640, radius: 25, minimumLod: 'theatre' },
-  territory: { priority: 560, radius: 29, minimumLod: 'theatre' },
+  // Province names are core geography at every command scale. Selection is a
+  // style change only; it must not change whether the name survives layout.
+  territory: { priority: 560, radius: 29, minimumLod: 'theatre', protected: true },
   'enemy-activity': { priority: 500, radius: 24, minimumLod: 'campaign' },
   'node-secondary': { priority: 440, radius: 21, minimumLod: 'campaign' },
   'enemy-stale': { priority: 360, radius: 23, minimumLod: 'campaign' },

@@ -66,6 +66,16 @@ interface TerrainMarkerDescriptor {
   element: MarkerElementDescriptor;
 }
 
+export interface TerrainOperationalLayers {
+  territoryNames: boolean;
+  friendlyFormations: boolean;
+  enemyContacts: boolean;
+  operations: boolean;
+  citiesHubs: boolean;
+  ports: boolean;
+  airports: boolean;
+}
+
 const makeElement = (className: string, label?: string): MarkerElementDescriptor => ({
   tag: 'button', className, label, dataset: {}, innerHTML: ''
 });
@@ -216,6 +226,7 @@ function buildTerrainOperationalMarkerDescriptors(
       `${node.name}, ${node.type}`
     );
     element.dataset.nodeId = node.id;
+    element.dataset.nodeType = node.type;
     element.innerHTML = `<b>${nodeSymbol(node.type)}</b><span>${node.name}</span>`;
     stopMapClick(element, () => callbacks.onSelectTerritory(node.territoryId));
     addMarker(
@@ -349,11 +360,105 @@ function buildTerrainOperationalMarkerDescriptors(
  * explicit offset, so pitched terrain never changes authoritative geography.
  */
 export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readonly Marker[]) {
+  applyTerrainOperationalMarkerLayout(map, markers, {
+    territoryNames: true,
+    friendlyFormations: true,
+    enemyContacts: true,
+    operations: true,
+    citiesHubs: true,
+    ports: true,
+    airports: false
+  });
+}
+
+const markerEnabled = (element: HTMLElement, layers: TerrainOperationalLayers) => {
+  const kind = element.dataset.r3MarkerKind as TerrainMarkerKind | undefined;
+  if (kind === 'territory' || kind === 'selected-territory') return layers.territoryNames;
+  if (kind === 'formation' || kind === 'selected-formation') return layers.friendlyFormations;
+  if (kind?.startsWith('enemy-')) return layers.enemyContacts;
+  if (kind === 'operation' || kind === 'live-threat' || kind === 'recent-threat' || kind === 'portal') return layers.operations;
+  if (kind === 'node-major' || kind === 'node-secondary') {
+    const type = element.dataset.nodeType;
+    if (type === 'port') return layers.ports;
+    if (type === 'airport') return layers.airports;
+    return layers.citiesHubs;
+  }
+  return true;
+};
+
+type Rect = { left: number; top: number; right: number; bottom: number };
+const overlaps = (a: Rect, b: Rect, gap = 4) => (
+  a.right + gap > b.left && a.left - gap < b.right
+  && a.bottom + gap > b.top && a.top - gap < b.bottom
+);
+
+/**
+ * Keep formation footprints intact while moving a co-located cluster by the
+ * smallest deterministic screen-space delta that clears visible place names.
+ * Marker longitude/latitude is never changed: the delta is presentation-only.
+ */
+function avoidFormationLabelCollisions(markers: readonly Marker[]) {
+  const obstacles = markers.flatMap(marker => {
+    const element = marker.getElement();
+    const kind = element.dataset.r3MarkerKind;
+    if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory' && kind !== 'node-major' && kind !== 'node-secondary')) return [];
+    return [element.getBoundingClientRect()];
+  });
+  const clusters = new globalThis.Map<string, Marker[]>();
+  for (const marker of markers) {
+    const element = marker.getElement();
+    if (element.hidden || !['formation', 'selected-formation'].includes(element.dataset.r3MarkerKind ?? '')) continue;
+    const territoryId = element.dataset.territoryId;
+    if (territoryId) {
+      const cluster = clusters.get(territoryId) ?? [];
+      cluster.push(marker);
+      clusters.set(territoryId, cluster);
+    }
+  }
+
+  // Ordered by distance, then direction, so repeated camera/state refreshes
+  // always choose the same compact solution. The 48px cap avoids WP2G-style
+  // detached cards while still clearing the label/card footprint.
+  const deltas: Array<readonly [number, number]> = [[0, 0]];
+  for (let distance = 8; distance <= 48; distance += 8) {
+    const diagonal = Math.round(distance / Math.SQRT2);
+    deltas.push([0, distance], [distance, 0], [-distance, 0], [0, -distance],
+      [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
+  }
+  for (const cluster of clusters.values()) {
+    const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
+    const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
+      left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
+    }, obstacle)))) ?? deltas[deltas.length - 1];
+    for (const marker of cluster) {
+      const element = marker.getElement();
+      const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+      const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+      marker.setOffset([baseX + delta[0], baseY + delta[1]]);
+      element.dataset.formationDisplacementX = String(delta[0]);
+      element.dataset.formationDisplacementY = String(delta[1]);
+    }
+  }
+}
+
+export function applyTerrainOperationalMarkerLayout(
+  map: Map,
+  markers: readonly Marker[],
+  layers: TerrainOperationalLayers
+) {
+  // Rebase offsets before measuring so layout never accumulates displacement.
+  for (const marker of markers) {
+    const element = marker.getElement();
+    marker.setOffset([
+      Number(element.dataset.r3MarkerOffsetX ?? 0),
+      Number(element.dataset.r3MarkerOffsetY ?? 0)
+    ]);
+  }
   const candidates = markers.flatMap(marker => {
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
     const kind = element.dataset.r3MarkerKind as TerrainMarkerKind | undefined;
-    if (!id || !kind) return [];
+    if (!id || !kind || !markerEnabled(element, layers)) return [];
     const projected = map.project(marker.getLngLat());
     const offsetX = Number(element.dataset.r3MarkerOffsetX ?? 0);
     const offsetY = Number(element.dataset.r3MarkerOffsetY ?? 0);
@@ -383,10 +488,11 @@ export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readon
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
     if (!id) continue;
-    const hidden = !visible.has(id);
+    const hidden = !markerEnabled(element, layers) || !visible.has(id);
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
+  avoidFormationLabelCollisions(markers);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
