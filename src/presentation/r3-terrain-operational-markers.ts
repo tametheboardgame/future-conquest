@@ -86,8 +86,10 @@ const addMarker = (
   offset: readonly [number, number] = [0, 0]
 ) => {
   Object.assign(element.dataset, {
-    r3MarkerKind: kind, r3MarkerId: markerId,
-    r3MarkerOffsetX: String(offset[0]), r3MarkerOffsetY: String(offset[1])
+    r3MarkerKind: kind,
+    r3MarkerId: markerId,
+    r3MarkerOffsetX: String(offset[0]),
+    r3MarkerOffsetY: String(offset[1])
   });
   markers.push({ id: markerId, kind, position, offset, element });
 };
@@ -138,6 +140,24 @@ const nodeSymbol = (type: string) => {
 };
 
 /**
+ * Player formations are geographic state, not floating annotations. A lone
+ * formation therefore sits exactly on the territory centre. Multiple groups in
+ * one territory fan out only enough to remain individually clickable.
+ */
+const formationOffset = (index: number, count: number): readonly [number, number] => {
+  if (count <= 1) return [0, 0];
+  const columns = Math.min(2, count);
+  const rows = Math.ceil(count / columns);
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const spacing = 24;
+  return [
+    (column - (columns - 1) / 2) * spacing,
+    (row - (rows - 1) / 2) * spacing
+  ];
+};
+
+/**
  * Project the mature command-map information hierarchy into screen-space DOM
  * markers above MapLibre terrain. These markers are presentation-only: all
  * positions come from existing territory/network geometry and all enemy detail
@@ -149,7 +169,8 @@ export function buildTerrainOperationalMarkers(
   callbacks: MarkerCallbacks
 ): Marker[] {
   return buildTerrainOperationalMarkerDescriptors(map, state, callbacks).map(descriptor => new Marker({
-    element: materializeElement(descriptor.element), anchor: 'center',
+    element: materializeElement(descriptor.element),
+    anchor: 'center',
     offset: [descriptor.offset[0], descriptor.offset[1]]
   }).setLngLat([descriptor.position[0], descriptor.position[1]]).addTo(map));
 }
@@ -213,18 +234,14 @@ function buildTerrainOperationalMarkerDescriptors(
     const position = territoryCentres[territoryId];
     if (!position) continue;
     const ordered = [...groups].sort((a, b) => a.id.localeCompare(b.id));
-    const columns = ordered.length <= 4 ? Math.min(2, ordered.length) : 3;
     ordered.forEach((group, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const dx = (column - (columns - 1) / 2) * 64;
-      const dy = 42 + row * 52;
       const selected = group.id === state.selectedTaskGroupId;
       const element = makeElement(
         `r3-terrain-task-group-marker ${selected ? 'selected' : ''} ${group.status}`,
         `${group.name}, ${group.personnel} active personnel, ${group.status}`
       );
       element.dataset.groupId = group.id;
+      element.dataset.territoryId = territoryId;
       element.innerHTML = `<strong>TG ${group.id.replace('TG-', '')}</strong><span>${compactStrength(group.personnel)}</span>`;
       stopMapClick(element, () => {
         if (callbacks.onSelectGroup) callbacks.onSelectGroup(group.id);
@@ -237,7 +254,7 @@ function buildTerrainOperationalMarkerDescriptors(
         position,
         selected ? 'selected-formation' : 'formation',
         `formation:${group.id}`,
-        [dx, dy]
+        formationOffset(index, ordered.length)
       );
     });
   }
@@ -267,7 +284,7 @@ function buildTerrainOperationalMarkerDescriptors(
       position,
       contactMarkerKind(contact.confidence),
       `enemy:${contact.territoryId}:${contact.confidence}`,
-      [44, -42]
+      [16, -16]
     );
   }
 
@@ -288,7 +305,7 @@ function buildTerrainOperationalMarkerDescriptors(
       position,
       threat.stage === 'recent-combat' ? 'recent-threat' : 'live-threat',
       `threat:${threat.territoryId}:${threat.stage}`,
-      [0, -58]
+      [-16, -16]
     );
   }
 
@@ -300,19 +317,23 @@ function buildTerrainOperationalMarkerDescriptors(
       `Operation at ${TERRITORIES[operation.target]?.centre ?? operation.target}, ${operation.participantGroupIds.length} participating formations`
     );
     element.dataset.operationId = operation.id;
+    element.dataset.territoryId = operation.target;
     element.textContent = `OP ${operation.participantGroupIds.length}×`;
     stopMapClick(element, () => callbacks.onSelectTerritory(operation.target));
-    addMarker(markers, map, element, position, 'operation', `operation:${operation.id}`, [-34, -38]);
+    addMarker(markers, map, element, position, 'operation', `operation:${operation.id}`, [16, 16]);
   }
 
   if (state.portalTerritory) {
     const position = territoryCentres[state.portalTerritory];
     if (position) {
       const element: MarkerElementDescriptor = {
-        tag: 'div', className: 'r3-terrain-portal-marker', ariaHidden: true,
-        dataset: {}, innerHTML: '<i></i><i></i>'
+        tag: 'div',
+        className: 'r3-terrain-portal-marker',
+        ariaHidden: true,
+        dataset: { territoryId: state.portalTerritory },
+        innerHTML: '<i></i><i></i>'
       };
-      addMarker(markers, map, element, position, 'portal', `portal:${state.portalTerritory}`, [0, -8]);
+      addMarker(markers, map, element, position, 'portal', `portal:${state.portalTerritory}`, [-16, 16]);
     }
   }
 
@@ -388,7 +409,8 @@ export function reconcileTerrainOperationalMarkers(
   const reconciled = next.map(descriptor => {
     const prior = priorById.get(descriptor.id);
     if (!prior) return new Marker({
-      element: materializeElement(descriptor.element), anchor: 'center',
+      element: materializeElement(descriptor.element),
+      anchor: 'center',
       offset: [descriptor.offset[0], descriptor.offset[1]]
     }).setLngLat([descriptor.position[0], descriptor.position[1]]).addTo(map);
 

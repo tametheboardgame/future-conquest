@@ -64,7 +64,9 @@ const RULES: Record<TerrainMarkerKind, TerrainMarkerRule> = {
   'live-threat': { priority: 930, radius: 28, minimumLod: 'theatre', protected: true },
   'selected-territory': { priority: 910, radius: 34, minimumLod: 'theatre', protected: true },
   portal: { priority: 890, radius: 22, minimumLod: 'theatre', protected: true },
-  formation: { priority: 850, radius: 32, minimumLod: 'theatre' },
+  // The player only has a small finite set of task groups. Never hide one just
+  // because another operational annotation occupies nearby screen space.
+  formation: { priority: 850, radius: 32, minimumLod: 'theatre', protected: true },
   'enemy-confirmed': { priority: 820, radius: 27, minimumLod: 'theatre' },
   'enemy-estimated': { priority: 760, radius: 26, minimumLod: 'theatre' },
   'node-major': { priority: 640, radius: 25, minimumLod: 'theatre' },

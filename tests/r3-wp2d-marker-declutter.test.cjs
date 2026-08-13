@@ -18,17 +18,18 @@ test('WP2D-D marker LOD thresholds match theatre campaign and local command scal
 test('WP2F declutter footprint grows with the tightly clamped rendered marker scale', async () => {
   const { visibleTerrainMarkerIds } = await load();
   const candidates = [
-    { id: 'a', kind: 'formation', x: 0, y: 0 },
-    { id: 'b', kind: 'formation', x: 54, y: 0 }
+    { id: 'a', kind: 'territory', x: 0, y: 0 },
+    { id: 'b', kind: 'territory', x: 50, y: 0 }
   ];
   assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 2);
   assert.equal(visibleTerrainMarkerIds(candidates, 'campaign').size, 1);
 });
 
-test('WP2D-D protects selected formations operations live threats selected ground and the portal', async () => {
+test('WP2G protects every player formation plus operations live threats selected ground and the portal', async () => {
   const { visibleTerrainMarkerIds } = await load();
   const candidates = [
     { id: 'selected', kind: 'selected-formation', x: 100, y: 100 },
+    { id: 'formation', kind: 'formation', x: 100, y: 100 },
     { id: 'operation', kind: 'operation', x: 100, y: 100 },
     { id: 'threat', kind: 'live-threat', x: 100, y: 100 },
     { id: 'territory', kind: 'selected-territory', x: 100, y: 100 },
@@ -90,8 +91,9 @@ test('WP2D-D never sacrifices protected command pieces to a reserved HUD zone', 
   const reserved = [{ left: 0, top: 0, right: 300, bottom: 150 }];
   const candidates = [
     { id: 'selected', kind: 'selected-formation', x: 100, y: 70 },
+    { id: 'formation', kind: 'formation', x: 110, y: 70 },
     { id: 'operation', kind: 'operation', x: 120, y: 70 },
     { id: 'threat', kind: 'live-threat', x: 140, y: 70 }
   ];
-  assert.deepEqual([...visibleTerrainMarkerIds(candidates, 'local', reserved)].sort(), ['operation', 'selected', 'threat']);
+  assert.deepEqual([...visibleTerrainMarkerIds(candidates, 'local', reserved)].sort(), ['formation', 'operation', 'selected', 'threat']);
 });

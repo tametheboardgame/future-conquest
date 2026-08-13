@@ -30,11 +30,62 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
   await page.waitForTimeout(900);
   evidence.profiles[expected] = await page.evaluate(() => {
     const root = document.querySelector('.r3-terrain-prototype');
+    const canvas = document.querySelector('.r3-terrain-prototype-canvas canvas');
     const markers = [...document.querySelectorAll('[data-r3-marker-id]')];
+    const formations = markers.filter(marker => marker.dataset.r3MarkerKind === 'formation' || marker.dataset.r3MarkerKind === 'selected-formation');
     const scale = Number.parseFloat(getComputedStyle(root).getPropertyValue('--r3-marker-scale'));
-    return { lod: root?.getAttribute('data-overlay-lod'), scale, markerCount: markers.length, visibleCount: markers.filter(marker => !marker.hidden).length, maximumRenderedScale: scale };
+    const canvasRect = canvas?.getBoundingClientRect();
+
+    const formationAlignment = formations.map(marker => {
+      const territoryId = marker.dataset.territoryId;
+      const territoryLabel = territoryId
+        ? document.querySelector(`.r3-terrain-territory-label[data-territory-id="${CSS.escape(territoryId)}"]`)
+        : null;
+      if (!(territoryLabel instanceof HTMLElement)) {
+        return { id: marker.dataset.r3MarkerId, territoryId, distancePx: Number.POSITIVE_INFINITY, inCanvas: false };
+      }
+      const wasHidden = territoryLabel.hidden;
+      territoryLabel.hidden = false;
+      const markerRect = marker.getBoundingClientRect();
+      const territoryRect = territoryLabel.getBoundingClientRect();
+      territoryLabel.hidden = wasHidden;
+      const markerX = markerRect.left + markerRect.width / 2;
+      const markerY = markerRect.top + markerRect.height / 2;
+      const territoryX = territoryRect.left + territoryRect.width / 2;
+      const territoryY = territoryRect.top + territoryRect.height / 2;
+      const distancePx = Math.hypot(markerX - territoryX, markerY - territoryY);
+      const inCanvas = Boolean(canvasRect)
+        && markerRect.right >= canvasRect.left
+        && markerRect.left <= canvasRect.right
+        && markerRect.bottom >= canvasRect.top
+        && markerRect.top <= canvasRect.bottom;
+      return { id: marker.dataset.r3MarkerId, territoryId, distancePx, inCanvas };
+    });
+
+    return {
+      lod: root?.getAttribute('data-overlay-lod'),
+      scale,
+      markerCount: markers.length,
+      visibleCount: markers.filter(marker => !marker.hidden).length,
+      maximumRenderedScale: scale,
+      formationCount: formations.length,
+      visibleFormationCount: formations.filter(marker => !marker.hidden).length,
+      formationsInCanvas: formationAlignment.filter(item => item.inCanvas).length,
+      maxFormationTerritoryDistancePx: Math.max(0, ...formationAlignment.map(item => item.distancePx)),
+      formationAlignment
+    };
   });
-  if (evidence.profiles[expected].maximumRenderedScale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
+  const profile = evidence.profiles[expected];
+  if (profile.maximumRenderedScale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
+  if (profile.visibleFormationCount !== profile.formationCount) {
+    throw new Error(`player formation hidden by declutter in ${expected}: ${profile.visibleFormationCount}/${profile.formationCount}`);
+  }
+  if (profile.maxFormationTerritoryDistancePx > 36) {
+    throw new Error(`formation/territory alignment drifted in ${expected}: ${profile.maxFormationTerritoryDistancePx.toFixed(1)}px`);
+  }
+  if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) {
+    throw new Error(`player formation fell outside ${expected} command-map canvas: ${profile.formationsInCanvas}/${profile.formationCount}`);
+  }
   await page.screenshot({ path: `${outputDir}/${file}`, fullPage: true });
 }
 
@@ -52,8 +103,6 @@ for (let y = 0.25; y <= 0.75 && !hovered; y += 0.1) {
 }
 if (!hovered) throw new Error('pointer sweep did not encounter a territory');
 evidence.hover.entered = true;
-// Move genuinely outside the MapLibre canvas. The previous canvas-edge probe could
-// still land on a territory polygon and therefore correctly retain pointer hover.
 await page.mouse.move(1, 1);
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype-canvas canvas')?.style.cursor !== 'pointer', undefined, { timeout: 5_000 });
 evidence.hover.cleared = await canvas.evaluate(node => node.style.cursor !== 'pointer');
