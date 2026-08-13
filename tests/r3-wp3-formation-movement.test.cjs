@@ -8,7 +8,7 @@ const source = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf
 const presentation = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
 const wrapper = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const pureStart = source.indexOf('const clamp01');
-const pureEnd = source.indexOf('export function formationPresentationPosition');
+const pureEnd = source.indexOf('export function formationPresentationPath');
 const pureSource = stripTypeScriptTypes(source.slice(pureStart, pureEnd).replace('export function interpolateFormationPath', 'function interpolateFormationPath'));
 const context = vm.createContext({ Math, globalThis: null });
 context.globalThis = context;
@@ -24,6 +24,7 @@ test('WP3 movement interpolation follows the complete presentation path by dista
 });
 
 test('WP3 formation movement is presentation-only and route-aware', () => {
+  assert.match(source, /export function formationPresentationPath/);
   assert.match(source, /group\.status !== 'moving'/);
   assert.match(source, /order\?\.type !== 'move'/);
   assert.match(source, /order\.progress \/ 100/);
@@ -45,7 +46,7 @@ test('WP3 reconciled movement animates only presentation and honours reduced mot
   assert.match(presentation, /marker\.setLngLat/);
   assert.match(presentation, /movementProgress/);
   assert.match(presentation, /movementTarget/);
-  assert.match(presentation, /moving:\$\{element\.dataset\.groupId\}/);
+  assert.match(presentation, /movementPath/);
   assert.doesNotMatch(presentation, /group\.location\s*=/);
   assert.doesNotMatch(presentation, /group\.order\s*=/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*false/);
