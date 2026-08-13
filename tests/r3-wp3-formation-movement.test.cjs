@@ -5,6 +5,8 @@ const vm = require('node:vm');
 const { stripTypeScriptTypes } = require('node:module');
 
 const source = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf8');
+const presentation = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
+const wrapper = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const pureStart = source.indexOf('const clamp01');
 const pureEnd = source.indexOf('export function formationPresentationPosition');
 const pureSource = stripTypeScriptTypes(source.slice(pureStart, pureEnd).replace('export function interpolateFormationPath', 'function interpolateFormationPath'));
@@ -32,4 +34,20 @@ test('WP3 formation movement is presentation-only and route-aware', () => {
   assert.doesNotMatch(source, /group\.location\s*=/);
   assert.doesNotMatch(source, /order\.progress\s*=/);
   assert.doesNotMatch(source, /group\.order\s*=/);
+});
+
+test('WP3 reconciled movement animates only presentation and honours reduced motion', () => {
+  assert.match(presentation, /MOVEMENT_ANIMATION_MS = 520/);
+  assert.match(presentation, /new WeakMap<Marker, FormationGeoPoint>/);
+  assert.match(presentation, /requestAnimationFrame/);
+  assert.match(presentation, /cancelAnimationFrame/);
+  assert.match(presentation, /prefers-reduced-motion: reduce/);
+  assert.match(presentation, /marker\.setLngLat/);
+  assert.match(presentation, /movementProgress/);
+  assert.match(presentation, /movementTarget/);
+  assert.match(presentation, /moving:\$\{element\.dataset\.groupId\}/);
+  assert.doesNotMatch(presentation, /group\.location\s*=/);
+  assert.doesNotMatch(presentation, /group\.order\s*=/);
+  assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*false/);
+  assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*true/);
 });
