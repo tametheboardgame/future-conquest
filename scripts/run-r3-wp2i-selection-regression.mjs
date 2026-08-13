@@ -14,6 +14,8 @@ await page.addInitScript(() => {
   localStorage.setItem('future-conquest:intro-seen:v3', 'true');
   localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
   window.__wp2iResizeEvents = [];
+  window.__wp2iMapIdentities = new WeakMap();
+  window.__wp2iNextMapIdentity = 1;
   window.addEventListener('resize', () => window.__wp2iResizeEvents.push({ width: innerWidth, height: innerHeight, at: performance.now() }));
 });
 
@@ -36,6 +38,14 @@ const snapshot = async label => page.evaluate(label => {
   const rect = canvas.getBoundingClientRect();
   return {
     label,
+    mapInstanceIdentity: (() => {
+      let identity = window.__wp2iMapIdentities.get(map);
+      if (!identity) {
+        identity = window.__wp2iNextMapIdentity++;
+        window.__wp2iMapIdentities.set(map, identity);
+      }
+      return identity;
+    })(),
     center: [centre.lng, centre.lat],
     zoom: map.getZoom(),
     pitch: map.getPitch(),
@@ -53,13 +63,23 @@ const snapshot = async label => page.evaluate(label => {
 const before = await snapshot('before-target');
 await page.evaluate(() => { window.__wp2iOriginalMap = window.__r3TerrainMap; });
 await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"]').click({ force: true });
-await page.getByText('ATTACK ORDER READY', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
+await page.waitForFunction(() => document.querySelector('.r3-terrain-territory-label.selected')?.getAttribute('data-territory-id') === 'DE-03');
 await page.waitForTimeout(1400);
 const after = await snapshot('after-target');
-const diagnostics = await page.evaluate(() => ({
-  sameMapInstance: window.__r3TerrainMap === window.__wp2iOriginalMap,
-  selectedTerritory: document.querySelector('.r3-terrain-territory-label.selected')?.getAttribute('data-territory-id') ?? null
-}));
+const diagnostics = await page.evaluate(() => {
+  const visible = element => !element.hidden && getComputedStyle(element).visibility !== 'hidden' && getComputedStyle(element).display !== 'none';
+  const intersects = (a, b) => a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
+  const contacts = [...document.querySelectorAll('.r3-terrain-enemy-contact')].filter(visible);
+  const placeLabels = [...document.querySelectorAll('.r3-terrain-territory-label, .r3-terrain-node-marker')].filter(visible);
+  return {
+    sameMapInstance: window.__r3TerrainMap === window.__wp2iOriginalMap,
+    selectedTerritory: document.querySelector('.r3-terrain-territory-label.selected')?.getAttribute('data-territory-id') ?? null,
+    enemyPlaceIntersections: contacts.flatMap(contact => placeLabels.flatMap(place => intersects(contact.getBoundingClientRect(), place.getBoundingClientRect()) ? [{
+      contact: contact.getAttribute('data-r3-marker-id'),
+      place: place.getAttribute('data-r3-marker-id')
+    }] : []))
+  };
+});
 const evidence = { before, after, diagnostics };
 fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
 await page.screenshot({ path: `${outputDir}/after-frankfurt-selection.png`, fullPage: true });
@@ -67,9 +87,11 @@ console.log('WP2I selection evidence:', JSON.stringify(evidence, null, 2));
 
 const centreDelta = Math.hypot(after.center[0] - before.center[0], after.center[1] - before.center[1]);
 if (!diagnostics.sameMapInstance) throw new Error('Selecting Frankfurt remounted the MapLibre instance.');
+if (before.mapInstanceIdentity !== after.mapInstanceIdentity) throw new Error('Selecting Frankfurt changed the recorded MapLibre instance identity.');
 if (Math.abs(after.zoom - before.zoom) > 0.01 || Math.abs(after.pitch - before.pitch) > 0.1 || Math.abs(after.bearing - before.bearing) > 0.1 || centreDelta > 0.01) {
   throw new Error(`Selecting Frankfurt changed the terrain camera: ${JSON.stringify({ before, after })}`);
 }
-if (before.terrain && !after.terrain) throw new Error('Selecting Frankfurt disabled physical terrain.');
+if (JSON.stringify(before.terrain) !== JSON.stringify(after.terrain)) throw new Error(`Selecting Frankfurt changed physical terrain: ${JSON.stringify({ before: before.terrain, after: after.terrain })}`);
+if (diagnostics.enemyPlaceIntersections.length) throw new Error(`Enemy contacts overlap visible place labels: ${JSON.stringify(diagnostics.enemyPlaceIntersections)}`);
 
 await browser.close();

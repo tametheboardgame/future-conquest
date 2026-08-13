@@ -400,6 +400,40 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   }
 }
 
+/** Keep intelligence cards legible without moving their authoritative WGS84 position. */
+function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[]) {
+  const obstacles = markers.flatMap(marker => {
+    const element = marker.getElement();
+    const kind = element.dataset.r3MarkerKind;
+    if (element.hidden || !['territory', 'selected-territory', 'node-major', 'node-secondary'].includes(kind ?? '')) return [];
+    return [element.getBoundingClientRect()];
+  });
+  const occupied: Rect[] = [];
+  const deltas: Array<readonly [number, number]> = [[0, 0]];
+  for (let distance = 8; distance <= 64; distance += 8) {
+    const diagonal = Math.round(distance / Math.SQRT2);
+    deltas.push([distance, 0], [0, distance], [-distance, 0], [0, -distance],
+      [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
+  }
+  const enemies = markers.filter(marker => {
+    const element = marker.getElement();
+    return !element.hidden && element.dataset.r3MarkerKind?.startsWith('enemy-');
+  }).sort((a, b) => (a.getElement().dataset.r3MarkerId ?? '').localeCompare(b.getElement().dataset.r3MarkerId ?? ''));
+  for (const marker of enemies) {
+    const element = marker.getElement();
+    const rect = element.getBoundingClientRect();
+    const delta = deltas.find(([dx, dy]) => [...obstacles, ...occupied].every(obstacle => !overlaps({
+      left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
+    }, obstacle, 0))) ?? [0, 0];
+    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    marker.setOffset([baseX + delta[0], baseY + delta[1]]);
+    element.dataset.contactDisplacementX = String(delta[0]);
+    element.dataset.contactDisplacementY = String(delta[1]);
+    occupied.push({ left: rect.left + delta[0], right: rect.right + delta[0], top: rect.top + delta[1], bottom: rect.bottom + delta[1] });
+  }
+}
+
 export function applyTerrainOperationalMarkerLayout(
   map: Map,
   markers: readonly Marker[],
@@ -442,6 +476,7 @@ export function applyTerrainOperationalMarkerLayout(
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
   avoidFormationLabelCollisions(markers);
+  avoidEnemyPlaceLabelCollisions(markers);
 }
 
 export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {

@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
+const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const declutter = fs.readFileSync('src/presentation/r3-terrain-marker-declutter.ts', 'utf8');
 
@@ -17,6 +18,14 @@ test('WP2I terrain layers use persistent presentation-only defaults', () => {
   assert.match(renderer, /retainedTerrainMapLayers = layers/);
   assert.match(renderer, /className="map-layer-control r3-terrain-layer-control"/);
   assert.match(renderer, /setLayoutProperty\('campaign-strategic-routes', 'visibility'/);
+});
+
+test('WP2I selection cannot remount the terrain renderer or move contact authority', () => {
+  assert.doesNotMatch(host, /TerrainMapPrototypeImpl key=\{profile\}/);
+  assert.match(markers, /avoidEnemyPlaceLabelCollisions/);
+  assert.match(markers, /contactDisplacementX/);
+  assert.match(markers, /distance <= 64/);
+  assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
 });
 
 test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
