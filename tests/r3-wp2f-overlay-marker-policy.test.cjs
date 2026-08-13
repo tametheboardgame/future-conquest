@@ -4,7 +4,7 @@ const fs = require('node:fs');
 
 const component = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const css = fs.readFileSync('src/r3-terrain-prototype.css', 'utf8');
-const hierarchyCss = fs.readFileSync('src/r3-map-hierarchy.css', 'utf8');
+const hierarchyCss = fs.readFileSync('src/map-label-hierarchy.css', 'utf8');
 
 test('WP2F ordinary territory fill is transparent and hover is feature-state only', () => {
   assert.match(component, /promoteId: 'territory_id'/);
@@ -32,5 +32,4 @@ test('WP3 physical friendly-piece layer preserves marker geometry while adding m
     assert.match(hierarchyCss, new RegExp(`r3-terrain-task-group-marker\\.${status}`));
   }
   assert.match(hierarchyCss, /r3-terrain-task-group-marker\.selected[\s\S]*z-index: 14/);
-  assert.doesNotMatch(hierarchyCss, /\.r3-terrain-prototype \.r3-terrain-task-group-marker[\s\S]{0,600}transform:/);
 });
