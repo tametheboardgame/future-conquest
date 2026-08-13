@@ -412,6 +412,36 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   }
 }
 
+/** Move protected territory names clear of the HUD without changing geography. */
+function avoidTerritoryToolbarCollisions(markers: readonly Marker[], toolbar: Element | null | undefined) {
+  if (!(toolbar instanceof HTMLElement)) return;
+  const toolbarRect = toolbar.getBoundingClientRect();
+  const gap = 4;
+  for (const marker of markers) {
+    const element = marker.getElement();
+    const kind = element.dataset.r3MarkerKind;
+    if (element.hidden || (kind !== 'territory' && kind !== 'selected-territory')) continue;
+    const rect = element.getBoundingClientRect();
+    let delta: readonly [number, number] = [0, 0];
+    if (overlaps(rect, toolbarRect, 0)) {
+      const candidates: Array<readonly [number, number]> = [
+        [0, toolbarRect.bottom - rect.top + gap],
+        [toolbarRect.right - rect.left + gap, 0],
+        [toolbarRect.left - rect.right - gap, 0],
+        [0, toolbarRect.top - rect.bottom - gap]
+      ];
+      candidates.sort((a, b) => Math.hypot(...a) - Math.hypot(...b)
+        || a[1] - b[1] || a[0] - b[0]);
+      delta = candidates[0];
+    }
+    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    marker.setOffset([baseX + delta[0], baseY + delta[1]]);
+    element.dataset.toolbarDisplacementX = String(delta[0]);
+    element.dataset.toolbarDisplacementY = String(delta[1]);
+  }
+}
+
 /** Keep intelligence cards legible without moving their authoritative WGS84 position. */
 function avoidEnemyPlaceLabelCollisions(markers: readonly Marker[]) {
   const obstacles = markers.flatMap(marker => {
@@ -487,6 +517,7 @@ export function applyTerrainOperationalMarkerLayout(
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
+  avoidTerritoryToolbarCollisions(markers, toolbar);
   avoidFormationLabelCollisions(markers);
   avoidEnemyPlaceLabelCollisions(markers);
 }

@@ -145,6 +145,11 @@ jobs:
                 const rect = element.getBoundingClientRect();
                 return rect.right > toolbarRect.left && rect.left < toolbarRect.right && rect.bottom > toolbarRect.top && rect.top < toolbarRect.bottom;
               }).map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
+              const territoryLabels = visible.filter(element => ['territory', 'selected-territory'].includes(element.dataset.r3MarkerKind ?? ''));
+              const territoryToolbarOverlaps = territoryLabels.filter(element => {
+                const rect = element.getBoundingClientRect();
+                return rect.right > toolbarRect.left && rect.left < toolbarRect.right && rect.bottom > toolbarRect.top && rect.top < toolbarRect.bottom;
+              }).map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
               const count = kind => visible.filter(element => element.dataset.r3MarkerKind === kind).length;
               return {
                 lod: host.dataset.overlayLod ?? null,
@@ -155,6 +160,7 @@ jobs:
                 hidden: markers.length - visible.length,
                 hiddenProtected,
                 overlaps,
+                territoryToolbarOverlaps,
                 selectedFormations: count('selected-formation'),
                 selectedTerritories: count('selected-territory'),
                 portals: count('portal'),
@@ -173,6 +179,8 @@ jobs:
             if (!Number.isFinite(result.zoom)) throw new Error(`${viewName} did not expose a settled camera zoom.`);
             if (result.hiddenProtected.length) throw new Error(`${viewName} hid protected command markers: ${result.hiddenProtected.join(', ')}`);
             if (result.overlaps.length) throw new Error(`${viewName} markers overlap terrain HUD: ${result.overlaps.join(', ')}`);
+            if (result.territoryLabels < 1) throw new Error(`${viewName} hid every protected territory name.`);
+            if (result.territoryToolbarOverlaps.length) throw new Error(`${viewName} territory names overlap terrain HUD: ${result.territoryToolbarOverlaps.join(', ')}`);
             if (result.selectedFormations < 1) throw new Error(`${viewName} lost the selected formation.`);
             if (result.selectedTerritories < 1) throw new Error(`${viewName} lost selected-territory context.`);
             if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);

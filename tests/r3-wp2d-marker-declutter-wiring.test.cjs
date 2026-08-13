@@ -43,6 +43,15 @@ test('WP2D-D converts the persistent terrain toolbar into a local screen-space r
   assert.match(markers, /bottom: toolbarRect\.bottom - mapRect\.top/);
 });
 
+test('WP2D-D shifts visible protected territory names clear of the actual toolbar before other collision passes', () => {
+  assert.match(markers, /function avoidTerritoryToolbarCollisions\(markers: readonly Marker\[\], toolbar: Element \| null \| undefined\)/);
+  assert.match(markers, /kind !== 'territory' && kind !== 'selected-territory'/);
+  assert.match(markers, /toolbarRect\.bottom - rect\.top \+ gap/);
+  assert.match(markers, /toolbarDisplacementX/);
+  assert.match(markers, /toolbarDisplacementY/);
+  assert.match(markers, /avoidTerritoryToolbarCollisions\(markers, toolbar\);\s*avoidFormationLabelCollisions\(markers\);\s*avoidEnemyPlaceLabelCollisions\(markers\);/);
+});
+
 test('WP2D-D hidden declutter state beats marker display rules in the real browser cascade', () => {
   assert.match(markers, /element\.dataset\.declutter = hidden \? 'hidden' : 'visible'/);
   assert.match(css, /\[data-declutter="hidden"\]\s*\{\s*display:\s*none\s*!important;/);

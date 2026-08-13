@@ -40,6 +40,9 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /future-conquest-slice-v0\.14/);
   assert.match(selectionReplay, /Manual Save/);
   assert.match(selectionReplay, /Load Manual Save/);
+  assert.match(selectionReplay, /CONTINUE CAMPAIGN/);
+  assert.match(selectionReplay, /setup-diagnostic\.json/);
+  assert.match(selectionReplay, /setup-failure\.png/);
   assert.match(selectionReplay, /const savedCampaign = await findAndSaveNaturalDusseldorfCampaign/);
   assert.match(selectionReplay, /Persist the complete transaction before evaluating a single invariant/);
   assert.match(selectionReplay, /after\.zoom < 4\.8/);

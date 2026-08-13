@@ -32,10 +32,6 @@ async function findAndSaveNaturalDusseldorfCampaign() {
   await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  await page.waitForTimeout(500);
-  const manualSave = page.getByRole('button', { name: 'Manual Save', exact: true });
-  if (!await manualSave.isVisible()) await page.locator('[data-command-view="campaign"]').click();
-  await manualSave.waitFor({ state: 'visible' });
 
   // Generate one campaign through the real new-campaign path. Once the naturally
   // random Düsseldorf start is found, use the product's Manual Save path so each
@@ -70,22 +66,40 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
     window.__wp2iMapIdentities = new WeakMap();
     window.__wp2iNextMapIdentity = 1;
   }, { storage: savedStorage, saveKey: manualSaveKey, metadataKey: manualSaveMetadataKey });
-  await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
-  await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  await page.waitForTimeout(500);
-  const manualLoad = page.getByRole('button', { name: 'Load Manual Save', exact: true });
-  if (!await manualLoad.isVisible()) await page.locator('[data-command-view="campaign"]').click();
-  await manualLoad.waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Load Manual Save', exact: true }).click();
-  await page.locator('[data-command-view="map"]').click();
-  const host = page.locator('.r3-terrain-prototype');
-  await host.waitFor({ state: 'visible', timeout: 45_000 });
-  await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
-  await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
-  await page.getByRole('button', { name: 'campaign', exact: true }).click();
-  await page.waitForTimeout(1200);
-  return { context, page };
+  try {
+    await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
+    // Exercise the canonical saved-game launcher transaction. continueCampaign()
+    // opens Campaign and invokes Load Manual Save; reselecting Campaign here would
+    // deliberately toggle the command surface back to Map.
+    await page.getByRole('button', { name: 'CONTINUE CAMPAIGN' }).click();
+    await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page');
+    await page.locator('[data-command-view="map"]').click();
+    const host = page.locator('.r3-terrain-prototype');
+    await host.waitFor({ state: 'visible', timeout: 45_000 });
+    await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
+    await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
+    await page.getByRole('button', { name: 'campaign', exact: true }).click();
+    await page.waitForTimeout(1200);
+    return { context, page };
+  } catch (error) {
+    const scenarioDir = `${outputDir}/${scenario}`;
+    fs.mkdirSync(scenarioDir, { recursive: true });
+    const diagnostic = {
+      scenario,
+      phase: 'saved-campaign-setup',
+      error: error instanceof Error ? (error.stack ?? error.message) : String(error),
+      url: page.url(),
+      launcherContinueVisible: await page.getByRole('button', { name: 'CONTINUE CAMPAIGN' }).isVisible().catch(() => false),
+      activeCommandView: await page.locator('[data-command-view][aria-current="page"]').getAttribute('data-command-view').catch(() => null),
+      terrainStatus: await page.locator('.r3-terrain-prototype').getAttribute('data-status').catch(() => null),
+      dusseldorfPortalPresent: await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').count().catch(() => 0)
+    };
+    fs.writeFileSync(`${scenarioDir}/setup-diagnostic.json`, `${JSON.stringify(diagnostic, null, 2)}\n`);
+    await page.screenshot({ path: `${scenarioDir}/setup-failure.png`, fullPage: true }).catch(() => {});
+    await context.close();
+    throw error;
+  }
 }
 
 async function installRecorder(page) {
