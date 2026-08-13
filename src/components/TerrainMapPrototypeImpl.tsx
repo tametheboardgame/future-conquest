@@ -43,7 +43,8 @@ import {
   applyTerrainOperationalMarkerDeclutter,
   buildTerrainOperationalMarkers,
   reconcileTerrainOperationalMarkers,
-  removeTerrainOperationalMarkers
+  removeTerrainOperationalMarkers,
+  terrainOperationalTerritoryCentres
 } from '../presentation/r3-terrain-operational-markers';
 
 export interface TerrainMapPrototypeProps {
@@ -440,49 +441,6 @@ function mapStyle(
             1.8
           ]
         }
-      },
-      {
-        id: 'campaign-strategic-nodes',
-        type: 'circle',
-        source: 'campaign-strategic-nodes',
-        minzoom: compact ? 6 : 5.4,
-        filter: ['>=', ['get', 'importance'], compact ? 2 : 1],
-        paint: {
-          'circle-color': [
-            'case',
-            ['==', ['get', 'node_type'], 'capital'], '#f1d07a',
-            ['==', ['get', 'node_type'], 'port'], '#77bfd2',
-            ['==', ['get', 'node_type'], 'airport'], '#b9b0e1',
-            ['==', ['get', 'node_type'], 'rail-hub'], '#c4a96e',
-            ['==', ['get', 'node_type'], 'crossing'], '#df8b68',
-            ['==', ['get', 'node_type'], 'logistics'], '#84cba8',
-            '#d0d3bd'
-          ],
-          'circle-radius': [
-            'case',
-            ['==', ['get', 'importance'], 3], 5,
-            ['==', ['get', 'importance'], 2], 4,
-            3
-          ],
-          'circle-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            5.4, ['case', ['==', ['get', 'importance'], 3], 0.72, 0],
-            6.2, ['case', ['>=', ['get', 'importance'], 2], 0.82, 0.16],
-            7.2, 0.88
-          ],
-          'circle-stroke-color': [
-            'case',
-            ['==', ['get', 'controller'], 'player'], '#6de2d2',
-            '#c39a9e'
-          ],
-          'circle-stroke-width': 1.4,
-          'circle-stroke-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            5.4, ['case', ['==', ['get', 'importance'], 3], 0.8, 0],
-            6.2, ['case', ['>=', ['get', 'importance'], 2], 0.88, 0.18],
-            7.2, 0.94
-          ]
-        }
       }
     ]
   };
@@ -579,6 +537,11 @@ export function TerrainMapPrototypeImpl({
       });
       ownedMap = map;
       mapRef.current = map;
+      Object.assign(window, {
+        __r3TerrainMap: map,
+        __r3StrategicNodes: STRATEGIC_NODES,
+        __r3TerritoryCentres: terrainOperationalTerritoryCentres
+      });
       const host = containerRef.current.parentElement;
       map.on('movestart', () => { if (host) host.dataset.mapMoving = 'true'; });
       map.on('moveend', () => { if (host) host.dataset.mapMoving = 'false'; });
@@ -709,6 +672,9 @@ export function TerrainMapPrototypeImpl({
       operationalMarkersRef.current = [];
       toolbarResizeObserver?.disconnect();
       mapRef.current = null;
+      delete (window as typeof window & { __r3TerrainMap?: Map }).__r3TerrainMap;
+      delete (window as typeof window & { __r3StrategicNodes?: typeof STRATEGIC_NODES }).__r3StrategicNodes;
+      delete (window as typeof window & { __r3TerritoryCentres?: typeof terrainOperationalTerritoryCentres }).__r3TerritoryCentres;
       ownedMap?.remove();
     };
     // This host deliberately creates one renderer instance; campaign overlays
