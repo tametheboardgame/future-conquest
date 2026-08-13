@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - 'src/game/**'
+      # R3 terrain presentation work is mechanically frozen, but we deliberately
+      # run the deterministic parity gate when its core renderer/marker surfaces
+      # change so visual refactors cannot silently disturb campaign behaviour.
+      - 'src/components/TerrainMapPrototypeImpl.tsx'
+      - 'src/presentation/r3-terrain-marker-declutter.ts'
+      - 'src/r3-terrain-prototype.css'
       - 'scripts/simulate-current-engine-balance.mjs'
       - 'scripts/trace-current-engine-balance.mjs'
       - 'tests/current-engine-balance-harness.test.cjs'

@@ -4,12 +4,25 @@ const assert = require('node:assert/strict');
 const load = () => import('../src/presentation/r3-terrain-marker-declutter.ts');
 
 test('WP2D-D marker LOD thresholds match theatre campaign and local command scales', async () => {
-  const { terrainMarkerLodForZoom } = await load();
+  const { terrainMarkerLodForZoom, terrainMarkerScaleForLod } = await load();
   assert.equal(terrainMarkerLodForZoom(3.6), 'theatre');
   assert.equal(terrainMarkerLodForZoom(4.79), 'theatre');
   assert.equal(terrainMarkerLodForZoom(4.8), 'campaign');
   assert.equal(terrainMarkerLodForZoom(6.39), 'campaign');
   assert.equal(terrainMarkerLodForZoom(6.4), 'local');
+  assert.equal(terrainMarkerScaleForLod('theatre'), 0.82);
+  assert.equal(terrainMarkerScaleForLod('campaign'), 0.94);
+  assert.equal(terrainMarkerScaleForLod('local'), 1.05);
+});
+
+test('WP2F declutter footprint grows with the tightly clamped rendered marker scale', async () => {
+  const { visibleTerrainMarkerIds } = await load();
+  const candidates = [
+    { id: 'a', kind: 'formation', x: 0, y: 0 },
+    { id: 'b', kind: 'formation', x: 54, y: 0 }
+  ];
+  assert.equal(visibleTerrainMarkerIds(candidates, 'theatre').size, 2);
+  assert.equal(visibleTerrainMarkerIds(candidates, 'campaign').size, 1);
 });
 
 test('WP2D-D protects selected formations operations live threats selected ground and the portal', async () => {

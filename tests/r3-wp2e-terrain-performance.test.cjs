@@ -81,6 +81,7 @@ test('exact-head Chromium gate waits for useful paint and completed terrain bodi
   assert.match(comparison, /regressionBudgets/);
   assert.match(comparison, /regressionBudget/);
   assert.match(comparison, /maximumHeadValue/);
+  assert.match(comparison, /timingMeasurementEpsilonMs = 5/);
   assert.match(comparison, /performance regression budget exceeded/);
   for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs']) {
     assert.match(comparison, new RegExp(field));
@@ -89,7 +90,7 @@ test('exact-head Chromium gate waits for useful paint and completed terrain bodi
   assert.match(workflow, /pull_request:[\s\S]+paths:[\s\S]+scripts\/compare-r3-wp2e-performance\.mjs/);
 });
 
-test('performance comparator passes normal variance and fails a material regression', () => {
+test('performance comparator absorbs timer-boundary jitter but still fails a material regression', () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r3-wp2e-budget-'));
   const comparator = path.resolve('scripts/compare-r3-wp2e-performance.mjs');
   const baseSha = 'base-sha';
@@ -116,16 +117,27 @@ test('performance comparator passes normal variance and fails a material regress
   try {
     const basePath = path.join(tempDir, 'base.json');
     const passingHeadPath = path.join(tempDir, 'head-pass.json');
+    const boundaryHeadPath = path.join(tempDir, 'head-boundary.json');
     const failingHeadPath = path.join(tempDir, 'head-fail.json');
     const passingOutputPath = path.join(tempDir, 'comparison-pass.json');
+    const boundaryOutputPath = path.join(tempDir, 'comparison-boundary.json');
     const failingOutputPath = path.join(tempDir, 'comparison-fail.json');
     fs.writeFileSync(basePath, JSON.stringify(makeEvidence('base', baseSha)));
     fs.writeFileSync(passingHeadPath, JSON.stringify(makeEvidence('head', headSha, 1.05)));
+    const boundaryEvidence = makeEvidence('head', headSha);
+    boundaryEvidence.timingsMs.campaignToTheatreMs = 3000.5;
+    fs.writeFileSync(boundaryHeadPath, JSON.stringify(boundaryEvidence));
     fs.writeFileSync(failingHeadPath, JSON.stringify(makeEvidence('head', headSha, 2)));
 
     const passing = spawnSync(process.execPath, [comparator, basePath, passingHeadPath, passingOutputPath, baseSha, headSha], { encoding: 'utf8' });
     assert.equal(passing.status, 0, passing.stderr || passing.stdout);
     assert.equal(JSON.parse(fs.readFileSync(passingOutputPath, 'utf8')).regressionBudget.passed, true);
+
+    const boundary = spawnSync(process.execPath, [comparator, basePath, boundaryHeadPath, boundaryOutputPath, baseSha, headSha], { encoding: 'utf8' });
+    assert.equal(boundary.status, 0, boundary.stderr || boundary.stdout);
+    const boundaryComparison = JSON.parse(fs.readFileSync(boundaryOutputPath, 'utf8'));
+    assert.equal(boundaryComparison.regressionBudget.passed, true);
+    assert.equal(boundaryComparison.regressionBudget.timingMeasurementEpsilonMs, 5);
 
     const failing = spawnSync(process.execPath, [comparator, basePath, failingHeadPath, failingOutputPath, baseSha, headSha], { encoding: 'utf8' });
     assert.notEqual(failing.status, 0);
