@@ -29,28 +29,48 @@ async function findAndSaveNaturalDusseldorfCampaign() {
     window.__wp2iMapIdentities = new WeakMap();
     window.__wp2iNextMapIdentity = 1;
   });
-  await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
-  await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-
-  // Generate one campaign through the real new-campaign path. Once the naturally
-  // random Düsseldorf start is found, use the product's Manual Save path so each
-  // surface can replay the identical campaign without repeating this search.
   let campaignAttempts = 1;
   let savedStorage;
-  for (;;) {
-    await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
-    await page.waitForFunction(key => Boolean(localStorage.getItem(key)), manualSaveKey);
-    savedStorage = await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), [manualSaveKey, manualSaveMetadataKey]);
-    const savedState = JSON.parse(savedStorage[manualSaveKey]);
-    if (savedState.portalTerritory === 'DE-02') break;
-    if (campaignAttempts >= 200) throw new Error('No natural Day-1 Düsseldorf portal after 200 campaigns.');
-    await page.getByRole('button', { name: 'New campaign', exact: true }).click();
-    campaignAttempts += 1;
+  try {
+    await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+    await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+
+    // Generate one campaign through the real new-campaign path. Once the naturally
+    // random Düsseldorf start is found, use the product's Manual Save path so each
+    // surface can replay the identical campaign without repeating this search.
+    for (;;) {
+      await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
+      await page.waitForFunction(key => Boolean(localStorage.getItem(key)), manualSaveKey);
+      savedStorage = await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), [manualSaveKey, manualSaveMetadataKey]);
+      const savedState = JSON.parse(savedStorage[manualSaveKey]);
+      if (savedState.portalTerritory === 'DE-02') break;
+      if (campaignAttempts >= 200) throw new Error('No natural Day-1 Düsseldorf portal after 200 campaigns.');
+      await page.getByRole('button', { name: 'New campaign', exact: true }).click();
+      // startCampaign() intentionally returns to Map. Reopen Campaign before the
+      // next iteration so its Manual Save control is rendered and actionable.
+      await page.locator('[data-command-view="campaign"]').click();
+      await page.getByRole('button', { name: 'Manual Save', exact: true }).waitFor({ state: 'visible' });
+      campaignAttempts += 1;
+    }
+    if (!savedStorage[manualSaveKey]) throw new Error('Manual Save UI did not populate the current save slot.');
+    return { savedStorage, campaignAttempts };
+  } catch (error) {
+    const diagnostic = {
+      phase: 'natural-dusseldorf-search',
+      campaignAttempts,
+      error: error instanceof Error ? (error.stack ?? error.message) : String(error),
+      url: page.url(),
+      activeCommandView: await page.locator('[data-command-view][aria-current="page"]').getAttribute('data-command-view').catch(() => null),
+      manualSaveVisible: await page.getByRole('button', { name: 'Manual Save', exact: true }).isVisible().catch(() => false),
+      newCampaignVisible: await page.getByRole('button', { name: 'New campaign', exact: true }).isVisible().catch(() => false)
+    };
+    fs.writeFileSync(`${outputDir}/setup-diagnostic.json`, `${JSON.stringify(diagnostic, null, 2)}\n`);
+    await page.screenshot({ path: `${outputDir}/setup-failure.png`, fullPage: true }).catch(() => {});
+    throw error;
+  } finally {
+    await context.close();
   }
-  if (!savedStorage[manualSaveKey]) throw new Error('Manual Save UI did not populate the current save slot.');
-  await context.close();
-  return { savedStorage, campaignAttempts };
 }
 
 async function openSavedDusseldorfCampaign(scenario, savedStorage) {
