@@ -59,12 +59,12 @@ const renderMovementRoutes = (map: Map, markers: readonly Marker[]) => {
   const existing = overlays.get(map);
   if (!routes.length) {
     existing?.replaceChildren();
-    if (existing) existing.hidden = true;
+    if (existing) existing.style.display = 'none';
     return;
   }
 
   const overlay = ensureOverlay(map);
-  overlay.hidden = false;
+  overlay.style.display = '';
   const rect = map.getContainer().getBoundingClientRect();
   overlay.setAttribute('viewBox', `0 0 ${Math.max(1, rect.width)} ${Math.max(1, rect.height)}`);
   overlay.replaceChildren();
