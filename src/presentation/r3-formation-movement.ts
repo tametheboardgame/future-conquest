@@ -5,8 +5,8 @@ export type FormationGeoPoint = readonly [number, number];
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
-// WP3 derives a display coordinate only. Engine-owned location, route progress
-// and arrival timing remain unchanged and continue to resolve in game state.
+// WP3 derives display geometry only. Engine-owned location, route progress and
+// arrival timing remain unchanged and continue to resolve in game state.
 const pointDistance = (a: FormationGeoPoint, b: FormationGeoPoint) => {
   const meanLatitude = ((a[1] + b[1]) / 2) * Math.PI / 180;
   const longitudeDistance = (b[0] - a[0]) * Math.cos(meanLatitude);
@@ -42,24 +42,22 @@ export function interpolateFormationPath(
   return points[points.length - 1];
 }
 
-export function formationPresentationPosition(
+export function formationPresentationPath(
   group: Pick<TaskGroup, 'location' | 'status' | 'order'>,
   territoryCentres: Readonly<Record<string, FormationGeoPoint>>
-): FormationGeoPoint | undefined {
+): readonly FormationGeoPoint[] | undefined {
   const origin = territoryCentres[group.location];
   if (!origin) return undefined;
   const order = group.order;
-  if (group.status !== 'moving' || order?.type !== 'move') return origin;
+  if (group.status !== 'moving' || order?.type !== 'move') return [origin];
   const target = territoryCentres[order.target];
-  if (!target) return origin;
+  if (!target) return [origin];
 
-  const progress = clamp01(order.progress / 100);
   const route = order.routeId ? STRATEGIC_ROUTES.find(candidate => candidate.id === order.routeId) : undefined;
-  if (!route) return interpolateFormationPath([origin, target], progress) ?? origin;
-
+  if (!route) return [origin, target];
   const forward = route.fromTerritoryId === group.location && route.toTerritoryId === order.target;
   const reverse = route.toTerritoryId === group.location && route.fromTerritoryId === order.target;
-  if (!forward && !reverse) return interpolateFormationPath([origin, target], progress) ?? origin;
+  if (!forward && !reverse) return [origin, target];
 
   const fromNodeId = forward ? route.fromNodeId : route.toNodeId;
   const toNodeId = forward ? route.toNodeId : route.fromNodeId;
@@ -69,5 +67,16 @@ export function formationPresentationPosition(
   if (fromNode) points.push(fromNode);
   if (toNode) points.push(toNode);
   points.push(target);
-  return interpolateFormationPath(points, progress) ?? origin;
+  return points;
+}
+
+export function formationPresentationPosition(
+  group: Pick<TaskGroup, 'location' | 'status' | 'order'>,
+  territoryCentres: Readonly<Record<string, FormationGeoPoint>>
+): FormationGeoPoint | undefined {
+  const path = formationPresentationPath(group, territoryCentres);
+  if (!path?.length) return undefined;
+  const order = group.order;
+  if (group.status !== 'moving' || order?.type !== 'move') return path[0];
+  return interpolateFormationPath(path, clamp01(order.progress / 100)) ?? path[0];
 }
