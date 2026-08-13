@@ -45,9 +45,18 @@ const LOD_RANK: Record<TerrainMarkerLod, number> = {
 
 const LOD_SPACING: Record<TerrainMarkerLod, number> = {
   theatre: 1.02,
-  campaign: 0.9,
-  local: 0.72
+  campaign: 0.94,
+  local: 0.7
 };
+
+/** Screen-space scale shared by rendered markers and collision footprints. */
+export const TERRAIN_MARKER_SCALE: Readonly<Record<TerrainMarkerLod, number>> = {
+  theatre: 0.82,
+  campaign: 0.94,
+  local: 1.05
+};
+
+export const terrainMarkerScaleForLod = (lod: TerrainMarkerLod) => TERRAIN_MARKER_SCALE[lod];
 
 const RULES: Record<TerrainMarkerKind, TerrainMarkerRule> = {
   'selected-formation': { priority: 1000, radius: 34, minimumLod: 'theatre', protected: true },
@@ -109,7 +118,8 @@ export function visibleTerrainMarkerIds(
       continue;
     }
 
-    if (reservedRects.some(rect => intersectsReservedRect(candidate, rule.radius, rect))) {
+    const radius = rule.radius * terrainMarkerScaleForLod(lod);
+    if (reservedRects.some(rect => intersectsReservedRect(candidate, radius, rect))) {
       continue;
     }
 
@@ -117,7 +127,9 @@ export function visibleTerrainMarkerIds(
       const otherRule = RULES[other.kind];
       const dx = candidate.x - other.x;
       const dy = candidate.y - other.y;
-      const minimumSeparation = (rule.radius + otherRule.radius) * spacing;
+      const minimumSeparation = (rule.radius + otherRule.radius)
+        * terrainMarkerScaleForLod(lod)
+        * spacing;
       return (dx * dx) + (dy * dy) < minimumSeparation * minimumSeparation;
     });
 

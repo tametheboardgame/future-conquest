@@ -155,7 +155,8 @@ function mapStyle(
       'r3-wp2b-hillshade-dem': { ...demSource },
       'campaign-territories': {
         type: 'geojson',
-        data: politicalData
+        data: politicalData,
+        promoteId: 'territory_id'
       },
       'campaign-fronts': {
         type: 'geojson',
@@ -230,27 +231,9 @@ function mapStyle(
             '#7c6669'
           ],
           'fill-opacity': [
-            'interpolate', ['linear'], ['zoom'],
-            4, ['case',
-              ['boolean', ['get', 'selected'], false], 0.18,
-              ['boolean', ['get', 'targeted'], false], 0.17,
-              0.07
-            ],
-            5.5, ['case',
-              ['boolean', ['get', 'selected'], false], 0.18,
-              ['boolean', ['get', 'targeted'], false], 0.17,
-              0.09
-            ],
-            7, ['case',
-              ['boolean', ['get', 'selected'], false], 0.18,
-              ['boolean', ['get', 'targeted'], false], 0.17,
-              0.12
-            ],
-            9, ['case',
-              ['boolean', ['get', 'selected'], false], 0.18,
-              ['boolean', ['get', 'targeted'], false], 0.17,
-              0.13
-            ]
+            'case',
+            ['boolean', ['feature-state', 'hover'], false], 0.075,
+            0
           ]
         }
       },
@@ -272,13 +255,13 @@ function mapStyle(
           ],
           'fill-opacity': [
             'case',
-            ['boolean', ['get', 'active_combat'], false], 0.24,
-            ['==', ['get', 'threat_stage'], 'under-attack'], 0.22,
-            ['==', ['get', 'threat_stage'], 'imminent'], 0.16,
-            ['==', ['get', 'threat_stage'], 'preparing'], 0.09,
-            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.07,
-            ['boolean', ['get', 'targeted'], false], 0.11,
-            ['boolean', ['get', 'selected'], false], 0.08,
+            ['boolean', ['get', 'active_combat'], false], 0.2,
+            ['==', ['get', 'threat_stage'], 'under-attack'], 0.18,
+            ['==', ['get', 'threat_stage'], 'imminent'], 0.13,
+            ['==', ['get', 'threat_stage'], 'preparing'], 0.075,
+            ['==', ['get', 'threat_stage'], 'recent-combat'], 0.055,
+            ['boolean', ['get', 'targeted'], false], 0.16,
+            ['boolean', ['get', 'selected'], false], 0.13,
             0
           ]
         }
@@ -289,8 +272,8 @@ function mapStyle(
         source: 'campaign-territories',
         paint: {
           'line-color': '#d7d9cf',
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.07, 5.5, 0.1, 7, 0.16, 9, 0.23],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.3, 6, 0.45, 8, 0.68]
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.18, 5.5, 0.23, 7, 0.3, 9, 0.38],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.42, 6, 0.58, 8, 0.78]
         }
       },
       {
@@ -689,11 +672,25 @@ export function TerrainMapPrototypeImpl({
         setMessage(`Terrain source warning · ${runtimeError.detail}`);
       });
 
+      let hoveredTerritoryId: string | number | undefined;
+      const clearTerritoryHover = () => {
+        if (hoveredTerritoryId === undefined) return;
+        map.setFeatureState({ source: 'campaign-territories', id: hoveredTerritoryId }, { hover: false });
+        hoveredTerritoryId = undefined;
+      };
       map.on('mouseenter', 'campaign-territories-fill', () => {
         map.getCanvas().style.cursor = 'pointer';
       });
+      map.on('mousemove', 'campaign-territories-fill', event => {
+        const territoryId = event.features?.[0]?.properties?.territory_id;
+        if (typeof territoryId !== 'string' || territoryId === hoveredTerritoryId) return;
+        clearTerritoryHover();
+        hoveredTerritoryId = territoryId;
+        map.setFeatureState({ source: 'campaign-territories', id: territoryId }, { hover: true });
+      });
       map.on('mouseleave', 'campaign-territories-fill', () => {
         map.getCanvas().style.cursor = '';
+        clearTerritoryHover();
       });
       map.on('click', 'campaign-territories-fill', event => {
         const territoryId = event.features?.[0]?.properties?.territory_id;

@@ -9,6 +9,7 @@
 }
 
 .r3-terrain-prototype {
+  --r3-marker-scale: .94;
   position: relative;
   min-height: 560px;
   height: 100%;
@@ -237,6 +238,7 @@
   .r3-terrain-prototype *::before,
   .r3-terrain-prototype *::after {
     scroll-behavior: auto !important;
+    transition-duration: 0s !important;
   }
 }
 
@@ -293,13 +295,19 @@
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  transition: width 140ms ease, min-width 140ms ease, height 140ms ease,
+    min-height 140ms ease, padding 140ms ease, font-size 140ms ease;
 }
+
+.r3-terrain-prototype[data-overlay-lod='theatre'] { --r3-marker-scale: .82; }
+.r3-terrain-prototype[data-overlay-lod='campaign'] { --r3-marker-scale: .94; }
+.r3-terrain-prototype[data-overlay-lod='local'] { --r3-marker-scale: 1.05; }
 
 .r3-terrain-territory-label {
   z-index: 4;
   display: grid;
-  min-width: 58px;
-  padding: 3px 6px 4px;
+  min-width: calc(58px * var(--r3-marker-scale));
+  padding: calc(3px * var(--r3-marker-scale)) calc(6px * var(--r3-marker-scale)) calc(4px * var(--r3-marker-scale));
   border: 1px solid rgba(201, 231, 223, .3);
   border-radius: 5px;
   background: rgba(4, 17, 20, .76);
@@ -345,8 +353,8 @@
 
 .r3-terrain-node-marker b {
   display: grid;
-  width: 16px;
-  height: 16px;
+  width: calc(16px * var(--r3-marker-scale));
+  height: calc(16px * var(--r3-marker-scale));
   place-items: center;
   border: 1px solid rgba(242, 234, 205, .75);
   border-radius: 50%;
@@ -365,8 +373,8 @@
 .r3-terrain-task-group-marker {
   z-index: 8;
   display: grid;
-  width: 58px;
-  min-height: 38px;
+  width: calc(58px * var(--r3-marker-scale));
+  min-height: calc(38px * var(--r3-marker-scale));
   place-items: center;
   padding: 4px 5px;
   border: 2px solid #7de9dd;
@@ -400,8 +408,8 @@
 .r3-terrain-enemy-contact {
   z-index: 9;
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: calc(40px * var(--r3-marker-scale));
+  height: calc(40px * var(--r3-marker-scale));
   place-items: center;
   padding: 2px;
   border: 2px solid #ff7770;
@@ -421,8 +429,8 @@
 .r3-terrain-threat-marker {
   z-index: 10;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: calc(34px * var(--r3-marker-scale));
+  height: calc(34px * var(--r3-marker-scale));
   place-items: center;
   padding: 0;
   border: 2px solid #ffc06c;
@@ -452,8 +460,8 @@
 
 .r3-terrain-portal-marker {
   z-index: 7;
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--r3-marker-scale));
+  height: calc(28px * var(--r3-marker-scale));
   pointer-events: none;
 }
 
@@ -471,13 +479,16 @@
 .r3-terrain-prototype[data-overlay-lod='campaign'] .r3-terrain-territory-label small { display: none; }
 .r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-node-marker.importance-2 { display: none; }
 .r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-node-marker span { display: none; }
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-task-group-marker span,
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-enemy-contact span,
+.r3-terrain-prototype[data-overlay-lod='theatre'] .r3-terrain-threat-marker span { display: none; }
 .r3-terrain-prototype[data-overlay-lod='campaign'] .r3-terrain-node-marker.importance-2 span { display: none; }
 
 .r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-node-marker.importance-2 { display: none; }
 .r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-territory-label small { display: none; }
 .r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-task-group-marker {
-  width: 52px;
-  min-height: 34px;
+  width: calc(52px * var(--r3-marker-scale));
+  min-height: calc(34px * var(--r3-marker-scale));
 }
 
 @media (max-width: 900px) {
