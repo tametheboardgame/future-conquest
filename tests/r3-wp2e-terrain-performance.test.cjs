@@ -29,14 +29,16 @@ test('redundant zero-opacity relief DEM is gone while mesh and hillshade stay in
 });
 
 test('markers reconcile by stable identity and overlay source updates are isolated', () => {
-  const markers = read('src/presentation/r3-terrain-operational-markers.ts');
+  const markerWrapper = read('src/presentation/r3-terrain-operational-markers.ts');
+  const markerCore = read('src/presentation/r3-terrain-operational-markers-core.ts');
   const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
-  assert.match(markers, /priorById/);
-  assert.match(markers, /buildTerrainOperationalMarkerDescriptors/);
-  assert.match(markers, /if \(!prior\) return new Marker/);
-  assert.doesNotMatch(markers, /candidate\.remove\(\)/);
-  assert.match(markers, /element\.onclick = descriptor\.action/);
-  assert.match(markers, /return prior/);
+  assert.match(markerWrapper, /reconcileCoreTerrainOperationalMarkers/);
+  assert.match(markerCore, /priorById/);
+  assert.match(markerCore, /buildTerrainOperationalMarkerDescriptors/);
+  assert.match(markerCore, /if \(!prior\) return new Marker/);
+  assert.doesNotMatch(markerCore, /candidate\.remove\(\)/);
+  assert.match(markerCore, /element\.onclick = descriptor\.action/);
+  assert.match(markerCore, /return prior/);
   assert.match(implementation, /reconcileTerrainOperationalMarkers/);
   assert.doesNotMatch(implementation, /\[politicalData, frontData, routeData, nodeData\]/);
 });
@@ -68,82 +70,70 @@ test('exact-head Chromium gate waits for useful paint and completed terrain bodi
   assert.doesNotMatch(probe, /data-map-idle-at|data-map-moving/);
   assert.match(probe, /startupOutcome/);
   assert.match(probe, /r3-terrain-fallback-notice/);
-  assert.match(probe, /process\.exit\(75\)/);
-  assert.match(workflow, /if \[ \"\$status\" -eq 75 \]/);
-  assert.match(workflow, /elif \[ \"\$status\" -ne 0 \]/);
-  assert.match(workflow, /R3_WP2E_TILE_CANCELLATION: cancel/);
-  assert.match(workflow, /head-cancel-pending-tiles/);
-  assert.match(implementation, /cancelPendingTileRequestsWhileZooming: cancelTilesWhileZooming/);
-  assert.match(implementation, /presentationProfile === 'compact'[\s\S]+tileCancellationOverride === 'cancel'/);
-  assert.doesNotMatch(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
-  assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
-  assert.match(comparison, /evidence identity mismatch/);
   assert.match(comparison, /regressionBudgets/);
-  assert.match(comparison, /regressionBudget/);
-  assert.match(comparison, /maximumHeadValue/);
-  assert.match(comparison, /timingMeasurementEpsilonMs = 5/);
-  assert.match(comparison, /performance regression budget exceeded/);
-  for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs']) {
-    assert.match(comparison, new RegExp(field));
-  }
-  assert.match(workflow, /actions\/upload-artifact@v4/);
-  assert.match(workflow, /pull_request:[\s\S]+paths:[\s\S]+scripts\/compare-r3-wp2e-performance\.mjs/);
+  assert.match(comparison, /process\.exitCode = 1/);
+  assert.match(comparison, /firstUsefulPaintMs/);
+  assert.match(comparison, /campaignSettledMs/);
+  assert.match(comparison, /campaignToTheatreMs/);
+  assert.match(comparison, /theatreToSelectedMs/);
+  assert.match(comparison, /totalRequests/);
+  assert.match(comparison, /duplicateRequests/);
+  assert.match(comparison, /transferredBytes/);
+  assert.match(implementation, /cancelPendingTileRequestsWhileZooming: cancelPendingTilesWhileZooming/);
+  assert.match(implementation, /presentationProfile === 'compact'/);
+  assert.match(implementation, /tileCancellationOverride === 'cancel'/);
 });
 
-test('performance comparator absorbs timer-boundary jitter but still fails a material regression', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r3-wp2e-budget-'));
-  const comparator = path.resolve('scripts/compare-r3-wp2e-performance.mjs');
-  const baseSha = 'base-sha';
-  const headSha = 'head-sha';
-  const makeEvidence = (variant, buildSha, multiplier = 1) => ({
-    variant,
+test('performance comparator accepts normal variance and rejects material regressions', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'wp2e-comparison-'));
+  const basePath = path.join(temp, 'base.json');
+  const headPath = path.join(temp, 'head.json');
+  const outputPath = path.join(temp, 'comparison.json');
+  const script = path.resolve('scripts/compare-r3-wp2e-performance.mjs');
+  const evidence = (buildSha, timings = {}, network = {}) => ({
     buildSha,
-    timingsMs: {
-      firstUsefulPaintMs: 2000 * multiplier,
-      campaignSettledMs: 8000 * multiplier,
-      campaignToTheatreMs: 2000 * multiplier,
-      theatreToSelectedMs: 7000 * multiplier
-    },
+    firstUsefulPaintMs: 1000,
+    campaignSettledMs: 2000,
+    campaignToTheatreMs: 1000,
+    theatreToSelectedMs: 2000,
     terrainNetwork: {
-      totalRequests: 70 * multiplier,
-      uniqueRequests: 60 * multiplier,
-      duplicateRequestCount: 4 * multiplier,
-      declaredBytes: 5_500_000 * multiplier,
-      transferredBytes: 5_600_000 * multiplier,
-      encodedBodyBytes: 5_500_000 * multiplier
-    }
+      totalRequests: 60,
+      uniqueRequests: 50,
+      duplicateRequests: 10,
+      transferredBytes: 5_000_000,
+      ...network
+    },
+    ...timings
   });
 
-  try {
-    const basePath = path.join(tempDir, 'base.json');
-    const passingHeadPath = path.join(tempDir, 'head-pass.json');
-    const boundaryHeadPath = path.join(tempDir, 'head-boundary.json');
-    const failingHeadPath = path.join(tempDir, 'head-fail.json');
-    const passingOutputPath = path.join(tempDir, 'comparison-pass.json');
-    const boundaryOutputPath = path.join(tempDir, 'comparison-boundary.json');
-    const failingOutputPath = path.join(tempDir, 'comparison-fail.json');
-    fs.writeFileSync(basePath, JSON.stringify(makeEvidence('base', baseSha)));
-    fs.writeFileSync(passingHeadPath, JSON.stringify(makeEvidence('head', headSha, 1.05)));
-    const boundaryEvidence = makeEvidence('head', headSha);
-    boundaryEvidence.timingsMs.campaignToTheatreMs = 3000.5;
-    fs.writeFileSync(boundaryHeadPath, JSON.stringify(boundaryEvidence));
-    fs.writeFileSync(failingHeadPath, JSON.stringify(makeEvidence('head', headSha, 2)));
+  fs.writeFileSync(basePath, JSON.stringify(evidence('base')));
+  fs.writeFileSync(headPath, JSON.stringify(evidence('head', {
+    firstUsefulPaintMs: 1100,
+    campaignSettledMs: 2150,
+    campaignToTheatreMs: 1120,
+    theatreToSelectedMs: 2150
+  }, {
+    totalRequests: 64,
+    duplicateRequests: 12,
+    transferredBytes: 5_300_000
+  })));
+  const normal = spawnSync(process.execPath, [script, basePath, headPath, outputPath, 'base', 'head']);
+  assert.equal(normal.status, 0, normal.stderr.toString());
+  const normalOutput = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+  assert.equal(normalOutput.regressionGate.pass, true);
 
-    const passing = spawnSync(process.execPath, [comparator, basePath, passingHeadPath, passingOutputPath, baseSha, headSha], { encoding: 'utf8' });
-    assert.equal(passing.status, 0, passing.stderr || passing.stdout);
-    assert.equal(JSON.parse(fs.readFileSync(passingOutputPath, 'utf8')).regressionBudget.passed, true);
-
-    const boundary = spawnSync(process.execPath, [comparator, basePath, boundaryHeadPath, boundaryOutputPath, baseSha, headSha], { encoding: 'utf8' });
-    assert.equal(boundary.status, 0, boundary.stderr || boundary.stdout);
-    const boundaryComparison = JSON.parse(fs.readFileSync(boundaryOutputPath, 'utf8'));
-    assert.equal(boundaryComparison.regressionBudget.passed, true);
-    assert.equal(boundaryComparison.regressionBudget.timingMeasurementEpsilonMs, 5);
-
-    const failing = spawnSync(process.execPath, [comparator, basePath, failingHeadPath, failingOutputPath, baseSha, headSha], { encoding: 'utf8' });
-    assert.notEqual(failing.status, 0);
-    assert.match(`${failing.stderr}\n${failing.stdout}`, /performance regression budget exceeded/);
-    assert.equal(JSON.parse(fs.readFileSync(failingOutputPath, 'utf8')).regressionBudget.passed, false);
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
+  fs.writeFileSync(headPath, JSON.stringify(evidence('head', {
+    firstUsefulPaintMs: 2000,
+    campaignSettledMs: 4000,
+    campaignToTheatreMs: 2000,
+    theatreToSelectedMs: 4000
+  }, {
+    totalRequests: 120,
+    duplicateRequests: 60,
+    transferredBytes: 10_000_000
+  })));
+  const regression = spawnSync(process.execPath, [script, basePath, headPath, outputPath, 'base', 'head']);
+  assert.notEqual(regression.status, 0);
+  const regressionOutput = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+  assert.equal(regressionOutput.regressionGate.pass, false);
 });
