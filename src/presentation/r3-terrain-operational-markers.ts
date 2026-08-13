@@ -227,6 +227,7 @@ function buildTerrainOperationalMarkerDescriptors(
     );
     element.dataset.nodeId = node.id;
     element.dataset.nodeType = node.type;
+    element.dataset.territoryId = node.territoryId;
     element.innerHTML = `<b>${nodeSymbol(node.type)}</b><span>${node.name}</span>`;
     stopMapClick(element, () => callbacks.onSelectTerritory(node.territoryId));
     addMarker(
@@ -417,10 +418,11 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   }
 
   // Ordered by distance, then direction, so repeated camera/state refreshes
-  // always choose the same compact solution. The 48px cap avoids WP2G-style
-  // detached cards while still clearing the label/card footprint.
+  // always choose the same compact solution. Eighty pixels is still a bounded
+  // screen-space annotation shift (not geographic movement) and is large enough
+  // to clear a 2x2 formation footprint from its permanent province/city label.
   const deltas: Array<readonly [number, number]> = [[0, 0]];
-  for (let distance = 8; distance <= 48; distance += 8) {
+  for (let distance = 8; distance <= 80; distance += 8) {
     const diagonal = Math.round(distance / Math.SQRT2);
     deltas.push([0, distance], [distance, 0], [-distance, 0], [0, -distance],
       [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
