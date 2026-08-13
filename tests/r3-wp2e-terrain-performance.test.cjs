@@ -1,8 +1,11 @@
 const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const read = path => fs.readFileSync(path, 'utf8');
+const read = filePath => fs.readFileSync(filePath, 'utf8');
 
 test('terrain has one reusable lazy/prewarm boundary and a cacheable shared manifest', () => {
   const app = read('src/App.tsx');
@@ -38,7 +41,7 @@ test('markers reconcile by stable identity and overlay source updates are isolat
   assert.doesNotMatch(implementation, /\[politicalData, frontData, routeData, nodeData\]/);
 });
 
-test('exact-head Chromium gate writes comparable request, byte and transition evidence', () => {
+test('exact-head Chromium gate waits for useful paint and completed terrain bodies', () => {
   const probe = read('scripts/run-r3-wp2e-performance.mjs');
   const comparison = read('scripts/compare-r3-wp2e-performance.mjs');
   const workflow = read('.github/workflows/r3-wp2e-performance-gate.yml');
@@ -50,6 +53,10 @@ test('exact-head Chromium gate writes comparable request, byte and transition ev
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(probe, /R3_WP2E_BUILD_SHA/);
   assert.match(probe, /R3_WP2E_VARIANT/);
+  assert.match(probe, /data-status=\\"ready\\"/);
+  assert.match(probe, /data-overlay-lod.*campaign/);
+  assert.match(probe, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
+  assert.match(probe, /animationFramesAfterReady: 2/);
   assert.match(probe, /waitForTerrainSettlement/);
   assert.match(probe, /TERRAIN_QUIET_MS = 500/);
   assert.match(probe, /CAMERA_SETTLE_MINIMUM_MS = 950/);
@@ -71,9 +78,60 @@ test('exact-head Chromium gate writes comparable request, byte and transition ev
   assert.doesNotMatch(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
   assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
   assert.match(comparison, /evidence identity mismatch/);
+  assert.match(comparison, /regressionBudgets/);
+  assert.match(comparison, /regressionBudget/);
+  assert.match(comparison, /maximumHeadValue/);
+  assert.match(comparison, /performance regression budget exceeded/);
   for (const field of ['firstUsefulPaintMs', 'campaignSettledMs', 'campaignToTheatreMs', 'theatreToSelectedMs']) {
     assert.match(comparison, new RegExp(field));
   }
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /pull_request:[\s\S]+paths:[\s\S]+scripts\/compare-r3-wp2e-performance\.mjs/);
+});
+
+test('performance comparator passes normal variance and fails a material regression', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r3-wp2e-budget-'));
+  const comparator = path.resolve('scripts/compare-r3-wp2e-performance.mjs');
+  const baseSha = 'base-sha';
+  const headSha = 'head-sha';
+  const makeEvidence = (variant, buildSha, multiplier = 1) => ({
+    variant,
+    buildSha,
+    timingsMs: {
+      firstUsefulPaintMs: 2000 * multiplier,
+      campaignSettledMs: 8000 * multiplier,
+      campaignToTheatreMs: 2000 * multiplier,
+      theatreToSelectedMs: 7000 * multiplier
+    },
+    terrainNetwork: {
+      totalRequests: 70 * multiplier,
+      uniqueRequests: 60 * multiplier,
+      duplicateRequestCount: 4 * multiplier,
+      declaredBytes: 5_500_000 * multiplier,
+      transferredBytes: 5_600_000 * multiplier,
+      encodedBodyBytes: 5_500_000 * multiplier
+    }
+  });
+
+  try {
+    const basePath = path.join(tempDir, 'base.json');
+    const passingHeadPath = path.join(tempDir, 'head-pass.json');
+    const failingHeadPath = path.join(tempDir, 'head-fail.json');
+    const passingOutputPath = path.join(tempDir, 'comparison-pass.json');
+    const failingOutputPath = path.join(tempDir, 'comparison-fail.json');
+    fs.writeFileSync(basePath, JSON.stringify(makeEvidence('base', baseSha)));
+    fs.writeFileSync(passingHeadPath, JSON.stringify(makeEvidence('head', headSha, 1.05)));
+    fs.writeFileSync(failingHeadPath, JSON.stringify(makeEvidence('head', headSha, 2)));
+
+    const passing = spawnSync(process.execPath, [comparator, basePath, passingHeadPath, passingOutputPath, baseSha, headSha], { encoding: 'utf8' });
+    assert.equal(passing.status, 0, passing.stderr || passing.stdout);
+    assert.equal(JSON.parse(fs.readFileSync(passingOutputPath, 'utf8')).regressionBudget.passed, true);
+
+    const failing = spawnSync(process.execPath, [comparator, basePath, failingHeadPath, failingOutputPath, baseSha, headSha], { encoding: 'utf8' });
+    assert.notEqual(failing.status, 0);
+    assert.match(`${failing.stderr}\n${failing.stdout}`, /performance regression budget exceeded/);
+    assert.equal(JSON.parse(fs.readFileSync(failingOutputPath, 'utf8')).regressionBudget.passed, false);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
