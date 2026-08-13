@@ -190,7 +190,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
   if (profile.visibleTerritoryCount !== profile.territoryCount) throw new Error(`territory label hidden by declutter in ${expected}`);
   if (profile.collisions.length) throw new Error(`formation rectangles intersect in ${expected}: ${JSON.stringify(profile.collisions)}`);
   if (profile.placeLabelCollisions.length) throw new Error(`formation intersects a place label in ${expected}: ${JSON.stringify(profile.placeLabelCollisions)}`);
-  if (profile.formationAlignment.some(item => item.displacementPx > 97)) throw new Error(`formation displacement exceeded budget in ${expected}`);
+  if (profile.formationAlignment.some(item => item.displacementPx > 49)) throw new Error(`formation displacement exceeded budget in ${expected}`);
   if (profile.formationAlignment.some(item => item.anchorSpreadPx > 2)) throw new Error(`formation terrain anchors diverged in ${expected}`);
   if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) throw new Error(`formation outside ${expected} canvas`);
   if (profile.duplicateNodeLayerPresent) throw new Error(`duplicate strategic-node layer remains in ${expected}`);
