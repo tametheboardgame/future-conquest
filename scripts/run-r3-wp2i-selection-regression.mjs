@@ -13,8 +13,8 @@ page.on('pageerror', error => console.log(`[browser pageerror] ${error.stack ?? 
 await page.addInitScript(() => {
   localStorage.setItem('future-conquest:intro-seen:v3', 'true');
   localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
-  window.__wp2iResizeEvents = [];
-  window.addEventListener('resize', () => window.__wp2iResizeEvents.push({ width: innerWidth, height: innerHeight, at: performance.now() }));
+  // Force newGame() to choose seed 9, whose portal is DE-02 / Düsseldorf.
+  Math.random = () => 9.5 / 999999;
 });
 
 await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
@@ -40,33 +40,28 @@ const snapshot = async label => page.evaluate(label => {
     zoom: map.getZoom(),
     pitch: map.getPitch(),
     bearing: map.getBearing(),
-    padding: map.getPadding(),
     terrain: map.getTerrain?.() ?? null,
     lod: host?.getAttribute('data-overlay-lod') ?? null,
     profile: host?.getAttribute('data-terrain-profile') ?? null,
-    canvas: { cssWidth: rect.width, cssHeight: rect.height, width: canvas.width, height: canvas.height },
-    windowSize: { width: innerWidth, height: innerHeight },
-    resizeEvents: [...(window.__wp2iResizeEvents ?? [])]
+    canvas: { cssWidth: rect.width, cssHeight: rect.height, width: canvas.width, height: canvas.height }
   };
 }, label);
 
 const before = await snapshot('before-target');
 await page.evaluate(() => { window.__wp2iOriginalMap = window.__r3TerrainMap; });
 await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"]').click({ force: true });
+await page.locator('.r3-terrain-territory-label[data-territory-id="DE-03"].selected').waitFor({ state: 'visible', timeout: 10_000 });
 await page.getByText('ATTACK ORDER READY', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
 await page.waitForTimeout(1400);
 const after = await snapshot('after-target');
-const diagnostics = await page.evaluate(() => ({
-  sameMapInstance: window.__r3TerrainMap === window.__wp2iOriginalMap,
-  selectedTerritory: document.querySelector('.r3-terrain-territory-label.selected')?.getAttribute('data-territory-id') ?? null
-}));
-const evidence = { before, after, diagnostics };
+const sameMapInstance = await page.evaluate(() => window.__r3TerrainMap === window.__wp2iOriginalMap);
+const evidence = { before, after, sameMapInstance };
 fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
 await page.screenshot({ path: `${outputDir}/after-frankfurt-selection.png`, fullPage: true });
 console.log('WP2I selection evidence:', JSON.stringify(evidence, null, 2));
 
 const centreDelta = Math.hypot(after.center[0] - before.center[0], after.center[1] - before.center[1]);
-if (!diagnostics.sameMapInstance) throw new Error('Selecting Frankfurt remounted the MapLibre instance.');
+if (!sameMapInstance) throw new Error('Selecting Frankfurt remounted the MapLibre instance.');
 if (Math.abs(after.zoom - before.zoom) > 0.01 || Math.abs(after.pitch - before.pitch) > 0.1 || Math.abs(after.bearing - before.bearing) > 0.1 || centreDelta > 0.01) {
   throw new Error(`Selecting Frankfurt changed the terrain camera: ${JSON.stringify({ before, after })}`);
 }
