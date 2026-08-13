@@ -160,8 +160,6 @@ const formationOffset = (index: number, count: number): readonly [number, number
   const rows = Math.ceil(count / columns);
   const column = index % columns;
   const row = Math.floor(index / columns);
-  // Offsets are transformed with the marker by MapLibre, so these dimensions
-  // follow the existing LOD scale while remaining wider/taller than the card.
   const horizontalPitch = 64;
   const verticalPitch = 44;
   return [
@@ -170,12 +168,6 @@ const formationOffset = (index: number, count: number): readonly [number, number
   ];
 };
 
-/**
- * Project the mature command-map information hierarchy into screen-space DOM
- * markers above MapLibre terrain. These markers are presentation-only: all
- * positions come from existing territory/network geometry and all enemy detail
- * comes from the player-visible operational-clarity adapters.
- */
 export function buildTerrainOperationalMarkers(
   map: Map,
   state: GameState,
@@ -194,6 +186,7 @@ function buildTerrainOperationalMarkerDescriptors(
   callbacks: MarkerCallbacks
 ): TerrainMarkerDescriptor[] {
   const markers: TerrainMarkerDescriptor[] = [];
+  const formationTerritoryIds = new Set(Object.values(state.taskGroups).map(group => group.location));
 
   for (const [territoryId, position] of Object.entries(terrainOperationalTerritoryCentres)) {
     const territory = state.territories[territoryId];
@@ -214,7 +207,7 @@ function buildTerrainOperationalMarkerDescriptors(
       position,
       selected ? 'selected-territory' : 'territory',
       `territory:${territoryId}`,
-      [0, -10]
+      formationTerritoryIds.has(territoryId) ? [0, -54] : [0, -10]
     );
   }
 
@@ -292,45 +285,23 @@ function buildTerrainOperationalMarkerDescriptors(
     element.dataset.territoryId = contact.territoryId;
     element.innerHTML = `<strong>${symbol}</strong><span>${confidence}</span>`;
     stopMapClick(element, () => callbacks.onSelectTerritory(contact.territoryId));
-    addMarker(
-      markers,
-      map,
-      element,
-      position,
-      contactMarkerKind(contact.confidence),
-      `enemy:${contact.territoryId}:${contact.confidence}`,
-      [16, -16]
-    );
+    addMarker(markers, map, element, position, contactMarkerKind(contact.confidence), `enemy:${contact.territoryId}:${contact.confidence}`, [16, -16]);
   }
 
   for (const threat of getThreatenedTerritories(state)) {
     const position = terrainOperationalTerritoryCentres[threat.territoryId];
     if (!position) continue;
-    const element = makeElement(
-      `r3-terrain-threat-marker ${threat.stage}`,
-      threat.summary
-    );
+    const element = makeElement(`r3-terrain-threat-marker ${threat.stage}`, threat.summary);
     element.dataset.territoryId = threat.territoryId;
     element.innerHTML = `<strong>!</strong>${threat.stage === 'recent-combat' ? '' : `<span>D${threat.executeTurn}</span>`}`;
     stopMapClick(element, () => callbacks.onSelectTerritory(threat.territoryId));
-    addMarker(
-      markers,
-      map,
-      element,
-      position,
-      threat.stage === 'recent-combat' ? 'recent-threat' : 'live-threat',
-      `threat:${threat.territoryId}:${threat.stage}`,
-      [-16, -16]
-    );
+    addMarker(markers, map, element, position, threat.stage === 'recent-combat' ? 'recent-threat' : 'live-threat', `threat:${threat.territoryId}:${threat.stage}`, [-16, -16]);
   }
 
   for (const operation of Object.values(state.operations)) {
     const position = terrainOperationalTerritoryCentres[operation.target];
     if (!position) continue;
-    const element = makeElement(
-      'r3-terrain-operation-marker',
-      `Operation at ${TERRITORIES[operation.target]?.centre ?? operation.target}, ${operation.participantGroupIds.length} participating formations`
-    );
+    const element = makeElement('r3-terrain-operation-marker', `Operation at ${TERRITORIES[operation.target]?.centre ?? operation.target}, ${operation.participantGroupIds.length} participating formations`);
     element.dataset.operationId = operation.id;
     element.dataset.territoryId = operation.target;
     element.textContent = `OP ${operation.participantGroupIds.length}×`;
@@ -355,11 +326,6 @@ function buildTerrainOperationalMarkerDescriptors(
   return markers;
 }
 
-/**
- * Resolve dense command-map marker collisions using a stable priority model.
- * The calculation uses projected screen-space coordinates plus the marker's
- * explicit offset, so pitched terrain never changes authoritative geography.
- */
 export function applyTerrainOperationalMarkerDeclutter(map: Map, markers: readonly Marker[]) {
   applyTerrainOperationalMarkerLayout(map, markers, {
     territoryNames: true,
@@ -393,11 +359,6 @@ const overlaps = (a: Rect, b: Rect, gap = 4) => (
   && a.bottom + gap > b.top && a.top - gap < b.bottom
 );
 
-/**
- * Keep formation footprints intact while moving a co-located cluster by the
- * smallest deterministic screen-space delta that clears visible place names.
- * Marker longitude/latitude is never changed: the delta is presentation-only.
- */
 function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   const obstacles = markers.flatMap(marker => {
     const element = marker.getElement();
@@ -417,12 +378,8 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     }
   }
 
-  // Ordered by distance, then direction, so repeated camera/state refreshes
-  // always choose the same compact solution. Eighty pixels is still a bounded
-  // screen-space annotation shift (not geographic movement) and is large enough
-  // to clear a 2x2 formation footprint from its permanent province/city label.
   const deltas: Array<readonly [number, number]> = [[0, 0]];
-  for (let distance = 8; distance <= 80; distance += 8) {
+  for (let distance = 8; distance <= 48; distance += 8) {
     const diagonal = Math.round(distance / Math.SQRT2);
     deltas.push([0, distance], [distance, 0], [-distance, 0], [0, -distance],
       [diagonal, diagonal], [-diagonal, diagonal], [diagonal, -diagonal], [-diagonal, -diagonal]);
@@ -431,7 +388,7 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     const rects = cluster.map(marker => marker.getElement().getBoundingClientRect());
     const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
       left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
-    }, obstacle)))) ?? deltas[deltas.length - 1];
+    }, obstacle)))) ?? [0, 0];
     for (const marker of cluster) {
       const element = marker.getElement();
       const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
@@ -448,7 +405,6 @@ export function applyTerrainOperationalMarkerLayout(
   markers: readonly Marker[],
   layers: TerrainOperationalLayers
 ) {
-  // Rebase offsets before measuring so layout never accumulates displacement.
   for (const marker of markers) {
     const element = marker.getElement();
     marker.setOffset([
@@ -464,12 +420,7 @@ export function applyTerrainOperationalMarkerLayout(
     const projected = map.project(marker.getLngLat());
     const offsetX = Number(element.dataset.r3MarkerOffsetX ?? 0);
     const offsetY = Number(element.dataset.r3MarkerOffsetY ?? 0);
-    return [{
-      id,
-      kind,
-      x: projected.x + (Number.isFinite(offsetX) ? offsetX : 0),
-      y: projected.y + (Number.isFinite(offsetY) ? offsetY : 0)
-    }];
+    return [{ id, kind, x: projected.x + (Number.isFinite(offsetX) ? offsetX : 0), y: projected.y + (Number.isFinite(offsetY) ? offsetY : 0) }];
   });
 
   const mapRect = map.getContainer().getBoundingClientRect();
@@ -481,11 +432,7 @@ export function applyTerrainOperationalMarkerLayout(
     right: toolbarRect.right - mapRect.left,
     bottom: toolbarRect.bottom - mapRect.top
   }] : [];
-  const visible = visibleTerrainMarkerIds(
-    candidates,
-    terrainMarkerLodForZoom(map.getZoom()),
-    reservedRects
-  );
+  const visible = visibleTerrainMarkerIds(candidates, terrainMarkerLodForZoom(map.getZoom()), reservedRects);
   for (const marker of markers) {
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
@@ -501,11 +448,6 @@ export function removeTerrainOperationalMarkers(markers: readonly Marker[]) {
   for (const marker of markers) marker.remove();
 }
 
-/**
- * Reconcile detached presentation descriptors before allocating MapLibre
- * markers. Existing markers retain their DOM node (and focus); only genuinely
- * new identities enter MapLibre's add/layout path.
- */
 export function reconcileTerrainOperationalMarkers(
   map: Map,
   previous: readonly Marker[],
