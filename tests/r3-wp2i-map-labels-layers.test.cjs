@@ -22,9 +22,10 @@ test('WP2I terrain layers use persistent presentation-only defaults', () => {
 test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
   assert.match(declutter, /territory: \{[^}]+protected: true/);
   assert.match(markers, /avoidFormationLabelCollisions/);
+  assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
   assert.match(markers, /clusters\.values\(\)/);
   assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /distance <= 80/);
+  assert.match(markers, /distance <= 48/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
   assert.match(markers, /marker\.setLngLat|setLngLat/);
 });
