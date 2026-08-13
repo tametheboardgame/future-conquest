@@ -35,6 +35,8 @@ async function findAndSaveNaturalDusseldorfCampaign() {
     await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
     await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+    await page.locator('[data-command-view="campaign"][aria-current="page"]').waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'Manual Save', exact: true }).waitFor({ state: 'visible' });
 
     // Generate one campaign through the real new-campaign path. Once the naturally
     // random Düsseldorf start is found, use the product's Manual Save path so each
@@ -49,7 +51,9 @@ async function findAndSaveNaturalDusseldorfCampaign() {
       await page.getByRole('button', { name: 'New campaign', exact: true }).click();
       // startCampaign() intentionally returns to Map. Reopen Campaign before the
       // next iteration so its Manual Save control is rendered and actionable.
+      await page.locator('[data-command-view="map"][aria-current="page"]').waitFor({ state: 'visible' });
       await page.locator('[data-command-view="campaign"]').click();
+      await page.locator('[data-command-view="campaign"][aria-current="page"]').waitFor({ state: 'visible' });
       await page.getByRole('button', { name: 'Manual Save', exact: true }).waitFor({ state: 'visible' });
       campaignAttempts += 1;
     }
@@ -100,7 +104,11 @@ async function openSavedDusseldorfCampaign(scenario, savedStorage) {
     await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
     await page.locator('.r3-terrain-portal-marker[data-territory-id="DE-02"]').waitFor({ state: 'attached' });
     await page.getByRole('button', { name: 'campaign', exact: true }).click();
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(() => {
+      const host = document.querySelector('.r3-terrain-prototype');
+      return host?.getAttribute('data-overlay-lod') === 'campaign'
+        && host?.getAttribute('data-terrain-relief') === 'physical';
+    });
     return { context, page };
   } catch (error) {
     const scenarioDir = `${outputDir}/${scenario}`;

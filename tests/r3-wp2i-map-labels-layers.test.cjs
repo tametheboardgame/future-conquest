@@ -42,6 +42,8 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /Load Manual Save/);
   assert.match(selectionReplay, /CONTINUE CAMPAIGN/);
   assert.match(selectionReplay, /startCampaign\(\) intentionally returns to Map/);
+  assert.match(selectionReplay, /\[data-command-view="campaign"\]\[aria-current="page"\]/);
+  assert.match(selectionReplay, /\[data-command-view="map"\]\[aria-current="page"\]/);
   assert.match(selectionReplay, /\[data-command-view="campaign"\].+\.click\(\)/);
   assert.match(selectionReplay, /Manual Save[^\n]+\.waitFor\(\{ state: 'visible' \}\)/);
   assert.match(selectionReplay, /phase: 'natural-dusseldorf-search'/);
@@ -60,7 +62,7 @@ test('WP2I protects province names and lays out complete formation clusters arou
   assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
   assert.match(markers, /clusters\.values\(\)/);
   assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /dx \* dx \+ dy \* dy <= 49 \* 49/);
+  assert.match(markers, /dx \* dx \+ dy \* dy <= 96 \* 96/);
   assert.match(markers, /deltas\.sort/);
   assert.match(markers, /obstacle, 0/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);

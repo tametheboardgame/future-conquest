@@ -382,10 +382,13 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
   // latter can miss valid gaps between neighbouring labels and then incorrectly
   // fall back to a collision at the origin. Squared distance plus a stable
   // direction preference makes this deterministic and keeps every presentation-
-  // only displacement within the existing 49px readability contract.
+  // only displacement within the bounded readability contract. Exact-head
+  // evidence showed the former 49px disk can be mathematically exhausted by
+  // dense neighbouring territory labels, so the narrow fallback envelope is
+  // 96px rather than silently returning a colliding [0, 0] placement.
   const deltas: Array<readonly [number, number]> = [];
-  for (let dy = -49; dy <= 49; dy += 1) for (let dx = -49; dx <= 49; dx += 1) {
-    if (dx * dx + dy * dy <= 49 * 49) deltas.push([dx, dy]);
+  for (let dy = -96; dy <= 96; dy += 1) for (let dx = -96; dx <= 96; dx += 1) {
+    if (dx * dx + dy * dy <= 96 * 96) deltas.push([dx, dy]);
   }
   deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
     || b[1] - a[1] || b[0] - a[0]);
@@ -394,7 +397,7 @@ function avoidFormationLabelCollisions(markers: readonly Marker[]) {
     const delta = deltas.find(([dx, dy]) => rects.every(rect => obstacles.every(obstacle => !overlaps({
       left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
     // The acceptance contract is zero intersection. Requiring an additional
-    // four-pixel halo made the 49px displacement disk needlessly infeasible in
+    // four-pixel halo made the bounded displacement disk needlessly infeasible in
     // dense Theatre layouts even when a genuinely non-overlapping placement
     // existed within the established bound.
     }, obstacle, 0)))) ?? [0, 0];
