@@ -53,7 +53,7 @@ test('exact-head Chromium gate waits for useful paint and completed terrain bodi
   assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
   assert.match(probe, /R3_WP2E_BUILD_SHA/);
   assert.match(probe, /R3_WP2E_VARIANT/);
-  assert.match(probe, /data-status=\\"ready\\"/);
+  assert.match(probe, /data-status="ready"/);
   assert.match(probe, /data-overlay-lod.*campaign/);
   assert.match(probe, /requestAnimationFrame\(\(\) => requestAnimationFrame\(resolve\)\)/);
   assert.match(probe, /animationFramesAfterReady: 2/);
