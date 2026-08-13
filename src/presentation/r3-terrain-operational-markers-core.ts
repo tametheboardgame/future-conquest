@@ -488,12 +488,14 @@ function avoidFormationLabelCollisions(
           const element = move.marker.getElement();
           const toolbarX = Number(element.dataset.toolbarDisplacementX ?? 0);
           const toolbarY = Number(element.dataset.toolbarDisplacementY ?? 0);
+          const placeX = Number(element.dataset.placeAvoidanceDisplacementX ?? 0) + move.delta[0];
+          const placeY = Number(element.dataset.placeAvoidanceDisplacementY ?? 0) + move.delta[1];
           move.marker.setOffset([
-            Number(element.dataset.r3MarkerOffsetX ?? 0) + toolbarX + move.delta[0],
-            Number(element.dataset.r3MarkerOffsetY ?? 0) + toolbarY + move.delta[1]
+            Number(element.dataset.r3MarkerOffsetX ?? 0) + toolbarX + placeX,
+            Number(element.dataset.r3MarkerOffsetY ?? 0) + toolbarY + placeY
           ]);
-          element.dataset.placeAvoidanceDisplacementX = String(move.delta[0]);
-          element.dataset.placeAvoidanceDisplacementY = String(move.delta[1]);
+          element.dataset.placeAvoidanceDisplacementX = String(placeX);
+          element.dataset.placeAvoidanceDisplacementY = String(placeY);
         }
         // Re-evaluate against the final displaced-label rectangles rather than
         // trusting the joint trial's intermediate geometry.
@@ -605,7 +607,6 @@ export function applyTerrainOperationalMarkerLayout(
   markers: readonly Marker[],
   layers: TerrainOperationalLayers
 ) {
-  const baseRects = resetAndCaptureMarkerBaseRects(markers);
   const candidates = markers.flatMap(marker => {
     const element = marker.getElement();
     const id = element.dataset.r3MarkerId;
@@ -635,6 +636,10 @@ export function applyTerrainOperationalMarkerLayout(
     element.hidden = hidden;
     element.dataset.declutter = hidden ? 'hidden' : 'visible';
   }
+  // MapLibre-backed geometry reflects `hidden` synchronously. Apply this
+  // pass's visibility first so newly eligible markers are measured at their
+  // real size rather than retaining a hidden zero rectangle for one frame.
+  const baseRects = resetAndCaptureMarkerBaseRects(markers);
   avoidTerritoryToolbarCollisions(markers, toolbar, baseRects, mapRect);
   avoidFormationLabelCollisions(markers, baseRects, toolbar, mapRect);
   avoidEnemyPlaceLabelCollisions(markers, toolbar, baseRects, mapRect);
