@@ -22,7 +22,7 @@ Entry state: R2-WP1 through R2-WP7 and the R2.5 Balance Stabilisation Gate are c
 
 ## R3 sequence
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes** -> R3-WP3 -> **Production Coherence Recovery -> R3 Stabilisation Gate** -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
 
 WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP2C followed after the first deployed terrain build proved the landscape but lacked command-map information parity. WP2D was approved on 2026-08-12 after the restored-overlay build confirmed the overall terrain direction while also exposing the need for an intensive Europe-coverage, robustness, safe-area, hierarchy and declutter pass before WP3 resumes.
 
@@ -133,50 +133,37 @@ The product owner visually accepted WP2D on 2026-08-12. WP3 remains paused while
 
 ---
 
-## R3-WP2E - Terrain Performance & Streaming Optimisation
+## R3-WP2E through post-WP2I terrain completion
 
-Status: APPROVED / ACTIVE
+Status: COMPLETE / MERGED
 
-Authoritative package detail: `docs/roadmap/R3-WP2E-TERRAIN-PERFORMANCE.md`.
+The accepted terrain programme continued through WP2E performance/streaming (PR #123 and review fixes), WP2F readability/marker scaling (#128), WP2G geographic alignment (#129), WP2H projection/collision correction (#130), WP2I persistent labels/layer controls (#131), and post-WP2I camera/marker/layout fixes (#134-#135). These packages preserved the renderer/simulation boundary and SVG fallback.
 
-Objective: reduce sporadic terrain loading and camera-change lag on the accepted WP2D terrain build, backed by permanent exact-browser performance evidence, without changing gameplay or the accepted visual direction.
-
-WP3 remains paused pending WP2E acceptance.
-
----
-
-## R3-WP2F - Overlay Readability & Marker Scaling
-
-Status: ACTIVE / LIVE ACCEPTANCE PENDING
-
-Authoritative package detail: `docs/roadmap/R3-WP2F-OVERLAY-READABILITY-MARKER-SCALING.md`.
-
-Objective: restore terrain-first political presentation and introduce a coherent, tightly-clamped screen-space marker detail and footprint policy.
-
-WP3 remains paused pending WP2F live visual acceptance.
+Their green CI does **not** prove that the known low-zoom Theatre land-mask polygon artefact or ambiguous front/orange short-segment language is fixed. Both remain open until the stabilisation gate reproduces and verifies/remediates them.
 
 ---
 
 ## R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED PENDING WP2F LIVE ACCEPTANCE
+Status: COMPLETE / MERGED (#136)
 
-Objective: make armies visibly exist on the accepted terrain map as readable board-game-like pieces and make movement understandable as a physical change in campaign state.
+WP3 delivered physical friendly formation pieces, status-specific material language, selected-piece emphasis, presentation-only route-aware movement interpolation and terrain route cues. It changes no authoritative location, order progress, gameplay timing or hidden enemy state. Its code merged at `63a1b3e967601ab762bdc9d4e30fad3674290fbe`, but remained hidden from the normal URL because terrain was still query-gated.
 
-Key requirements:
+---
 
-- coherent friendly piece language distinct from contemporary enemy contacts;
-- ownership, broad type/status and strength readable without constant panel inspection;
-- crowded territories remain usable;
-- selected formations are visually dominant;
-- movement paths are understandable before/while resolving;
-- movement, split, merge, reinforce, retreat and regroup have clear visual transitions where authoritative state permits interpolation;
-- animation never delays or changes deterministic resolution;
-- enemy pieces continue to respect intelligence uncertainty;
-- reduced-motion/performance settings can simplify or disable movement animation;
-- Three.js may be used for physical pieces through the approved MapLibre custom 3D layer once WP2D accepts the terrain surface.
+## R3 Production Coherence Recovery
 
-Any exploratory WP3 work made against the raised-territory renderer is non-authoritative and may be reused only if it fits the accepted WP2D surface.
+Status: ACTIVE
+
+The authoritative specification is `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`. Recovery makes MapLibre/Copernicus terrain and WP3 the normal supported production path, retains automatic compact/WebGL fallback and explicit `?terrain=0` SVG selection, adds no-query exact-browser proof, and reconciles programme governance. PR #137 (WP4) was paused and closed unmerged on 2026-08-14.
+
+---
+
+## R3 Stabilisation Gate - Map & WP3 Bug Remediation
+
+Status: MANDATORY NEXT / WP4 BLOCKING
+
+Before WP4, audit the production-default map in Theatre, Campaign and Selected views; reproduce and fix/verify the low-zoom land-mask artefact and ambiguous front/orange segments; inspect pieces, movement routes, labels, contacts, operations, collisions and camera stability; validate compact, reduced-motion and SVG fallback; run full regression, build, persistence, balance, performance and browser gates; and obtain human visual acceptance of deployed `main`. CI alone cannot close visual defects.
 
 ---
 

@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - 'src/components/TerrainMapPrototype*.tsx'
+      - 'src/App.tsx'
       - 'src/presentation/r3-terrain-*.ts'
       - 'src/r3-terrain-prototype.css'
       - 'public/generated/r3-terrain/**'
       - 'scripts/measure-r3-terrain-budget.mjs'
       - 'tests/r3-wp2b-*.test.cjs'
+      - 'tests/r3-production-terrain-default.test.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/r3-wp2b-browser-runtime-probe.yml'
@@ -70,7 +72,9 @@ jobs:
           await page.addInitScript(() => {
             localStorage.setItem('future-conquest:intro-seen:v3', 'true');
           });
-          await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
+          // This must remain the unqualified production entry URL. A query-gated
+          // renderer would make this exact-browser recovery check fail.
+          await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 30000 });
 
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
@@ -103,6 +107,25 @@ jobs:
             console.log('Terrain DOM state:', JSON.stringify(state));
             await browser.close();
             throw new Error('Terrain renderer neither became ready nor surfaced fallback diagnostics.');
+          }
+
+          const formationPieces = page.locator('.r3-terrain-task-group-marker');
+          if (await formationPieces.count() < 1) {
+            throw new Error('Production terrain path has no WP3 physical formation pieces.');
+          }
+          const piecePresentation = await formationPieces.first().evaluate(element => {
+            const style = getComputedStyle(element);
+            return {
+              position: style.position,
+              transform: style.transform,
+              background: style.backgroundImage,
+              classes: element.className,
+              markerKind: element.dataset.r3MarkerKind
+            };
+          });
+          console.log('WP3 r3-piece-status presentation:', JSON.stringify(piecePresentation));
+          if (piecePresentation.position !== 'absolute' || piecePresentation.background === 'none' || piecePresentation.markerKind === undefined) {
+            throw new Error(`WP3 physical formation-piece presentation is inactive: ${JSON.stringify(piecePresentation)}`);
           }
 
           await page.waitForTimeout(1200);
@@ -179,6 +202,17 @@ jobs:
           }
 
           console.log(`MapLibre terrain visibly rendered in the campaign map with ${canvasCount} canvas element(s).`);
+
+          const fallbackPage = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+          await fallbackPage.addInitScript(() => localStorage.setItem('future-conquest:intro-seen:v3', 'true'));
+          await fallbackPage.goto('http://127.0.0.1:4173/?terrain=0', { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await fallbackPage.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+          await fallbackPage.locator('[data-command-view="map"]').click();
+          await fallbackPage.locator('svg.map.europe-map').waitFor({ state: 'visible', timeout: 10000 });
+          if (await fallbackPage.locator('.maplibregl-canvas').count()) {
+            throw new Error('?terrain=0 did not force the SVG accessibility map.');
+          }
+          console.log('?terrain=0 forced the SVG command map.');
           await browser.close();
           NODE
       - name: Upload terrain visual diagnostic

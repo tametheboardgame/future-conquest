@@ -1,162 +1,54 @@
 # Future Conquest Development Status
 
-Last updated: 2026-08-12
+Last updated: 2026-08-14
 
 ## Current programme
 
-R3 Visualisation & Command Experience programme.
+R3 Visualisation & Command Experience is in **Production Coherence Recovery**. The authoritative recovery specification is `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`; the programme roadmap is `docs/roadmap/R3-ROADMAP.md`.
 
-Authoritative roadmap: `docs/roadmap/R3-ROADMAP.md`.
+The mechanically validated R2 and R2.5 programme is complete. R3 remains presentation-only: gameplay, balance, save schema, territory/route topology, hidden-information authority and narrative are frozen except for separately approved integration defects.
 
-Approved sequence:
+## Completed baseline and R3 history
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D** -> R3-WP3 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+- **R2 / R2.5:** complete through the R2.5 Balance Stabilisation Gate (PR #113). The validated 720-campaign baseline remains Story 50.0%, Standard 29.6%, Hard 7.9%.
+- **R3-WP1:** renderer-neutral visual architecture and stable SVG fallback, merged in PR #114.
+- **R3-WP2:** initial 2.5D strategic map, merged in PR #115; its political-slab art direction was superseded by real terrain.
+- **R3-WP2B:** MapLibre/Copernicus terrain foundation, PR #117 with browser/runtime hotfixes #118-#120.
+- **R3-WP2C:** operational-overlay parity, PR #121.
+- **R3-WP2D:** Europe terrain refinement, camera/LOD, safe-area and declutter work, PR #122.
+- **R3-WP2E:** terrain performance and streaming, PR #123 and review fixes.
+- **R3-WP2F:** terrain-first readability and marker scaling, PR #128.
+- **R3-WP2G:** geographic alignment, PR #129.
+- **R3-WP2H:** projection/collision correction, PR #130.
+- **R3-WP2I:** persistent labels and layer controls, PR #131.
+- **Post-WP2I fixes:** camera, marker and layout corrections, PRs #134 and #135.
+- **R3-WP3:** physical formation pieces, state-specific material language, selected-piece emphasis, presentation-only movement interpolation and route cues, merged in PR #136 (`63a1b3e967601ab762bdc9d4e30fad3674290fbe`).
 
-The simulation/gameplay layer remains mechanically frozen from the validated R2.5 baseline unless R3 exposes a genuine integration defect.
+## Active recovery
 
-## Completed R2 / R2.5 baseline
+WP3 was merged and deployed, but the normal production entry path still selected the SVG map because terrain required `?terrain=1`. This recovery makes MapLibre/Copernicus terrain—and therefore WP3—the supported production default. Automatic compact/WebGL failure fallback remains SVG, and `?terrain=0` deliberately forces SVG for accessibility and diagnostics.
 
-R2-WP2 through R2-WP7/R2.5 are complete and merged. The final R2.5 baseline merged via PR #113 as `60950fcb634bc789bc77a49f2f2708fd2e7fc281` and demonstrated approximately Story 50.0%, Normal 29.6% and Hard 7.9% wins across 720 deterministic day-120 campaigns.
+Exact-browser coverage must open the production build without a terrain query, prove a real MapLibre canvas and WP3 physical formation presentation, and separately prove the `?terrain=0` fallback. Passing CI is integration evidence, not human visual acceptance.
 
-## Completed R3 work
+## Known defects carried forward
 
-### R3-WP1 - Visual Architecture & Renderer Foundation
+The following are explicitly **not declared fixed by this recovery or by unrelated green CI**:
 
-Status: COMPLETE / MERGED
-PR: #114
-Merge commit: `be3176de940b37346d713eb575d81bf0c92fe03d`
+- the low-zoom Theatre land-mask polygon artefact;
+- ambiguous front/orange short-segment visual language.
 
-WP1 established renderer-neutral presentation state, explicit terrain/control/routes/pieces/effects boundaries, camera/LOD/assets/performance conventions and a stable SVG/DOM renderer/fallback.
+They must be reproduced, verified and fixed or explicitly accepted during the next gate.
 
-### R3-WP2 - 2.5D Strategic Map
+## Mandatory next item
 
-Status: COMPLETE / MERGED; PRIMARY DEPTH ART DIRECTION SUPERSEDED BY WP2B
-PR: #115
-Merge commit: `7ad39d5d75889cf05b6af8f54f61eafb09ef033b`
+**R3 Stabilisation Gate - Map & WP3 Bug Remediation** is mandatory immediately after recovery. It requires production-default Theatre/Campaign/Selected visual audit, remediation of the known defects, live WP3 movement/piece inspection, fallback/reduced-motion validation, full regression/performance/persistence/balance/browser gates, and human acceptance of deployed `main`.
 
-WP2 proved political/control hierarchy, deterministic front derivation, crowded-region zoom hierarchy, non-interactive presentation layers, geometry/hit-testing preservation, mobile/reduced-motion simplification, 393/393 tests, production build and 720-campaign balance parity.
+R3-WP4 is paused. PR #137 was closed unmerged on 2026-08-14 and is reference material only; WP4 cannot resume until recovery and the stabilisation gate complete.
 
-Human visual review immediately after merge identified that political territory depth/extrusion could read as floating slabs. The useful state/overlay work remains valid, but political polygons no longer serve as the physical terrain surface.
+## Authoritative sequence
 
-### R3-WP2B - Real Terrain Foundation
-
-Status: COMPLETE / MERGED
-Primary PR: #117
-Runtime hotfix PRs: #118, #119, #120
-Package definition: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`
-
-WP2B replaced ownership-driven extrusion with a continuous Copernicus/MapLibre landscape and proved the technical terrain path end-to-end.
-
-Delivered and validated:
-
-- MapLibre GL JS 6 geospatial terrain renderer behind the `?terrain=1` review path;
-- public Copernicus GLO-30 source material preprocessed into self-hosted Mapbox Terrain-RGB assets;
-- representative terrain set of 82 PNG tiles / approximately 6.1 MB across z4-z7;
-- stylised colour relief, hillshade, land wash, coastline and subdued sea;
-- explicit MapLibre/Vite worker bundling required for production GeoJSON source loading;
-- production browser runtime probe that enters the campaign and verifies a real visible MapLibre canvas;
-- `full`, `compact` and `svg-fallback` renderer profiles;
-- compact terrain exaggeration/pitch/render-pressure reduction;
-- keyboard/reduced-motion behaviour and a visible `2D accessible map` escape;
-- exact production terrain asset/chunk budgets;
-- GitHub Pages production deployment and live verifier;
-- deterministic 720-campaign parity on validated package heads;
-- renderer failure remains non-blocking and falls back to SVG.
-
-Important implementation lesson recorded by the browser probes: TypeScript/build success is not enough for WebGL terrain. Runtime browser coverage now guards worker bundling, actual canvas visibility, terrain source readiness and production pathing.
-
-### R3-WP2C - Terrain Operational Overlay Parity
-
-Status: COMPLETE / MERGED
-PR: #121
-Merge commit: `205e5e0ec154b49c4c01cd47b0eedf85c2fcc74c`
-
-Live product-owner review of the first stable terrain build confirmed the terrain direction but showed that the new renderer had not inherited enough of the mature SVG command-map information surface.
-
-WP2C restored:
-
-- friendly formation counters with strength/readiness language;
-- selected-formation distinction and click-selection parity;
-- territory/location labels;
-- strategic city/node cues;
-- player-visible recon contacts;
-- threat markers;
-- active-operation markers;
-- portal marker;
-- screen-space operational-marker LOD over pitched terrain;
-- hidden-information boundaries by reusing the existing player-visible intelligence adapters rather than raw enemy formation state.
-
-The exact-head Chromium overlay gate verified the real campaign map contains visible friendly formations, territory/location labels, strategic nodes and player-visible recon contacts, then physically clicked `TG-2` and verified that formation became selected.
-
-Product-owner visual review of the deployed WP2C build explicitly approved the broad **real terrain + operational command information + top-down/pitched camera** direction as substantially closer to the intended game.
-
-## Current active work
-
-### R3-WP2D - Terrain Refinement & Presentation Polish
-
-Status: TECHNICALLY VALIDATED / AWAITING LIVE PRODUCT-OWNER VISUAL ACCEPTANCE
-PR: #122
-Branch: `agent/r3-wp2d-terrain-refinement`
-Package definition: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`
-Base main: `205e5e0ec154b49c4c01cd47b0eedf85c2fcc74c`
-Validated code-bearing head: `ea3adc1becd89074e642871ed6b7fc663f4ee445`
-
-WP2D has completed its autonomous technical and visual-refinement pass. The candidate now provides:
-
-- a 960-tile self-hosted Copernicus Terrain-RGB Europe theatre footprint;
-- resilient terrain-source/error handling with the supported camera envelope free of the earlier missing-tile warning path;
-- formal Theatre, Campaign and Selected camera presets with dynamic persistent-HUD safe padding;
-- a deliberate LOD split: clean strategic-flat Theatre overview and physical 2.5D terrain at Campaign/Selected decision scales;
-- quiet administrative borders, stronger control/front hierarchy and reduced ordinary route noise while critical supply/bottleneck state remains legible;
-- deterministic projected-screen marker declutter with protected priority for selected formations, active operations/live threats, selected territory and portal state;
-- deterministic toolbar exclusion zones so non-critical markers yield rather than sit beneath persistent terrain controls;
-- restrained bevel/contact-shadow grounding for formations, contacts and operations without movement or authoritative-coordinate distortion;
-- a reproducible build-time Europe-only land mask clipped from World Atlas rather than browser-side world geometry, removing the large diagonal/global polygon artefacts exposed during close visual inspection;
-- non-wrapping Europe-only MapLibre behaviour while preserving the SVG/accessible fallback and reduced-effects path.
-
-Exact-head validation on `ea3adc1becd89074e642871ed6b7fc663f4ee445`:
-
-- full engine regression suite: PASS, including current v14 persistence and legacy v7/v6/v4/v3/v2 save migrations;
-- TypeScript + Vite production build and generated-asset verification: PASS;
-- R3 WP2B terrain smoke: PASS;
-- R3 WP2B Chromium runtime probe: PASS;
-- R3 WP2C operational-overlay Chromium probe: PASS;
-- R3 WP2D three-view Chromium visual/runtime gate: PASS;
-- Campaign view settled at zoom 5.35 / physical relief with zero protected-marker losses and zero HUD overlaps;
-- Theatre view settled at zoom 3.60 / strategic-flat relief with deterministic declutter and zero HUD overlaps;
-- Selected view settled at zoom 7.10 / physical relief with zero protected-marker losses and zero HUD overlaps;
-- manual inspection of the exact-head Campaign/Theatre/Selected evidence confirmed the previous diagonal/global land-polygon artefacts are removed;
-- deterministic day-120 balance run: **720 campaigns, exact frozen R2.5 parity — Story 50.0%, Standard 29.6%, Hard 7.9%**;
-- no `src/game/**` authority changes, no save-schema/topology changes, no review threads/comments and no temporary applicator machinery remaining in the final PR diff.
-
-The next gate is deliberately human: deploy the hidden `?terrain=1` candidate from main and obtain product-owner visual acceptance. WP3 remains paused until that acceptance is given.
-
-## Paused work
-
-### R3-WP3 - Formation Pieces & Animated Movement
-
-Status: PAUSED UNTIL WP2D VISUAL APPROVAL
-
-Exploratory PR #116 was closed unmerged after the terrain art-direction correction. Its early piece styling may be selectively reused later, but substantial movement animation will not resume until WP2D accepts the terrain foundation.
-
-Once accepted, WP3 should build physical formation pieces/movement on the MapLibre terrain using Three.js/custom 3D layers where useful, while preserving the SVG fallback and intelligence uncertainty.
-
-## Next approved work after WP2D visual approval
-
-1. R3-WP3 - Formation Pieces & Animated Movement
-2. R3-WP4 - Battle, Front & Strategic Event Feedback
-3. R3-WP5 - Strategic Information Layers
-4. R3-WP6 - Command UI/UX Overhaul
-5. R3-WP7 - Audio, Music & Atmosphere
-6. R3-WP8 - Performance, Scalability, Accessibility & Resilience
-7. R3-WP9 - Visual Polish & Integrated Validation
-
-## Product-owner stop conditions
-
-Product-owner input is required for fundamental mechanic changes, narrative changes, materially different art direction, unresolved subjective gameplay choices, conflicts with intentional design, permissions/tooling blockers, or a stable deployed WP2D visual milestone that materially benefits from human review.
-
-Routine terrain source hardening, terrain-footprint generation, map-camera/framing work, safe-area logic, overlay hierarchy, marker collision/LOD, projection, testing, CI, save compatibility, deployment, performance work, accessibility, attribution and evidence-based technical choices within the approved MapLibre/Copernicus/Three.js direction remain autonomous.
-
-## Source-of-truth rule
-
-Current code, tests, Git history, active PR acceptance criteria, this status file and the approved roadmaps take precedence over stale historical status text elsewhere in the repository.
+1. R3 Production Coherence Recovery (active)
+2. R3 Stabilisation Gate - Map & WP3 Bug Remediation (mandatory next)
+3. R3-WP4 through R3-WP9
+4. Integrated R3 review and human visual/UX playtest
+5. Small R3.5 remediation pass if required

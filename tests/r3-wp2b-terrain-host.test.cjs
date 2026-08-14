@@ -65,6 +65,7 @@ test('R3 WP2B installs MapLibre behind one lazy boundary while preserving the st
   assert.match(app, /lazy\(\(\) => loadTerrainMapModule\(\)/);
   assert.match(host, /TerrainMapPrototypeImpl/);
   assert.match(app, /terrainPrototypeRequested/);
+  assert.match(app, /get\('terrain'\) !== '0'/);
   assert.match(app, /terrainPrototypeFailed/);
   assert.match(app, /MapView/);
 });

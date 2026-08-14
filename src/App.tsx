@@ -71,7 +71,11 @@ export default function App() {
   const [showSupplyWarning, setShowSupplyWarning] = useState(false);
   const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
   const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
-  const terrainPrototypeRequested = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('terrain') === '1';
+  // Terrain is the production renderer. Only the explicit accessibility and
+  // diagnostics override opts out; the terrain host still owns compact/WebGL
+  // capability detection and falls back to SVG if initialisation fails.
+  const terrainPrototypeRequested = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('terrain') !== '0';
   const [terrainPrototypeFailed, setTerrainPrototypeFailed] = useState(false);
   const [terrainPrototypeFailureReason, setTerrainPrototypeFailureReason] = useState('');
 
@@ -542,13 +546,13 @@ export default function App() {
               <span><strong>3D terrain unavailable</strong>{terrainPrototypeFailureReason || 'The terrain renderer returned to the stable 2D map.'}</span>
               <button type="button" onClick={() => { setTerrainPrototypeFailureReason(''); setTerrainPrototypeFailed(false); }}>Retry terrain</button>
             </div>}
-            {terrainPrototypeRequested && !terrainPrototypeFailed ? <Suspense fallback={<div className="r3-terrain-prototype-loading" role="status">Loading experimental terrain renderer…</div>}>
+            {terrainPrototypeRequested && !terrainPrototypeFailed ? <Suspense fallback={<div className="r3-terrain-prototype-loading" role="status">Loading terrain command map…</div>}>
               <TerrainMapPrototype
                 state={state}
                 onSelect={openTerritoryOnMap}
                 onSelectGroup={openGroupOnMap}
                 onFallback={(reason) => {
-                  console.warn(`R3 terrain prototype fallback: ${reason}`);
+                  console.warn(`R3 terrain renderer fallback: ${reason}`);
                   setTerrainPrototypeFailureReason(reason);
                   setTerrainPrototypeFailed(true);
                 }}
