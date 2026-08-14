@@ -16,7 +16,7 @@ export type WorldMiniatureEvidence = {
   layerId: string;
   renderCount: number;
   lod: 'theatre' | 'campaign' | 'selected';
-  objects: Array<{ id: string; type: string; position: readonly [number, number]; elevation: number; clearance: number; visible: boolean }>;
+  objects: Array<{ id: string; type: string; position: readonly [number, number]; elevation: number; clearance: number; visible: boolean; displayScale: number }>;
 };
 
 declare global { interface Window { __r3WorldMiniatures?: WorldMiniatureEvidence } }
@@ -82,6 +82,15 @@ function infrastructure(node: StrategicNodeDefinition) {
 const kindFor = (node: StrategicNodeDefinition): WorldKind =>
   node.type === 'capital' || node.type === 'city' ? 'city' : node.type;
 
+function worldPresentationScale(lod: 'theatre' | 'campaign' | 'selected') {
+  // Strategic structures are symbolic board-game pieces, not true-scale
+  // buildings. Compensate for camera distance so their silhouette remains
+  // readable, then taper their world footprint as the camera closes in.
+  if (lod === 'theatre') return 65_000;
+  if (lod === 'campaign') return 42_000;
+  return 19_000;
+}
+
 /** Presentation-only objects derived exactly from the public strategic-node catalogue. */
 export class WorldMiniaturesLayer implements CustomLayerInterface {
   readonly id = R3_WORLD_MINIATURE_LAYER_ID;
@@ -134,10 +143,18 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
       const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(piece.node.position, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
-      const scale = (lod === 'theatre' ? 15500 : lod === 'campaign' ? 19000 : 22500) * (piece.node.importance === 3 ? 1.18 : 1);
+      const displayScale = worldPresentationScale(lod) * (piece.node.importance === 3 ? 1.18 : 1);
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
-      piece.root.scale.set(metres * scale, -metres * scale, metres * scale);
-      evidence.push({ id: piece.node.id, type: piece.node.type, position: piece.node.position, elevation, clearance: CLEARANCE_METRES, visible: piece.root.visible });
+      piece.root.scale.set(metres * displayScale, -metres * displayScale, metres * displayScale);
+      evidence.push({
+        id: piece.node.id,
+        type: piece.node.type,
+        position: piece.node.position,
+        elevation,
+        clearance: CLEARANCE_METRES,
+        visible: piece.root.visible,
+        displayScale
+      });
     }
     this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
     this.renderer.resetState(); this.renderer.render(this.scene, this.camera); this.renderCount += 1;
