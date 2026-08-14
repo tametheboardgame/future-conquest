@@ -1,6 +1,6 @@
 # WP3.5 Production Presentation Hotfix
 
-Status: ACTIVE REMEDIATION
+Status: IMPLEMENTED - EXACT-HEAD VALIDATION IN PROGRESS
 
 ## Product-owner finding
 
