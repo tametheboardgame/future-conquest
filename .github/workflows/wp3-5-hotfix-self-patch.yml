@@ -22,8 +22,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Apply bounded source patches
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           impl = Path('src/components/TerrainMapPrototypeImpl.tsx')
@@ -101,6 +102,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
           elif new2 not in text:
               raise SystemExit('WP2F Layers camera patch target not found')
           probe.write_text(text)
+          PY
       - name: Commit patch if needed
         run: |
           if git diff --quiet; then
