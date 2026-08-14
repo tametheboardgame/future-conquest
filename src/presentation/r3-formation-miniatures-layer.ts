@@ -182,9 +182,11 @@ function clusterOffsets(state: GameState) {
 }
 
 function presentationScaleForZoom(zoom: number) {
-  if (zoom < 4.8) return 78_000;
-  if (zoom < 6.4) return 52_000;
-  return 24_000;
+  // Tuned against the real MapLibre v6 projection path: readable strategic
+  // board-game pieces without covering entire territories at Campaign zoom.
+  if (zoom < 4.8) return 44_000;
+  if (zoom < 6.4) return 28_000;
+  return 18_000;
 }
 
 /** Derived-only Three.js presentation. MapLibre's matrix and DEM remain the sole camera/terrain authority. */
