@@ -251,8 +251,9 @@ importance-driven Theatre/Campaign/Selected density, samples MapLibre terrain
 with bounded presentation clearance, and follows the existing Cities/hubs,
 Ports and Airports layer controls. Browser evidence now records exact node
 coordinates, terrain elevation, clearance, visibility and LOD alongside the A/B
-formation evidence and the explicit `?terrain=0` fallback. The package remains
-ACTIVE—not complete—until exact-head gates and deployed-main visual acceptance.
+formation evidence and the explicit `?terrain=0` fallback. Implementation is
+**READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE** on the active PR
+line. It remains ACTIVE—not complete—until deployed-main visual acceptance.
 
 ## Architecture direction
 

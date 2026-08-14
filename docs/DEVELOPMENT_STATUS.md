@@ -73,8 +73,10 @@ Three.js custom layer for authoritative strategic nodes: importance-scaled city
 clusters and distinct port, airport, rail/logistics and crossing miniatures,
 terrain elevation plus bounded clearance, deterministic Theatre/Campaign/Selected
 LOD, existing Layers-state visibility, browser diagnostics and automatic DOM/SVG
-fallback. This is implementation completion evidence, not deployed-main visual
-acceptance; WP4 remains blocked until the product-owner exit gate is satisfied.
+fallback. Final hardening is **READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE** on
+the active PR line after exact-head browser, performance, build, persistence and
+deterministic-balance validation. This is not deployed-main visual acceptance;
+WP4 remains blocked until the product-owner exit gate is satisfied.
 
 ## Authoritative sequence
 

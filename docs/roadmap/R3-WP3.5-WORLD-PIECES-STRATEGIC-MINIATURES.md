@@ -255,7 +255,8 @@ WP3.5 completes when the production terrain map reads as a physical strategic wa
   and the explicit SVG fallback remains unchanged. Chromium evidence covers
   exact geographic anchors, terrain elevation/clearance and all three LODs.
 
-This record does not declare the package accepted. Exact-head validation,
+This record does not declare the package accepted. The active PR implementation
+is **READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE**; exact-head validation,
 deployment and product-owner visual acceptance remain mandatory, and WP4 remains
 blocked.
 
