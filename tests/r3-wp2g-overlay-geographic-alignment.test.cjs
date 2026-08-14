@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const read = path => fs.readFileSync(path, 'utf8');
 
 test('player formations stay geographically anchored instead of using large fixed offsets', () => {
-  const markers = read('src/presentation/r3-terrain-operational-markers.ts');
+  const markers = read('src/presentation/r3-terrain-operational-markers-core.ts');
   assert.match(markers, /if \(count <= 1\) return \[0, 0\]/);
   assert.match(markers, /const horizontalPitch = 64/);
   assert.match(markers, /const verticalPitch = 44/);

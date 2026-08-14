@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 
 const renderer = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const host = fs.readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
-const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
+const markers = fs.readFileSync('src/presentation/r3-terrain-operational-markers-core.ts', 'utf8');
 const declutter = fs.readFileSync('src/presentation/r3-terrain-marker-declutter.ts', 'utf8');
 const selectionReplay = fs.readFileSync('scripts/run-r3-wp2i-selection-regression.mjs', 'utf8');
 
@@ -28,6 +28,25 @@ test('WP2I selection preserves the profile-key lifecycle and does not move conta
   assert.match(markers, /contactDisplacementX/);
   assert.match(markers, /distance <= 64/);
   assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
+});
+
+test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
+  assert.match(declutter, /territory: \{[^}]+protected: true/);
+  assert.match(markers, /avoidFormationLabelCollisions/);
+  assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
+  assert.match(markers, /clusters\.values\(\)/);
+  assert.match(markers, /getBoundingClientRect\(\)/);
+  assert.match(markers, /dx \* dx \+ dy \* dy <= 96 \* 96/);
+  assert.match(markers, /deltas\.sort/);
+  assert.match(markers, /obstacle, 0/);
+  assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
+  assert.match(markers, /marker\.setLngLat|setLngLat/);
+});
+
+test('WP2I keeps strategic nodes single-source and selection-independent', () => {
+  assert.doesNotMatch(renderer, /id: 'campaign-strategic-nodes'/);
+  assert.match(markers, /for \(const node of STRATEGIC_NODES\)/);
+  assert.doesNotMatch(markers, /state\.selectedTerritory === node/);
 });
 
 test('WP2I browser replay covers every live Frankfurt selection surface on clean product-sized pages', () => {
@@ -65,23 +84,4 @@ test('WP2I browser replay covers every live Frankfurt selection surface on clean
   assert.match(selectionReplay, /after\.zoom < 4\.8/);
   assert.match(selectionReplay, /after\.lod !== 'campaign'/);
   assert.match(selectionReplay, /after\.terrainRelief !== 'physical'/);
-});
-
-test('WP2I protects province names and lays out complete formation clusters around place labels', () => {
-  assert.match(declutter, /territory: \{[^}]+protected: true/);
-  assert.match(markers, /avoidFormationLabelCollisions/);
-  assert.match(markers, /formationTerritoryIds\.has\(territoryId\) \? \[0, -54\] : \[0, -10\]/);
-  assert.match(markers, /clusters\.values\(\)/);
-  assert.match(markers, /getBoundingClientRect\(\)/);
-  assert.match(markers, /dx \* dx \+ dy \* dy <= 96 \* 96/);
-  assert.match(markers, /deltas\.sort/);
-  assert.match(markers, /obstacle, 0/);
-  assert.match(markers, /marker\.setOffset\(\[baseX \+ delta\[0\], baseY \+ delta\[1\]\]\)/);
-  assert.match(markers, /marker\.setLngLat|setLngLat/);
-});
-
-test('WP2I keeps strategic nodes single-source and selection-independent', () => {
-  assert.doesNotMatch(renderer, /id: 'campaign-strategic-nodes'/);
-  assert.match(markers, /for \(const node of STRATEGIC_NODES\)/);
-  assert.doesNotMatch(markers, /state\.selectedTerritory === node/);
 });

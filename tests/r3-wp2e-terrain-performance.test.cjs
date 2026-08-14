@@ -29,14 +29,16 @@ test('redundant zero-opacity relief DEM is gone while mesh and hillshade stay in
 });
 
 test('markers reconcile by stable identity and overlay source updates are isolated', () => {
-  const markers = read('src/presentation/r3-terrain-operational-markers.ts');
+  const markerWrapper = read('src/presentation/r3-terrain-operational-markers.ts');
+  const markerCore = read('src/presentation/r3-terrain-operational-markers-core.ts');
   const implementation = read('src/components/TerrainMapPrototypeImpl.tsx');
-  assert.match(markers, /priorById/);
-  assert.match(markers, /buildTerrainOperationalMarkerDescriptors/);
-  assert.match(markers, /if \(!prior\) return new Marker/);
-  assert.doesNotMatch(markers, /candidate\.remove\(\)/);
-  assert.match(markers, /element\.onclick = descriptor\.action/);
-  assert.match(markers, /return prior/);
+  assert.match(markerWrapper, /reconcileCoreTerrainOperationalMarkers/);
+  assert.match(markerCore, /priorById/);
+  assert.match(markerCore, /buildTerrainOperationalMarkerDescriptors/);
+  assert.match(markerCore, /if \(!prior\) return new Marker/);
+  assert.doesNotMatch(markerCore, /candidate\.remove\(\)/);
+  assert.match(markerCore, /element\.onclick = descriptor\.action/);
+  assert.match(markerCore, /return prior/);
   assert.match(implementation, /reconcileTerrainOperationalMarkers/);
   assert.doesNotMatch(implementation, /\[politicalData, frontData, routeData, nodeData\]/);
 });

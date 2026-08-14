@@ -46,6 +46,7 @@ import {
   removeTerrainOperationalMarkers,
   terrainOperationalTerritoryCentres
 } from '../presentation/r3-terrain-operational-markers';
+import { createCoalescedFrameTask } from '../presentation/r3-coalesced-frame-task';
 import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
 
 export interface TerrainMapPrototypeProps {
@@ -541,6 +542,7 @@ export function TerrainMapPrototypeImpl({
     let disposed = false;
     let ownedMap: Map | null = null;
     let toolbarResizeObserver: ResizeObserver | null = null;
+    let cancelOperationalLayoutFrame: (() => void) | undefined;
 
     const initialise = async () => {
       const terrainSource = await loadTerrainSource();
@@ -614,10 +616,19 @@ export function TerrainMapPrototypeImpl({
         }
         host.dataset.terrainRelief = terrainMeshMode;
       };
+      const operationalLayoutFrame = createCoalescedFrameTask({
+        request: callback => window.requestAnimationFrame(callback),
+        cancel: handle => window.cancelAnimationFrame(handle)
+      }, () => {
+        if (!disposed) {
+          applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layersRef.current);
+        }
+      });
+      cancelOperationalLayoutFrame = operationalLayoutFrame.cancel;
       const refreshOperationalPresentation = () => {
         updateOverlayLod();
         updateTerrainMeshLod();
-        applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layersRef.current);
+        operationalLayoutFrame.schedule();
       };
       map.on('zoom', updateOverlayLod);
       map.on('moveend', refreshOperationalPresentation);
@@ -707,6 +718,7 @@ export function TerrainMapPrototypeImpl({
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
       toolbarResizeObserver?.disconnect();
+      cancelOperationalLayoutFrame?.();
       mapRef.current = null;
       delete (window as typeof window & { __r3TerrainMap?: Map }).__r3TerrainMap;
       delete (window as typeof window & { __r3StrategicNodes?: typeof STRATEGIC_NODES }).__r3StrategicNodes;

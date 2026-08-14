@@ -55,6 +55,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
     const formationRects = formations.map(marker => ({
       id: marker.dataset.r3MarkerId,
       territoryId: marker.dataset.territoryId,
+      moving: marker.dataset.movementProgress !== undefined,
       offsetX: Number(marker.dataset.r3MarkerOffsetX ?? 0),
       offsetY: Number(marker.dataset.r3MarkerOffsetY ?? 0),
       displacementX: Number(marker.dataset.formationDisplacementX ?? 0),
@@ -82,7 +83,13 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
         }
       }
     }
-    const clusters = formationRects.reduce((result, item) => {
+    // WP2F's anchor-spread contract protects stationary formations that share
+    // one authoritative territory anchor. WP3 moving formations intentionally
+    // render along their order path, so including them in a territory cluster
+    // would misclassify valid presentation movement as geographic anchor drift.
+    // They remain covered by visibility, collision, displacement and canvas
+    // bounds checks below.
+    const clusters = formationRects.filter(item => !item.moving).reduce((result, item) => {
       (result[item.territoryId] ??= []).push(item);
       return result;
     }, {});
@@ -133,6 +140,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
       camera: { zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() },
       markerCount: markers.length,
       formationCount: formations.length,
+      movingFormationCount: formationRects.filter(item => item.moving).length,
       visibleFormationCount: formations.filter(marker => !marker.hidden).length,
       territoryCount: territories.length,
       visibleTerritoryCount: territories.filter(marker => !marker.hidden).length,
@@ -191,7 +199,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
   if (profile.collisions.length) throw new Error(`formation rectangles intersect in ${expected}: ${JSON.stringify(profile.collisions)}`);
   if (profile.placeLabelCollisions.length) throw new Error(`formation intersects a place label in ${expected}: ${JSON.stringify(profile.placeLabelCollisions)}`);
   if (profile.formationAlignment.some(item => item.displacementPx > 97)) throw new Error(`formation displacement exceeded budget in ${expected}`);
-  if (profile.formationAlignment.some(item => item.anchorSpreadPx > 2)) throw new Error(`formation terrain anchors diverged in ${expected}`);
+  if (profile.formationAlignment.some(item => item.anchorSpreadPx > 2)) throw new Error(`stationary formation terrain anchors diverged in ${expected}`);
   if ((expected === 'theatre' || expected === 'campaign') && profile.formationsInCanvas !== profile.formationCount) throw new Error(`formation outside ${expected} canvas`);
   if (profile.duplicateNodeLayerPresent) throw new Error(`duplicate strategic-node layer remains in ${expected}`);
   if (profile.nodeDiagnostics.some(node => node.missing || node.markerCount !== 1)) throw new Error(`strategic node duplication/missing marker failed in ${expected}`);

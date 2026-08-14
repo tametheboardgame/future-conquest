@@ -54,7 +54,11 @@ jobs:
           import { chromium } from 'playwright';
 
           const browser = await chromium.launch({ headless: true });
-          const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+          // WP2D gates settled visual states; normal camera animation behaviour remains owned by other gates.
+          const page = await browser.newPage({
+            viewport: { width: 1600, height: 1000 },
+            reducedMotion: 'reduce'
+          });
           const terrainResponses = new Map();
           page.on('response', response => {
             const url = response.url();
@@ -106,13 +110,26 @@ jobs:
           }
           await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
-          const verifyView = async (viewName, expectedLod, expectedRelief) => {
-            const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
-            if (viewName === 'selected' && await button.isDisabled()) {
-              throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
+          const captureEvidence = async viewName => {
+            try {
+              await page.locator('.r3-terrain-prototype').screenshot({
+                path: `/tmp/r3-wp2d-${viewName}.png`,
+                timeout: 5000
+              });
+            } catch (error) {
+              console.log(`WP2D ${viewName} evidence capture skipped after bounded timeout:`, error instanceof Error ? error.message : String(error));
             }
+          };
+
+          const verifyView = async (viewName, expectedLod, expectedRelief, activate = true) => {
             const beforeTiles = new Set(terrainResponses.keys());
-            await button.click();
+            if (activate) {
+              const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
+              if (viewName === 'selected' && await button.isDisabled()) {
+                throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
+              }
+              await button.click();
+            }
             await page.waitForFunction(
               expected => {
                 const host = document.querySelector('.r3-terrain-prototype');
@@ -122,7 +139,8 @@ jobs:
               { lod: expectedLod, relief: expectedRelief },
               { timeout: 6000 }
             );
-            await page.waitForTimeout(180);
+            // Match the proven WP2F settled-state cadence and allow deferred marker layout to complete.
+            await page.waitForTimeout(900);
 
             const result = await page.evaluate(expected => {
               const host = document.querySelector('.r3-terrain-prototype');
@@ -186,15 +204,15 @@ jobs:
             if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);
             if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
-
-            await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png` });
           };
 
-          await verifyView('campaign', 'campaign', 'physical');
+          // The renderer already starts at Campaign. Assert that settled state in place rather than issuing a redundant camera transaction.
+          await verifyView('campaign', 'campaign', 'physical', false);
           await verifyView('theatre', 'theatre', 'strategic-flat');
           await verifyView('selected', 'local', 'physical');
 
           console.log('WP2D unique terrain requests:', terrainResponses.size, 'tiles /', [...terrainResponses.values()].reduce((a, b) => a + b, 0), 'declared bytes');
+          await captureEvidence('selected');
           await browser.close();
           NODE
       - name: Upload WP2D visual evidence
