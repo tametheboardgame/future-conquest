@@ -25,6 +25,7 @@ import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } fro
 export const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 const CLEARANCE_METRES = 45;
 const VISUAL_GROUP_NAME = 'formation-miniature-visual';
+const ELEVATION_RESAMPLE_DEGREES = 0.01;
 
 type Piece = {
   root: Group;
@@ -32,6 +33,8 @@ type Piece = {
   from: FormationGeoPoint;
   target: FormationGeoPoint;
   startedAt: number;
+  elevation?: number;
+  elevationAt?: FormationGeoPoint;
 };
 
 export type FormationMiniatureBrowserEvidence = {
@@ -182,11 +185,15 @@ function clusterOffsets(state: GameState) {
 }
 
 function presentationScaleForZoom(zoom: number) {
-  // Tuned against the real MapLibre v6 projection path: readable strategic
-  // board-game pieces without covering entire territories at Campaign zoom.
   if (zoom < 4.8) return 44_000;
   if (zoom < 6.4) return 28_000;
   return 18_000;
+}
+
+function needsElevationSample(piece: Piece, point: FormationGeoPoint) {
+  if (piece.elevation === undefined || !piece.elevationAt) return true;
+  return Math.abs(piece.elevationAt[0] - point[0]) >= ELEVATION_RESAMPLE_DEGREES
+    || Math.abs(piece.elevationAt[1] - point[1]) >= ELEVATION_RESAMPLE_DEGREES;
 }
 
 /** Derived-only Three.js presentation. MapLibre's matrix and DEM remain the sole camera/terrain authority. */
@@ -250,7 +257,15 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
         root.rotation.z = movementBearing(group);
         this.scene.add(root);
         const current = old?.current ?? target;
-        this.pieces.set(group.id, { root, current, from: current, target, startedAt: performance.now() });
+        this.pieces.set(group.id, {
+          root,
+          current,
+          from: current,
+          target,
+          startedAt: performance.now(),
+          elevation: old?.elevation,
+          elevationAt: old?.elevationAt
+        });
       } else {
         if (old.target[0] !== target[0] || old.target[1] !== target[1]) {
           old.from = old.current; old.target = target; old.startedAt = performance.now();
@@ -275,7 +290,14 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       piece.current = this.reducedMotion ? piece.target : interpolateFormationPresentation(piece.from, piece.target, elapsed);
       animating ||= !this.reducedMotion && elapsed < FORMATION_PRESENTATION_ANIMATION_MS;
       const lngLat: [number, number] = [piece.current[0], piece.current[1]];
-      const elevation = this.map.queryTerrainElevation(lngLat) ?? 0;
+      if (needsElevationSample(piece, lngLat)) {
+        const sampledElevation = this.map.queryTerrainElevation(lngLat);
+        if (sampledElevation !== null) {
+          piece.elevation = sampledElevation;
+          piece.elevationAt = [...lngLat];
+        }
+      }
+      const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(lngLat, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
