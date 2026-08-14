@@ -51,7 +51,7 @@ function TerrainMapModuleHost(props: TerrainMapPrototypeProps) {
     return createElement(
       'div',
       { className: 'r3-terrain-prototype-loading', role: 'status' },
-      'Loading experimental terrain renderer…'
+      'Loading terrain command map…'
     );
   }
 
