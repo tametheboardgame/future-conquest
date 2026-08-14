@@ -48,10 +48,9 @@ import {
 } from '../presentation/r3-terrain-operational-markers';
 import { createCoalescedFrameTask } from '../presentation/r3-coalesced-frame-task';
 import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
-import {
-  FormationMiniaturesLayer,
-  R3_FORMATION_MINIATURE_LAYER_ID
-} from '../presentation/r3-formation-miniatures-layer';
+import type { FormationMiniaturesLayer } from '../presentation/r3-formation-miniatures-layer';
+
+const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -642,8 +641,11 @@ export function TerrainMapPrototypeImpl({
       map.on('moveend', refreshOperationalPresentation);
       refreshOperationalPresentation();
 
-      map.on('load', () => {
+      map.on('load', async () => {
         try {
+          // Keep Three.js out of the already budgeted terrain bootstrap chunk.
+          const { FormationMiniaturesLayer } = await import('../presentation/r3-formation-miniatures-layer');
+          if (disposed) return;
           const miniatureLayer = new FormationMiniaturesLayer(stateRef.current);
           map.addLayer(miniatureLayer);
           formationMiniaturesRef.current = miniatureLayer;

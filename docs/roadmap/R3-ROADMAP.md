@@ -32,6 +32,7 @@ One P2 presentation debt from that acceptance is intentionally carried into WP3.
 - Real elevation describes geography, never political ownership: political territories remain overlays on one continuous landscape.
 - Runtime browser code must not contain private geospatial-service credentials.
 - The stable SVG/DOM campaign map remains the explicit `?terrain=0` accessibility/diagnostic/failure fallback.
+- This reconciles, rather than replaces, the historical WP1 renderer decision: the existing SVG/DOM map remained primary while measured evidence compared it with a WebGL/Three.js hybrid, with a clear fallback required for every accelerated presentation layer. WP3.5's measured custom-layer adoption is governed by the current package below; it does not erase that compatibility contract.
 - Major new mechanics, narrative changes or art-direction changes outside the approved broad direction require product-owner approval.
 - Any autonomous worker must inspect `docs/DEVELOPMENT_STATUS.md`, this roadmap and the current active package before selecting work.
 

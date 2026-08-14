@@ -32,6 +32,17 @@ type Piece = {
   lastUpdate: number;
 };
 
+export type FormationMiniatureBrowserEvidence = {
+  layerId: string;
+  reducedMotion: boolean;
+  renderCount: number;
+  pieces: Array<{ id: string; current: FormationGeoPoint; target: FormationGeoPoint; elevation: number; visible: boolean }>;
+};
+
+declare global {
+  interface Window { __r3FormationMiniatures?: FormationMiniatureBrowserEvidence }
+}
+
 const statusColours: Record<TaskGroup['status'], number> = {
   ready: 0x65d8ca,
   moving: 0x8fe9dc,
@@ -124,6 +135,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
   private readonly pieces = new globalThis.Map<string, Piece>();
   private state: GameState;
   private reducedMotion: boolean;
+  private renderCount = 0;
 
   constructor(state: GameState) {
     this.state = state;
@@ -179,7 +191,8 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     let animating = false;
     const zoom = this.map.getZoom();
     const lodScale = zoom < 4.8 ? 0.55 : zoom < 6.4 ? 0.78 : 1;
-    for (const piece of this.pieces.values()) {
+    const browserPieces: FormationMiniatureBrowserEvidence['pieces'] = [];
+    for (const [id, piece] of this.pieces) {
       const elapsed = Math.min(64, Math.max(0, now - piece.lastUpdate));
       piece.lastUpdate = now;
       const alpha = this.reducedMotion ? 1 : 1 - Math.exp(-elapsed / 135);
@@ -194,10 +207,18 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
       piece.root.scale.set(metres * 26000 * lodScale, -metres * 26000 * lodScale, metres * 26000 * lodScale);
       piece.root.visible = true;
+      browserPieces.push({ id, current: [...piece.current], target: [...piece.target], elevation, visible: piece.root.visible });
     }
     this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
+    this.renderCount += 1;
+    window.__r3FormationMiniatures = {
+      layerId: this.id,
+      reducedMotion: this.reducedMotion,
+      renderCount: this.renderCount,
+      pieces: browserPieces
+    };
     if (animating) this.map.triggerRepaint();
   }
 
@@ -207,5 +228,6 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     this.map = undefined;
     for (const child of this.scene.children) if (child instanceof Object3D) child.clear();
     this.pieces.clear();
+    delete window.__r3FormationMiniatures;
   }
 }

@@ -558,8 +558,6 @@
    skin becomes transparent; focus restores a concise identity surface. */
 .r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker {
   opacity: 0;
-  min-width: 48px;
-  min-height: 48px;
 }
 
 .r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker:focus-visible {
