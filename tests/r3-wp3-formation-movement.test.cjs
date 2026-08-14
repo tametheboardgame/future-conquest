@@ -6,6 +6,7 @@ const { stripTypeScriptTypes } = require('node:module');
 
 const source = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf8');
 const presentation = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
+const routeOverlay = fs.readFileSync('src/presentation/r3-formation-route-overlay.ts', 'utf8');
 const wrapper = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
 const pureStart = source.indexOf('const clamp01');
 const pureEnd = source.indexOf('export function formationPresentationPath');
@@ -57,4 +58,15 @@ test('WP3 reconciled movement animates presentation, including completed one-tur
   assert.doesNotMatch(presentation, /element\.dataset\.r3MarkerOffsetY\s*=/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*false/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*true/);
+});
+
+test('WP3 route overlay does not rebuild synchronously throughout camera travel', () => {
+  assert.match(routeOverlay, /const scheduledFrames = new WeakMap<Map, number>/);
+  assert.match(routeOverlay, /requestAnimationFrame/);
+  assert.match(routeOverlay, /map\.on\('movestart'/);
+  assert.match(routeOverlay, /map\.on\('moveend'/);
+  assert.match(routeOverlay, /map\.isMoving\(\)/);
+  assert.match(routeOverlay, /hideMovementRoutesDuringCameraTravel/);
+  assert.doesNotMatch(routeOverlay, /map\.on\('move',/);
+  assert.doesNotMatch(routeOverlay, /const refresh = \(\) => renderMovementRoutes/);
 });
