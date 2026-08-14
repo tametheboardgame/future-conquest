@@ -120,7 +120,7 @@ jobs:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: \${{ github.event.pull_request.head.sha }}
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
