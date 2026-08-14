@@ -23,11 +23,21 @@ The following were explicitly deferred or reproduced during production review an
    - Determine whether the artefact still exists after all WP2D-I changes.
    - If present, fix the land-mask/terrain presentation without changing geography or territory authority.
    - If no longer reproducible, retain machine/browser evidence explaining why it is considered closed.
+   - **Fixed on the stabilisation branch:** the clipped World Atlas
+     `MultiPolygon` was being submitted as one continent-spanning render
+     geometry. The generated v2 mask emits independently wound `Polygon`
+     features, preventing low-zoom triangulation from joining distant parts
+     while preserving the same land union and coastline. The WP2D Theatre
+     browser evidence and permanent geometry/winding regression cover closure.
 
 2. **Ambiguous orange/front short-segment language**
    - Existing player/enemy front indicators can read as unexplained short orange segments.
    - Audit their meaning, colour, geometry, layering and legend/context.
    - Make fronts immediately understandable without introducing WP4 battle/event effects early.
+   - **Fixed on the stabilisation branch:** MapLibre fronts now use the same
+     warm segmented core and dark casing as the SVG fallback, and an on-map key
+     explicitly contrasts `Opposing-control front` with `Movement / supply
+     route`. This is presentation-only and introduces no battle/event effects.
 
 3. **P1 territory-selection marker reprojection/layout drift**
    - Reproduced by the product owner on the normal production terrain map on 2026-08-14.
@@ -155,7 +165,7 @@ Not allowed without separate product-owner approval:
 - WP6 command-interface redesign;
 - new audio/music work.
 
-## Validation gate
+## Pre-merge technical acceptance
 
 Before this package can merge/close:
 
@@ -176,8 +186,14 @@ Before this package can merge/close:
 - deterministic 720-campaign balance parity remains unchanged;
 - `?terrain=0` SVG fallback passes;
 - no gameplay-authority files change unless a separately approved genuine integration defect requires it;
-- GitHub Pages deploys the resulting merge commit;
-- **human visual acceptance of the normal production URL is obtained before WP4 resumes.**
+
+## Post-merge deployment and visual acceptance
+
+After the technically accepted package merges, but before this gate closes or
+WP4 resumes:
+
+- GitHub Pages must deploy the resulting merge commit successfully;
+- **human visual acceptance of the normal production URL must be obtained.**
 
 ## Roadmap after this gate
 

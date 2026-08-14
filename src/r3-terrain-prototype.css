@@ -183,6 +183,31 @@
   pointer-events: none;
 }
 
+.r3-terrain-map-key {
+  position: absolute;
+  z-index: 6;
+  right: 12px;
+  bottom: 34px;
+  display: flex;
+  gap: 12px;
+  padding: 5px 8px;
+  border: 1px solid rgba(164, 214, 209, .2);
+  border-radius: 5px;
+  background: rgba(2, 9, 12, .82);
+  color: #c7d6d3;
+  font: 8px IBM Plex Mono, monospace;
+  letter-spacing: .035em;
+  pointer-events: none;
+}
+
+.r3-terrain-map-key span { display: flex; align-items: center; gap: 6px; }
+.r3-terrain-map-key i { display: inline-block; width: 25px; height: 0; }
+.r3-terrain-map-key-front i {
+  border-top: 3px dashed #ffad66;
+  filter: drop-shadow(0 1px #332322);
+}
+.r3-terrain-map-key-route i { border-top: 1px solid #9ba58f; }
+
 .r3-terrain-prototype[data-status='warning'] {
   border-color: rgba(230, 174, 94, .55);
 }
@@ -223,6 +248,7 @@
 }
 
 @media (max-width: 900px) {
+  .r3-terrain-map-key { right: 8px; gap: 8px; }
   .r3-terrain-prototype-shell,
   .r3-terrain-prototype {
     min-height: 430px;
