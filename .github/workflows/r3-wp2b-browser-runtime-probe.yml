@@ -8,7 +8,10 @@ on:
       - 'src/components/TerrainMapPrototype*.tsx'
       - 'src/App.tsx'
       - 'src/presentation/r3-terrain-*.ts'
+      - 'src/presentation/r3-formation-miniatures-layer.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
       - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
       - 'public/generated/r3-terrain/**'
       - 'scripts/measure-r3-terrain-budget.mjs'
       - 'tests/r3-wp2b-*.test.cjs'
@@ -71,6 +74,7 @@ jobs:
 
           await page.addInitScript(() => {
             localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+            localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
           });
           // This must remain the unqualified production entry URL. A query-gated
           // renderer would make this exact-browser recovery check fail.
@@ -109,23 +113,26 @@ jobs:
             throw new Error('Terrain renderer neither became ready nor surfaced fallback diagnostics.');
           }
 
-          const formationPieces = page.locator('.r3-terrain-task-group-marker');
-          if (await formationPieces.count() < 1) {
-            throw new Error('Production terrain path has no WP3 physical formation pieces.');
-          }
-          const piecePresentation = await formationPieces.first().evaluate(element => {
-            const style = getComputedStyle(element);
+          await page.locator('.r3-terrain-task-group-marker').first().waitFor({ state: 'attached', timeout: 10000 });
+          await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-physical-formations') === 'ready', null, { timeout: 15000 });
+          await page.waitForFunction(() => (window.__r3FormationMiniatures?.renderCount ?? 0) > 0, null, { timeout: 10000 });
+          const piecePresentation = await page.evaluate(() => {
+            const marker = document.querySelector('.r3-terrain-task-group-marker');
+            const physical = window.__r3FormationMiniatures;
             return {
-              position: style.position,
-              transform: style.transform,
-              background: style.backgroundImage,
-              classes: element.className,
-              markerKind: element.dataset.r3MarkerKind
+              physicalRenderCount: physical?.renderCount ?? 0,
+              physicalVisible: physical?.pieces.filter(piece => piece.visible).length ?? 0,
+              compatibilityMarkerOpacity: marker instanceof HTMLElement ? getComputedStyle(marker).opacity : null,
+              compatibilityMarkerPosition: marker instanceof HTMLElement ? getComputedStyle(marker).position : null,
+              markerKind: marker instanceof HTMLElement ? marker.dataset.r3MarkerKind ?? null : null
             };
           });
-          console.log('WP3 r3-piece-status presentation:', JSON.stringify(piecePresentation));
-          if (piecePresentation.position !== 'absolute' || piecePresentation.background === 'none' || piecePresentation.markerKind === undefined) {
-            throw new Error(`WP3 physical formation-piece presentation is inactive: ${JSON.stringify(piecePresentation)}`);
+          console.log('WP3.5 physical formation presentation:', JSON.stringify(piecePresentation));
+          if (piecePresentation.physicalRenderCount < 1 || piecePresentation.physicalVisible < 1) {
+            throw new Error(`WP3.5 physical formation layer is inactive: ${JSON.stringify(piecePresentation)}`);
+          }
+          if (Number(piecePresentation.compatibilityMarkerOpacity) !== 0 || piecePresentation.compatibilityMarkerPosition !== 'absolute' || !piecePresentation.markerKind) {
+            throw new Error(`WP3.5 compatibility interaction target is not correctly hidden/anchored: ${JSON.stringify(piecePresentation)}`);
           }
 
           await page.waitForTimeout(1200);
@@ -189,14 +196,7 @@ jobs:
           }
           const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
           const dominantRatio = ranked.length ? ranked[0][1] / samples : 1;
-          console.log('Terrain screenshot pixels:', JSON.stringify({
-            width: png.width,
-            height: png.height,
-            sampledPixels: samples,
-            quantisedColours: counts.size,
-            dominantRatio,
-            topColours: ranked.slice(0, 8)
-          }));
+          console.log('Terrain screenshot pixels:', JSON.stringify({ width: png.width, height: png.height, sampledPixels: samples, quantisedColours: counts.size, dominantRatio, topColours: ranked.slice(0, 8) }));
           if (counts.size < 24 || dominantRatio > 0.97) {
             throw new Error(`Terrain canvas is visually blank or near-uniform: ${counts.size} colours, dominant ratio ${dominantRatio.toFixed(4)}`);
           }
@@ -204,11 +204,16 @@ jobs:
           console.log(`MapLibre terrain visibly rendered in the campaign map with ${canvasCount} canvas element(s).`);
 
           const fallbackPage = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
-          await fallbackPage.addInitScript(() => localStorage.setItem('future-conquest:intro-seen:v3', 'true'));
+          await fallbackPage.addInitScript(() => {
+            localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+            localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
+          });
           await fallbackPage.goto('http://127.0.0.1:4173/?terrain=0', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await fallbackPage.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+          await fallbackPage.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
           await fallbackPage.locator('[data-command-view="map"]').click();
-          await fallbackPage.locator('svg.map.europe-map').waitFor({ state: 'visible', timeout: 10000 });
+          await fallbackPage.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
+          await fallbackPage.locator('svg.map.europe-map').waitFor({ state: 'visible', timeout: 15000 });
           if (await fallbackPage.locator('.maplibregl-canvas').count()) {
             throw new Error('?terrain=0 did not force the SVG accessibility map.');
           }
