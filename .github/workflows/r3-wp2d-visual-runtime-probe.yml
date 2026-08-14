@@ -106,6 +106,17 @@ jobs:
           }
           await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
 
+          const captureEvidence = async viewName => {
+            try {
+              await page.locator('.r3-terrain-prototype').screenshot({
+                path: `/tmp/r3-wp2d-${viewName}.png`,
+                timeout: 5000
+              });
+            } catch (error) {
+              console.log(`WP2D ${viewName} evidence capture skipped after bounded timeout:`, error instanceof Error ? error.message : String(error));
+            }
+          };
+
           const verifyView = async (viewName, expectedLod, expectedRelief) => {
             const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
             if (viewName === 'selected' && await button.isDisabled()) {
@@ -187,7 +198,7 @@ jobs:
             if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
 
-            await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png` });
+            await captureEvidence(viewName);
           };
 
           await verifyView('campaign', 'campaign', 'physical');
