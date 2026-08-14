@@ -33,16 +33,14 @@ jobs:
         run: npm test
       - name: Build production game
         run: npm run build
-      - name: Remove one-shot applicator machinery
-        run: |
-          rm scripts/apply-r3-production-recovery.mjs
-          rm .github/workflows/r3-recovery-apply.yml
-      - name: Commit recovery changes
+      - name: Keep workflow mutation out of the automated commit
+        run: rm -f .github/workflows/r3-production-default-terrain.yml
+      - name: Commit validated source changes only
         run: |
           git config user.name 'Future Conquest Recovery Supervisor'
           git config user.email 'actions@users.noreply.github.com'
-          git add -A
+          git add src/App.tsx tests/r3-production-coherence.test.cjs scripts/run-r3-production-default-runtime.mjs
           git diff --cached --check
           git commit -m 'R3 recovery: make terrain and WP3 the production default'
           git push origin HEAD:agent/r3-production-coherence-recovery
-# retry after escaping the generated GitHub expression
+# connector will install the permanent workflow and remove one-shot machinery after this succeeds
