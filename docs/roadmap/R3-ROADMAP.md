@@ -2,29 +2,48 @@
 
 Status: APPROVED / ACTIVE PROGRAMME
 
+Last reconciled: 2026-08-14
+
 R3 is the Visualisation & Command Experience release. Its purpose is to transform the mechanically stabilised strategy game into a coherent, readable and visually distinctive grand-strategy command experience without destabilising the simulation.
 
-Entry state: R2-WP1 through R2-WP7 and the R2.5 Balance Stabilisation Gate are complete. PR #113 merged to `main` as `60950fcb634bc789bc77a49f2f2708fd2e7fc281`. The validated R2.5 baseline demonstrated Story at approximately 50.0% wins, Normal at approximately 29.6% and Hard at approximately 7.9% across 720 deterministic day-120 campaigns. R3 therefore begins from a mechanical freeze: presentation work may expose a genuine integration defect, but should not casually rebalance or redesign the game.
+## CURRENT PACKAGE - READ THIS FIRST
 
-## R3 programme principles
+**R3-WP3.5 - World Pieces & Strategic Miniatures is ACTIVE and blocks WP4.**
+
+Authoritative package: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
+
+No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 while WP3.5 is incomplete. The old WP4 PR #137 is closed/unmerged historical reference material only.
+
+The R3 Stabilisation Gate is complete. PR #139 merged to `main` as `1e6560cd871fc918d9914eb9cbf6da27b5a4e1c3`, GitHub Pages deployed and verified that commit, and the product owner visually accepted the deployed map on 2026-08-14. Geographic anchoring is therefore the accepted production baseline.
+
+One P2 presentation debt from that acceptance is intentionally carried into WP3.5: current marker/piece movement can feel slightly sticky/stepped/guttery during camera movement/layout settlement. Do not reopen the temporary marker implementation merely to polish this. WP3.5 owns replacing/superseding that behaviour with the final physical-piece movement architecture.
+
+---
+
+## Programme principles
 
 - The simulation remains authoritative. Rendering reads game state and never becomes a second source of gameplay truth.
 - Preserve the existing TypeScript/Vite browser delivery model and GitHub Pages deployment unless measured evidence requires otherwise.
 - Strategic readability takes priority over spectacle.
 - Preserve territory IDs/geometry semantics, route topology, operation logic, save compatibility, deterministic behaviour and intelligence-information boundaries.
 - Visual state should be derived rather than unnecessarily persisted in campaign saves.
-- Laptop usability, mobile fallback, keyboard access, contrast and reduced-motion support are first-class constraints.
-- 3D/2.5D geography is presentation only unless a later gameplay change is separately approved.
-- Real elevation must describe geography, never political ownership: political territories are overlays on one continuous landscape.
+- Laptop usability, compact/touch fallback, keyboard access, contrast and reduced-motion support are first-class constraints.
+- 3D/2.5D geography and pieces are presentation only unless a later gameplay change is separately approved.
+- Real elevation describes geography, never political ownership: political territories remain overlays on one continuous landscape.
 - Runtime browser code must not contain private geospatial-service credentials.
-- The stable SVG/DOM campaign map remains an accessibility/reduced-effects/failure fallback while the real-terrain renderer matures.
+- The stable SVG/DOM campaign map remains the explicit `?terrain=0` accessibility/diagnostic/failure fallback.
 - Major new mechanics, narrative changes or art-direction changes outside the approved broad direction require product-owner approval.
+- Any autonomous worker must inspect `docs/DEVELOPMENT_STATUS.md`, this roadmap and the current active package before selecting work.
 
-## R3 sequence
+## Authoritative R3 sequence
 
-R3-WP1 -> R3-WP2 -> **R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes** -> R3-WP3 -> **Production Coherence Recovery -> R3 Stabilisation Gate** -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.
+Completed history:
 
-WP2B was inserted by product-owner decision on 2026-08-11 after visual review of WP2 showed that territory-level extrusion could read as floating political slabs. WP2C followed after the first deployed terrain build proved the landscape but lacked command-map information parity. WP2D was approved on 2026-08-12 after the restored-overlay build confirmed the overall terrain direction while also exposing the need for an intensive Europe-coverage, robustness, safe-area, hierarchy and declutter pass before WP3 resumes.
+R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate
+
+Current and future:
+
+**R3-WP3.5 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
 
 ---
 
@@ -32,28 +51,15 @@ WP2B was inserted by product-owner decision on 2026-08-11 after visual review of
 
 Status: COMPLETE / MERGED (#114)
 
-Objective: establish a clean presentation architecture and select the rendering approach before substantial visual content is built.
-
-WP1 established renderer-neutral presentation state, camera/LOD/assets/performance boundaries and initially selected evolved SVG/DOM over a wholesale WebGL rewrite based on the then-required map. WP1 explicitly evaluated the **existing SVG/DOM map** against a **WebGL/Three.js**-class alternative using measured evidence, selecting evolved SVG/DOM as the primary renderer with a **clear fallback** and escalation path if later browser paint/effect pressure justified WebGL. That historical decision remains valid for the stable fallback renderer. The later WP2B art-direction decision is a separately approved specialised geospatial-terrain requirement and does not move game authority into the renderer.
+WP1 established renderer-neutral presentation state, camera/LOD/assets/performance boundaries and retained SVG/DOM as the stable fallback. It explicitly preserved the simulation/presentation boundary.
 
 ---
 
 ## R3-WP2 - 2.5D Strategic Map
 
-Status: COMPLETE / MERGED (#115), VISUAL APPROACH PARTLY SUPERSEDED BY WP2B
+Status: COMPLETE / MERGED (#115), VISUAL APPROACH PARTLY SUPERSEDED BY REAL TERRAIN
 
-Objective: prove political/control hierarchy, front rendering, hit-testing preservation, crowded-region readability and a more physical campaign presentation while preserving the existing territory model.
-
-WP2 successfully established:
-
-- non-interactive derived terrain/front/depth layers;
-- clearer political control and operational states;
-- deterministic opposing-control front derivation;
-- zoom hierarchy for crowded Benelux/Rhine/Alpine regions;
-- mobile/reduced-motion simplification;
-- geometry/hit-testing/accessibility regressions and balance parity.
-
-Human visual review then identified a flaw: making political territory polygons appear physically raised can read as disconnected/floating slabs. The useful WP2 overlay/state work should be retained where compatible, but **territory extrusion is not the final terrain model**.
+WP2 proved political/control hierarchy, front rendering, crowded-region readability and a more physical campaign presentation. Product-owner review rejected raised political-territory slabs as the final terrain direction, leading to WP2B.
 
 ---
 
@@ -61,22 +67,16 @@ Human visual review then identified a flaw: making political territory polygons 
 
 Status: COMPLETE / MERGED (#117 plus runtime hotfixes #118-#120)
 
-Authoritative package detail: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`.
+Authoritative detail: `docs/roadmap/R3-WP2B-REAL-TERRAIN.md`.
 
-Objective: replace political-slab depth with a continuous real-elevation campaign landscape while retaining the proven simulation/presentation boundary and strategic overlays.
+Key architecture established:
 
-Selected direction:
-
-- **MapLibre GL JS** owns the geospatial camera, continuous terrain, tile/LOD and terrain picking surface;
-- **Copernicus DEM** is the elevation source direction, preferring GLO-30 source material where practical/permitted with GLO-90/downsampled assets as an acceptable production fallback;
-- authenticated Copernicus access belongs in controlled asset-generation tooling, not browser secrets;
-- surface appearance is stylised real-earth terrain rather than raw Google imagery;
-- territory ownership, borders, fronts, routes and warnings are strategic overlays on the landscape;
-- terrain begins with an approximately 2× vertical-exaggeration prototype and is tuned by visual evidence;
-- **Three.js** is reserved for 3D game pieces/effects through a MapLibre custom 3D layer when WP3 resumes;
-- the existing SVG/DOM map remains the fallback.
-
-WP2B proved the self-hosted Copernicus Terrain-RGB pipeline, MapLibre/Vite worker integration, real browser rendering, compact/mobile fallback policy, terrain performance budgets, camera/navigation, production GitHub Pages deployment and deterministic balance parity. The representative footprint intentionally began as southern England -> Paris -> Belgium/Benelux -> Rhine -> Switzerland/Alps rather than the whole intended theatre.
+- MapLibre GL JS owns geospatial camera, continuous terrain, terrain tiles/LOD and picking surface;
+- Copernicus DEM supplies elevation through self-hosted terrain assets;
+- surface appearance is stylised real-earth terrain rather than raw imagery;
+- territory ownership, borders, fronts, routes and warnings are strategic overlays;
+- Three.js is reserved for physical game pieces/effects through a MapLibre custom 3D layer;
+- SVG/DOM remains fallback.
 
 ---
 
@@ -84,20 +84,7 @@ WP2B proved the self-hosted Copernicus Terrain-RGB pipeline, MapLibre/Vite worke
 
 Status: COMPLETE / MERGED (#121)
 
-Objective: restore the mature command-map information hierarchy over the accepted real-terrain renderer after live review showed that the first terrain build had removed too much operational information.
-
-WP2C restored:
-
-- friendly formation counters and selection parity;
-- territory/location labels;
-- strategic city/node cues;
-- player-visible recon contacts and threat markers;
-- active-operation and portal cues;
-- screen-space marker LOD over pitched terrain;
-- hidden-information safeguards using existing intelligence adapters;
-- Chromium runtime coverage proving overlays are visible in the actual campaign map and that formation-counter selection works.
-
-WP2C established that the combination of **real terrain + operational command information** is the accepted broad visual direction. It did not attempt the final terrain/overlay refinement pass.
+Restored formation selection, labels, strategic nodes, recon contacts/threats, operation/portal cues and screen-space LOD over the real-terrain map while preserving hidden-information boundaries.
 
 ---
 
@@ -105,31 +92,9 @@ WP2C established that the combination of **real terrain + operational command in
 
 Status: COMPLETE / MERGED (#122), VISUALLY ACCEPTED
 
-Authoritative package detail: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`.
+Authoritative detail: `docs/roadmap/R3-WP2D-TERRAIN-REFINEMENT.md`.
 
-Objective: intensively refine the accepted real-terrain command map until it is robust, Europe-scaled, safe around persistent HUD surfaces, decluttered and visually coherent enough to become the stable foundation for WP3.
-
-Product-owner review of the live WP2C build explicitly approved the broad direction and highlighted the next issues:
-
-- the current static terrain footprint does not yet cover the intended Europe theatre cleanly;
-- a deployed tile request can produce a terrain-source warning;
-- political/territory lines remain visually messy in some views;
-- dense map markers need stronger priority/collision behaviour;
-- operational markers can intrude beneath the terrain status/control box;
-- the strong top-down <-> pitched 2.5D camera capability should be retained and refined rather than simplified away.
-
-WP2D therefore owned:
-
-- terrain tile/source robustness;
-- expansion/regeneration of the terrain footprint for the intended Europe theatre;
-- formal Theatre/Campaign/Selected camera framing;
-- map safe-area insets and marker/HUD collision prevention;
-- political/front/route hierarchy cleanup;
-- marker declutter and priority rules;
-- intensive browser visual/runtime validation across top-down and pitched views;
-- performance/accessibility/fallback preservation and exact simulation parity.
-
-The product owner visually accepted WP2D on 2026-08-12. At that point WP3 remained paused while the focused WP2E terrain performance and streaming pass proceeded; WP2E through WP2I and the post-WP2I corrections have since completed.
+Owned Europe terrain coverage, camera framing, safe-area behaviour, hierarchy, declutter, browser validation, accessibility/fallback and performance work.
 
 ---
 
@@ -137,9 +102,14 @@ The product owner visually accepted WP2D on 2026-08-12. At that point WP3 remain
 
 Status: COMPLETE / MERGED
 
-The accepted terrain programme continued through WP2E performance/streaming (PR #123 and review fixes), WP2F readability/marker scaling (#128), WP2G geographic alignment (#129), WP2H projection/collision correction (#130), WP2I persistent labels/layer controls (#131), and post-WP2I camera/marker/layout fixes (#134-#135). These packages preserved the renderer/simulation boundary and SVG fallback.
+- WP2E performance/streaming: PR #123 plus review fixes.
+- WP2F readability/marker scaling: PR #128.
+- WP2G geographic alignment: PR #129.
+- WP2H projection/collision correction: PR #130.
+- WP2I persistent labels/layer controls: PR #131.
+- post-WP2I camera/marker/layout fixes: PRs #134-#135.
 
-Their green CI does **not** prove that the known low-zoom Theatre land-mask polygon artefact or ambiguous front/orange short-segment language is fixed. Both remain open until the stabilisation gate reproduces and verifies/remediates them.
+These packages established the stable MapLibre/Copernicus terrain and operational-overlay foundation later hardened by the stabilisation gate.
 
 ---
 
@@ -147,7 +117,9 @@ Their green CI does **not** prove that the known low-zoom Theatre land-mask poly
 
 Status: COMPLETE / MERGED (#136)
 
-WP3 delivered physical friendly formation pieces, status-specific material language, selected-piece emphasis, presentation-only route-aware movement interpolation and terrain route cues. It changes no authoritative location, order progress, gameplay timing or hidden enemy state. Its code merged at `63a1b3e967601ab762bdc9d4e30fad3674290fbe`, but remained hidden from the normal URL because terrain was still query-gated.
+WP3 delivered the first physical-friendly-formation presentation, status-specific visual states, selected-piece emphasis, route-aware presentation-only movement interpolation and terrain route cues.
+
+Important clarification: WP3 proved the **technical formation-piece and movement system**, but its current markers are not the final visual end-state. The product owner has now approved WP3.5 to replace that temporary representation with actual miniature army pieces and strategic world objects before battle feedback is added.
 
 ---
 
@@ -155,28 +127,146 @@ WP3 delivered physical friendly formation pieces, status-specific material langu
 
 Status: COMPLETE / MERGED (#138)
 
-The authoritative specification is `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`. Recovery made MapLibre/Copernicus terrain and WP3 the normal supported production path, retained automatic compact/WebGL fallback and explicit `?terrain=0` SVG selection, added no-query exact-browser proof, and reconciled programme governance. PR #138 merged as `5809d08b63a34df6c8aa111f6e300378a1eeb5b3` and was successfully deployed to GitHub Pages. PR #137 (WP4) remains paused and closed unmerged.
+Authoritative detail: `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`.
+
+Recovery made MapLibre/Copernicus terrain plus WP3 the normal production path, retained automatic fallback and explicit `?terrain=0`, added no-query browser proof and reconciled programme governance.
 
 ---
 
 ## R3 Stabilisation Gate - Map & WP3 Bug Remediation
 
-Status: ACTIVE / WP4 BLOCKING
+Status: COMPLETE / MERGED / DEPLOYED / PRODUCT-OWNER VISUALLY ACCEPTED (#139)
 
-Authoritative package detail: `docs/roadmap/R3-STABILISATION-MAP-WP3-BUGS.md`.
+Historical detail: `docs/roadmap/R3-STABILISATION-MAP-WP3-BUGS.md`.
 
-Before WP4, audit and repair the production-default map in Theatre, Campaign and Selected views. The gate must explicitly reproduce and fix/verify:
+Merge commit: `1e6560cd871fc918d9914eb9cbf6da27b5a4e1c3`.
 
-- **P1 territory-selection marker reprojection/layout drift:** selecting Düsseldorf / entering attack-target-selected state currently causes labels and TG formation pieces to move away from their correct geographic anchors; at wider zoom the displacement becomes extreme, with formations and labels translated far down the screen while the terrain remains correctly positioned. The fix must preserve authoritative lon/lat anchoring through selection, camera settlement, zoom/pitch and Theatre/Campaign/Selected transitions and must be protected by an exact-browser `map.project()` geographic-anchor regression;
-- the low-zoom land-mask polygon artefact;
-- ambiguous orange/front short-segment visual language;
-- any additional P0/P1/P2 map/WP3 defects found by the full production audit.
+Closed issues included:
 
-The gate must also inspect pieces, movement routes, labels, contacts, operations, collisions and camera stability; validate compact, reduced-motion and SVG fallback; run full regression, build, persistence, balance, performance and browser gates; and obtain human visual acceptance before WP4 resumes. CI alone cannot close visual defects.
+- P1 territory-selection marker reprojection/layout drift;
+- low-zoom Theatre land-mask polygon artefact;
+- ambiguous orange/front short-segment presentation;
+- camera/layout/performance regressions found during remediation.
+
+The deployed build was visually accepted by the product owner on 2026-08-14. Formations, labels and operational markers remain in the correct places through selection, zoom, pitch and view changes.
+
+Accepted P2 debt transferred to WP3.5: movement can feel somewhat sticky/stepped during camera/layout activity. Geographic correctness is stable; the final physical-piece architecture should solve presentation smoothness rather than polishing the temporary marker implementation twice.
+
+---
+
+# R3-WP3.5 - World Pieces & Strategic Miniatures
+
+Status: **APPROVED / ACTIVE / WP4 BLOCKING**
+
+Authoritative detail: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
+
+## Objective
+
+Turn the accepted real-terrain map into a physical strategic war-game table before battle/event effects are built.
+
+The package replaces current temporary formation markers with actual stylised miniature army pieces, introduces terrain-grounded miniature cities and key structures, improves movement smoothness as part of the new piece architecture, and establishes controlled LOD/performance behaviour across Local/Selected, Campaign and Theatre scales.
+
+## WP3.5A - Physical formation-piece system
+
+- actual 2.5D/3D miniature Task Group representation;
+- initial direction: small groups of stylised future infantry or equivalent readable miniature formation;
+- strong silhouettes and slightly exaggerated board-game proportions;
+- stable terrain contact/base treatment;
+- state language for ready/selected/moving/attacking/recovering/holding and other existing authoritative states;
+- co-located formation usability;
+- no hidden-information leakage for enemy contacts;
+- no gameplay authority changes.
+
+## WP3.5B - Smooth movement & terrain attachment
+
+- solve the accepted sticky/stepped movement debt here;
+- smooth interpolation between authoritative positions without changing simulation timing;
+- route-following where existing route information permits;
+- optional movement-facing/orientation;
+- stable terrain-height placement so pieces neither float nor bury into slopes;
+- no geographic drift through selection, zoom, pitch, resize or view changes;
+- natural settlement at authoritative destinations;
+- reduced-motion equivalent;
+- extend existing geographic-anchor regressions to the physical-piece layer where practical.
+
+## WP3.5C - City miniatures
+
+- major/capital city clusters;
+- important/standard city clusters;
+- symbolic scale rather than literal real-world scale;
+- terrain-grounded placement;
+- persistent/collision-aware labels retained;
+- recognisable broad skyline language where useful without requiring bespoke landmark modelling.
+
+## WP3.5D - Strategic infrastructure miniatures
+
+Where existing authoritative data supports them, add recognisable strategic objects such as:
+
+- logistics/supply hubs;
+- ports;
+- airports/airfields;
+- rail/logistics nodes;
+- industrial centres;
+- command/administrative facilities already represented by game state;
+- portal/future-force strategic site presentation where appropriate.
+
+No new infrastructure mechanics are introduced by this package.
+
+## WP3.5E - LOD, scale & performance
+
+- Local/Selected: richest miniature detail and terrain contact;
+- Campaign: simplified geometry/materials while retaining strategic identity;
+- Theatre: strongly simplified/low-poly/silhouette/billboard/counter form where necessary;
+- use instancing/batching/shared materials where appropriate;
+- deterministic culling/LOD;
+- controlled model/texture budgets;
+- preserve established terrain performance budgets unless a measured, separately approved revision is justified.
+
+## WP3.5F - Integration, accessibility & fallback
+
+Validate:
+
+- Theatre/Campaign/Selected;
+- territory, formation and attack-target selection;
+- moving/stationary pieces;
+- crowded/co-located formations;
+- labels around miniature cities/structures;
+- layers;
+- resize/sidebar changes;
+- compact/touch;
+- reduced motion;
+- keyboard where applicable;
+- renderer failure;
+- `?terrain=0` SVG fallback;
+- save/load and deterministic balance parity.
+
+## Architecture direction
+
+Three.js through a MapLibre custom 3D layer is the preferred implementation direction for physical pieces/world objects unless measured browser evidence shows a better compatible solution.
+
+MapLibre remains camera/geospatial authority. Simulation state remains gameplay authority. 3D objects are derived presentation only.
+
+## Exit gate
+
+WP3.5 does not complete until:
+
+- miniature formations are visibly preferable to the temporary markers;
+- movement is geographically correct and materially smoother;
+- cities/key structures read as physical map objects without overwhelming labels/fronts;
+- LOD is coherent across all three map scales;
+- performance/accessibility/fallback remain acceptable;
+- relevant browser/runtime/performance tests and full build/test/balance gates pass;
+- deployed `main` receives product-owner visual acceptance.
+
+**Only then may WP4 resume.**
 
 ---
 
 ## R3-WP4 - Battle, Front & Strategic Event Feedback
+
+Status: BLOCKED BY WP3.5
+
+Old PR #137 is CLOSED/UNMERGED reference material only. A fresh WP4 implementation should start from the accepted WP3.5 `main`, not from the obsolete pre-stabilisation branch.
 
 Objective: make attacks, counterattacks, captures, retreats and major campaign changes visible on the map without turning the game into tactical spectacle.
 
@@ -186,6 +276,7 @@ Key requirements:
 - attacks/counterattacks have clear direction;
 - front-line changes, capture, retreat, reinforcement, isolation and critical supply disruption receive concise cues;
 - restrained impacts/smoke/fire may be used where readable at campaign scale;
+- effects interact with the final WP3.5 physical-piece architecture;
 - after-action reports remain the authoritative detailed explanation;
 - effects never expose hidden information or block simulation timing;
 - reduced-motion behaviour is supported.
@@ -194,67 +285,58 @@ Key requirements:
 
 ## R3-WP5 - Strategic Information Layers
 
+Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+
 Objective: make the map the primary strategic information surface through coherent overlays tied to authoritative simulation state.
 
 Target layers include political control, friendly strength/readiness, assessed enemy threat, supply/network flow, route condition, Food/Industry/Energy/Transport/Medical/Military Stores, local stockpiles, logistics hubs, occupation/garrison pressure and force-quality information where useful.
-
-Each layer must answer a clear player question, remain understandable through legends, combine without excessive noise, preserve critical exceptions, update without mutating gameplay and retain contextual navigation into exact actionable objects.
 
 ---
 
 ## R3-WP6 - Command UI/UX Overhaul
 
+Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+
 Objective: make the surrounding command interface visually coherent with the new map and reduce effort required to understand and act.
 
-Key requirements:
-
-- one visual system for panels, typography, icons, buttons, alerts and selections;
-- territory and formation inspection present situation, resources, defence, infrastructure and actions clearly;
-- alerts prioritise what needs attention now;
-- exact contextual deep links remain intact;
-- confirmation behaviour is proportional to consequence;
-- compact desktop avoids horizontal scrolling;
-- responsive/mobile, keyboard, contrast and reduced-motion support remain functional.
+Requirements include a unified panel/typography/icon/button/alert system, clearer territory/formation inspection, better alert priority, preserved deep links, consequence-proportionate confirmation, compact desktop usability, responsive/mobile behaviour, keyboard access, contrast and reduced motion.
 
 ---
 
 ## R3-WP7 - Audio, Music & Atmosphere
 
+Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+
 Objective: add music, UI/order/movement/battle cues and restrained atmosphere without making gameplay dependent on audio.
 
-Requirements include versioned assets, master/music/effects controls, persistent settings, smooth state transitions, browser autoplay-safe behaviour and graceful missing-asset fallback.
+Requirements include versioned assets, master/music/effects controls, persistent settings, smooth state transitions, browser-autoplay-safe behaviour and graceful missing-asset fallback.
 
 ---
 
 ## R3-WP8 - Performance, Scalability, Accessibility & Resilience
 
+Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+
 Objective: ensure the richer presentation remains reliable on realistic hardware.
 
-Requirements include performance budgets for theatre/local/heavy-front states, LOD/culling/batching where needed, stable large-piece/effect counts, controlled asset memory/load time, keyboard/focus/contrast/reduced-motion support, graceful low-performance degradation, recoverable renderer failure and transient rendering state kept out of campaign saves.
+Requirements include performance budgets for theatre/local/heavy-front states, LOD/culling/batching, stable large-piece/effect counts, controlled asset memory/load time, keyboard/focus/contrast/reduced-motion support, graceful low-performance degradation, recoverable renderer failure and transient rendering state kept out of campaign saves.
 
-WP8 must validate both the primary MapLibre terrain path and the retained SVG fallback.
+WP8 validates both primary MapLibre terrain and retained SVG fallback.
 
 ---
 
 ## R3-WP9 - Visual Polish & Integrated Validation
 
+Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+
 Objective: audit the finished R3 presentation as one product and establish a stable deployed build for human review.
 
-Final validation gate:
+Final validation includes presentation regressions, full repository tests, production build, save/load, deterministic balance parity, representative campaign traces, performance benchmarks, GitHub CI, deployed-main verification and whole-game visual/UX audit.
 
-- focused presentation regressions;
-- complete repository tests;
-- reproducible production build;
-- supported save/load validation;
-- deterministic campaign/balance parity;
-- representative campaign traces;
-- performance benchmarks;
-- GitHub CI;
-- deployed-main verification;
-- whole-game visual/UX audit covering title/prologue, campaign, save/load, victory and defeat.
+---
 
 ## R3 product-owner handoff
 
-Human review should focus on whether the real-terrain direction feels like a coherent grand-strategy campaign landscape/physical relief command table, whether ownership/fronts/forces remain immediately understandable above geography, whether pieces and battle feedback feel satisfying without becoming busy, whether the strategic situation surface prioritises the right problems and whether the whole game feels cohesive.
+Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether miniature armies and world structures feel satisfying without becoming busy, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
 
-R4 is intentionally not frozen. Small findings from R3 human review should become an R3.5 remediation pass before selecting the next major simulation/content direction.
+Small findings from final R3 review should become an R3.5 remediation pass before selecting the next major simulation/content direction.

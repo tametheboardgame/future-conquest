@@ -1,211 +1,109 @@
 # R3 Stabilisation Gate - Map & WP3 Bug Remediation
 
-Status: AUTHORITATIVE / ACTIVE
+Status: COMPLETE / MERGED / DEPLOYED / PRODUCT-OWNER VISUALLY ACCEPTED
 
 Opened: 2026-08-14
+Completed: 2026-08-14
 
-Entry baseline: `main` at `5809d08b63a34df6c8aa111f6e300378a1eeb5b3`, the merged and successfully deployed R3 Production Coherence Recovery.
+Entry baseline: `main` at `5809d08b63a34df6c8aa111f6e300378a1eeb5b3`.
+Final merge: PR #139 -> `main` at `1e6560cd871fc918d9914eb9cbf6da27b5a4e1c3`.
 
-## Purpose
+## Closure
 
-Freeze forward feature development and make the production-default MapLibre/Copernicus campaign map plus merged WP3 formation-piece/movement presentation stable, coherent and visually acceptable before R3-WP4 resumes.
+This gate is historical. It no longer authorises active work and must not be treated as the current programme package.
 
-The normal GitHub Pages URL is now the only primary production reference. `?terrain=0` remains the deliberate stable SVG accessibility/diagnostic fallback. `?terrain=1` is no longer required to see the production terrain renderer.
+The current active programme package is **R3-WP3.5 - World Pieces & Strategic Miniatures**, defined in `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
 
-This gate is explicitly BUG FIXES FIRST. It is not permission to add new mechanics, redesign combat, add WP4 effects, or broaden R3 scope.
+WP4 remains blocked until WP3.5 completes.
 
-## Authoritative known defects at entry
+## Purpose of the completed gate
 
-The following were explicitly deferred or reproduced during production review and must not be silently treated as solved:
+The stabilisation gate froze forward feature development long enough to make the production-default MapLibre/Copernicus campaign map and the merged WP3 formation/movement presentation geographically stable and visually reviewable.
 
-1. **Low-zoom Theatre land-mask polygon artefact**
-   - Reproduce on the deployed production-default terrain path.
-   - Determine whether the artefact still exists after all WP2D-I changes.
-   - If present, fix the land-mask/terrain presentation without changing geography or territory authority.
-   - If no longer reproducible, retain machine/browser evidence explaining why it is considered closed.
-   - **Fixed on the stabilisation branch:** the clipped World Atlas
-     `MultiPolygon` was being submitted as one continent-spanning render
-     geometry. The generated v2 mask emits independently wound `Polygon`
-     features, preventing low-zoom triangulation from joining distant parts
-     while preserving the same land union and coastline. The WP2D Theatre
-     browser evidence and permanent geometry/winding regression cover closure.
+The normal GitHub Pages URL remained the primary production reference. `?terrain=0` remained the deliberate SVG accessibility/diagnostic fallback.
 
-2. **Ambiguous orange/front short-segment language**
-   - Existing player/enemy front indicators can read as unexplained short orange segments.
-   - Audit their meaning, colour, geometry, layering and legend/context.
-   - Make fronts immediately understandable without introducing WP4 battle/event effects early.
-   - **Fixed on the stabilisation branch:** MapLibre fronts now use the same
-     warm segmented core and dark casing as the SVG fallback, and an on-map key
-     explicitly contrasts `Opposing-control front` with `Movement / supply
-     route`. This is presentation-only and introduces no battle/event effects.
+## Defects closed
 
-3. **P1 territory-selection marker reprojection/layout drift**
-   - Reproduced by the product owner on the normal production terrain map on 2026-08-14.
-   - The initial Campaign view is geographically coherent. Immediately after selecting Düsseldorf / entering attack-target-selected state, place labels and operational markers visibly move away from their correct geographic locations. At wider zoom the error becomes extreme: formation pieces and multiple labels are displaced far down the screen while the underlying terrain remains correctly positioned.
-   - Treat this as an operational-overlay anchoring defect, not a cosmetic spacing issue. Selecting a territory may legitimately reframe the camera, but it must never change the authoritative geographic anchor of a formation, place label, contact, node or operation marker.
-   - Investigate the complete camera/selection/layout transaction, including MapLibre `project()` timing, move/zoom/pitch completion, marker layout scheduling, retained presentation offsets, collision/declutter passes and any CSS/DOM transforms. Do not assume the cause before reproducing it.
-   - Ensure screen-space layout is recomputed from authoritative geographic coordinates after the camera settles, without stale projection state, double-applied offsets, accumulated transforms or layout work based on a previous camera transform.
-   - The fix must cover ordinary territory selection, attack-target selection, formation selection, Theatre/Campaign/Selected preset changes, manual zoom/pitch and returning from another command view.
-   - Add a deterministic exact-browser regression which records one or more known marker geographic anchors, changes selection/camera state, then verifies each visible marker remains within a small pixel tolerance of the current MapLibre projection of its authoritative longitude/latitude after the camera settles. Include at least Düsseldorf/Frankfurt-area selection plus Theatre -> Campaign -> Selected transitions and a zoomed-out check.
-   - The browser gate must also verify that labels/formations do not undergo a common large vertical translation or leave the usable map canvas after selection.
-   - Do not solve the regression merely by disabling legitimate camera transitions or hiding affected markers.
+### P1 territory-selection marker reprojection/layout drift
 
-## Full production audit
+Product-owner reproduction showed that selecting Düsseldorf / entering attack-target-selected state could make place labels and TG formation pieces fall progressively down the screen while the terrain itself remained correct.
 
-The stabilisation audit must cover the deployed/default MapLibre path, not only isolated component tests.
+Root cause: marker reconciliation replaced the complete DOM class list, deleting MapLibre structural marker/anchor classes. Reconciled markers could then enter normal document flow and acquire marker-order-dependent vertical displacement.
 
-### A. Theatre, Campaign and Selected views
+Resolution:
 
-For all three camera profiles verify:
+- preserve MapLibre-owned structural classes during product styling reconciliation;
+- prevent collision/layout measurement from queueing redundant geographic reprojections;
+- derive layout from settled authoritative projection plus one fresh bounded presentation offset;
+- preserve moving-formation interpolation;
+- add an exact-browser geographic-anchor regression comparing visible stationary markers with current `map.project()` output using a small pixel tolerance;
+- retain guards against a common large vertical translation of the overlay layer.
 
-- terrain coverage and continuity;
-- land/sea/coast presentation;
-- territory borders and control hierarchy;
-- front indicators;
-- territory labels;
-- cities, hubs, ports and enabled strategic nodes;
-- friendly formation pieces;
-- enemy contacts and uncertainty language;
-- operations/threat markers;
-- Layers control;
-- persistent HUD safe areas;
-- marker visibility and collisions;
-- camera framing and transitions;
-- no unexpected geographic drift or duplicated markers.
+The exact-head selection/geographic-anchor gate passed before merge and product-owner live review confirmed that formations, labels and operational markers remained correctly positioned through selection, zoom, pitch and map-view changes.
 
-### B. WP3 physical pieces and movement
+### Low-zoom Theatre land-mask polygon artefact
 
-Verify in live gameplay, not only static classes:
+Root cause: the clipped World Atlas land mask was rendered as one continent-spanning `MultiPolygon`, allowing low-zoom triangulation to create large visual wedges between distant polygon parts.
 
-- ready, garrison, moving, attacking, recovering, engineering and interdicting piece states are distinguishable where those states exist;
-- selected formations are visually dominant;
-- pieces remain geographically anchored;
-- co-located formations remain usable;
-- movement interpolation is visible for ordinary movement orders where authoritative state permits it;
-- route/path cues are readable and distinct from front indicators;
-- movement completion does not visually teleport in common cases;
-- split, merge, retreat/regroup/recovery presentation does not introduce stale markers or impossible intermediate state;
-- reduced-motion produces a clear non-animated equivalent;
-- presentation never changes authoritative order progress or simulation timing.
+Resolution:
 
-### C. Interaction regression audit
+- normalise polygon winding;
+- emit independent bounded polygon features rather than one continent-spanning render geometry;
+- version the generated presentation-only land mask;
+- add geometry/winding/bounds regression coverage.
 
-Exercise at minimum:
+### Ambiguous orange/front short-segment language
 
-- territory selection;
-- formation selection;
-- attack-target selection;
-- opening/closing attack-ready state;
-- Theatre -> Campaign -> Selected transitions;
-- zoom and pitch changes;
-- layer toggles across camera changes;
-- crowded formation/label/contact scenarios;
-- map resize/sidebar changes;
-- return to map after other command views.
+Resolution:
 
-Verify:
+- fronts use a restrained segmented warm core over dark casing;
+- movement/supply routes remain visually distinct;
+- a persistent on-map key explicitly distinguishes `Opposing-control front` from `Movement / supply route`;
+- no WP4 battle/event effects were introduced early.
 
-- no camera jumps unless the player explicitly invokes a camera preset/action or the documented selection behaviour intentionally reframes the view;
-- any intentional camera reframe preserves every marker's geographic anchor;
-- no stale camera projection is used for marker placement after selection, zoom, pitch or preset changes;
-- no labels disappear unexpectedly;
-- no contacts/formation cards cover protected labels;
-- no markers leave the usable canvas or hide beneath persistent HUD controls;
-- no duplicate Dover/Calais or equivalent node representation reappears;
-- marker identity remains stable where required.
+### Performance/camera regressions exposed during repair
 
-### D. Compatibility, accessibility and resilience
+The first P1 repair attempt caused camera-settlement and terrain-request regressions. Those changes were rejected. The accepted implementation restored established transition/performance behaviour while retaining the stronger geographic-anchor checks.
 
-Verify:
+## Technical acceptance evidence
 
-- normal production URL defaults to terrain on supported desktop hardware;
-- `?terrain=0` reliably forces SVG;
-- unsupported WebGL/renderer failure falls back safely;
-- compact/touch behaviour remains usable;
-- keyboard navigation remains usable;
-- contrast and focus behaviour remain acceptable;
-- reduced-motion avoids unnecessary animation;
-- no private terrain credentials exist in browser runtime.
+Before merge, the final PR #139 head passed the relevant production gates, including:
 
-## Audit method
+- full repository tests;
+- TypeScript/Vite production build;
+- WP2B terrain smoke/runtime;
+- WP2C overlay runtime;
+- WP2D Theatre/Campaign/Selected visual runtime;
+- WP2E exact-head terrain performance;
+- WP2F visual/readability/collision runtime;
+- WP2I selection/camera/geographic-anchor regression;
+- WP3 formation movement;
+- persistence/save compatibility coverage;
+- deterministic 720-campaign balance simulation;
+- SVG fallback, compact and reduced-motion coverage represented by the repository test/runtime suite.
 
-Use both automation and visual evidence.
+GitHub Pages then deployed and verified merge commit `1e6560cd871fc918d9914eb9cbf6da27b5a4e1c3`.
 
-Automation alone is insufficient for subjective visual defects. The branch must maintain or add deterministic browser probes/screenshots for representative Theatre, Campaign, Selected, selection-transition and moving/crowded states, but final closure requires product-owner live visual acceptance of deployed `main`.
+## Product-owner visual acceptance
 
-For every discovered issue classify it:
+The deployed build was visually accepted on 2026-08-14.
 
-- P0: blocks normal play or production renderer availability;
-- P1: materially damages map readability, interaction or strategic interpretation;
-- P2: visible polish/readability defect suitable for this stabilisation gate;
-- Deferred: genuinely belongs to WP4+ and is explicitly documented rather than silently ignored.
+Acceptance specifically confirmed that things now stay in the correct place in all views regardless of selection/camera movement.
 
-## Scope boundary
+One non-blocking P2 visual observation was accepted: current formation-marker movement can feel slightly sticky/stepped/guttery during map/camera movement. Geographic correctness is not affected.
 
-Allowed:
+This debt is deliberately transferred to **R3-WP3.5**, where the temporary marker presentation is replaced by the intended physical miniature army/world-object architecture. Do not reopen this completed gate merely to polish temporary marker motion.
 
-- renderer/presentation bug fixes;
-- terrain/map-source presentation fixes;
-- marker/layout/collision/camera corrections;
-- WP3 presentation corrections;
-- accessibility/fallback fixes;
-- targeted performance fixes required by a reproduced regression;
-- tests, browser probes and visual evidence;
-- documentation/status corrections.
+## Programme handoff
 
-Not allowed without separate product-owner approval:
+The next package is:
 
-- gameplay or balance changes;
-- save-schema changes;
-- territory IDs/geometry semantics or route topology changes;
-- hidden-information/intelligence-authority changes;
-- new combat mechanics;
-- WP4 battle/event feedback implementation;
-- WP5 strategic layer expansion;
-- WP6 command-interface redesign;
-- new audio/music work.
+1. **R3-WP3.5 - World Pieces & Strategic Miniatures** (ACTIVE / WP4 BLOCKING)
+2. R3-WP4 - Battle, Front & Strategic Event Feedback
+3. R3-WP5 - Strategic Information Layers
+4. R3-WP6 - Command UI/UX Overhaul
+5. R3-WP7 - Audio, Music & Atmosphere
+6. R3-WP8 - Performance, Scalability, Accessibility & Resilience
+7. R3-WP9 - Visual Polish & Integrated Validation
 
-## Pre-merge technical acceptance
-
-Before this package can merge/close:
-
-- all reproduced P0/P1 defects in scope are fixed;
-- the P1 selection/camera marker-drift regression is fixed and covered by an exact-browser geographic-anchor assertion;
-- known land-mask and front-segment issues are explicitly closed with evidence or fixed;
-- exact-browser production-default terrain test passes;
-- WP2B terrain smoke/runtime passes;
-- WP2C overlay runtime passes;
-- WP2D three-view visual runtime passes;
-- WP2E performance budgets pass;
-- WP2F readability/collision runtime passes;
-- WP2I camera/selection regression passes;
-- WP3 formation/movement tests pass;
-- complete repository tests pass;
-- TypeScript/Vite production build passes;
-- supported save/load/persistence regressions pass;
-- deterministic 720-campaign balance parity remains unchanged;
-- `?terrain=0` SVG fallback passes;
-- no gameplay-authority files change unless a separately approved genuine integration defect requires it;
-
-## Post-merge deployment and visual acceptance
-
-After the technically accepted package merges, but before this gate closes or
-WP4 resumes:
-
-- GitHub Pages must deploy the resulting merge commit successfully;
-- **human visual acceptance of the normal production URL must be obtained.**
-
-## Roadmap after this gate
-
-Only after this stabilisation gate is complete and visually accepted:
-
-1. R3-WP4 - Battle, Front & Strategic Event Feedback
-2. R3-WP5 - Strategic Information Layers
-3. R3-WP6 - Command UI/UX Overhaul
-4. R3-WP7 - Audio, Music & Atmosphere
-5. R3-WP8 - Performance, Scalability, Accessibility & Resilience
-6. R3-WP9 - Visual Polish & Integrated Validation
-7. Integrated R3 review and human playtest
-8. R3.5 remediation if required
-
-WP4 PR #137 remains closed/unmerged reference material only until this gate passes.
+PR #137 remains closed/unmerged historical WP4 reference material only.
