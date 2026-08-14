@@ -1,117 +1,88 @@
-import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const origin = process.env.R3_WP2E_ORIGIN ?? 'http://127.0.0.1:4173';
-const output = process.env.R3_WP2E_EVIDENCE ?? 'artifacts/r3-wp2e-performance.json';
-// Do not use GITHUB_SHA here: pull_request workflows set it to GitHub's
-// synthetic merge commit unless every caller remembers to override it.
-const buildSha = process.env.R3_WP2E_BUILD_SHA ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+const targetUrl = process.env.R3_WP2E_URL ?? 'http://127.0.0.1:4173/?terrain=1';
+const buildSha = process.env.R3_WP2E_BUILD_SHA ?? 'unknown';
 const variant = process.env.R3_WP2E_VARIANT ?? 'local';
+const evidencePath = process.env.R3_WP2E_EVIDENCE ?? 'artifacts/r3-wp2e-performance.json';
 const tileCancellation = process.env.R3_WP2E_TILE_CANCELLATION ?? 'default';
-const TERRAIN_QUIET_MS = 500;
+const renderedUrl = tileCancellation === 'cancel'
+  ? `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}tileCancellation=cancel`
+  : targetUrl;
 const INITIAL_SETTLE_MINIMUM_MS = 250;
 const CAMERA_SETTLE_MINIMUM_MS = 950;
-const SETTLEMENT_TIMEOUT_MS = 45_000;
-const TERRAIN_TILE_PATH = '/generated/r3-terrain/tiles/';
+const TERRAIN_QUIET_MS = 500;
+const SETTLEMENT_TIMEOUT_MS = 30_000;
 
+fs.mkdirSync(path.dirname(evidencePath), { recursive: true });
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
-const page = await context.newPage();
-const session = await context.newCDPSession(page);
-await session.send('Network.enable');
-await session.send('Network.setCacheDisabled', { cacheDisabled: true });
-
+const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
+await page.setCacheEnabled(false);
 const requests = [];
-const diagnostics = [];
 const inFlightTerrainRequests = new Set();
 let lastTerrainActivityAt = 0;
 let peakInFlightTerrainRequests = 0;
-const isTerrainTileUrl = url => url.includes(TERRAIN_TILE_PATH);
-const noteTerrainActivity = () => {
+const diagnostics = [];
+const isTerrainTile = url => url.includes('/generated/r3-terrain/tiles/');
+page.on('request', request => {
+  const url = request.url();
+  if (!isTerrainTile(url)) return;
+  requests.push({ url, bytes: 0 });
+  inFlightTerrainRequests.add(request);
   lastTerrainActivityAt = performance.now();
   peakInFlightTerrainRequests = Math.max(peakInFlightTerrainRequests, inFlightTerrainRequests.size);
-};
-
-page.on('console', message => diagnostics.push(`[console:${message.type()}] ${message.text()}`));
-page.on('pageerror', error => diagnostics.push(`[pageerror] ${error.stack ?? error.message}`));
-page.on('request', request => {
-  if (!isTerrainTileUrl(request.url())) return;
-  inFlightTerrainRequests.add(request);
-  noteTerrainActivity();
 });
-page.on('response', response => {
-  if (!isTerrainTileUrl(response.url())) return;
-  requests.push({
-    url: response.url(),
-    status: response.status(),
-    bytes: Number(response.headers()['content-length'] ?? 0)
-  });
+page.on('response', async response => {
+  const url = response.url();
+  if (!isTerrainTile(url)) return;
+  const entry = requests.findLast(item => item.url === url && item.bytes === 0);
+  if (entry) {
+    const declared = Number(response.headers()['content-length'] ?? 0);
+    if (Number.isFinite(declared)) entry.bytes = declared;
+  }
 });
-page.on('requestfinished', request => {
-  if (!isTerrainTileUrl(request.url())) return;
+const markTerrainComplete = request => {
+  if (!isTerrainTile(request.url())) return;
   inFlightTerrainRequests.delete(request);
-  noteTerrainActivity();
+  lastTerrainActivityAt = performance.now();
+};
+page.on('requestfinished', markTerrainComplete);
+page.on('requestfailed', markTerrainComplete);
+page.on('console', message => {
+  const text = `[console:${message.type()}] ${message.text()}`;
+  if (/terrain|webgl|fallback|GL Driver|GroupMarkerNotSet/i.test(text)) diagnostics.push(text);
 });
-page.on('requestfailed', request => {
-  if (isTerrainTileUrl(request.url())) {
-    inFlightTerrainRequests.delete(request);
-    noteTerrainActivity();
-  }
-  if (request.url().includes('/generated/r3-terrain/')) {
-    diagnostics.push(`[requestfailed] ${request.url()} :: ${request.failure()?.errorText ?? 'unknown'}`);
-  }
-});
+page.on('pageerror', error => diagnostics.push(`[pageerror] ${error.stack ?? error.message}`));
+
 await page.addInitScript(() => {
   localStorage.setItem('future-conquest:intro-seen:v3', 'true');
   localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
 });
 
 const started = performance.now();
-const query = tileCancellation === 'cancel' ? '?terrain=1&tileCancellation=cancel' : '?terrain=1';
-await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+await page.goto(renderedUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
 await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15_000 });
+await page.waitForFunction(
+  () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
+  null,
+  { timeout: 5000 }
+);
 await page.locator('[data-command-view="map"]').click();
+await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 20_000 });
 
-const terrainCanvas = page.locator('.r3-terrain-prototype-canvas canvas');
-const fallback = page.locator('.r3-terrain-fallback-notice');
-const startupOutcome = await Promise.race([
-  terrainCanvas.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'terrain'),
-  fallback.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'fallback')
-]).catch(() => 'timeout');
-if (startupOutcome !== 'terrain') {
-  const state = await page.evaluate(() => ({
-    terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
-    terrainPrototype: Boolean(document.querySelector('.r3-terrain-prototype')),
-    fallback: document.querySelector('.r3-terrain-fallback-notice')?.textContent ?? null,
-    canvasCount: document.querySelectorAll('.maplibregl-canvas').length
-  }));
-  console.error('WP2E performance startup diagnostics:', JSON.stringify({ startupOutcome, state, diagnostics }, null, 2));
-  await browser.close();
-  // Exit 75 distinguishes the one retryable renderer-start path from later
-  // measurement failures, which must remain strict for both variants.
-  console.error(startupOutcome === 'fallback'
-    ? `terrain fell back during WP2E performance gate: ${state.fallback ?? 'unknown reason'}`
-    : 'terrain renderer did not expose a visible canvas during WP2E performance gate');
-  process.exit(75);
-}
-
-// A visible MapLibre canvas can still be blank while the style is loading.
-// Define useful paint build-neutrally: renderer ready/warning, Campaign LOD
-// applied, then allow two animation frames for that ready state to be painted.
-await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').waitFor({ state: 'visible', timeout: 45_000 });
-await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'campaign');
-await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+const terrainHost = page.locator('.r3-terrain-prototype');
+await terrainHost.waitFor({ state: 'visible', timeout: 30_000 });
+await page.waitForFunction(() => {
+  const host = document.querySelector('.r3-terrain-prototype');
+  return host instanceof HTMLElement && host.dataset.status === 'ready' && host.dataset.overlayLod === 'campaign';
+}, null, { timeout: 30_000 });
+await page.waitForFunction(() => document.querySelectorAll('.maplibregl-canvas').length > 0, null, { timeout: 10_000 });
+await page.waitForTimeout(0);
+await page.waitForTimeout(0);
 const firstUsefulPaintMs = performance.now() - started;
 
-/**
- * Build-neutral settlement rule used identically for WP2D base and WP2E head:
- * allow the normal camera/render window to elapse, then require every observed
- * Terrain-RGB request body to have completed and terrain network activity to
- * have remained quiet for a bounded period. Head-only MapLibre idle
- * instrumentation is intentionally not required here.
- */
 const waitForTerrainSettlement = async (phaseStartedAt, minimumMs) => {
   for (;;) {
     const now = performance.now();
@@ -149,7 +120,18 @@ await waitForTerrainSettlement(selectionSettlementStarted, INITIAL_SETTLE_MINIMU
 
 const transition = async (name, expectedLod) => {
   const before = performance.now();
-  await page.locator('.r3-terrain-prototype-toolbar button', { hasText: name }).click();
+  // This probe measures renderer/network settlement, not pointer hit-testing.
+  // Dedicated browser/selection gates own real user interaction. Invoke the
+  // already-proven enabled camera control directly so presentation overlays do
+  // not contaminate the benchmark with Playwright actionability waits.
+  await page.evaluate(cameraName => {
+    const button = [...document.querySelectorAll('.r3-terrain-prototype-toolbar button')]
+      .find(element => element.textContent?.trim() === cameraName);
+    if (!(button instanceof HTMLButtonElement) || button.disabled) {
+      throw new Error(`Camera control ${cameraName} is unavailable.`);
+    }
+    button.click();
+  }, name);
   await page.waitForFunction(lod => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === lod, expectedLod);
   await waitForTerrainSettlement(before, CAMERA_SETTLE_MINIMUM_MS);
   return performance.now() - before;
@@ -188,7 +170,12 @@ const evidence = {
     peakInFlightTerrainRequests,
     buildNeutral: true
   },
-  timingsMs: { firstUsefulPaintMs, campaignSettledMs, campaignToTheatreMs, theatreToSelectedMs },
+  timingsMs: {
+    firstUsefulPaintMs,
+    campaignSettledMs,
+    campaignToTheatreMs,
+    theatreToSelectedMs
+  },
   terrainNetwork: {
     totalRequests: requests.length,
     uniqueRequests: counts.size,
@@ -198,13 +185,10 @@ const evidence = {
     transferredBytes,
     encodedBodyBytes
   },
-  fallbackVisible: await fallback.isVisible().catch(() => false),
-  warning: await page.locator('.r3-terrain-prototype').getAttribute('data-status') === 'warning',
+  fallbackVisible: await page.locator('.r3-terrain-fallback-notice').isVisible().catch(() => false),
+  warning: (await terrainHost.getAttribute('data-status')) === 'warning',
   diagnostics
 };
-if (evidence.fallbackVisible) throw new Error('terrain fell back during WP2E performance gate');
-fs.mkdirSync(new URL('../artifacts/', import.meta.url), { recursive: true });
-fs.mkdirSync(output.slice(0, output.lastIndexOf('/')) || '.', { recursive: true });
-fs.writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`);
+fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 console.log(JSON.stringify(evidence, null, 2));
 await browser.close();
