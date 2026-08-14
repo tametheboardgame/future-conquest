@@ -1,4 +1,4 @@
-import { MercatorCoordinate, type CustomLayerInterface, type Map } from 'maplibre-gl';
+import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map } from 'maplibre-gl';
 import {
   AmbientLight, BoxGeometry, Camera, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, Matrix4, Mesh, MeshStandardMaterial, Scene, WebGLRenderer
@@ -83,9 +83,6 @@ const kindFor = (node: StrategicNodeDefinition): WorldKind =>
   node.type === 'capital' || node.type === 'city' ? 'city' : node.type;
 
 function worldPresentationScale(lod: 'theatre' | 'campaign' | 'selected') {
-  // Strategic structures are symbolic board-game pieces, not true-scale
-  // buildings. Compensate for camera distance so their silhouette remains
-  // readable, then taper their world footprint as the camera closes in.
   if (lod === 'theatre') return 65_000;
   if (lod === 'campaign') return 42_000;
   return 19_000;
@@ -125,7 +122,7 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
 
   update(layers: TerrainOperationalLayers) { this.layers = layers; this.map?.triggerRepaint(); }
 
-  render(_gl: WebGL2RenderingContext, options: { modelViewProjectionMatrix: ArrayLike<number> }) {
+  render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput) {
     if (!this.map || !this.renderer) return;
     const zoom = this.map.getZoom();
     const lod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'selected';
@@ -133,12 +130,8 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
     for (const piece of this.pieces) {
       const enabled = piece.kind === 'port' ? this.layers.ports
         : piece.kind === 'airport' ? this.layers.airports : this.layers.citiesHubs;
-      // Theatre keeps only authoritative importance-3 silhouettes; Campaign
-      // bounds density by removing minor infrastructure while Selected is rich.
       const lodVisible = lod === 'selected' || (lod === 'campaign' ? piece.node.importance >= 2 : piece.node.importance >= 3);
       piece.root.visible = enabled && lodVisible;
-      // Strategic nodes never move. Keep the first available DEM sample rather
-      // than querying every object on every camera-animation frame.
       piece.elevation ??= this.map.queryTerrainElevation([piece.node.position[0], piece.node.position[1]]) ?? undefined;
       const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(piece.node.position, elevation + CLEARANCE_METRES);
@@ -156,7 +149,7 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
         displayScale
       });
     }
-    this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
+    this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
     this.renderer.resetState(); this.renderer.render(this.scene, this.camera); this.renderCount += 1;
     window.__r3WorldMiniatures = { layerId: this.id, renderCount: this.renderCount, lod, objects: evidence };
   }
