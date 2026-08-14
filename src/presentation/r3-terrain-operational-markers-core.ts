@@ -412,7 +412,11 @@ const overlaps = (a: Rect, b: Rect, gap = 4) => (
 
 const formationDeltas = (() => {
   const deltas: Array<readonly [number, number]> = [];
-  for (let dy = -96; dy <= 96; dy += 1) for (let dx = -96; dx <= 96; dx += 1) {
+  // Four-pixel presentation granularity is visually continuous at the marker
+  // scale while keeping the dense-cluster search bounded. A one-pixel lattice
+  // produced almost thirty thousand candidates and could monopolise the main
+  // thread during a camera/selection transaction.
+  for (let dy = -96; dy <= 96; dy += 4) for (let dx = -96; dx <= 96; dx += 4) {
     if (dx * dx + dy * dy <= 96 * 96) deltas.push([dx, dy]);
   }
   return deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
