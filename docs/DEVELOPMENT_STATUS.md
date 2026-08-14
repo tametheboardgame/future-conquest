@@ -8,6 +8,7 @@ R3 Visualisation & Command Experience is now in **R3-WP3.5 - World Pieces & Stra
 
 Authoritative active package: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
 Programme roadmap: `docs/roadmap/R3-ROADMAP.md`.
+Active implementation line: `agent/r3-wp3-5-implementation` (single WP3.5 implementation branch; all WP3.5 code, tests and review work belongs here until this package is complete).
 
 **R3-WP4 is blocked.** PR #137 remains closed/unmerged historical reference material only. No worker, scheduled task or future development thread should resume WP4 until WP3.5 has been implemented, deployed and visually accepted.
 
