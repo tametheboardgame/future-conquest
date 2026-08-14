@@ -83,6 +83,8 @@ export function applyMovingFormationMarkers(
       delete element.dataset.movementTarget;
       delete element.dataset.movementRouteId;
       delete element.dataset.movementPath;
+      delete element.dataset.r3PresentationOffsetX;
+      delete element.dataset.r3PresentationOffsetY;
       continue;
     }
 
@@ -97,6 +99,8 @@ export function applyMovingFormationMarkers(
     const originalY = Number(element.dataset.r3MarkerOffsetY ?? 0);
     const offsetX = originalX * scale;
     const offsetY = originalY * scale;
+    element.dataset.r3PresentationOffsetX = String(offsetX);
+    element.dataset.r3PresentationOffsetY = String(offsetY);
     marker.setOffset([offsetX, offsetY]);
 
     element.dataset.movementProgress = String(progress);

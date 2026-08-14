@@ -355,6 +355,16 @@ const markerEnabled = (element: HTMLElement, layers: TerrainOperationalLayers) =
 
 type Rect = { left: number; top: number; right: number; bottom: number };
 type MarkerBaseRects = ReadonlyMap<Marker, Rect>;
+const effectiveMarkerBaseOffset = (element: HTMLElement): [number, number] => {
+  const canonicalX = Number(element.dataset.r3MarkerOffsetX ?? 0);
+  const canonicalY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+  const presentationX = Number(element.dataset.r3PresentationOffsetX);
+  const presentationY = Number(element.dataset.r3PresentationOffsetY);
+  return [
+    Number.isFinite(presentationX) ? presentationX : canonicalX,
+    Number.isFinite(presentationY) ? presentationY : canonicalY
+  ];
+};
 const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
   left: rect.left + dx, right: rect.right + dx, top: rect.top + dy, bottom: rect.bottom + dy
 });
@@ -365,10 +375,7 @@ const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
 const resetAndCaptureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => {
   for (const marker of markers) {
     const element = marker.getElement();
-    marker.setOffset([
-      Number(element.dataset.r3MarkerOffsetX ?? 0),
-      Number(element.dataset.r3MarkerOffsetY ?? 0)
-    ]);
+    marker.setOffset(effectiveMarkerBaseOffset(element));
     element.dataset.formationDisplacementX = '0';
     element.dataset.formationDisplacementY = '0';
     element.dataset.contactDisplacementX = '0';
@@ -490,10 +497,8 @@ function avoidFormationLabelCollisions(
           const toolbarY = Number(element.dataset.toolbarDisplacementY ?? 0);
           const placeX = Number(element.dataset.placeAvoidanceDisplacementX ?? 0) + move.delta[0];
           const placeY = Number(element.dataset.placeAvoidanceDisplacementY ?? 0) + move.delta[1];
-          move.marker.setOffset([
-            Number(element.dataset.r3MarkerOffsetX ?? 0) + toolbarX + placeX,
-            Number(element.dataset.r3MarkerOffsetY ?? 0) + toolbarY + placeY
-          ]);
+          const [baseX, baseY] = effectiveMarkerBaseOffset(element);
+          move.marker.setOffset([baseX + toolbarX + placeX, baseY + toolbarY + placeY]);
           element.dataset.placeAvoidanceDisplacementX = String(placeX);
           element.dataset.placeAvoidanceDisplacementY = String(placeY);
         }
@@ -506,8 +511,7 @@ function avoidFormationLabelCollisions(
     delta ??= [0, 0];
     for (const marker of cluster) {
       const element = marker.getElement();
-      const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
-      const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+      const [baseX, baseY] = effectiveMarkerBaseOffset(element);
       marker.setOffset([baseX + delta[0], baseY + delta[1]]);
       element.dataset.formationDisplacementX = String(delta[0]);
       element.dataset.formationDisplacementY = String(delta[1]);
@@ -546,8 +550,7 @@ function avoidTerritoryToolbarCollisions(
           && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom;
       }) ?? delta;
     }
-    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
-    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    const [baseX, baseY] = effectiveMarkerBaseOffset(element);
     marker.setOffset([baseX + delta[0], baseY + delta[1]]);
     element.dataset.toolbarDisplacementX = String(delta[0]);
     element.dataset.toolbarDisplacementY = String(delta[1]);
@@ -593,8 +596,7 @@ function avoidEnemyPlaceLabelCollisions(
         && candidate.right <= canvasRect.right && candidate.bottom <= canvasRect.bottom
         && [...obstacles, ...occupied].every(obstacle => !overlaps(candidate, obstacle, 0));
     }) ?? [0, 0];
-    const baseX = Number(element.dataset.r3MarkerOffsetX ?? 0);
-    const baseY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    const [baseX, baseY] = effectiveMarkerBaseOffset(element);
     marker.setOffset([baseX + delta[0], baseY + delta[1]]);
     element.dataset.contactDisplacementX = String(delta[0]);
     element.dataset.contactDisplacementY = String(delta[1]);
@@ -613,8 +615,7 @@ export function applyTerrainOperationalMarkerLayout(
     const kind = element.dataset.r3MarkerKind as TerrainMarkerKind | undefined;
     if (!id || !kind || !markerEnabled(element, layers)) return [];
     const projected = map.project(marker.getLngLat());
-    const offsetX = Number(element.dataset.r3MarkerOffsetX ?? 0);
-    const offsetY = Number(element.dataset.r3MarkerOffsetY ?? 0);
+    const [offsetX, offsetY] = effectiveMarkerBaseOffset(element);
     return [{ id, kind, x: projected.x + (Number.isFinite(offsetX) ? offsetX : 0), y: projected.y + (Number.isFinite(offsetY) ? offsetY : 0) }];
   });
 

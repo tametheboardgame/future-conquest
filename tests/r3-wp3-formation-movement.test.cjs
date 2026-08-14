@@ -8,6 +8,7 @@ const source = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf
 const presentation = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
 const routeOverlay = fs.readFileSync('src/presentation/r3-formation-route-overlay.ts', 'utf8');
 const wrapper = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
+const layoutCore = fs.readFileSync('src/presentation/r3-terrain-operational-markers-core.ts', 'utf8');
 const pieceCss = fs.readFileSync('src/map-label-hierarchy.css', 'utf8');
 const pureStart = source.indexOf('const clamp01');
 const pureEnd = source.indexOf('export function formationPresentationPath');
@@ -59,6 +60,23 @@ test('WP3 reconciled movement animates presentation, including completed one-tur
   assert.doesNotMatch(presentation, /element\.dataset\.r3MarkerOffsetY\s*=/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*false/);
   assert.match(wrapper, /terrainOperationalTerritoryCentres,\s*true/);
+});
+
+test('WP3 moving fan-out uses a temporary presentation offset through terrain layout', () => {
+  assert.match(presentation, /element\.dataset\.r3PresentationOffsetX = String\(offsetX\)/);
+  assert.match(presentation, /element\.dataset\.r3PresentationOffsetY = String\(offsetY\)/);
+  assert.match(presentation, /delete element\.dataset\.r3PresentationOffsetX/);
+  assert.match(presentation, /delete element\.dataset\.r3PresentationOffsetY/);
+  assert.doesNotMatch(presentation, /element\.dataset\.r3MarkerOffset[XY]\s*=/);
+
+  const helper = layoutCore.match(/const effectiveMarkerBaseOffset[\s\S]*?\n\};/)?.[0] ?? '';
+  assert.match(helper, /r3PresentationOffsetX/);
+  assert.match(helper, /r3PresentationOffsetY/);
+  assert.match(helper, /r3MarkerOffsetX/);
+  assert.match(helper, /r3MarkerOffsetY/);
+  assert.match(layoutCore, /marker\.setOffset\(effectiveMarkerBaseOffset\(element\)\)/);
+  assert.match(layoutCore, /const \[offsetX, offsetY\] = effectiveMarkerBaseOffset\(element\)/);
+  assert.match(layoutCore, /const \[baseX, baseY\] = effectiveMarkerBaseOffset\(element\)/);
 });
 
 test('WP3 route overlay does not rebuild synchronously throughout camera travel', () => {
