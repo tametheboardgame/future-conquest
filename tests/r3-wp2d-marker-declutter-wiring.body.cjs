@@ -27,6 +27,11 @@ test('WP2D-D tags every terrain marker with stable priority metadata and explici
   ]) assert.match(markers, new RegExp(`'${kind}'`));
 });
 
+test('WP2D-D reconciliation preserves MapLibre structural positioning classes', () => {
+  assert.match(markers, /mapLibreClasses = \[\.\.\.element\.classList\]\.filter\(name => name\.startsWith\('maplibregl-'\)\)/);
+  assert.match(markers, /element\.className = \[\.\.\.descriptor\.className\.split/);
+});
+
 test('WP2D-D declutters from projected screen coordinates without altering authoritative marker geography', () => {
   assert.match(markers, /map\.project\(marker\.getLngLat\(\)\)/);
   assert.match(markers, /visibleTerrainMarkerIds\([\s\S]*candidates,[\s\S]*terrainMarkerLodForZoom\(map\.getZoom\(\)\),[\s\S]*reservedRects[\s\S]*\)/);
@@ -68,6 +73,11 @@ test('WP2D-D post-declutter enemy displacement keeps the actual toolbar forbidde
 test('WP2F measures synchronous MapLibre base geometry and provides a bounded joint fallback', () => {
   assert.match(markers, /MapLibre 6 updates a marker transform synchronously in Marker#setOffset/);
   assert.match(markers, /resetAndCaptureMarkerBaseRects[\s\S]*marker\.setOffset[\s\S]*getBoundingClientRect/);
+  assert.doesNotMatch(
+    markers.slice(markers.indexOf('const resetAndCaptureMarkerBaseRects'), markers.indexOf('const overlaps')),
+    /\.setLngLat\(/,
+    'layout must not queue geographic reprojections while measuring marker DOM geometry'
+  );
   assert.doesNotMatch(markers, /translateRect\(rect, -dx, -dy\)/);
   assert.match(markers, /function avoidFormationLabelCollisions\([\s\S]*toolbar: Element[\s\S]*canvasRect: Rect/);
   assert.match(markers, /const rects = cluster\.map\(marker => baseRects\.get\(marker\)/);

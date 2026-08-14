@@ -432,6 +432,7 @@ function mapStyle(
         paint: {
           'line-color': '#ffad66',
           'line-opacity': 0.98,
+          'line-dasharray': [2.4, 1.35],
           'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.65, 6, 2.15, 8, 2.7, 10, 3.0]
         }
       },
@@ -827,6 +828,10 @@ export function TerrainMapPrototypeImpl({
       aria-describedby="r3-terrain-keyboard-help"
       aria-label="Experimental real-elevation campaign map"
     />
+    <div className="r3-terrain-map-key" aria-label="Map symbol key">
+      <span className="r3-terrain-map-key-front"><i />Opposing-control front</span>
+      <span className="r3-terrain-map-key-route"><i />Movement / supply route</span>
+    </div>
     <p id="r3-terrain-keyboard-help" className="r3-terrain-sr-only">Use arrow keys to pan and plus or minus to zoom. Use the theatre, campaign and selected buttons to restore strategic camera views.</p>
     <div className="r3-terrain-prototype-attribution">{sourceAttribution}</div>
   </div>;

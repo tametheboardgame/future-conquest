@@ -38,7 +38,7 @@ test('WP2D-E land mask is reproducible from World Atlas during normal production
 
 test('WP2D-E generated land mask is bounded, non-empty and free of empty rings', () => {
   assert.equal(asset.type, 'FeatureCollection');
-  assert.equal(asset.futureConquest.id, 'r3-europe-land-mask-v1');
+  assert.equal(asset.futureConquest.id, 'r3-europe-land-mask-v2');
   assert.equal(asset.futureConquest.source, 'world-atlas/land-110m');
   assert.equal(asset.futureConquest.purpose, 'presentation-only physical land wash and coastline');
   assert.deepEqual(asset.futureConquest.clipBounds, clipBounds);
@@ -48,7 +48,7 @@ test('WP2D-E generated land mask is bounded, non-empty and free of empty rings',
   let ringCount = 0;
   let coordinateCount = 0;
   for (const feature of asset.features) {
-    assert.ok(feature.geometry && ['Polygon', 'MultiPolygon'].includes(feature.geometry.type));
+    assert.equal(feature.geometry?.type, 'Polygon', 'each island/continent must be an independent render geometry');
     visitGeometry(feature.geometry, ring => {
       ringCount += 1;
       assert.ok(Array.isArray(ring) && ring.length >= 4, 'land mask contains an empty or invalid polygon ring');
@@ -63,4 +63,18 @@ test('WP2D-E generated land mask is bounded, non-empty and free of empty rings',
   }
   assert.ok(ringCount > 10, 'Europe land mask unexpectedly lost coastline geometry');
   assert.ok(coordinateCount > 100, 'Europe land mask unexpectedly lost geographic detail');
+});
+
+test('WP2D stabilisation mask uses bounded RFC 7946 polygon units at Theatre zoom', () => {
+  assert.ok(asset.features.length > 10, 'expected the clipped MultiPolygon to be split into render units');
+  for (const feature of asset.features) {
+    feature.geometry.coordinates.forEach((ring, index) => {
+      const area = ring.reduce((sum, coordinate, pointIndex) => {
+        const previous = ring[(pointIndex + ring.length - 1) % ring.length];
+        return sum + previous[0] * coordinate[1] - coordinate[0] * previous[1];
+      }, 0) / 2;
+      assert.equal(area > 0, index === 0, `ring ${index} has incorrect RFC 7946 winding`);
+    });
+  }
+  assert.match(builder, /independent,[\s\S]*bounded triangulation units/);
 });

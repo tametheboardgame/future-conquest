@@ -88,7 +88,15 @@ test('WP2D-C keeps opposing fronts unmistakable without the old oversized underl
   assert.match(underlay, /'line-opacity': 0\.72/);
   assert.match(underlay, /4, 3\.6, 6, 4\.6, 8, 5\.4, 10, 6\.0/);
   assert.match(core, /'line-color': '#ffad66'/);
+  assert.match(core, /'line-dasharray': \[2\.4, 1\.35\]/);
   assert.match(core, /4, 1\.65, 6, 2\.15, 8, 2\.7, 10, 3\.0/);
+});
+
+test('stabilisation key distinguishes opposing fronts from movement and supply routes', () => {
+  assert.match(renderer, /r3-terrain-map-key-front[\s\S]*Opposing-control front/);
+  assert.match(renderer, /r3-terrain-map-key-route[\s\S]*Movement \/ supply route/);
+  assert.match(css, /r3-terrain-map-key-front i[\s\S]*border-top: 3px dashed #ffad66/);
+  assert.match(css, /r3-terrain-map-key-route i[\s\S]*border-top: 1px solid #9ba58f/);
 });
 
 test('WP2D-C lets critical routes beat ordinary infrastructure clutter', () => {

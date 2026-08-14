@@ -99,7 +99,12 @@ const addMarker = (
     r3MarkerKind: kind,
     r3MarkerId: markerId,
     r3MarkerOffsetX: String(offset[0]),
-    r3MarkerOffsetY: String(offset[1])
+    r3MarkerOffsetY: String(offset[1]),
+    // Keep the geographic source of truth beside the DOM marker. MapLibre owns
+    // the screen transform; layout passes may add bounded pixel offsets, but
+    // must never turn a previously projected position into the next anchor.
+    r3AuthoritativeLongitude: String(position[0]),
+    r3AuthoritativeLatitude: String(position[1])
   });
   markers.push({ id: markerId, kind, position, offset, element });
 };
@@ -109,7 +114,13 @@ const stopMapClick = (element: MarkerElementDescriptor, action: () => void) => {
 };
 
 const updateElement = (element: HTMLElement, descriptor: MarkerElementDescriptor) => {
-  element.className = descriptor.className;
+  // Reconciliation updates product styling without deleting the structural
+  // classes MapLibre added to the supplied element. In particular,
+  // `maplibregl-marker` supplies absolute positioning; dropping it puts every
+  // reconciled marker back into normal DOM flow, adding the preceding marker
+  // heights to its projected Y coordinate.
+  const mapLibreClasses = [...element.classList].filter(name => name.startsWith('maplibregl-'));
+  element.className = [...descriptor.className.split(/\s+/).filter(Boolean), ...mapLibreClasses].join(' ');
   if (descriptor.label) element.setAttribute('aria-label', descriptor.label);
   else element.removeAttribute('aria-label');
   if (descriptor.ariaHidden) element.setAttribute('aria-hidden', 'true');
@@ -375,6 +386,13 @@ const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
 const resetAndCaptureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => {
   for (const marker of markers) {
     const element = marker.getElement();
+    // MapLibre owns geographic projection and has already refreshed the marker
+    // transform when this settled layout pass runs. Re-setting lng/lat here is
+    // not a harmless reset: Marker#setLngLat queues another DOM update. Doing
+    // that once per marker while measuring the same collection lets those
+    // queued transforms interleave with the measurements and turns DOM order
+    // into a cumulative screen-space translation. Reset only our one bounded
+    // presentation offset; the marker's authoritative lng/lat never changes.
     marker.setOffset(effectiveMarkerBaseOffset(element));
     element.dataset.formationDisplacementX = '0';
     element.dataset.formationDisplacementY = '0';
@@ -394,7 +412,11 @@ const overlaps = (a: Rect, b: Rect, gap = 4) => (
 
 const formationDeltas = (() => {
   const deltas: Array<readonly [number, number]> = [];
-  for (let dy = -96; dy <= 96; dy += 1) for (let dx = -96; dx <= 96; dx += 1) {
+  // Four-pixel presentation granularity is visually continuous at the marker
+  // scale while keeping the dense-cluster search bounded. A one-pixel lattice
+  // produced almost thirty thousand candidates and could monopolise the main
+  // thread during a camera/selection transaction.
+  for (let dy = -96; dy <= 96; dy += 4) for (let dx = -96; dx <= 96; dx += 4) {
     if (dx * dx + dy * dy <= 96 * 96) deltas.push([dx, dy]);
   }
   return deltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
@@ -461,7 +483,10 @@ function avoidFormationLabelCollisions(
       labelDeltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
         || b[1] - a[1] || b[0] - a[0]);
 
-      for (const candidateDelta of formationDeltas) {
+      // Larger low-zoom conflicts retain their authoritative base placement;
+      // exhaustive multi-label backtracking would be exponential and block
+      // the camera transaction. Declutter has already reduced that context.
+      for (const candidateDelta of conflicting.length <= 4 ? formationDeltas : []) {
         const formationRects = rects.map(rect => translateRect(rect, candidateDelta[0], candidateDelta[1]));
         if (formationRects.some(rect => placedFormationRects.some(placed => overlaps(rect, placed, 0)))) continue;
         if (formationRects.some(rect => (hudRect && overlaps(rect, hudRect, 0))
