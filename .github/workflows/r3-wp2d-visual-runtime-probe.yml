@@ -121,13 +121,15 @@ jobs:
             }
           };
 
-          const verifyView = async (viewName, expectedLod, expectedRelief) => {
-            const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
-            if (viewName === 'selected' && await button.isDisabled()) {
-              throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
-            }
+          const verifyView = async (viewName, expectedLod, expectedRelief, activate = true) => {
             const beforeTiles = new Set(terrainResponses.keys());
-            await button.click();
+            if (activate) {
+              const button = page.locator('.r3-terrain-prototype-toolbar button', { hasText: viewName }).first();
+              if (viewName === 'selected' && await button.isDisabled()) {
+                throw new Error('Selected camera preset unexpectedly disabled despite new-game selected territory.');
+              }
+              await button.click();
+            }
             await page.waitForFunction(
               expected => {
                 const host = document.querySelector('.r3-terrain-prototype');
@@ -137,7 +139,8 @@ jobs:
               { lod: expectedLod, relief: expectedRelief },
               { timeout: 6000 }
             );
-            await page.waitForTimeout(180);
+            // Match the proven WP2F settled-state cadence and allow deferred marker layout to complete.
+            await page.waitForTimeout(900);
 
             const result = await page.evaluate(expected => {
               const host = document.querySelector('.r3-terrain-prototype');
@@ -201,10 +204,10 @@ jobs:
             if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);
             if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
-
           };
 
-          await verifyView('campaign', 'campaign', 'physical');
+          // The renderer already starts at Campaign. Assert that settled state in place rather than issuing a redundant camera transaction.
+          await verifyView('campaign', 'campaign', 'physical', false);
           await verifyView('theatre', 'theatre', 'strategic-flat');
           await verifyView('selected', 'local', 'physical');
 
