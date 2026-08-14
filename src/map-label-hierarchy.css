@@ -29,8 +29,10 @@
 /* R3-WP3: friendly MapLibre formations become physical command-table pieces.
    These terrain-scoped selectors are intentionally more specific than the later
    base terrain stylesheet, while retaining its dimensions, marker identity and
-   authoritative WGS84 position. Keep depth effects zero-blur so MapLibre camera
-   transforms stay cheap in software/headless rendering as well as on the GPU. */
+   authoritative WGS84 position. The marker must remain absolutely positioned
+   so MapLibre transforms share one geographic origin. Keep depth effects zero-blur
+   so MapLibre camera transforms stay cheap in software/headless rendering as well as
+   on the GPU. */
 .r3-terrain-prototype .r3-terrain-task-group-marker {
   --r3-piece-edge: #081f23;
   --r3-piece-face-top: #17646a;

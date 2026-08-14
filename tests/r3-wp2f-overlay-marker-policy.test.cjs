@@ -33,3 +33,13 @@ test('WP3 physical friendly-piece layer preserves marker geometry while adding m
   }
   assert.match(hierarchyCss, /r3-terrain-task-group-marker\.selected[\s\S]*z-index: 14/);
 });
+
+test('WP3 physical friendly-piece layer preserves MapLibre absolute marker positioning', () => {
+  const terrainPieceRule = hierarchyCss.match(
+    /\.r3-terrain-prototype \.r3-terrain-task-group-marker \{([^}]*)\}/,
+  );
+
+  assert.ok(terrainPieceRule, 'expected the terrain task-group marker rule');
+  assert.match(terrainPieceRule[1], /position:\s*absolute;/);
+  assert.doesNotMatch(terrainPieceRule[1], /position:\s*(?:relative|static);/);
+});
