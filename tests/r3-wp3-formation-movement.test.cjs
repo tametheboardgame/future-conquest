@@ -8,6 +8,7 @@ const source = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf
 const presentation = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
 const routeOverlay = fs.readFileSync('src/presentation/r3-formation-route-overlay.ts', 'utf8');
 const wrapper = fs.readFileSync('src/presentation/r3-terrain-operational-markers.ts', 'utf8');
+const pieceCss = fs.readFileSync('src/map-label-hierarchy.css', 'utf8');
 const pureStart = source.indexOf('const clamp01');
 const pureEnd = source.indexOf('export function formationPresentationPath');
 const pureSource = stripTypeScriptTypes(source.slice(pureStart, pureEnd).replace('export function interpolateFormationPath', 'function interpolateFormationPath'));
@@ -69,4 +70,10 @@ test('WP3 route overlay does not rebuild synchronously throughout camera travel'
   assert.match(routeOverlay, /hideMovementRoutesDuringCameraTravel/);
   assert.doesNotMatch(routeOverlay, /map\.on\('move',/);
   assert.doesNotMatch(routeOverlay, /const refresh = \(\) => renderMovementRoutes/);
+});
+
+test('WP3 physical pieces preserve MapLibre absolute marker positioning', () => {
+  const rule = pieceCss.match(/\.r3-terrain-prototype \.r3-terrain-task-group-marker\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.match(rule, /position:\s*absolute\s*;/);
+  assert.doesNotMatch(rule, /position:\s*(?:relative|static)\s*;/);
 });
