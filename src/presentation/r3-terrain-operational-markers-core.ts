@@ -380,18 +380,13 @@ const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
 const resetAndCaptureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => {
   for (const marker of markers) {
     const element = marker.getElement();
-    // A moving formation legitimately uses an interpolated WGS84 presentation
-    // position. Every other marker is stationary, so force MapLibre to project
-    // its authoritative coordinate against the *current* camera before reading
-    // collision geometry. This also repairs transforms retained across React
-    // reconciliation while a camera transition was in flight.
-    if (!element.dataset.movementProgress) {
-      const longitude = Number(element.dataset.r3AuthoritativeLongitude);
-      const latitude = Number(element.dataset.r3AuthoritativeLatitude);
-      if (Number.isFinite(longitude) && Number.isFinite(latitude)) {
-        marker.setLngLat([longitude, latitude]);
-      }
-    }
+    // MapLibre owns geographic projection and has already refreshed the marker
+    // transform when this settled layout pass runs. Re-setting lng/lat here is
+    // not a harmless reset: Marker#setLngLat queues another DOM update. Doing
+    // that once per marker while measuring the same collection lets those
+    // queued transforms interleave with the measurements and turns DOM order
+    // into a cumulative screen-space translation. Reset only our one bounded
+    // presentation offset; the marker's authoritative lng/lat never changes.
     marker.setOffset(effectiveMarkerBaseOffset(element));
     element.dataset.formationDisplacementX = '0';
     element.dataset.formationDisplacementY = '0';

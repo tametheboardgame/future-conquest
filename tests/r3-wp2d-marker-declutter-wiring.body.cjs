@@ -68,6 +68,11 @@ test('WP2D-D post-declutter enemy displacement keeps the actual toolbar forbidde
 test('WP2F measures synchronous MapLibre base geometry and provides a bounded joint fallback', () => {
   assert.match(markers, /MapLibre 6 updates a marker transform synchronously in Marker#setOffset/);
   assert.match(markers, /resetAndCaptureMarkerBaseRects[\s\S]*marker\.setOffset[\s\S]*getBoundingClientRect/);
+  assert.doesNotMatch(
+    markers.slice(markers.indexOf('const resetAndCaptureMarkerBaseRects'), markers.indexOf('const overlaps')),
+    /\.setLngLat\(/,
+    'layout must not queue geographic reprojections while measuring marker DOM geometry'
+  );
   assert.doesNotMatch(markers, /translateRect\(rect, -dx, -dy\)/);
   assert.match(markers, /function avoidFormationLabelCollisions\([\s\S]*toolbar: Element[\s\S]*canvasRect: Rect/);
   assert.match(markers, /const rects = cluster\.map\(marker => baseRects\.get\(marker\)/);
