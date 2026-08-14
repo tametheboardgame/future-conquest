@@ -300,8 +300,15 @@ function assertGeographicAnchors(scenario, state) {
 }
 
 async function settleCamera(page, options, label) {
-  await page.evaluate(options => window.__r3TerrainMap.jumpTo(options), options);
-  await page.waitForFunction(() => !window.__r3TerrainMap.isMoving());
+  await page.evaluate(options => new Promise(resolve => {
+    const map = window.__r3TerrainMap;
+    let settled = false;
+    const finish = () => { if (!settled) { settled = true; resolve(); } };
+    map.once('idle', finish);
+    map.jumpTo(options);
+    // A missing remote DEM tile must not make the geographic assertion hang.
+    setTimeout(finish, 5_000);
+  }), options);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const state = await snapshot(page, label);
   assertGeographicAnchors(label, state);
