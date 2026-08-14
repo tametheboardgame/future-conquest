@@ -4,6 +4,15 @@ const fs = require('node:fs');
 
 const workflow = fs.readFileSync('.github/workflows/r3-wp2d-visual-runtime-probe.yml', 'utf8');
 
+test('WP2D uses reduced motion to gate settled visual states', () => {
+  // Normal camera animation behaviour is intentionally owned by other gates; WP2D verifies settled hierarchy/LOD.
+  assert.match(
+    workflow,
+    /browser\.newPage\(\{\s*viewport: \{ width: 1600, height: 1000 \},\s*reducedMotion: 'reduce'\s*\}\)/
+  );
+  assert.match(workflow, /WP2D gates settled visual states; normal camera animation behaviour remains owned by other gates\./);
+});
+
 test('WP2D evidence screenshots are bounded and non-gating', () => {
   const captureStart = workflow.indexOf('const captureEvidence = async viewName =>');
   const verifyStart = workflow.indexOf('const verifyView = async (viewName, expectedLod, expectedRelief) =>');
