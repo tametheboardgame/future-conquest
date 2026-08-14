@@ -1,4 +1,4 @@
-import { MercatorCoordinate, type CustomLayerInterface, type Map } from 'maplibre-gl';
+import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map } from 'maplibre-gl';
 import {
   AmbientLight,
   BoxGeometry,
@@ -182,9 +182,6 @@ function clusterOffsets(state: GameState) {
 }
 
 function presentationScaleForZoom(zoom: number) {
-  // Strategic pieces are intentionally not geographically true-scale. Keep
-  // them board-game readable at Theatre/Campaign distance, then reduce their
-  // world footprint as the camera closes in so Selected view stays controlled.
   if (zoom < 4.8) return 78_000;
   if (zoom < 6.4) return 52_000;
   return 24_000;
@@ -265,7 +262,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     }
   }
 
-  render(_gl: WebGL2RenderingContext, options: { modelViewProjectionMatrix: ArrayLike<number> }) {
+  render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput) {
     if (!this.map || !this.renderer) return;
     const now = performance.now();
     let animating = false;
@@ -292,7 +289,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
         displayScale
       });
     }
-    this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
+    this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
     this.renderCount += 1;
