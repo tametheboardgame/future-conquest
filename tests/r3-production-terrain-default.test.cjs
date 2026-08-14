@@ -13,11 +13,15 @@ test('production terrain is opt-out rather than query-gated', () => {
   assert.match(app, /<MapView/);
 });
 
-test('exact-browser gate covers the normal URL, WP3 pieces, and forced SVG fallback', () => {
+test('exact-browser gate covers the normal URL, physical WP3.5 pieces, interaction fallback, and forced SVG fallback', () => {
   assert.match(workflow, /page\.goto\('http:\/\/127\.0\.0\.1:4173\/'/);
   assert.doesNotMatch(workflow, /page\.goto\('http:\/\/127\.0\.0\.1:4173\/\?terrain=1'/);
+  assert.match(workflow, /__r3FormationMiniatures/);
+  assert.match(workflow, /physicalRenderCount/);
+  assert.match(workflow, /physicalVisible/);
+  assert.match(workflow, /compatibilityMarkerOpacity/);
+  assert.match(workflow, /compatibilityMarkerPosition/);
   assert.match(workflow, /r3-terrain-task-group-marker/);
-  assert.match(workflow, /r3-piece-status/);
   assert.match(workflow, /\?terrain=0/);
   assert.match(workflow, /svg\.map\.europe-map/);
 });
