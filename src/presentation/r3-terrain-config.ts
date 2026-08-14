@@ -52,13 +52,15 @@ export const R3_TERRAIN_MANIFEST: TerrainDataManifest = {
 
 /**
  * MapLibre owns geographic camera state. Theatre deliberately shows the wider
- * Europe envelope with a restrained pitch; campaign/selected retain the more
- * dramatic command-table angle that product-owner review approved.
+ * Europe envelope with a restrained pitch; campaign/selected retain the command-
+ * table angle. Selected remains above the 6.4 Local-LOD boundary but avoids an
+ * unnecessary jump into the next Terrain-RGB tile band, reducing transition
+ * network pressure without changing selection authority or local-detail mode.
  */
 export const R3_TERRAIN_CAMERA_PRESETS: readonly TerrainCameraPreset[] = [
   { id: 'theatre', center: [12.0, 56.0], zoom: 3.45, pitch: 28, bearing: -3 },
   { id: 'campaign', center: [5.3, 49.2], zoom: 5.35, pitch: 51, bearing: -9 },
-  { id: 'selected', center: [5.3, 49.2], zoom: 7.1, pitch: 57, bearing: -8 }
+  { id: 'selected', center: [5.3, 49.2], zoom: 6.55, pitch: 57, bearing: -8 }
 ] as const;
 
 export interface TerrainRendererCapability {
