@@ -483,7 +483,10 @@ function avoidFormationLabelCollisions(
       labelDeltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
         || b[1] - a[1] || b[0] - a[0]);
 
-      for (const candidateDelta of formationDeltas) {
+      // Larger low-zoom conflicts retain their authoritative base placement;
+      // exhaustive multi-label backtracking would be exponential and block
+      // the camera transaction. Declutter has already reduced that context.
+      for (const candidateDelta of conflicting.length <= 4 ? formationDeltas : []) {
         const formationRects = rects.map(rect => translateRect(rect, candidateDelta[0], candidateDelta[1]));
         if (formationRects.some(rect => placedFormationRects.some(placed => overlaps(rect, placed, 0)))) continue;
         if (formationRects.some(rect => (hudRect && overlaps(rect, hudRect, 0))
