@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const app = fs.readFileSync('src/App.tsx', 'utf8');
+const terrainMap = fs.readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/r3-wp2b-browser-runtime-probe.yml', 'utf8');
 
 test('production terrain is opt-out rather than query-gated', () => {
@@ -19,4 +20,11 @@ test('exact-browser gate covers the normal URL, WP3 pieces, and forced SVG fallb
   assert.match(workflow, /r3-piece-status/);
   assert.match(workflow, /\?terrain=0/);
   assert.match(workflow, /svg\.map\.europe-map/);
+});
+
+test('production terrain uses production-facing terminology', () => {
+  assert.match(terrainMap, /3D TERRAIN COMMAND MAP/);
+  assert.doesNotMatch(terrainMap, /R3 TERRAIN SPIKE/);
+  assert.doesNotMatch(app, /Loading experimental terrain renderer/);
+  assert.doesNotMatch(terrainMap, /Loading experimental terrain renderer/);
 });

@@ -800,7 +800,7 @@ export function TerrainMapPrototypeImpl({
 
   return <div className="r3-terrain-prototype" data-status={status} data-terrain-profile={presentationProfile}>
     <div ref={toolbarRef} className="r3-terrain-prototype-toolbar" aria-label="Terrain camera controls">
-      <span aria-live="polite"><strong>R3 TERRAIN SPIKE</strong>{message}</span>
+      <span aria-live="polite"><strong>3D TERRAIN COMMAND MAP</strong>{message}</span>
       <div>{R3_TERRAIN_CAMERA_PRESETS.map(preset => <button
         key={preset.id}
         type="button"
