@@ -29,7 +29,8 @@
 /* R3-WP3: friendly MapLibre formations become physical command-table pieces.
    These terrain-scoped selectors are intentionally more specific than the later
    base terrain stylesheet, while retaining its dimensions, marker identity and
-   authoritative WGS84 position. */
+   authoritative WGS84 position. Keep depth effects zero-blur so MapLibre camera
+   transforms stay cheap in software/headless rendering as well as on the GPU. */
 .r3-terrain-prototype .r3-terrain-task-group-marker {
   --r3-piece-edge: #081f23;
   --r3-piece-face-top: #17646a;
@@ -45,7 +46,6 @@
   box-shadow:
     0 3px 0 var(--r3-piece-edge),
     0 6px 0 rgba(2, 12, 14, .78),
-    0 10px 14px rgba(0, 0, 0, .48),
     inset 0 1px 0 rgba(255, 255, 255, .17),
     inset 0 -2px 0 rgba(0, 0, 0, .28);
 }
@@ -60,7 +60,7 @@
   height: 6px;
   border-radius: 0 0 5px 5px;
   background: linear-gradient(180deg, #12383b, #061719);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, .45);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .45);
   pointer-events: none;
 }
 
@@ -114,8 +114,7 @@
     0 0 0 3px rgba(133, 255, 239, .3),
     0 3px 0 var(--r3-piece-edge),
     0 6px 0 rgba(2, 12, 14, .82),
-    0 0 15px rgba(104, 255, 235, .6),
-    0 12px 17px rgba(0, 0, 0, .6),
+    0 9px 0 rgba(4, 31, 34, .5),
     inset 0 1px 0 rgba(255, 255, 255, .24);
 }
 
@@ -128,7 +127,7 @@
 .r3-terrain-prototype[data-terrain-profile='compact'] .r3-terrain-task-group-marker {
   box-shadow:
     0 2px 0 var(--r3-piece-edge),
-    0 5px 8px rgba(0, 0, 0, .5),
+    0 5px 0 rgba(0, 0, 0, .5),
     inset 0 1px 0 rgba(255, 255, 255, .13);
 }
 
