@@ -44,6 +44,10 @@ The corrected physical map also exposed avoidable terrain-network churn during T
 8. Cache formation terrain-height samples across camera-only movement and keep the DEM source attached with zero exaggeration in Theatre, avoiding needless terrain teardown/refetch while retaining proper grounding when formations actually move.
 9. Keep WP2F and the performance benchmark focused on settled visual/performance state by programmatically invoking already-proven camera controls; dedicated browser and selection gates continue to exercise real pointer interaction.
 
+## Final gate
+
+Do not merge on source-level or screenshot evidence alone. The final exact head must pass build/engine tests, terrain smoke, normal browser runtime, overlay runtime, WP2D/WP2F visual probes, WP2I selection/geographic regression, WP3 movement, deterministic balance, the Windows/Linux deployed-path WP3.5 probe, and the unchanged WP2E base-vs-head performance budget. After merge, the exact main commit must deploy through Pages and the product owner must visually retest the live normal URL.
+
 ## Boundaries
 
 - MapLibre remains camera/geospatial/terrain authority.
