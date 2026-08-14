@@ -20,7 +20,7 @@ const host = page.locator('.r3-terrain-prototype');
 await host.waitFor({ state: 'visible', timeout: 45_000 });
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
 
-const evidence = { profiles: {}, physicalFormations: {}, hover: {}, identity: {}, fallback: {} };
+const evidence = { profiles: {}, physicalFormations: {}, worldMiniatures: {}, hover: {}, identity: {}, fallback: {} };
 const persistEvidence = () => fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
 
 for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], ['campaign', 'campaign', 'campaign.png'], ['selected', 'local', 'selected-local.png']]) {
@@ -168,6 +168,22 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
     };
   });
 
+  const world = await page.evaluate(() => {
+    const map = window.__r3TerrainMap;
+    const diagnostic = window.__r3WorldMiniatures;
+    const nodes = window.__r3StrategicNodes ?? [];
+    if (!map || !diagnostic) throw new Error('Three.js world-miniature diagnostic unavailable');
+    return {
+      layerActive: Boolean(map.getLayer(diagnostic.layerId)),
+      renderCount: diagnostic.renderCount,
+      lod: diagnostic.lod,
+      objects: diagnostic.objects.map(object => {
+        const node = nodes.find(candidate => candidate.id === object.id);
+        return { ...object, anchorErrorDegrees: node ? Math.hypot(object.position[0] - node.position[0], object.position[1] - node.position[1]) : null };
+      })
+    };
+  });
+
   const flatProjection = await page.evaluate(async nodeIds => {
     const map = window.__r3TerrainMap;
     const nodes = window.__r3StrategicNodes ?? [];
@@ -206,6 +222,7 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
 
   evidence.profiles[expected] = { ...profile, flatProjection };
   evidence.physicalFormations[expected] = physical;
+  evidence.worldMiniatures[expected] = world;
   await page.screenshot({ path: `${outputDir}/${file}`, fullPage: true });
   persistEvidence();
 
@@ -215,6 +232,14 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
   }
   if (!physical.reducedMotion || physical.pieces.some(piece => piece.settlementDegrees > 1e-9)) {
     throw new Error(`reduced-motion physical pieces did not settle in ${expected}: ${JSON.stringify(physical.pieces)}`);
+  }
+  const visibleCities = world.objects.filter(object => object.visible && ['capital', 'city'].includes(object.type));
+  const visibleInfrastructure = world.objects.filter(object => object.visible && !['capital', 'city', 'airport'].includes(object.type));
+  if (!world.layerActive || world.renderCount < 1 || visibleCities.length < 2 || visibleInfrastructure.length < 2) {
+    throw new Error(`physical city/infrastructure layer is not active and visible in ${expected}: ${JSON.stringify(world)}`);
+  }
+  if (world.objects.some(object => object.anchorErrorDegrees !== 0 || !Number.isFinite(object.elevation) || object.clearance < 10 || object.clearance > 60)) {
+    throw new Error(`world miniature geographic/grounding contract failed in ${expected}: ${JSON.stringify(world.objects)}`);
   }
   if (profile.visibleFormationCount !== profile.formationCount) throw new Error(`player formation hidden by declutter in ${expected}`);
   if (profile.visibleTerritoryCount !== profile.territoryCount) throw new Error(`territory label hidden by declutter in ${expected}`);

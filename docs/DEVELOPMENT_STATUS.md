@@ -67,6 +67,15 @@ Primary outcomes:
 
 See `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md` for the complete approved package.
 
+Implementation status on the active PR line: WP3.5A/B is technically accepted at
+`54be95ed99cb235dc237c63160def2123869ec07`. WP3.5C-F now adds a second derived
+Three.js custom layer for authoritative strategic nodes: importance-scaled city
+clusters and distinct port, airport, rail/logistics and crossing miniatures,
+terrain elevation plus bounded clearance, deterministic Theatre/Campaign/Selected
+LOD, existing Layers-state visibility, browser diagnostics and automatic DOM/SVG
+fallback. This is implementation completion evidence, not deployed-main visual
+acceptance; WP4 remains blocked until the product-owner exit gate is satisfied.
+
 ## Authoritative sequence
 
 1. **R3-WP3.5 - World Pieces & Strategic Miniatures** (ACTIVE / WP4 BLOCKING)

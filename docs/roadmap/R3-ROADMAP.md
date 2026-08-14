@@ -241,6 +241,19 @@ Validate:
 - `?terrain=0` SVG fallback;
 - save/load and deterministic balance parity.
 
+### Active implementation record
+
+WP3.5A/B is accepted as the exact-head technical baseline at `54be95e`. The C-F
+implementation composes lightweight city and infrastructure relief from the
+existing `STRATEGIC_NODES` catalogue only, preserves the established DOM labels
+and interaction targets, shares restrained procedural materials, applies
+importance-driven Theatre/Campaign/Selected density, samples MapLibre terrain
+with bounded presentation clearance, and follows the existing Cities/hubs,
+Ports and Airports layer controls. Browser evidence now records exact node
+coordinates, terrain elevation, clearance, visibility and LOD alongside the A/B
+formation evidence and the explicit `?terrain=0` fallback. The package remains
+ACTIVE—not complete—until exact-head gates and deployed-main visual acceptance.
+
 ## Architecture direction
 
 Three.js through a MapLibre custom 3D layer is the preferred implementation direction for physical pieces/world objects unless measured browser evidence shows a better compatible solution.
