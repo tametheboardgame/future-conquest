@@ -494,7 +494,10 @@ function avoidFormationLabelCollisions(
         // otherwise simple one-label solution.
         const candidateConflicting = conflicting.filter(label => {
           const rect = placeLabelRect(label, baseRects);
-          return formationRects.some(formation => overlaps(formation, rect, 0));
+          const element = label.getElement();
+          const previouslyMoved = Number(element.dataset.placeAvoidanceDisplacementX ?? 0) !== 0
+            || Number(element.dataset.placeAvoidanceDisplacementY ?? 0) !== 0;
+          return previouslyMoved || formationRects.some(formation => overlaps(formation, rect, 0));
         });
         if (candidateConflicting.length > 4) continue;
         const fixedLabels = labels.filter(label => !candidateConflicting.includes(label)).map(label => placeLabelRect(label, baseRects));
