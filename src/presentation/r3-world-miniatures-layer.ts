@@ -1,4 +1,4 @@
-import { MercatorCoordinate, type CustomLayerInterface, type Map } from 'maplibre-gl';
+import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map } from 'maplibre-gl';
 import {
   AmbientLight, BoxGeometry, Camera, ConeGeometry, CylinderGeometry, DirectionalLight,
   Group, Matrix4, Mesh, MeshStandardMaterial, Scene, WebGLRenderer
@@ -16,7 +16,7 @@ export type WorldMiniatureEvidence = {
   layerId: string;
   renderCount: number;
   lod: 'theatre' | 'campaign' | 'selected';
-  objects: Array<{ id: string; type: string; position: readonly [number, number]; elevation: number; clearance: number; visible: boolean }>;
+  objects: Array<{ id: string; type: string; position: readonly [number, number]; elevation: number; clearance: number; visible: boolean; displayScale: number }>;
 };
 
 declare global { interface Window { __r3WorldMiniatures?: WorldMiniatureEvidence } }
@@ -82,6 +82,13 @@ function infrastructure(node: StrategicNodeDefinition) {
 const kindFor = (node: StrategicNodeDefinition): WorldKind =>
   node.type === 'capital' || node.type === 'city' ? 'city' : node.type;
 
+function worldPresentationScale(lod: 'theatre' | 'campaign' | 'selected') {
+  // Symbolic war-table structures, tuned against the MapLibre v6 projection.
+  if (lod === 'theatre') return 34_000;
+  if (lod === 'campaign') return 24_000;
+  return 14_000;
+}
+
 /** Presentation-only objects derived exactly from the public strategic-node catalogue. */
 export class WorldMiniaturesLayer implements CustomLayerInterface {
   readonly id = R3_WORLD_MINIATURE_LAYER_ID;
@@ -116,7 +123,7 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
 
   update(layers: TerrainOperationalLayers) { this.layers = layers; this.map?.triggerRepaint(); }
 
-  render(_gl: WebGL2RenderingContext, options: { modelViewProjectionMatrix: ArrayLike<number> }) {
+  render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput) {
     if (!this.map || !this.renderer) return;
     const zoom = this.map.getZoom();
     const lod = zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'selected';
@@ -124,22 +131,26 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
     for (const piece of this.pieces) {
       const enabled = piece.kind === 'port' ? this.layers.ports
         : piece.kind === 'airport' ? this.layers.airports : this.layers.citiesHubs;
-      // Theatre keeps only authoritative importance-3 silhouettes; Campaign
-      // bounds density by removing minor infrastructure while Selected is rich.
       const lodVisible = lod === 'selected' || (lod === 'campaign' ? piece.node.importance >= 2 : piece.node.importance >= 3);
       piece.root.visible = enabled && lodVisible;
-      // Strategic nodes never move. Keep the first available DEM sample rather
-      // than querying every object on every camera-animation frame.
       piece.elevation ??= this.map.queryTerrainElevation([piece.node.position[0], piece.node.position[1]]) ?? undefined;
       const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(piece.node.position, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
-      const scale = (lod === 'theatre' ? 15500 : lod === 'campaign' ? 19000 : 22500) * (piece.node.importance === 3 ? 1.18 : 1);
+      const displayScale = worldPresentationScale(lod) * (piece.node.importance === 3 ? 1.18 : 1);
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
-      piece.root.scale.set(metres * scale, -metres * scale, metres * scale);
-      evidence.push({ id: piece.node.id, type: piece.node.type, position: piece.node.position, elevation, clearance: CLEARANCE_METRES, visible: piece.root.visible });
+      piece.root.scale.set(metres * displayScale, -metres * displayScale, metres * displayScale);
+      evidence.push({
+        id: piece.node.id,
+        type: piece.node.type,
+        position: piece.node.position,
+        elevation,
+        clearance: CLEARANCE_METRES,
+        visible: piece.root.visible,
+        displayScale
+      });
     }
-    this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
+    this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
     this.renderer.resetState(); this.renderer.render(this.scene, this.camera); this.renderCount += 1;
     window.__r3WorldMiniatures = { layerId: this.id, renderCount: this.renderCount, lod, objects: evidence };
   }

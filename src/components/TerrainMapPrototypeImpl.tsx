@@ -618,10 +618,17 @@ export function TerrainMapPrototypeImpl({
         if (!host) return;
         const nextMode = map.getZoom() < 4.8 ? 'strategic-flat' : 'physical';
         if (nextMode !== terrainMeshMode) {
-          map.setTerrain(nextMode === 'physical' ? {
+          // Keep the DEM source attached in Theatre so MapLibre can retain its
+          // terrain tile cache across Theatre -> Campaign/Selected transitions.
+          // Zero exaggeration gives the required strategic-flat presentation
+          // without tearing terrain down and forcing the same DEM tiles to be
+          // requested again when physical relief returns.
+          map.setTerrain({
             source: 'r3-wp2b-terrain-dem',
-            exaggeration: terrainExaggerationForProfile(presentationProfile)
-          } : null);
+            exaggeration: nextMode === 'physical'
+              ? terrainExaggerationForProfile(presentationProfile)
+              : 0
+          });
           terrainMeshMode = nextMode;
         }
         host.dataset.terrainRelief = terrainMeshMode;

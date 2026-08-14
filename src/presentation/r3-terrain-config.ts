@@ -96,14 +96,19 @@ export function chooseTerrainPresentationProfile(environment: TerrainPresentatio
 }
 
 /**
- * Compact terrain keeps the same geographic framing but reduces camera pitch
- * and a little zoom pressure. This is presentation state only.
+ * Runtime presentation may apply renderer-pressure adjustments without changing
+ * the named camera-preset contract. Full-profile Selected starts exactly at the
+ * Local LOD boundary, avoiding an unnecessary higher Terrain-RGB tile band while
+ * retaining the Selected/local presentation. Compact terrain keeps the same
+ * geography and also reduces pitch/zoom pressure.
  */
 export function terrainCameraForProfile(
   preset: TerrainCameraPreset,
   profile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
 ): TerrainCameraPreset {
-  if (profile === 'full') return { ...preset };
+  if (profile === 'full') {
+    return preset.id === 'selected' ? { ...preset, zoom: Math.min(preset.zoom, 6.4) } : { ...preset };
+  }
   return {
     ...preset,
     zoom: Math.max(3.2, preset.zoom - 0.15),

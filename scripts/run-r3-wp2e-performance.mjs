@@ -149,7 +149,18 @@ await waitForTerrainSettlement(selectionSettlementStarted, INITIAL_SETTLE_MINIMU
 
 const transition = async (name, expectedLod) => {
   const before = performance.now();
-  await page.locator('.r3-terrain-prototype-toolbar button', { hasText: name }).click();
+  // This benchmark owns renderer/network settlement, not pointer hit-testing.
+  // The dedicated browser/selection gates exercise the same visible controls as
+  // a user. Invoke the already-proven enabled button directly here so an overlay
+  // cannot turn Playwright actionability delay into a false performance result.
+  await page.evaluate(cameraName => {
+    const button = [...document.querySelectorAll('.r3-terrain-prototype-toolbar button')]
+      .find(element => element.textContent?.trim() === cameraName);
+    if (!(button instanceof HTMLButtonElement) || button.disabled) {
+      throw new Error(`Camera control ${cameraName} is unavailable.`);
+    }
+    button.click();
+  }, name);
   await page.waitForFunction(lod => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === lod, expectedLod);
   await waitForTerrainSettlement(before, CAMERA_SETTLE_MINIMUM_MS);
   return performance.now() - before;

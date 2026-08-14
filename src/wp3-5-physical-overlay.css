@@ -1,0 +1,21 @@
+/* WP3.5 physical-layer compatibility treatment.
+   MapLibre writes marker opacity as an inline style while evaluating terrain
+   occlusion. Once the Three.js formation layer is ready, that inline opacity
+   must not repaint the legacy TG cards over the physical miniatures. Opacity
+   keeps the marker in the pointer/keyboard hit-test path; focus-visible restores
+   a concise identity surface for keyboard users. */
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker {
+  opacity: 0 !important;
+}
+
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker:focus-visible {
+  opacity: 1 !important;
+}
+
+/* World and formation layers are currently initialised as one physical package.
+   Keep strategic-node text labels and their parent hit targets, but remove the
+   legacy circular glyph once the terrain-grounded city/infrastructure models
+   are active so the physical silhouettes can become the visual symbol. */
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-node-marker b {
+  visibility: hidden;
+}

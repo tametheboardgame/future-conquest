@@ -1,0 +1,66 @@
+name: WP3.5 production startup probe
+
+on:
+  push:
+    branches:
+      - agent/wp3-5-production-fallback-hotfix
+    paths:
+      - 'scripts/probe-wp3-5-production-startup.mjs'
+      - '.github/workflows/wp3-5-production-startup-probe.yml'
+      - 'tests/r3-wp3-5-formation-miniatures.test.cjs'
+      - 'src/components/TerrainMapPrototype.tsx'
+      - 'src/components/TerrainMapPrototypeImpl.tsx'
+      - 'src/presentation/r3-formation-miniatures-layer.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'src/presentation/r3-terrain-operational-markers-core.ts'
+      - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
+  pull_request:
+    paths:
+      - 'scripts/probe-wp3-5-production-startup.mjs'
+      - '.github/workflows/wp3-5-production-startup-probe.yml'
+      - 'tests/r3-wp3-5-formation-miniatures.test.cjs'
+      - 'src/components/TerrainMapPrototype.tsx'
+      - 'src/components/TerrainMapPrototypeImpl.tsx'
+      - 'src/presentation/r3-formation-miniatures-layer.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'src/presentation/r3-terrain-operational-markers-core.ts'
+      - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
+
+jobs:
+  production-startup:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            browser_channel: ''
+            label: linux-chromium
+          - os: windows-latest
+            browser_channel: chrome
+            label: windows-chrome
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --ignore-scripts playwright@1.55.0
+      - run: node --test tests/r3-wp3-5-formation-miniatures.test.cjs tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-formation-movement.test.cjs
+      - if: matrix.browser_channel == ''
+        run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Probe deployed-style /future-conquest path
+        env:
+          WP35_BROWSER_CHANNEL: ${{ matrix.browser_channel }}
+          WP35_SCREENSHOT: wp3-5-${{ matrix.label }}.png
+        run: node scripts/probe-wp3-5-production-startup.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wp3-5-production-startup-${{ matrix.label }}
+          path: wp3-5-${{ matrix.label }}.png

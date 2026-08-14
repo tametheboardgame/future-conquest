@@ -7,7 +7,10 @@ on:
     paths:
       - 'src/components/TerrainMapPrototype*.tsx'
       - 'src/presentation/r3-terrain-*.ts'
+      - 'src/presentation/r3-formation-miniatures-layer.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
       - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
       - 'public/generated/r3-terrain/**'
       - 'tests/r3-wp2d-*.test.cjs'
       - '.github/workflows/r3-wp2d-visual-runtime-probe.yml'
@@ -55,10 +58,7 @@ jobs:
 
           const browser = await chromium.launch({ headless: true });
           // WP2D gates settled visual states; normal camera animation behaviour remains owned by other gates.
-          const page = await browser.newPage({
-            viewport: { width: 1600, height: 1000 },
-            reducedMotion: 'reduce'
-          });
+          const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
           const terrainResponses = new Map();
           page.on('response', response => {
             const url = response.url();
@@ -108,14 +108,15 @@ jobs:
             await browser.close();
             throw new Error('WP2D terrain renderer neither became visible nor surfaced fallback diagnostics.');
           }
-          await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'visible', timeout: 10000 });
+          await page.locator('[data-r3-marker-kind="selected-formation"]').first().waitFor({ state: 'attached', timeout: 10000 });
+          await page.waitForFunction(() => {
+            const host = document.querySelector('.r3-terrain-prototype');
+            return host instanceof HTMLElement && (host.dataset.physicalFormations === 'ready' || host.dataset.physicalFormations === 'fallback');
+          }, null, { timeout: 10000 });
 
           const captureEvidence = async viewName => {
             try {
-              await page.locator('.r3-terrain-prototype').screenshot({
-                path: `/tmp/r3-wp2d-${viewName}.png`,
-                timeout: 5000
-              });
+              await page.locator('.r3-terrain-prototype').screenshot({ path: `/tmp/r3-wp2d-${viewName}.png`, timeout: 5000 });
             } catch (error) {
               console.log(`WP2D ${viewName} evidence capture skipped after bounded timeout:`, error instanceof Error ? error.message : String(error));
             }
@@ -139,15 +140,12 @@ jobs:
               { lod: expectedLod, relief: expectedRelief },
               { timeout: 6000 }
             );
-            // Match the proven WP2F settled-state cadence and allow deferred marker layout to complete.
             await page.waitForTimeout(900);
 
             const result = await page.evaluate(expected => {
               const host = document.querySelector('.r3-terrain-prototype');
               const toolbar = document.querySelector('.r3-terrain-prototype-toolbar');
-              if (!(host instanceof HTMLElement) || !(toolbar instanceof HTMLElement)) {
-                throw new Error('Terrain host or toolbar unavailable.');
-              }
+              if (!(host instanceof HTMLElement) || !(toolbar instanceof HTMLElement)) throw new Error('Terrain host or toolbar unavailable.');
               const toolbarRect = toolbar.getBoundingClientRect();
               const markers = [...host.querySelectorAll('[data-r3-marker-id]')].filter(element => element instanceof HTMLElement);
               const visible = markers.filter(element => {
@@ -169,20 +167,31 @@ jobs:
                 return rect.right > toolbarRect.left && rect.left < toolbarRect.right && rect.bottom > toolbarRect.top && rect.top < toolbarRect.bottom;
               }).map(element => `${element.dataset.r3MarkerKind}:${element.dataset.r3MarkerId}`);
               const count = kind => visible.filter(element => element.dataset.r3MarkerKind === kind).length;
+              const physical = window.__r3FormationMiniatures ?? null;
+              const physicalReady = host.dataset.physicalFormations === 'ready';
+              const physicalVisible = physical?.pieces.filter(piece => piece.visible).length ?? 0;
+              const selectedDom = markers.find(element => element.dataset.r3MarkerKind === 'selected-formation');
+              const selectedId = selectedDom?.dataset.groupId ?? null;
+              const selectedPhysicalVisible = Boolean(selectedId && physical?.pieces.some(piece => piece.id === selectedId && piece.visible));
               return {
                 lod: host.dataset.overlayLod ?? null,
                 relief: host.dataset.terrainRelief ?? null,
                 zoom: Number(host.dataset.overlayZoom ?? Number.NaN),
                 expected,
+                physicalReady,
+                physicalRenderCount: physical?.renderCount ?? 0,
+                physicalVisible,
+                selectedPhysicalVisible,
                 visible: visible.length,
+                visualContext: visible.length + (physicalReady ? physicalVisible : 0),
                 hidden: markers.length - visible.length,
                 hiddenProtected,
                 overlaps,
                 territoryToolbarOverlaps,
-                selectedFormations: count('selected-formation'),
+                selectedFormations: physicalReady ? (selectedPhysicalVisible ? 1 : 0) : count('selected-formation'),
                 selectedTerritories: count('selected-territory'),
                 portals: count('portal'),
-                formations: count('formation'),
+                formations: physicalReady ? physicalVisible : count('formation'),
                 territoryLabels: count('territory'),
                 majorNodes: count('node-major')
               };
@@ -199,10 +208,11 @@ jobs:
             if (result.overlaps.length) throw new Error(`${viewName} markers overlap terrain HUD: ${result.overlaps.join(', ')}`);
             if (result.territoryLabels < 1) throw new Error(`${viewName} hid every protected territory name.`);
             if (result.territoryToolbarOverlaps.length) throw new Error(`${viewName} territory names overlap terrain HUD: ${result.territoryToolbarOverlaps.join(', ')}`);
-            if (result.selectedFormations < 1) throw new Error(`${viewName} lost the selected formation.`);
+            if (result.selectedFormations < 1) throw new Error(`${viewName} lost the selected formation presentation.`);
+            if (result.physicalReady && result.physicalRenderCount < 1) throw new Error(`${viewName} physical formation layer reported ready without rendering.`);
             if (result.selectedTerritories < 1) throw new Error(`${viewName} lost selected-territory context.`);
             if (result.portals < 1) throw new Error(`${viewName} lost portal context.`);
-            if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
+            if (result.visualContext < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
           };
 

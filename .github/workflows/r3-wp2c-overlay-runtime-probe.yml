@@ -8,7 +8,10 @@ on:
       - 'src/components/TerrainMapPrototype*.tsx'
       - 'src/presentation/r3-terrain-operational-markers.ts'
       - 'src/presentation/r3-terrain-marker-declutter.ts'
+      - 'src/presentation/r3-formation-miniatures-layer.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
       - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
       - 'tests/r3-wp2c-terrain-overlay-parity.test.cjs'
       - 'tests/r3-wp2d-marker-declutter*.test.cjs'
       - '.github/workflows/r3-wp2c-overlay-runtime-probe.yml'
@@ -74,7 +77,11 @@ jobs:
           await page.locator('[data-command-view="map"]').click();
           await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
           await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
-          await page.locator('.r3-terrain-task-group-marker').first().waitFor({ state: 'visible', timeout: 10000 });
+          await page.locator('.r3-terrain-task-group-marker').first().waitFor({ state: 'attached', timeout: 10000 });
+          await page.waitForFunction(() => {
+            const host = document.querySelector('.r3-terrain-prototype');
+            return host instanceof HTMLElement && (host.dataset.physicalFormations === 'ready' || host.dataset.physicalFormations === 'fallback');
+          }, null, { timeout: 10000 });
           await page.waitForTimeout(800);
 
           const overlayState = await page.evaluate(() => {
@@ -85,11 +92,23 @@ jobs:
               return !element.hidden && rect.width > 4 && rect.height > 4 && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) > 0;
             }).length;
             const host = document.querySelector('.r3-terrain-prototype');
+            const physical = window.__r3FormationMiniatures ?? null;
+            const selectedDom = document.querySelector('.r3-terrain-task-group-marker.selected');
+            const selectedId = selectedDom instanceof HTMLElement ? selectedDom.dataset.groupId ?? null : null;
+            const physicalVisible = physical?.pieces.filter(piece => piece.visible).length ?? 0;
+            const selectedPhysicalVisible = Boolean(selectedId && physical?.pieces.some(piece => piece.id === selectedId && piece.visible));
+            const physicalReady = host instanceof HTMLElement && host.dataset.physicalFormations === 'ready';
+            const visibleTaskGroups = visibleCount('.r3-terrain-task-group-marker');
             return {
               overlayLod: host instanceof HTMLElement ? host.dataset.overlayLod ?? null : null,
               overlayZoom: host instanceof HTMLElement ? Number(host.dataset.overlayZoom ?? Number.NaN) : Number.NaN,
+              physicalReady,
+              physicalRenderCount: physical?.renderCount ?? 0,
+              physicalVisible,
+              selectedPhysicalVisible,
               taskGroups: document.querySelectorAll('.r3-terrain-task-group-marker').length,
-              visibleTaskGroups: visibleCount('.r3-terrain-task-group-marker'),
+              visibleTaskGroups,
+              visualFriendlyFormations: physicalReady ? physicalVisible : visibleTaskGroups,
               selectedTaskGroups: document.querySelectorAll('.r3-terrain-task-group-marker.selected').length,
               territoryLabels: document.querySelectorAll('.r3-terrain-territory-label').length,
               visibleTerritoryLabels: visibleCount('.r3-terrain-territory-label'),
@@ -104,8 +123,10 @@ jobs:
           });
           console.log('WP2I terrain overlay state:', JSON.stringify(overlayState));
 
-          if (overlayState.visibleTaskGroups < 1) throw new Error('Terrain map has no visible friendly formation counters.');
-          if (overlayState.selectedTaskGroups < 1) throw new Error('Terrain map does not distinguish the selected formation.');
+          if (overlayState.visualFriendlyFormations < 1) throw new Error('Terrain map has no visible friendly formation presentation.');
+          if (overlayState.physicalReady && overlayState.physicalRenderCount < 1) throw new Error('Physical formations report ready without rendering.');
+          if (overlayState.selectedTaskGroups < 1) throw new Error('Terrain map does not distinguish the selected formation interaction target.');
+          if (overlayState.physicalReady && !overlayState.selectedPhysicalVisible) throw new Error('Selected physical formation is not visible.');
           if (overlayState.visibleTerritoryLabels !== overlayState.territoryLabels) throw new Error(`Terrain map hid enabled territory/location labels: ${overlayState.visibleTerritoryLabels}/${overlayState.territoryLabels}.`);
           if (overlayState.visibleStrategicNodes < 3) throw new Error(`Terrain map has insufficient visible city/network cues: ${overlayState.visibleStrategicNodes}.`);
           if (overlayState.visibleStrategicNodes >= overlayState.strategicNodes) throw new Error('Campaign view did not declutter any strategic nodes.');
@@ -114,9 +135,14 @@ jobs:
           if (!Number.isFinite(overlayState.overlayZoom)) throw new Error('Terrain operational overlay zoom metadata was not initialised.');
 
           const secondGroup = page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"]');
-          await secondGroup.click();
-          await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'visible', timeout: 5000 });
-          console.log('WP2I formation counter selection verified for TG-2.');
+          await secondGroup.click({ force: true });
+          await page.locator('.r3-terrain-task-group-marker[data-group-id="TG-2"].selected').waitFor({ state: 'attached', timeout: 5000 });
+          await page.waitForFunction(() => {
+            const host = document.querySelector('.r3-terrain-prototype');
+            if (!(host instanceof HTMLElement) || host.dataset.physicalFormations !== 'ready') return true;
+            return Boolean(window.__r3FormationMiniatures?.pieces.some(piece => piece.id === 'TG-2' && piece.visible));
+          }, null, { timeout: 5000 });
+          console.log('WP2I formation selection verified for TG-2.');
 
           const selectedCamera = page.locator('.r3-terrain-prototype-toolbar button', { hasText: 'selected' }).first();
           await selectedCamera.click();

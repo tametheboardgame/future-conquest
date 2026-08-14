@@ -20,10 +20,11 @@ test('procedural pieces have distinct city, port, airport, rail and crossing sil
   assert.match(layer, /ConeGeometry/);
 });
 
-test('world objects use MapLibre terrain and matrix authority with bounded clearance', () => {
+test('world objects use MapLibre terrain and current v6 custom-layer projection authority with bounded clearance', () => {
   assert.match(layer, /queryTerrainElevation/);
   assert.match(layer, /MercatorCoordinate\.fromLngLat\(piece\.node\.position, elevation \+ CLEARANCE_METRES\)/);
-  assert.match(layer, /projectionMatrix = new Matrix4\(\)\.fromArray\(options\.modelViewProjectionMatrix\)/);
+  assert.match(layer, /defaultProjectionData\.mainMatrix/);
+  assert.doesNotMatch(layer, /options\.modelViewProjectionMatrix/);
   assert.match(layer, /const CLEARANCE_METRES = 22/);
 });
 
@@ -33,6 +34,7 @@ test('deterministic LOD and existing Layers state control physical visibility', 
   assert.match(layer, /this\.layers\.ports/);
   assert.match(layer, /this\.layers\.airports/);
   assert.match(layer, /this\.layers\.citiesHubs/);
+  assert.match(layer, /worldPresentationScale/);
   assert.match(host, /worldMiniaturesRef\.current\?\.update\(layers\)/);
 });
 

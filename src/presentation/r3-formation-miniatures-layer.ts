@@ -1,4 +1,4 @@
-import { MercatorCoordinate, type CustomLayerInterface, type Map } from 'maplibre-gl';
+import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map } from 'maplibre-gl';
 import {
   AmbientLight,
   BoxGeometry,
@@ -24,6 +24,8 @@ import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } fro
 
 export const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 const CLEARANCE_METRES = 45;
+const VISUAL_GROUP_NAME = 'formation-miniature-visual';
+const ELEVATION_RESAMPLE_DEGREES = 0.01;
 
 type Piece = {
   root: Group;
@@ -31,13 +33,23 @@ type Piece = {
   from: FormationGeoPoint;
   target: FormationGeoPoint;
   startedAt: number;
+  elevation?: number;
+  elevationAt?: FormationGeoPoint;
 };
 
 export type FormationMiniatureBrowserEvidence = {
   layerId: string;
   reducedMotion: boolean;
   renderCount: number;
-  pieces: Array<{ id: string; current: FormationGeoPoint; target: FormationGeoPoint; elevation: number; visible: boolean }>;
+  pieces: Array<{
+    id: string;
+    current: FormationGeoPoint;
+    target: FormationGeoPoint;
+    elevation: number;
+    visible: boolean;
+    clusterOffset: readonly [number, number];
+    displayScale: number;
+  }>;
 };
 
 declare global {
@@ -94,6 +106,8 @@ function makeIdentityTexture(group: TaskGroup) {
 
 function makeMiniature(group: TaskGroup, selected: boolean) {
   const root = new Group();
+  const visual = new Group();
+  visual.name = VISUAL_GROUP_NAME;
   const material = new MeshStandardMaterial({ color: statusColours[group.status], roughness: 0.7, metalness: 0.18 });
   const base = new Mesh(
     new CylinderGeometry(selected ? 1.25 : 1.08, selected ? 1.35 : 1.18, 0.16, 16),
@@ -101,9 +115,9 @@ function makeMiniature(group: TaskGroup, selected: boolean) {
   );
   base.rotation.x = Math.PI / 2;
   base.position.z = 0.08;
-  root.add(base);
+  visual.add(base);
   for (const [x, y] of [[-0.5, -0.2], [0, 0.22], [0.5, -0.2], [-0.25, 0.55], [0.25, 0.55]] as const) {
-    root.add(soldier(material, x, y));
+    visual.add(soldier(material, x, y));
   }
   const label = new Mesh(
     new PlaneGeometry(1.55, 0.58),
@@ -111,7 +125,8 @@ function makeMiniature(group: TaskGroup, selected: boolean) {
   );
   label.position.set(0, -0.88, 0.48);
   label.rotation.x = Math.PI / 2.7;
-  root.add(label);
+  visual.add(label);
+  root.add(visual);
   root.userData.status = group.status;
   return root;
 }
@@ -138,6 +153,49 @@ function disposeMiniature(root: Object3D) {
   for (const material of materials) { material.map?.dispose(); material.dispose(); }
 }
 
+function coordinateKey(point: FormationGeoPoint) {
+  return `${point[0].toFixed(5)}:${point[1].toFixed(5)}`;
+}
+
+function clusterOffsets(state: GameState) {
+  const clusters = new globalThis.Map<string, Array<{ id: string; point: FormationGeoPoint }>>();
+  for (const group of Object.values(state.taskGroups)) {
+    const point = formationPresentationPosition(group, terrainOperationalTerritoryCentres);
+    if (!point) continue;
+    const key = coordinateKey(point);
+    const cluster = clusters.get(key) ?? [];
+    cluster.push({ id: group.id, point });
+    clusters.set(key, cluster);
+  }
+
+  const offsets = new globalThis.Map<string, readonly [number, number]>();
+  for (const cluster of clusters.values()) {
+    cluster.sort((a, b) => a.id.localeCompare(b.id));
+    if (cluster.length === 1) {
+      offsets.set(cluster[0].id, [0, 0]);
+      continue;
+    }
+    const radius = cluster.length <= 4 ? 1.18 : 1.45;
+    cluster.forEach((member, index) => {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * index) / cluster.length;
+      offsets.set(member.id, [Math.cos(angle) * radius, Math.sin(angle) * radius]);
+    });
+  }
+  return offsets;
+}
+
+function presentationScaleForZoom(zoom: number) {
+  if (zoom < 4.8) return 44_000;
+  if (zoom < 6.4) return 28_000;
+  return 18_000;
+}
+
+function needsElevationSample(piece: Piece, point: FormationGeoPoint) {
+  if (piece.elevation === undefined || !piece.elevationAt) return true;
+  return Math.abs(piece.elevationAt[0] - point[0]) >= ELEVATION_RESAMPLE_DEGREES
+    || Math.abs(piece.elevationAt[1] - point[1]) >= ELEVATION_RESAMPLE_DEGREES;
+}
+
 /** Derived-only Three.js presentation. MapLibre's matrix and DEM remain the sole camera/terrain authority. */
 export class FormationMiniaturesLayer implements CustomLayerInterface {
   readonly id = R3_FORMATION_MINIATURE_LAYER_ID;
@@ -152,6 +210,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
   private reducedMotion: boolean;
   private visible: boolean;
   private renderCount = 0;
+  private clusterOffsetById = new globalThis.Map<string, readonly [number, number]>();
 
   constructor(state: GameState, layers: Pick<TerrainOperationalLayers, 'friendlyFormations'>) {
     this.state = state;
@@ -179,6 +238,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
 
   private rebuild() {
     if (!this.map) return;
+    this.clusterOffsetById = clusterOffsets(this.state);
     const active = new Set(Object.keys(this.state.taskGroups));
     for (const [id, piece] of this.pieces) if (!active.has(id)) {
       this.scene.remove(piece.root);
@@ -197,37 +257,63 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
         root.rotation.z = movementBearing(group);
         this.scene.add(root);
         const current = old?.current ?? target;
-        this.pieces.set(group.id, { root, current, from: current, target, startedAt: performance.now() });
+        this.pieces.set(group.id, {
+          root,
+          current,
+          from: current,
+          target,
+          startedAt: performance.now(),
+          elevation: old?.elevation,
+          elevationAt: old?.elevationAt
+        });
       } else {
         if (old.target[0] !== target[0] || old.target[1] !== target[1]) {
           old.from = old.current; old.target = target; old.startedAt = performance.now();
         }
         old.root.rotation.z = movementBearing(group);
       }
+      const piece = this.pieces.get(group.id);
+      const visual = piece?.root.getObjectByName(VISUAL_GROUP_NAME);
+      const offset = this.clusterOffsetById.get(group.id) ?? [0, 0];
+      visual?.position.set(offset[0], offset[1], 0);
     }
   }
 
-  render(_gl: WebGL2RenderingContext, options: { modelViewProjectionMatrix: ArrayLike<number> }) {
+  render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput) {
     if (!this.map || !this.renderer) return;
     const now = performance.now();
     let animating = false;
-    const zoom = this.map.getZoom();
-    const lodScale = zoom < 4.8 ? 0.55 : zoom < 6.4 ? 0.78 : 1;
+    const displayScale = presentationScaleForZoom(this.map.getZoom());
     const browserPieces: FormationMiniatureBrowserEvidence['pieces'] = [];
     for (const [id, piece] of this.pieces) {
       const elapsed = now - piece.startedAt;
       piece.current = this.reducedMotion ? piece.target : interpolateFormationPresentation(piece.from, piece.target, elapsed);
       animating ||= !this.reducedMotion && elapsed < FORMATION_PRESENTATION_ANIMATION_MS;
       const lngLat: [number, number] = [piece.current[0], piece.current[1]];
-      const elevation = this.map.queryTerrainElevation(lngLat) ?? 0;
+      if (needsElevationSample(piece, lngLat)) {
+        const sampledElevation = this.map.queryTerrainElevation(lngLat);
+        if (sampledElevation !== null) {
+          piece.elevation = sampledElevation;
+          piece.elevationAt = [...lngLat];
+        }
+      }
+      const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(lngLat, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
-      piece.root.scale.set(metres * 26000 * lodScale, -metres * 26000 * lodScale, metres * 26000 * lodScale);
+      piece.root.scale.set(metres * displayScale, -metres * displayScale, metres * displayScale);
       piece.root.visible = this.visible;
-      browserPieces.push({ id, current: [...piece.current], target: [...piece.target], elevation, visible: piece.root.visible });
+      browserPieces.push({
+        id,
+        current: [...piece.current],
+        target: [...piece.target],
+        elevation,
+        visible: piece.root.visible,
+        clusterOffset: this.clusterOffsetById.get(id) ?? [0, 0],
+        displayScale
+      });
     }
-    this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
+    this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
     this.renderer.resetState();
     this.renderer.render(this.scene, this.camera);
     this.renderCount += 1;
