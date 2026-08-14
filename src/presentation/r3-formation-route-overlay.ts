@@ -5,6 +5,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const overlays = new WeakMap<Map, SVGSVGElement>();
 const latestMarkers = new WeakMap<Map, readonly Marker[]>();
 const trackedMaps = new WeakSet<Map>();
+const scheduledFrames = new WeakMap<Map, number>();
 
 const parseMovementPath = (value: string | undefined): readonly FormationGeoPoint[] | undefined => {
   if (!value) return undefined;
@@ -112,13 +113,34 @@ const renderMovementRoutes = (map: Map, markers: readonly Marker[]) => {
   }
 };
 
+const hideMovementRoutesDuringCameraTravel = (map: Map) => {
+  const overlay = overlays.get(map);
+  if (overlay) overlay.style.visibility = 'hidden';
+};
+
+const scheduleMovementRouteRefresh = (map: Map) => {
+  if (scheduledFrames.has(map)) return;
+  const frame = requestAnimationFrame(() => {
+    scheduledFrames.delete(map);
+    if (map.isMoving()) {
+      hideMovementRoutesDuringCameraTravel(map);
+      return;
+    }
+    renderMovementRoutes(map, latestMarkers.get(map) ?? []);
+    const overlay = overlays.get(map);
+    if (overlay) overlay.style.visibility = '';
+  });
+  scheduledFrames.set(map, frame);
+};
+
 export function syncFormationMovementRouteOverlay(map: Map, markers: readonly Marker[]) {
   latestMarkers.set(map, markers);
   if (!trackedMaps.has(map)) {
-    const refresh = () => renderMovementRoutes(map, latestMarkers.get(map) ?? []);
-    map.on('move', refresh);
-    map.on('resize', refresh);
+    map.on('movestart', () => hideMovementRoutesDuringCameraTravel(map));
+    map.on('moveend', () => scheduleMovementRouteRefresh(map));
+    map.on('resize', () => scheduleMovementRouteRefresh(map));
     trackedMaps.add(map);
   }
-  renderMovementRoutes(map, markers);
+  if (map.isMoving()) hideMovementRoutesDuringCameraTravel(map);
+  else scheduleMovementRouteRefresh(map);
 }
