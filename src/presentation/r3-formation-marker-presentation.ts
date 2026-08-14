@@ -4,11 +4,12 @@ import type { GameState } from '../game/types';
 import {
   formationPresentationPath,
   formationPresentationPosition,
+  FORMATION_PRESENTATION_ANIMATION_MS,
+  interpolateFormationPresentation,
   type FormationGeoPoint
 } from './r3-formation-movement';
 
 const clampProgress = (value: number) => Math.max(0, Math.min(100, value));
-const MOVEMENT_ANIMATION_MS = 520;
 const renderedPositions = new WeakMap<Marker, FormationGeoPoint>();
 const animationFrames = new WeakMap<Marker, number>();
 const movingMarkers = new WeakSet<Marker>();
@@ -44,12 +45,8 @@ const setMarkerPresentationPosition = (
       animationFrames.delete(marker);
       return;
     }
-    const t = Math.max(0, Math.min(1, (now - startedAt) / MOVEMENT_ANIMATION_MS));
-    const eased = 1 - Math.pow(1 - t, 3);
-    const point: FormationGeoPoint = [
-      previous[0] + (target[0] - previous[0]) * eased,
-      previous[1] + (target[1] - previous[1]) * eased
-    ];
+    const t = Math.max(0, Math.min(1, (now - startedAt) / FORMATION_PRESENTATION_ANIMATION_MS));
+    const point = interpolateFormationPresentation(previous, target, now - startedAt);
     marker.setLngLat([point[0], point[1]]);
     renderedPositions.set(marker, point);
     if (t < 1) animationFrames.set(marker, requestAnimationFrame(frame));

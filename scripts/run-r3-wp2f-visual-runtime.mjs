@@ -318,6 +318,7 @@ await fallbackPage.locator('.startup-game-shell').waitFor({ state: 'visible' });
 await fallbackPage.locator('[data-command-view="map"]').click();
 const fallbackMap = fallbackPage.locator('.europe-map');
 await fallbackMap.waitFor({ state: 'visible' });
+await fallbackPage.waitForFunction(() => document.querySelectorAll('.europe-map .task-group-marker').length >= 4);
 evidence.fallback = {
   usable: await fallbackMap.isVisible(),
   terrainRendererAbsent: await fallbackPage.locator('.r3-terrain-prototype').count() === 0,

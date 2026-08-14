@@ -26,10 +26,27 @@ test('WP3.5 custom pieces derive geographic state, terrain elevation, state lang
 });
 
 test('WP3.5 smoothing remains presentation-only and reduced motion settles immediately', () => {
-  assert.match(layer, /this\.reducedMotion \? 1 : 1 - Math\.exp\(-elapsed \/ 135\)/);
+  assert.match(layer, /interpolateFormationPresentation\(piece\.from, piece\.target, elapsed\)/);
+  assert.match(layer, /FORMATION_PRESENTATION_ANIMATION_MS/);
   assert.match(layer, /this\.map\.triggerRepaint\(\)/);
   assert.doesNotMatch(layer, /state\.taskGroups\[[^\]]+\]\s*=/);
   assert.doesNotMatch(layer, /order\.progress\s*=/);
+});
+
+test('formation layer visibility follows Layers and replacement resources are disposed', () => {
+  assert.match(layer, /this\.visible = layers\.friendlyFormations/);
+  assert.match(layer, /piece\.root\.visible = this\.visible/);
+  assert.match(layer, /disposeMiniature\(old\.root\)/);
+  assert.match(layer, /material\.map\?\.dispose\(\); material\.dispose\(\)/);
+});
+
+test('movement bearing and interaction target use shared progress and presentation timing', () => {
+  const movement = fs.readFileSync('src/presentation/r3-formation-movement.ts', 'utf8');
+  const marker = fs.readFileSync('src/presentation/r3-formation-marker-presentation.ts', 'utf8');
+  assert.match(layer, /formationForwardPathTarget\(path, progress\)/);
+  assert.match(movement, /activePathSegment\(points, progress\)/);
+  assert.match(marker, /interpolateFormationPresentation\(previous, target, now - startedAt\)/);
+  assert.match(marker, /FORMATION_PRESENTATION_ANIMATION_MS/);
 });
 
 test('WP3.5 retains DOM formation interaction and renderer-failure fallback', () => {

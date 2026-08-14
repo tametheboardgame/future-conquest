@@ -11,7 +11,7 @@ export const R3_WORLD_MINIATURE_LAYER_ID = 'r3-wp3-5-world-miniatures';
 const CLEARANCE_METRES = 22;
 
 type WorldKind = 'city' | 'port' | 'airport' | 'rail-hub' | 'logistics' | 'crossing';
-type WorldPiece = { node: StrategicNodeDefinition; root: Group; kind: WorldKind };
+type WorldPiece = { node: StrategicNodeDefinition; root: Group; kind: WorldKind; elevation?: number };
 export type WorldMiniatureEvidence = {
   layerId: string;
   renderCount: number;
@@ -128,7 +128,10 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
       // bounds density by removing minor infrastructure while Selected is rich.
       const lodVisible = lod === 'selected' || (lod === 'campaign' ? piece.node.importance >= 2 : piece.node.importance >= 3);
       piece.root.visible = enabled && lodVisible;
-      const elevation = this.map.queryTerrainElevation([piece.node.position[0], piece.node.position[1]]) ?? 0;
+      // Strategic nodes never move. Keep the first available DEM sample rather
+      // than querying every object on every camera-animation frame.
+      piece.elevation ??= this.map.queryTerrainElevation([piece.node.position[0], piece.node.position[1]]) ?? undefined;
+      const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(piece.node.position, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
       const scale = (lod === 'theatre' ? 15500 : lod === 'campaign' ? 19000 : 22500) * (piece.node.importance === 3 ? 1.18 : 1);

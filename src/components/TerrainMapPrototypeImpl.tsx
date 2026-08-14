@@ -655,7 +655,7 @@ export function TerrainMapPrototypeImpl({
           const worldLayer = new WorldMiniaturesLayer(layersRef.current);
           map.addLayer(worldLayer);
           worldMiniaturesRef.current = worldLayer;
-          const miniatureLayer = new FormationMiniaturesLayer(stateRef.current);
+          const miniatureLayer = new FormationMiniaturesLayer(stateRef.current, layersRef.current);
           map.addLayer(miniatureLayer);
           formationMiniaturesRef.current = miniatureLayer;
           if (host) host.dataset.physicalFormations = 'ready';
@@ -801,7 +801,7 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
-    formationMiniaturesRef.current?.update(state);
+    formationMiniaturesRef.current?.update(state, layers);
     worldMiniaturesRef.current?.update(layers);
     applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
 

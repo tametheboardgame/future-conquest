@@ -19,8 +19,8 @@ import {
   WebGLRenderer
 } from 'three';
 import type { GameState, TaskGroup } from '../game/types';
-import { formationPresentationPath, formationPresentationPosition, type FormationGeoPoint } from './r3-formation-movement';
-import { terrainOperationalTerritoryCentres } from './r3-terrain-operational-markers-core';
+import { FORMATION_PRESENTATION_ANIMATION_MS, formationForwardPathTarget, formationPresentationPath, formationPresentationPosition, interpolateFormationPresentation, type FormationGeoPoint } from './r3-formation-movement';
+import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } from './r3-terrain-operational-markers-core';
 
 export const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 const CLEARANCE_METRES = 45;
@@ -28,8 +28,9 @@ const CLEARANCE_METRES = 45;
 type Piece = {
   root: Group;
   current: FormationGeoPoint;
+  from: FormationGeoPoint;
   target: FormationGeoPoint;
-  lastUpdate: number;
+  startedAt: number;
 };
 
 export type FormationMiniatureBrowserEvidence = {
@@ -118,9 +119,23 @@ function makeMiniature(group: TaskGroup, selected: boolean) {
 function movementBearing(group: TaskGroup) {
   const path = formationPresentationPath(group, terrainOperationalTerritoryCentres);
   if (!path || path.length < 2 || group.status !== 'moving') return 0;
+  const progress = group.order?.type === 'move' ? group.order.progress / 100 : 0;
   const position = formationPresentationPosition(group, terrainOperationalTerritoryCentres) ?? path[0];
-  const next = path.find(point => point !== path[0] && (point[0] !== position[0] || point[1] !== position[1])) ?? path.at(-1)!;
+  const next = formationForwardPathTarget(path, progress) ?? path.at(-1)!;
   return Math.atan2(next[0] - position[0], next[1] - position[1]);
+}
+
+function disposeMiniature(root: Object3D) {
+  const geometries = new Set<{ dispose(): void }>();
+  const materials = new Set<MeshStandardMaterial>();
+  root.traverse(child => {
+    if (!(child instanceof Mesh)) return;
+    geometries.add(child.geometry);
+    const meshMaterials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of meshMaterials) if (material instanceof MeshStandardMaterial) materials.add(material);
+  });
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of materials) { material.map?.dispose(); material.dispose(); }
 }
 
 /** Derived-only Three.js presentation. MapLibre's matrix and DEM remain the sole camera/terrain authority. */
@@ -135,10 +150,12 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
   private readonly pieces = new globalThis.Map<string, Piece>();
   private state: GameState;
   private reducedMotion: boolean;
+  private visible: boolean;
   private renderCount = 0;
 
-  constructor(state: GameState) {
+  constructor(state: GameState, layers: Pick<TerrainOperationalLayers, 'friendlyFormations'>) {
     this.state = state;
+    this.visible = layers.friendlyFormations;
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
@@ -153,8 +170,9 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     this.rebuild();
   }
 
-  update(state: GameState) {
+  update(state: GameState, layers: Pick<TerrainOperationalLayers, 'friendlyFormations'>) {
     this.state = state;
+    this.visible = layers.friendlyFormations;
     this.rebuild();
     this.map?.triggerRepaint();
   }
@@ -164,6 +182,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     const active = new Set(Object.keys(this.state.taskGroups));
     for (const [id, piece] of this.pieces) if (!active.has(id)) {
       this.scene.remove(piece.root);
+      disposeMiniature(piece.root);
       this.pieces.delete(id);
     }
     for (const group of Object.values(this.state.taskGroups)) {
@@ -172,14 +191,17 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       const selected = group.id === this.state.selectedTaskGroupId;
       const old = this.pieces.get(group.id);
       if (!old || old.root.userData.status !== group.status || Boolean(old.root.userData.selected) !== selected) {
-        if (old) this.scene.remove(old.root);
+        if (old) { this.scene.remove(old.root); disposeMiniature(old.root); }
         const root = makeMiniature(group, selected);
         root.userData.selected = selected;
         root.rotation.z = movementBearing(group);
         this.scene.add(root);
-        this.pieces.set(group.id, { root, current: old?.current ?? target, target, lastUpdate: performance.now() });
+        const current = old?.current ?? target;
+        this.pieces.set(group.id, { root, current, from: current, target, startedAt: performance.now() });
       } else {
-        old.target = target;
+        if (old.target[0] !== target[0] || old.target[1] !== target[1]) {
+          old.from = old.current; old.target = target; old.startedAt = performance.now();
+        }
         old.root.rotation.z = movementBearing(group);
       }
     }
@@ -193,20 +215,16 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     const lodScale = zoom < 4.8 ? 0.55 : zoom < 6.4 ? 0.78 : 1;
     const browserPieces: FormationMiniatureBrowserEvidence['pieces'] = [];
     for (const [id, piece] of this.pieces) {
-      const elapsed = Math.min(64, Math.max(0, now - piece.lastUpdate));
-      piece.lastUpdate = now;
-      const alpha = this.reducedMotion ? 1 : 1 - Math.exp(-elapsed / 135);
-      const dx = piece.target[0] - piece.current[0];
-      const dy = piece.target[1] - piece.current[1];
-      piece.current = Math.hypot(dx, dy) < 1e-7 ? piece.target : [piece.current[0] + dx * alpha, piece.current[1] + dy * alpha];
-      animating ||= piece.current !== piece.target;
+      const elapsed = now - piece.startedAt;
+      piece.current = this.reducedMotion ? piece.target : interpolateFormationPresentation(piece.from, piece.target, elapsed);
+      animating ||= !this.reducedMotion && elapsed < FORMATION_PRESENTATION_ANIMATION_MS;
       const lngLat: [number, number] = [piece.current[0], piece.current[1]];
       const elevation = this.map.queryTerrainElevation(lngLat) ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(lngLat, elevation + CLEARANCE_METRES);
       const metres = coordinate.meterInMercatorCoordinateUnits();
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
       piece.root.scale.set(metres * 26000 * lodScale, -metres * 26000 * lodScale, metres * 26000 * lodScale);
-      piece.root.visible = true;
+      piece.root.visible = this.visible;
       browserPieces.push({ id, current: [...piece.current], target: [...piece.target], elevation, visible: piece.root.visible });
     }
     this.camera.projectionMatrix = new Matrix4().fromArray(options.modelViewProjectionMatrix);
@@ -226,6 +244,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     this.renderer?.dispose();
     this.renderer = undefined;
     this.map = undefined;
+    for (const piece of this.pieces.values()) disposeMiniature(piece.root);
     for (const child of this.scene.children) if (child instanceof Object3D) child.clear();
     this.pieces.clear();
     delete window.__r3FormationMiniatures;
