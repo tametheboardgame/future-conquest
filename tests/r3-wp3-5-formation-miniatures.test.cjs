@@ -11,6 +11,8 @@ test('WP3.5 formation miniatures use a MapLibre custom 3D layer with procedural 
   assert.match(layer, /implements CustomLayerInterface/);
   assert.match(layer, /renderingMode = '3d'/);
   assert.match(layer, /new WebGLRenderer\(\{ canvas: map\.getCanvas\(\), context: gl/);
+  assert.match(layer, /defaultProjectionData\.mainMatrix/);
+  assert.doesNotMatch(layer, /options\.modelViewProjectionMatrix/);
   assert.match(layer, /for \(const \[x, y\] of \[\[-0\.5, -0\.2\].*\[0\.25, 0\.55\]/s);
   assert.match(layer, /CylinderGeometry/);
   assert.match(layer, /ConeGeometry/);
@@ -24,9 +26,9 @@ test('WP3.5 custom pieces derive geographic state, terrain elevation, state lang
     assert.match(layer, new RegExp(`${status}: 0x`));
   }
   assert.match(layer, /presentationScaleForZoom/);
-  assert.match(layer, /78_000/);
-  assert.match(layer, /52_000/);
-  assert.match(layer, /24_000/);
+  assert.match(layer, /44_000/);
+  assert.match(layer, /28_000/);
+  assert.match(layer, /18_000/);
 });
 
 test('co-located formations keep one geographic root but receive deterministic local miniature offsets', () => {
