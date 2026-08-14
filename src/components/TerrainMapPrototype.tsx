@@ -3,6 +3,7 @@ import {
   chooseTerrainPresentationProfile,
   type TerrainPresentationProfile
 } from '../presentation/r3-terrain-config';
+import '../wp3-5-physical-overlay.css';
 import {
   TerrainMapPrototypeImpl,
   prewarmTerrainRuntime,
