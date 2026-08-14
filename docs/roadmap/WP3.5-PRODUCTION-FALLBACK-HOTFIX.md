@@ -30,6 +30,8 @@ Both the formation and world miniature layers now use `defaultProjectionData.mai
 
 A further presentation issue became clear after the projection/card fixes: four starting Task Groups can share one authoritative Luxembourg coordinate, so their physical representations stacked directly on top of one another. The hotfix preserves the exact geographic root but gives co-located miniature child groups deterministic local visual offsets. Strategic scale was then tuned against the corrected projection so pieces remain readable without covering whole territories.
 
+The corrected physical map also exposed avoidable terrain-network churn during Theatre to Selected transitions. Formation DEM samples are now cached until the formation genuinely moves, and Theatre keeps the DEM source attached at zero exaggeration rather than removing terrain entirely. This preserves a flat Theatre presentation while allowing MapLibre to retain terrain tiles for the return to Campaign/Selected relief.
+
 ## Hotfix scope
 
 1. Make the physical-ready compatibility-marker transparency authoritative while retaining invisible pointer/keyboard hit targets and restoring a concise card only for `:focus-visible`.
@@ -38,7 +40,9 @@ A further presentation issue became clear after the projection/card fixes: four 
 4. Tune symbolic Theatre/Campaign/Selected presentation scale for army and world miniatures against the corrected projection.
 5. Keep strategic-node text labels/hit targets, but suppress the old circular node glyph when physical city/infrastructure silhouettes are active.
 6. Keep the dedicated production-path regression probe on Linux Chromium and Windows Chrome. It mounts the built game at `/future-conquest/`, requires the actual Three.js layers to render, requires legacy Task Group cards to compute to zero opacity, and captures screenshots for visual inspection.
-7. Keep Selected in Local LOD while capping the full-profile live zoom at 6.55 to avoid unnecessary Terrain-RGB tile pressure. The historical named Selected preset remains 7.1.
+7. Keep Selected in Local LOD while capping the full-profile live zoom at 6.4 to avoid requesting an unnecessary higher-detail terrain band. The historical named Selected preset remains 7.1.
+8. Cache formation terrain-height samples across camera-only movement and keep the DEM source attached with zero exaggeration in Theatre, avoiding needless terrain teardown/refetch while retaining proper grounding when formations actually move.
+9. Keep WP2F and the performance benchmark focused on settled visual/performance state by programmatically invoking already-proven camera controls; dedicated browser and selection gates continue to exercise real pointer interaction.
 
 ## Boundaries
 
@@ -47,5 +51,5 @@ A further presentation issue became clear after the projection/card fixes: four 
 - No gameplay, balance, save, route, territory, intelligence or narrative changes.
 - Preserve PR #139 geographic-anchor guarantees and WP3.5 movement/click-target synchronisation.
 - Preserve Layers controls, reduced motion, GPU disposal and `?terrain=0` SVG fallback.
-- Performance thresholds remain unchanged; benchmark harness changes must preserve the existing useful-paint, fallback and terrain-settlement contracts.
+- Performance thresholds remain unchanged; benchmark harness changes preserve the existing useful-paint, fallback and terrain-settlement contracts.
 - WP4 remains blocked until the corrected deployed WP3.5 build is visually accepted by the product owner.
