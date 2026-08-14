@@ -15,7 +15,7 @@ test('WP2D uses reduced motion to gate settled visual states', () => {
 
 test('WP2D evidence screenshots are bounded and non-gating', () => {
   const captureStart = workflow.indexOf('const captureEvidence = async viewName =>');
-  const verifyStart = workflow.indexOf('const verifyView = async (viewName, expectedLod, expectedRelief) =>');
+  const verifyStart = workflow.indexOf('const verifyView = async (viewName, expectedLod, expectedRelief, activate = true) =>');
   assert.ok(captureStart >= 0 && verifyStart > captureStart, 'bounded evidence helper must precede view verification');
 
   const capture = workflow.slice(captureStart, verifyStart);
@@ -27,9 +27,20 @@ test('WP2D evidence screenshots are bounded and non-gating', () => {
   assert.doesNotMatch(capture, /throw error/);
 });
 
+test('WP2D asserts the initial Campaign state without a redundant camera transaction', () => {
+  const verifyStart = workflow.indexOf('const verifyView = async (viewName, expectedLod, expectedRelief, activate = true) =>');
+  const campaign = workflow.indexOf("await verifyView('campaign', 'campaign', 'physical', false);");
+  const theatre = workflow.indexOf("await verifyView('theatre', 'theatre', 'strategic-flat');");
+  assert.ok(verifyStart >= 0 && campaign > verifyStart, 'Campaign must be verified through the common gating helper');
+  assert.ok(campaign < theatre, 'initial Campaign state must be asserted before Theatre');
+  assert.match(workflow, /if \(activate\) \{[\s\S]*?await button\.click\(\);[\s\S]*?\}/);
+  assert.match(workflow, /renderer already starts at Campaign\. Assert that settled state in place rather than issuing a redundant camera transaction/);
+  assert.match(workflow, /await page\.waitForTimeout\(900\);/);
+});
+
 test('WP2D assertions remain gating before a single post-Selected evidence capture', () => {
   const lodAssertion = workflow.indexOf('if (result.lod !== expectedLod) throw new Error');
-  const campaign = workflow.indexOf("await verifyView('campaign', 'campaign', 'physical');");
+  const campaign = workflow.indexOf("await verifyView('campaign', 'campaign', 'physical', false);");
   const theatre = workflow.indexOf("await verifyView('theatre', 'theatre', 'strategic-flat');");
   const selected = workflow.indexOf("await verifyView('selected', 'local', 'physical');");
   const captureCall = workflow.indexOf("await captureEvidence('selected');");
