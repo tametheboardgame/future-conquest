@@ -1,0 +1,40 @@
+name: R3 WP4 battle event feedback gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/presentation/r3-battle-event-overlay.ts'
+      - 'src/presentation/r3-strategic-event-cues.ts'
+      - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'tests/r3-wp4-*.test.cjs'
+      - 'scripts/probe-r3-wp4-battle-overlay.mjs'
+      - '.github/workflows/r3-wp4-battle-event-feedback.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  wp4-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium probe dependency
+        run: npm install --no-save --no-package-lock playwright-core@1.54.2
+      - name: Focused WP4 contracts
+        run: node --test tests/r3-wp4-battle-event-feedback.test.cjs
+      - name: Full regression suite
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Chromium active-operation probe
+        run: node scripts/probe-r3-wp4-battle-overlay.mjs

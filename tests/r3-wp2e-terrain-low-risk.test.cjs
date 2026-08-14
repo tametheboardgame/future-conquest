@@ -29,10 +29,11 @@ test('WP2E removes the invisible colour-relief DEM path but keeps mesh and hills
   assert.match(renderer, /'r3-wp2b-hillshade-dem': \{ \.\.\.demSource \}/);
 });
 
-test('roadmap records the WP2E handoff through WP2F and keeps WP3 paused', () => {
+test('roadmap records completed WP2E/WP2F/WP3 handoffs and active WP4', () => {
   assert.match(roadmap, /R3-WP2D -> R3-WP2E/);
   assert.match(roadmap, /Status: COMPLETE \/ MERGED \(#122\), VISUALLY ACCEPTED/);
   assert.match(roadmap, /R3-WP2E - Terrain Performance & Streaming Optimisation/);
   assert.match(roadmap, /R3-WP2E -> R3-WP2F/);
-  assert.match(roadmap, /Status: PAUSED PENDING WP2F LIVE ACCEPTANCE/);
+  assert.match(roadmap, /Status: COMPLETE \/ MERGED \(#136\), LIVE VERIFIED 2026-08-14/);
+  assert.match(roadmap, /R3-WP4-BATTLE-FRONT-EVENT-FEEDBACK\.md/);
 });

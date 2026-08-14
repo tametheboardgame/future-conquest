@@ -129,37 +129,37 @@ WP2D therefore owns:
 - intensive browser visual/runtime validation across top-down and pitched views;
 - performance/accessibility/fallback preservation and exact simulation parity.
 
-The product owner visually accepted WP2D on 2026-08-12. WP3 remains paused while the focused WP2E terrain performance and streaming pass is active.
+The product owner visually accepted WP2D on 2026-08-12. The subsequent WP2E and WP2F passes are complete and merged.
 
 ---
 
 ## R3-WP2E - Terrain Performance & Streaming Optimisation
 
-Status: APPROVED / ACTIVE
+Status: COMPLETE / MERGED
 
 Authoritative package detail: `docs/roadmap/R3-WP2E-TERRAIN-PERFORMANCE.md`.
 
 Objective: reduce sporadic terrain loading and camera-change lag on the accepted WP2D terrain build, backed by permanent exact-browser performance evidence, without changing gameplay or the accepted visual direction.
 
-WP3 remains paused pending WP2E acceptance.
+Completed and merged before the WP2F readability pass. At the historical WP2D checkpoint, WP3 was paused pending WP2E; that sequencing gate is now closed.
 
 ---
 
 ## R3-WP2F - Overlay Readability & Marker Scaling
 
-Status: ACTIVE / LIVE ACCEPTANCE PENDING
+Status: COMPLETE / MERGED
 
 Authoritative package detail: `docs/roadmap/R3-WP2F-OVERLAY-READABILITY-MARKER-SCALING.md`.
 
 Objective: restore terrain-first political presentation and introduce a coherent, tightly-clamped screen-space marker detail and footprint policy.
 
-WP3 remains paused pending WP2F live visual acceptance.
+Completed and merged before WP3 resumed.
 
 ---
 
 ## R3-WP3 - Formation Pieces & Animated Movement
 
-Status: PAUSED PENDING WP2F LIVE ACCEPTANCE
+Status: COMPLETE / MERGED (#136), LIVE VERIFIED 2026-08-14
 
 Objective: make armies visibly exist on the accepted terrain map as readable board-game-like pieces and make movement understandable as a physical change in campaign state.
 
@@ -176,11 +176,15 @@ Key requirements:
 - reduced-motion/performance settings can simplify or disable movement animation;
 - Three.js may be used for physical pieces through the approved MapLibre custom 3D layer once WP2D accepts the terrain surface.
 
-Any exploratory WP3 work made against the raised-territory renderer is non-authoritative and may be reused only if it fits the accepted WP2D surface.
+WP3 merged as PR #136 and was verified live on 2026-08-14. Its teal movement presentation remains the accepted baseline for WP4.
 
 ---
 
 ## R3-WP4 - Battle, Front & Strategic Event Feedback
+
+Status: APPROVED / ACTIVE
+
+Authoritative package detail: `docs/roadmap/R3-WP4-BATTLE-FRONT-EVENT-FEEDBACK.md`.
 
 Objective: make attacks, counterattacks, captures, retreats and major campaign changes visible on the map without turning the game into tactical spectacle.
 

@@ -5,16 +5,18 @@ import {
   withIndependentMovingFormationClusters
 } from './r3-formation-marker-presentation';
 import { syncFormationMovementRouteOverlay } from './r3-formation-route-overlay';
+import { syncBattleEventOverlay } from './r3-battle-event-overlay';
+import { deriveActiveAttackCues } from './r3-strategic-event-cues';
 import {
   applyTerrainOperationalMarkerLayout as applyCoreTerrainOperationalMarkerLayout,
   buildTerrainOperationalMarkers as buildCoreTerrainOperationalMarkers,
   reconcileTerrainOperationalMarkers as reconcileCoreTerrainOperationalMarkers,
-  removeTerrainOperationalMarkers,
+  removeTerrainOperationalMarkers as removeTerrainOperationalMarkersCore,
   terrainOperationalTerritoryCentres,
   type TerrainOperationalLayers
 } from './r3-terrain-operational-markers-core';
 
-export { removeTerrainOperationalMarkers, terrainOperationalTerritoryCentres };
+export { terrainOperationalTerritoryCentres };
 export type { TerrainOperationalLayers };
 
 interface MarkerCallbacks {
@@ -30,6 +32,7 @@ export function buildTerrainOperationalMarkers(map: Map, state: GameState, callb
     false
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
+  syncBattleEventOverlay(map, deriveActiveAttackCues(state), terrainOperationalTerritoryCentres);
   return markers;
 }
 
@@ -46,8 +49,11 @@ export function reconcileTerrainOperationalMarkers(
     true
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
+  syncBattleEventOverlay(map, deriveActiveAttackCues(state), terrainOperationalTerritoryCentres);
   return markers;
 }
+
+export const removeTerrainOperationalMarkers = removeTerrainOperationalMarkersCore;
 
 export function applyTerrainOperationalMarkerLayout(
   map: Map,

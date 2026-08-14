@@ -48,6 +48,7 @@ import {
 } from '../presentation/r3-terrain-operational-markers';
 import { createCoalescedFrameTask } from '../presentation/r3-coalesced-frame-task';
 import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
+import { removeBattleEventOverlay } from '../presentation/r3-battle-event-overlay';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -715,6 +716,7 @@ export function TerrainMapPrototypeImpl({
     return () => {
       disposed = true;
       loadedRef.current = false;
+      if (ownedMap) removeBattleEventOverlay(ownedMap);
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
       toolbarResizeObserver?.disconnect();

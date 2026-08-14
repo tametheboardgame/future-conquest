@@ -13,7 +13,7 @@ test('R3 programme keeps terrain refinement before formation animation', () => {
   const wp2e = roadmap.indexOf('## R3-WP2E - Terrain Performance & Streaming Optimisation');
   const wp3 = roadmap.indexOf('## R3-WP3 - Formation Pieces & Animated Movement');
   assert.ok(wp2b >= 0 && wp2c > wp2b && wp2d > wp2c && wp2e > wp2d && wp3 > wp2e);
-  assert.match(roadmap, /WP3 (?:is|remains) paused pending WP2E/i);
+  assert.match(roadmap, /Status: COMPLETE \/ MERGED \(#136\), LIVE VERIFIED 2026-08-14/);
 });
 
 test('R3 WP2B explicitly replaces political slab elevation with continuous terrain', () => {
