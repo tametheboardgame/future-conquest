@@ -19,7 +19,7 @@ const visibleText = () => [...document.querySelectorAll('*')].some(element => {
 });
 
 async function findAndSaveNaturalDusseldorfCampaign() {
-  const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  const context = await browser.newContext({ viewport, reducedMotion: 'reduce', ignoreHTTPSErrors: true });
   const page = await context.newPage();
   page.on('console', message => console.log(`[campaign-setup console ${message.type()}] ${message.text()}`));
   page.on('pageerror', error => console.log(`[campaign-setup pageerror] ${error.stack ?? error.message}`));
@@ -78,7 +78,7 @@ async function findAndSaveNaturalDusseldorfCampaign() {
 }
 
 async function openSavedDusseldorfCampaign(scenario, savedStorage) {
-  const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  const context = await browser.newContext({ viewport, reducedMotion: 'reduce', ignoreHTTPSErrors: true });
   const page = await context.newPage();
   page.on('console', message => console.log(`[${scenario} console ${message.type()}] ${message.text()}`));
   page.on('pageerror', error => console.log(`[${scenario} pageerror] ${error.stack ?? error.message}`));
@@ -189,6 +189,23 @@ async function snapshot(page, label) {
     const intersects = (a, b) => a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
     const contacts = [...document.querySelectorAll('.r3-terrain-enemy-contact')].filter(visible);
     const places = [...document.querySelectorAll('.r3-terrain-territory-label, .r3-terrain-node-marker')].filter(visible);
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const markerAnchors = [...document.querySelectorAll('[data-r3-marker-id]')]
+      .filter(element => visible(element) && !element.dataset.movementProgress)
+      .flatMap(element => {
+        const longitude = Number(element.dataset.r3AuthoritativeLongitude);
+        const latitude = Number(element.dataset.r3AuthoritativeLatitude);
+        if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return [];
+        const projected = map.project([longitude, latitude]);
+        const rect = element.getBoundingClientRect();
+        const offset = axis => ['r3MarkerOffset', 'formationDisplacement', 'contactDisplacement', 'toolbarDisplacement', 'placeAvoidanceDisplacement']
+          .reduce((sum, prefix) => sum + (Number(element.dataset[`${prefix}${axis}`]) || 0), 0);
+        const expectedX = mapRect.left + projected.x + offset('X');
+        const expectedY = mapRect.top + projected.y + offset('Y');
+        const actualX = rect.left + rect.width / 2;
+        const actualY = rect.top + rect.height / 2;
+        return [{ id: element.dataset.r3MarkerId, dx: actualX - expectedX, dy: actualY - expectedY }];
+      });
     const centre = map.getCenter();
     let identity = window.__wp2iMapIdentities.get(map);
     if (!identity) {
@@ -226,6 +243,7 @@ async function snapshot(page, label) {
         contact: contact.getAttribute('data-r3-marker-id'),
         place: place.getAttribute('data-r3-marker-id')
       }] : [])),
+      markerAnchors,
       trace: [...(window.__wp2iMapTrace ?? [])]
     };
   }, label);
@@ -270,6 +288,24 @@ async function assertInvariant(scenario, before, after, transitionError) {
   }
   if (JSON.stringify(before.terrain) !== JSON.stringify(after.terrain)) throw new Error(`${scenario}: selection changed physical terrain.`);
   if (after.enemyPlaceIntersections.length) throw new Error(`${scenario}: enemy contacts overlap visible place labels: ${JSON.stringify(after.enemyPlaceIntersections)}`);
+  assertGeographicAnchors(scenario, after);
+}
+
+function assertGeographicAnchors(scenario, state) {
+  if (!state.markerAnchors.length) throw new Error(`${scenario}: no visible stationary markers were measured.`);
+  const failures = state.markerAnchors.filter(anchor => Math.hypot(anchor.dx, anchor.dy) > 3);
+  if (failures.length) throw new Error(`${scenario}: markers detached from map.project() anchors: ${JSON.stringify(failures)}`);
+  const commonVerticalTranslation = state.markerAnchors.reduce((sum, anchor) => sum + anchor.dy, 0) / state.markerAnchors.length;
+  if (Math.abs(commonVerticalTranslation) > 3) throw new Error(`${scenario}: common vertical overlay translation: ${commonVerticalTranslation}px`);
+}
+
+async function settleCamera(page, options, label) {
+  await page.evaluate(options => window.__r3TerrainMap.jumpTo(options), options);
+  await page.waitForFunction(() => !window.__r3TerrainMap.isMoving());
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const state = await snapshot(page, label);
+  assertGeographicAnchors(label, state);
+  return state;
 }
 
 async function runScenario({ name, activate }, savedCampaign) {
@@ -292,7 +328,12 @@ async function runScenario({ name, activate }, savedCampaign) {
     }
     // Persist the complete transaction before evaluating a single invariant.
     const after = await snapshot(page, skipped ? 'frankfurt-surface-not-present' : 'immediate-after-frankfurt-selection');
-    const evidence = { scenario: name, viewport, campaignAttempts: savedCampaign.campaignAttempts, setup: 'existing-manual-save-slot', naturalPortal: 'DE-02', target: 'DE-03', activation, skipped, transitionError, before, after };
+    const cameraPresets = skipped ? [] : [
+      await settleCamera(page, { center: [10.2, 51.1], zoom: 4.1, pitch: 0 }, `${name}:theatre-zoomed-out`),
+      await settleCamera(page, { center: [8.68, 50.11], zoom: 7.2, pitch: 42 }, `${name}:selected-frankfurt`),
+      await settleCamera(page, { center: before.center, zoom: before.zoom, pitch: before.pitch, bearing: before.bearing }, `${name}:campaign-return`)
+    ];
+    const evidence = { scenario: name, viewport, campaignAttempts: savedCampaign.campaignAttempts, setup: 'existing-manual-save-slot', naturalPortal: 'DE-02', target: 'DE-03', activation, skipped, transitionError, before, after, cameraPresets };
     fs.writeFileSync(`${scenarioDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
     await page.screenshot({ path: `${scenarioDir}/after-frankfurt-selection.png`, fullPage: true });
     console.log(`WP2I ${name} evidence:`, JSON.stringify(evidence, null, 2));

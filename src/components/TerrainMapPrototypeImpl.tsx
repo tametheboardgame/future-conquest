@@ -631,7 +631,9 @@ export function TerrainMapPrototypeImpl({
         operationalLayoutFrame.schedule();
       };
       map.on('zoom', updateOverlayLod);
+      map.on('move', operationalLayoutFrame.schedule);
       map.on('moveend', refreshOperationalPresentation);
+      map.on('idle', operationalLayoutFrame.schedule);
       refreshOperationalPresentation();
 
       map.on('load', () => {

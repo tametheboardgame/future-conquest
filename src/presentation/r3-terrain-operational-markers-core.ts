@@ -99,7 +99,12 @@ const addMarker = (
     r3MarkerKind: kind,
     r3MarkerId: markerId,
     r3MarkerOffsetX: String(offset[0]),
-    r3MarkerOffsetY: String(offset[1])
+    r3MarkerOffsetY: String(offset[1]),
+    // Keep the geographic source of truth beside the DOM marker. MapLibre owns
+    // the screen transform; layout passes may add bounded pixel offsets, but
+    // must never turn a previously projected position into the next anchor.
+    r3AuthoritativeLongitude: String(position[0]),
+    r3AuthoritativeLatitude: String(position[1])
   });
   markers.push({ id: markerId, kind, position, offset, element });
 };
@@ -375,6 +380,18 @@ const translateRect = (rect: Rect, dx: number, dy: number): Rect => ({
 const resetAndCaptureMarkerBaseRects = (markers: readonly Marker[]): MarkerBaseRects => {
   for (const marker of markers) {
     const element = marker.getElement();
+    // A moving formation legitimately uses an interpolated WGS84 presentation
+    // position. Every other marker is stationary, so force MapLibre to project
+    // its authoritative coordinate against the *current* camera before reading
+    // collision geometry. This also repairs transforms retained across React
+    // reconciliation while a camera transition was in flight.
+    if (!element.dataset.movementProgress) {
+      const longitude = Number(element.dataset.r3AuthoritativeLongitude);
+      const latitude = Number(element.dataset.r3AuthoritativeLatitude);
+      if (Number.isFinite(longitude) && Number.isFinite(latitude)) {
+        marker.setLngLat([longitude, latitude]);
+      }
+    }
     marker.setOffset(effectiveMarkerBaseOffset(element));
     element.dataset.formationDisplacementX = '0';
     element.dataset.formationDisplacementY = '0';

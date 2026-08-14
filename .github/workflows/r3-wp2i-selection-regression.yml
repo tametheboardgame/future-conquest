@@ -7,6 +7,7 @@ on:
     paths:
       - 'src/components/TerrainMapPrototype*.tsx'
       - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'src/presentation/r3-terrain-operational-markers-core.ts'
       - 'scripts/run-r3-wp2i-selection-regression.mjs'
       - '.github/workflows/r3-wp2i-selection-regression.yml'
 
