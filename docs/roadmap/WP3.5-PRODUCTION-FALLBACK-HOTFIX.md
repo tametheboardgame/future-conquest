@@ -6,27 +6,39 @@ Status: ACTIVE REMEDIATION
 
 The WP3.5 merge deployed successfully, but live Chrome inspection showed the legacy rectangular Task Group cards and strategic-node glyphs covering the intended physical army/city/infrastructure presentation. Incognito reproduced the same state.
 
-## Confirmed root cause
+## Confirmed root causes
 
 A deployed-style `/future-conquest/` browser probe reproduces the issue on both Linux Chromium and Windows Chrome.
 
-The Three.js runtime was not failing:
+The Three.js runtime itself was loading:
 - the formation, world and shared Three.js chunks all load successfully;
 - WebGL2 is active;
 - `data-physical-formations="ready"` is set;
 - both formation and world custom layers report render activity and visible derived objects.
 
-The visible regression was caused by the compatibility Task Group markers remaining opaque. MapLibre writes marker opacity as an inline style while evaluating marker visibility/terrain occlusion, so the ordinary stylesheet rule `opacity: 0` could not suppress the old card skin after the physical layer became ready. The old cards therefore painted over the physical pieces.
+That evidence exposed two separate presentation failures.
 
-A second presentation issue became clear once the cards were suppressed: four starting Task Groups share one authoritative Luxembourg coordinate, so their physical representations stacked directly on top of one another, and the original strategic scale made the procedural figures/world structures too small to read clearly at Campaign distance.
+### 1. Legacy compatibility cards remained opaque
+
+MapLibre writes marker opacity as an inline style while evaluating marker visibility/terrain occlusion. The ordinary WP3.5 stylesheet rule `opacity: 0` therefore could not suppress the old Task Group card skin after the physical layer became ready, so the legacy cards painted over the physical pieces.
+
+### 2. The Three.js layers used the wrong MapLibre v6 projection input
+
+The custom layers were feeding Three.js the older generic `modelViewProjectionMatrix`. MapLibre v6 exposes the simple Mercator custom-layer projection through `defaultProjectionData.mainMatrix`, including in its terrain + Three.js integration pattern. Render callbacks and diagnostic counters could therefore be active without the geometry presenting correctly in the real map scene.
+
+Both the formation and world miniature layers now use `defaultProjectionData.mainMatrix`. Production-path screenshots after this correction visibly show the actual infantry groups, city clusters and infrastructure silhouettes rather than merely reporting render counts.
+
+A further presentation issue became clear after the projection/card fixes: four starting Task Groups can share one authoritative Luxembourg coordinate, so their physical representations stacked directly on top of one another. The hotfix preserves the exact geographic root but gives co-located miniature child groups deterministic local visual offsets. Strategic scale was then tuned against the corrected projection so pieces remain readable without covering whole territories.
 
 ## Hotfix scope
 
 1. Make the physical-ready compatibility-marker transparency authoritative while retaining invisible pointer/keyboard hit targets and restoring a concise card only for `:focus-visible`.
-2. Preserve exact geographic roots, but arrange co-located Task Group miniature visuals deterministically around their shared root so four formations do not collapse into one object.
-3. Increase symbolic Theatre/Campaign presentation scale for army and world miniatures, tapering it again at Selected/close zoom so physical pieces remain controlled rather than becoming true-scale geography.
-4. Keep strategic-node text labels/hit targets, but suppress the old circular node glyph when physical city/infrastructure silhouettes are active.
-5. Keep the dedicated production-path regression probe on Linux Chromium and Windows Chrome. It mounts the built game at `/future-conquest/`, requires the actual Three.js layers to render, and requires legacy Task Group cards to compute to zero opacity.
+2. Use MapLibre v6 `defaultProjectionData.mainMatrix` for both physical custom layers and regression-test against returning to the obsolete projection path.
+3. Preserve exact geographic roots, but arrange co-located Task Group miniature visuals deterministically around their shared root so four formations do not collapse into one object.
+4. Tune symbolic Theatre/Campaign/Selected presentation scale for army and world miniatures against the corrected projection.
+5. Keep strategic-node text labels/hit targets, but suppress the old circular node glyph when physical city/infrastructure silhouettes are active.
+6. Keep the dedicated production-path regression probe on Linux Chromium and Windows Chrome. It mounts the built game at `/future-conquest/`, requires the actual Three.js layers to render, requires legacy Task Group cards to compute to zero opacity, and captures screenshots for visual inspection.
+7. Keep Selected in Local LOD while capping the full-profile live zoom at 6.55 to avoid unnecessary Terrain-RGB tile pressure. The historical named Selected preset remains 7.1.
 
 ## Boundaries
 
@@ -35,4 +47,5 @@ A second presentation issue became clear once the cards were suppressed: four st
 - No gameplay, balance, save, route, territory, intelligence or narrative changes.
 - Preserve PR #139 geographic-anchor guarantees and WP3.5 movement/click-target synchronisation.
 - Preserve Layers controls, reduced motion, GPU disposal and `?terrain=0` SVG fallback.
+- Performance thresholds remain unchanged; benchmark harness changes must preserve the existing useful-paint, fallback and terrain-settlement contracts.
 - WP4 remains blocked until the corrected deployed WP3.5 build is visually accepted by the product owner.
