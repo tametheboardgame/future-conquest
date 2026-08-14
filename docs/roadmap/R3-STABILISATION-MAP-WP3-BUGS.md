@@ -16,7 +16,7 @@ This gate is explicitly BUG FIXES FIRST. It is not permission to add new mechani
 
 ## Authoritative known defects at entry
 
-The following were explicitly deferred by earlier terrain work and must not be silently treated as solved:
+The following were explicitly deferred or reproduced during production review and must not be silently treated as solved:
 
 1. **Low-zoom Theatre land-mask polygon artefact**
    - Reproduce on the deployed production-default terrain path.
@@ -28,6 +28,17 @@ The following were explicitly deferred by earlier terrain work and must not be s
    - Existing player/enemy front indicators can read as unexplained short orange segments.
    - Audit their meaning, colour, geometry, layering and legend/context.
    - Make fronts immediately understandable without introducing WP4 battle/event effects early.
+
+3. **P1 territory-selection marker reprojection/layout drift**
+   - Reproduced by the product owner on the normal production terrain map on 2026-08-14.
+   - The initial Campaign view is geographically coherent. Immediately after selecting Düsseldorf / entering attack-target-selected state, place labels and operational markers visibly move away from their correct geographic locations. At wider zoom the error becomes extreme: formation pieces and multiple labels are displaced far down the screen while the underlying terrain remains correctly positioned.
+   - Treat this as an operational-overlay anchoring defect, not a cosmetic spacing issue. Selecting a territory may legitimately reframe the camera, but it must never change the authoritative geographic anchor of a formation, place label, contact, node or operation marker.
+   - Investigate the complete camera/selection/layout transaction, including MapLibre `project()` timing, move/zoom/pitch completion, marker layout scheduling, retained presentation offsets, collision/declutter passes and any CSS/DOM transforms. Do not assume the cause before reproducing it.
+   - Ensure screen-space layout is recomputed from authoritative geographic coordinates after the camera settles, without stale projection state, double-applied offsets, accumulated transforms or layout work based on a previous camera transform.
+   - The fix must cover ordinary territory selection, attack-target selection, formation selection, Theatre/Campaign/Selected preset changes, manual zoom/pitch and returning from another command view.
+   - Add a deterministic exact-browser regression which records one or more known marker geographic anchors, changes selection/camera state, then verifies each visible marker remains within a small pixel tolerance of the current MapLibre projection of its authoritative longitude/latitude after the camera settles. Include at least Düsseldorf/Frankfurt-area selection plus Theatre -> Campaign -> Selected transitions and a zoomed-out check.
+   - The browser gate must also verify that labels/formations do not undergo a common large vertical translation or leave the usable map canvas after selection.
+   - Do not solve the regression merely by disabling legitimate camera transitions or hiding affected markers.
 
 ## Full production audit
 
@@ -84,7 +95,9 @@ Exercise at minimum:
 
 Verify:
 
-- no camera jumps unless the player explicitly invokes a camera preset/action;
+- no camera jumps unless the player explicitly invokes a camera preset/action or the documented selection behaviour intentionally reframes the view;
+- any intentional camera reframe preserves every marker's geographic anchor;
+- no stale camera projection is used for marker placement after selection, zoom, pitch or preset changes;
 - no labels disappear unexpectedly;
 - no contacts/formation cards cover protected labels;
 - no markers leave the usable canvas or hide beneath persistent HUD controls;
@@ -108,7 +121,7 @@ Verify:
 
 Use both automation and visual evidence.
 
-Automation alone is insufficient for subjective visual defects. The branch must maintain or add deterministic browser probes/screenshots for representative Theatre, Campaign, Selected and moving/crowded states, but final closure requires product-owner live visual acceptance of deployed `main`.
+Automation alone is insufficient for subjective visual defects. The branch must maintain or add deterministic browser probes/screenshots for representative Theatre, Campaign, Selected, selection-transition and moving/crowded states, but final closure requires product-owner live visual acceptance of deployed `main`.
 
 For every discovered issue classify it:
 
@@ -147,6 +160,7 @@ Not allowed without separate product-owner approval:
 Before this package can merge/close:
 
 - all reproduced P0/P1 defects in scope are fixed;
+- the P1 selection/camera marker-drift regression is fixed and covered by an exact-browser geographic-anchor assertion;
 - known land-mask and front-segment issues are explicitly closed with evidence or fixed;
 - exact-browser production-default terrain test passes;
 - WP2B terrain smoke/runtime passes;
