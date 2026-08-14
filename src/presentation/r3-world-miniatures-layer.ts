@@ -83,9 +83,10 @@ const kindFor = (node: StrategicNodeDefinition): WorldKind =>
   node.type === 'capital' || node.type === 'city' ? 'city' : node.type;
 
 function worldPresentationScale(lod: 'theatre' | 'campaign' | 'selected') {
-  if (lod === 'theatre') return 65_000;
-  if (lod === 'campaign') return 42_000;
-  return 19_000;
+  // Symbolic war-table structures, tuned against the MapLibre v6 projection.
+  if (lod === 'theatre') return 34_000;
+  if (lod === 'campaign') return 24_000;
+  return 14_000;
 }
 
 /** Presentation-only objects derived exactly from the public strategic-node catalogue. */
