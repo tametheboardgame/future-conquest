@@ -24,7 +24,6 @@ const server = createServer((request, response) => {
     response.writeHead(404).end('not found');
     return;
   }
-
   let relative = decodeURIComponent(requestUrl.pathname.slice(mount.length));
   if (!relative || relative === '/') relative = '/index.html';
   const candidate = resolve(siteRoot, `.${normalize(relative)}`);
@@ -32,14 +31,12 @@ const server = createServer((request, response) => {
     response.writeHead(403).end('forbidden');
     return;
   }
-
   let file = candidate;
   if ((!existsSync(file) || statSync(file).isDirectory()) && !extname(relative)) file = join(siteRoot, 'index.html');
   if (!existsSync(file) || statSync(file).isDirectory()) {
     response.writeHead(404).end(`missing ${relative}`);
     return;
   }
-
   response.writeHead(200, {
     'content-type': contentTypes.get(extname(file)) ?? 'application/octet-stream',
     'cache-control': 'no-store'
@@ -81,12 +78,40 @@ try {
   result = await page.evaluate(() => {
     const host = document.querySelector('.r3-terrain-prototype');
     const firstFormation = document.querySelector('.r3-terrain-task-group-marker');
+    const selector = ".r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker";
+    const matchedOpacityRules = [];
+    if (firstFormation instanceof HTMLElement) {
+      for (const sheet of [...document.styleSheets]) {
+        let rules;
+        try { rules = [...sheet.cssRules]; } catch { continue; }
+        for (const rule of rules) {
+          if (!(rule instanceof CSSStyleRule) || !rule.style.opacity) continue;
+          try {
+            if (firstFormation.matches(rule.selectorText)) matchedOpacityRules.push({
+              selector: rule.selectorText,
+              opacity: rule.style.opacity,
+              priority: rule.style.getPropertyPriority('opacity')
+            });
+          } catch { /* unsupported selector */ }
+        }
+      }
+    }
     return {
       hostDataset: host instanceof HTMLElement ? { ...host.dataset } : null,
       webgl2: Boolean(document.querySelector('.r3-terrain-prototype-canvas canvas')?.getContext('webgl2')),
       formationEvidence: window.__r3FormationMiniatures ?? null,
       worldEvidence: window.__r3WorldMiniatures ?? null,
-      formationOpacity: firstFormation instanceof HTMLElement ? getComputedStyle(firstFormation).opacity : null
+      formationOpacity: firstFormation instanceof HTMLElement ? getComputedStyle(firstFormation).opacity : null,
+      markerSelectorDiagnostic: firstFormation instanceof HTMLElement ? {
+        matchesReadySelector: firstFormation.matches(selector),
+        insideHost: Boolean(firstFormation.closest('.r3-terrain-prototype')),
+        parentClass: firstFormation.parentElement?.className ?? null,
+        grandparentClass: firstFormation.parentElement?.parentElement?.className ?? null,
+        activeTag: document.activeElement === firstFormation,
+        focusVisible: firstFormation.matches(':focus-visible'),
+        inlineOpacity: firstFormation.style.opacity || null,
+        matchedOpacityRules
+      } : null
     };
   });
 } catch (error) {
@@ -94,7 +119,6 @@ try {
 }
 
 console.log(JSON.stringify({ channel: channel ?? 'playwright-chromium', resources: resourceEvents, console: consoleEvents, result }, null, 2));
-
 await page.screenshot({ path: process.env.WP35_SCREENSHOT ?? 'wp3-5-production-startup.png', fullPage: true }).catch(() => undefined);
 await browser.close();
 await new Promise(resolveClose => server.close(resolveClose));
