@@ -52,15 +52,13 @@ export const R3_TERRAIN_MANIFEST: TerrainDataManifest = {
 
 /**
  * MapLibre owns geographic camera state. Theatre deliberately shows the wider
- * Europe envelope with a restrained pitch; campaign/selected retain the command-
- * table angle. Selected remains above the 6.4 Local-LOD boundary but avoids an
- * unnecessary jump into the next Terrain-RGB tile band, reducing transition
- * network pressure without changing selection authority or local-detail mode.
+ * Europe envelope with a restrained pitch; campaign/selected retain the more
+ * dramatic command-table angle that product-owner review approved.
  */
 export const R3_TERRAIN_CAMERA_PRESETS: readonly TerrainCameraPreset[] = [
   { id: 'theatre', center: [12.0, 56.0], zoom: 3.45, pitch: 28, bearing: -3 },
   { id: 'campaign', center: [5.3, 49.2], zoom: 5.35, pitch: 51, bearing: -9 },
-  { id: 'selected', center: [5.3, 49.2], zoom: 6.55, pitch: 57, bearing: -8 }
+  { id: 'selected', center: [5.3, 49.2], zoom: 7.1, pitch: 57, bearing: -8 }
 ] as const;
 
 export interface TerrainRendererCapability {
@@ -98,14 +96,18 @@ export function chooseTerrainPresentationProfile(environment: TerrainPresentatio
 }
 
 /**
- * Compact terrain keeps the same geographic framing but reduces camera pitch
- * and a little zoom pressure. This is presentation state only.
+ * Runtime presentation may apply renderer-pressure adjustments without changing
+ * the named camera-preset contract. Full-profile Selected remains just inside
+ * Local LOD while avoiding an unnecessary higher Terrain-RGB tile band.
+ * Compact terrain keeps the same geography and also reduces pitch/zoom pressure.
  */
 export function terrainCameraForProfile(
   preset: TerrainCameraPreset,
   profile: Exclude<TerrainPresentationProfile, 'svg-fallback'>
 ): TerrainCameraPreset {
-  if (profile === 'full') return { ...preset };
+  if (profile === 'full') {
+    return preset.id === 'selected' ? { ...preset, zoom: Math.min(preset.zoom, 6.55) } : { ...preset };
+  }
   return {
     ...preset,
     zoom: Math.max(3.2, preset.zoom - 0.15),
