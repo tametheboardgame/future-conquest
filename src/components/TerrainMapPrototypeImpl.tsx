@@ -48,6 +48,10 @@ import {
 } from '../presentation/r3-terrain-operational-markers';
 import { createCoalescedFrameTask } from '../presentation/r3-coalesced-frame-task';
 import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
+import {
+  FormationMiniaturesLayer,
+  R3_FORMATION_MINIATURE_LAYER_ID
+} from '../presentation/r3-formation-miniatures-layer';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -489,6 +493,8 @@ export function TerrainMapPrototypeImpl({
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
+  const formationMiniaturesRef = useRef<FormationMiniaturesLayer | null>(null);
+  const stateRef = useRef(state);
   const selectRef = useRef(onSelect);
   const selectGroupRef = useRef(onSelectGroup);
   const fallbackRef = useRef(onFallback);
@@ -502,6 +508,7 @@ export function TerrainMapPrototypeImpl({
   selectRef.current = onSelect;
   selectGroupRef.current = onSelectGroup;
   fallbackRef.current = onFallback;
+  stateRef.current = state;
   layersRef.current = layers;
 
   useEffect(() => {
@@ -636,6 +643,16 @@ export function TerrainMapPrototypeImpl({
       refreshOperationalPresentation();
 
       map.on('load', () => {
+        try {
+          const miniatureLayer = new FormationMiniaturesLayer(stateRef.current);
+          map.addLayer(miniatureLayer);
+          formationMiniaturesRef.current = miniatureLayer;
+          if (host) host.dataset.physicalFormations = 'ready';
+        } catch (error) {
+          // Terrain remains usable through the established DOM formation layer.
+          console.warn('R3 physical formation layer unavailable; retaining compatible markers.', error);
+          if (host) host.dataset.physicalFormations = 'fallback';
+        }
         loadedRef.current = true;
         setStatus('ready');
         setMessage(`${terrainSource.label} · ${presentationProfile === 'compact' ? 'compact terrain' : 'continuous relief'} · operational overlays projected from campaign state`);
@@ -718,6 +735,10 @@ export function TerrainMapPrototypeImpl({
       loadedRef.current = false;
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
+      if (ownedMap?.getLayer(R3_FORMATION_MINIATURE_LAYER_ID)) {
+        ownedMap.removeLayer(R3_FORMATION_MINIATURE_LAYER_ID);
+      }
+      formationMiniaturesRef.current = null;
       toolbarResizeObserver?.disconnect();
       cancelOperationalLayoutFrame?.();
       mapRef.current = null;
@@ -767,6 +788,7 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
+    formationMiniaturesRef.current?.update(state);
     applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
 
   }, [state, status, layers]);

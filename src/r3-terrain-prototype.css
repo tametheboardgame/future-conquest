@@ -552,3 +552,18 @@
 .r3-terrain-prototype [data-declutter="hidden"] {
   display: none !important;
 }
+
+/* WP3.5 keeps the proven geographic DOM markers as keyboard/pointer hit targets
+   and renderer-failure fallback. Once the custom 3D layer is live their card
+   skin becomes transparent; focus restores a concise identity surface. */
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker {
+  opacity: 0;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker:focus-visible {
+  opacity: 1;
+  outline: 2px solid #eaff78;
+  outline-offset: 3px;
+}
