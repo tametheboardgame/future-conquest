@@ -23,10 +23,31 @@ await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')
 const evidence = { profiles: {}, physicalFormations: {}, worldMiniatures: {}, hover: {}, identity: {}, fallback: {} };
 const persistEvidence = () => fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
 
+const activateCamera = async name => {
+  const control = page.getByRole('button', { name, exact: true });
+  await control.waitFor({ state: 'visible' });
+  if (name === 'selected' && await control.isDisabled()) {
+    await page.locator('.r3-terrain-territory-label').first().click({ force: true });
+    await page.waitForFunction(cameraName => {
+      const button = [...document.querySelectorAll('.r3-terrain-prototype-toolbar button')]
+        .find(element => element.textContent?.trim() === cameraName);
+      return button instanceof HTMLButtonElement && !button.disabled;
+    }, name);
+  }
+  // WP2F owns settled visual-state assertions, not Playwright pointer
+  // actionability. Dedicated interaction/selection gates exercise user clicks.
+  await page.evaluate(cameraName => {
+    const button = [...document.querySelectorAll('.r3-terrain-prototype-toolbar button')]
+      .find(element => element.textContent?.trim() === cameraName);
+    if (!(button instanceof HTMLButtonElement) || button.disabled) {
+      throw new Error(`Camera control ${cameraName} is unavailable.`);
+    }
+    button.click();
+  }, name);
+};
+
 for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], ['campaign', 'campaign', 'campaign.png'], ['selected', 'local', 'selected-local.png']]) {
-  const control = page.getByRole('button', { name: button, exact: true });
-  if (button === 'selected' && await control.isDisabled()) await page.locator('.r3-terrain-territory-label').first().click();
-  await control.click();
+  await activateCamera(button);
   await page.waitForFunction(lod => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === lod, expected);
   await page.waitForTimeout(900);
 
@@ -260,7 +281,7 @@ if (!(await layersControl.isVisible())) throw new Error('terrain Layers control 
 await layersControl.locator('summary').click();
 const toggles = ['Territory names', 'Friendly formations', 'Cities and hubs', 'Ports'];
 for (const label of toggles) await layersControl.getByLabel(label, { exact: true }).uncheck();
-await page.getByRole('button', { name: 'campaign', exact: true }).click();
+await activateCamera('campaign');
 await page.waitForTimeout(900);
 for (const label of toggles) {
   if (await layersControl.getByLabel(label, { exact: true }).isChecked()) throw new Error(`${label} did not remain disabled through camera refresh`);
