@@ -36,7 +36,7 @@
   --r3-piece-face-top: #17646a;
   --r3-piece-face-bottom: #0a3d42;
   --r3-piece-accent: #8af5e7;
-  position: relative;
+  position: absolute;
   isolation: isolate;
   border-color: var(--r3-piece-accent);
   border-radius: 5px 5px 7px 7px;
