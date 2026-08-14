@@ -1,6 +1,6 @@
 # R3 Stabilisation Gate - Map & WP3 Bug Remediation
 
-Status: AUTHORITATIVE / ACTIVE
+Status: AUTHORITATIVE / TECHNICALLY ACCEPTED - DEPLOYMENT AND HUMAN VISUAL ACCEPTANCE PENDING
 
 Opened: 2026-08-14
 
@@ -187,6 +187,39 @@ Before this package can merge/close:
 - `?terrain=0` SVG fallback passes;
 - no gameplay-authority files change unless a separately approved genuine integration defect requires it;
 
+**Technical close-out (2026-08-14): complete on PR #139.** The exact-head
+workflows for `9e47bca33d73b5cc4a598f2caa72acecb403a0d2` passed the production build,
+the full current-engine 720-campaign balance simulation, WP2B terrain smoke
+and browser runtime, WP2C overlay parity, WP2D Theatre/Campaign/Selected visual
+runtime, WP2E performance budgets, WP2F visual runtime, WP2I selection and
+geographic anchoring, and WP3 formation movement. The complete repository test
+suite also passed, including persistence/save compatibility,
+terrain failure handling, explicit `?terrain=0` fallback, compact presentation,
+keyboard interaction and reduced-motion coverage. No assertion, geographic
+anchor tolerance or performance budget was weakened.
+
+The final production audit found no additional P0, P1 or P2 defect within this
+gate. Its evidence covers:
+
+- Theatre, Campaign and Selected terrain, coast, border, control, label,
+  city/hub/port, contact, operation/threat, formation, route and front layers;
+- territory, attack-target and formation selection; settled camera preset,
+  zoom and pitch transitions; stable marker identity and geographic anchoring;
+- crowded-marker collision/declutter, protected HUD areas, layer toggles,
+  sidebar/viewport resizing and return-to-map reconciliation;
+- WP3 ready, garrison, moving, attacking, recovering, engineering and
+  interdicting presentation, selected-piece emphasis, route interpolation and
+  bounded reduced-motion equivalents;
+- compact/touch layout, keyboard/focus behavior, renderer-failure resilience,
+  and the explicit `?terrain=0` SVG path.
+
+The audit independently confirmed that the P1 fix preserves MapLibre's
+structural marker classes and computes each settled presentation from the
+current authoritative projection, the v2 land mask uses independently wound
+polygon render units, and fronts use the documented segmented warm-core/dark-
+casing language plus the map key. No gameplay, save-schema, topology, balance,
+hidden-information or WP4 authority changed.
+
 ## Post-merge deployment and visual acceptance
 
 After the technically accepted package merges, but before this gate closes or
@@ -194,6 +227,9 @@ WP4 resumes:
 
 - GitHub Pages must deploy the resulting merge commit successfully;
 - **human visual acceptance of the normal production URL must be obtained.**
+
+These deployment and David visual-acceptance checks are the only remaining
+gate. Until both pass, this package remains active and WP4 remains blocked.
 
 ## Roadmap after this gate
 

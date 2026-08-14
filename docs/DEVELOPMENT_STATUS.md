@@ -4,7 +4,7 @@ Last updated: 2026-08-14
 
 ## Current programme
 
-R3 Visualisation & Command Experience is in **R3 Stabilisation Gate - Map & WP3 Bug Remediation**.
+R3 Visualisation & Command Experience is in **R3 Stabilisation Gate - Map & WP3 Bug Remediation**. PR #139 is technically accepted; deployment of the resulting merge and David's live visual acceptance are the only remaining gate.
 
 Authoritative active package: `docs/roadmap/R3-STABILISATION-MAP-WP3-BUGS.md`.
 Programme roadmap: `docs/roadmap/R3-ROADMAP.md`.
@@ -29,19 +29,21 @@ The mechanically validated R2 and R2.5 programme is complete. R3 remains present
 - **R3-WP3:** physical formation pieces, status-specific material language, selected-piece emphasis, presentation-only movement interpolation and route cues, PR #136.
 - **R3 Production Coherence Recovery:** PR #138, merged to `main` as `5809d08b63a34df6c8aa111f6e300378a1eeb5b3` and successfully deployed to GitHub Pages. The normal production URL now selects MapLibre/Copernicus terrain by default on supported hardware and therefore exposes the merged WP3 presentation. `?terrain=0` deliberately forces the stable SVG fallback.
 
-## Active stabilisation gate
+## Active stabilisation gate - technical checks complete
 
-Forward feature development is frozen while the production-default 3D map and WP3 presentation are audited and repaired.
+Forward feature development remains frozen while the technically accepted production-default 3D map and WP3 stabilisation package awaits deployment and human visual acceptance.
 
-Known defects carried into the gate include:
+The entry defects are resolved on PR #139:
 
-- low-zoom Theatre land-mask polygon artefact, to be reproduced and fixed or closed with evidence;
-- ambiguous front/orange short-segment visual language, to be made strategically understandable;
-- any additional production-visible map/WP3 defects found during the Theatre/Campaign/Selected audit.
+- the P1 selection drift was traced to reconciliation removing MapLibre's structural marker classes; the fix and permanent three-pixel `map.project()` regression are green;
+- the low-zoom Theatre artefact was fixed by emitting independently wound land-mask polygon render units;
+- fronts now use a segmented warm core with dark casing and an explicit key that distinguishes them from movement/supply routes.
 
-The gate also requires live inspection of WP3 pieces and movement, labels, contacts, operations, collision handling, camera stability, layer controls, compact/reduced-motion behaviour and SVG fallback.
+The production audit covers Theatre, Campaign and Selected views; labels and strategic nodes; contacts and operations; WP3 pieces, states and routes; collision handling; territory, attack and formation selection; camera settlement; layer controls; resizing; compact/touch and reduced-motion behavior; keyboard/focus behavior; resilience; and explicit `?terrain=0` SVG fallback. No additional in-scope P0/P1/P2 defect was found.
 
-Automated CI is necessary but not sufficient. Closure requires human visual acceptance of the normal deployed production URL.
+All exact-head technical workflows were green at audited implementation head `9e47bca33d73b5cc4a598f2caa72acecb403a0d2`, including the full test/build and 720-campaign balance gates plus WP2B, WP2C, WP2D, WP2E, WP2F, WP2I and WP3 browser/runtime gates. No gameplay, save-schema, topology, balance, hidden-information or WP4 authority changed.
+
+Automated technical acceptance is complete but is not final visual acceptance. The only remaining gate is successful deployment of the resulting merge commit followed by David's human visual acceptance of the normal production URL. Until then, this gate remains active and WP4 remains blocked.
 
 ## Paused work
 
