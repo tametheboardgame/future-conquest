@@ -20,7 +20,7 @@ const host = page.locator('.r3-terrain-prototype');
 await host.waitFor({ state: 'visible', timeout: 45_000 });
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready');
 
-const evidence = { profiles: {}, hover: {}, identity: {} };
+const evidence = { profiles: {}, physicalFormations: {}, worldMiniatures: {}, hover: {}, identity: {}, fallback: {} };
 const persistEvidence = () => fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
 
 for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], ['campaign', 'campaign', 'campaign.png'], ['selected', 'local', 'selected-local.png']]) {
@@ -153,6 +153,37 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
     };
   }, diagnosticNodeIds);
 
+  const physical = await page.evaluate(() => {
+    const map = window.__r3TerrainMap;
+    const diagnostic = window.__r3FormationMiniatures;
+    if (!map || !diagnostic) throw new Error('Three.js formation diagnostic unavailable');
+    return {
+      layerActive: Boolean(map.getLayer(diagnostic.layerId)),
+      renderCount: diagnostic.renderCount,
+      reducedMotion: diagnostic.reducedMotion,
+      pieces: diagnostic.pieces.map(piece => ({
+        ...piece,
+        settlementDegrees: Math.hypot(piece.current[0] - piece.target[0], piece.current[1] - piece.target[1])
+      }))
+    };
+  });
+
+  const world = await page.evaluate(() => {
+    const map = window.__r3TerrainMap;
+    const diagnostic = window.__r3WorldMiniatures;
+    const nodes = window.__r3StrategicNodes ?? [];
+    if (!map || !diagnostic) throw new Error('Three.js world-miniature diagnostic unavailable');
+    return {
+      layerActive: Boolean(map.getLayer(diagnostic.layerId)),
+      renderCount: diagnostic.renderCount,
+      lod: diagnostic.lod,
+      objects: diagnostic.objects.map(object => {
+        const node = nodes.find(candidate => candidate.id === object.id);
+        return { ...object, anchorErrorDegrees: node ? Math.hypot(object.position[0] - node.position[0], object.position[1] - node.position[1]) : null };
+      })
+    };
+  });
+
   const flatProjection = await page.evaluate(async nodeIds => {
     const map = window.__r3TerrainMap;
     const nodes = window.__r3StrategicNodes ?? [];
@@ -190,10 +221,26 @@ for (const [button, expected, file] of [['theatre', 'theatre', 'theatre.png'], [
   }, diagnosticNodeIds);
 
   evidence.profiles[expected] = { ...profile, flatProjection };
+  evidence.physicalFormations[expected] = physical;
+  evidence.worldMiniatures[expected] = world;
   await page.screenshot({ path: `${outputDir}/${file}`, fullPage: true });
   persistEvidence();
 
   if (profile.scale > 1.081) throw new Error(`marker clamp exceeded in ${expected}`);
+  if (!physical.layerActive || physical.renderCount < 1 || physical.pieces.length < 4 || physical.pieces.some(piece => !piece.visible)) {
+    throw new Error(`physical formation layer is not active and visible in ${expected}: ${JSON.stringify(physical)}`);
+  }
+  if (!physical.reducedMotion || physical.pieces.some(piece => piece.settlementDegrees > 1e-9)) {
+    throw new Error(`reduced-motion physical pieces did not settle in ${expected}: ${JSON.stringify(physical.pieces)}`);
+  }
+  const visibleCities = world.objects.filter(object => object.visible && ['capital', 'city'].includes(object.type));
+  const visibleInfrastructure = world.objects.filter(object => object.visible && !['capital', 'city', 'airport'].includes(object.type));
+  if (!world.layerActive || world.renderCount < 1 || visibleCities.length < 2 || visibleInfrastructure.length < 2) {
+    throw new Error(`physical city/infrastructure layer is not active and visible in ${expected}: ${JSON.stringify(world)}`);
+  }
+  if (world.objects.some(object => object.anchorErrorDegrees !== 0 || !Number.isFinite(object.elevation) || object.clearance < 10 || object.clearance > 60)) {
+    throw new Error(`world miniature geographic/grounding contract failed in ${expected}: ${JSON.stringify(world.objects)}`);
+  }
   if (profile.visibleFormationCount !== profile.formationCount) throw new Error(`player formation hidden by declutter in ${expected}`);
   if (profile.visibleTerritoryCount !== profile.territoryCount) throw new Error(`territory label hidden by declutter in ${expected}`);
   if (profile.collisions.length) throw new Error(`formation rectangles intersect in ${expected}: ${JSON.stringify(profile.collisions)}`);
@@ -256,4 +303,31 @@ if (!evidence.hover.selectionUnchanged || evidence.identity.unchanged !== eviden
 evidence.territoryFillPolicy = 'ordinary:0;hover:0.075;selected:0.13;targeted:0.16';
 persistEvidence();
 await browser.close();
+
+// The compatibility query must bypass the accelerated terrain renderer while
+// retaining a usable campaign map and formation controls.
+const fallbackBrowser = await chromium.launch({ headless: true });
+const fallbackPage = await fallbackBrowser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
+await fallbackPage.addInitScript(() => {
+  localStorage.setItem('future-conquest:intro-seen:v3', 'true');
+  localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
+});
+await fallbackPage.goto(`${origin}/?terrain=0`, { waitUntil: 'domcontentloaded' });
+await fallbackPage.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
+await fallbackPage.locator('.startup-game-shell').waitFor({ state: 'visible' });
+await fallbackPage.locator('[data-command-view="map"]').click();
+const fallbackMap = fallbackPage.locator('.europe-map');
+await fallbackMap.waitFor({ state: 'visible' });
+await fallbackPage.waitForFunction(() => document.querySelectorAll('.europe-map .task-group-marker').length >= 4);
+evidence.fallback = {
+  usable: await fallbackMap.isVisible(),
+  terrainRendererAbsent: await fallbackPage.locator('.r3-terrain-prototype').count() === 0,
+  formations: await fallbackPage.locator('.europe-map .task-group-marker').count()
+};
+await fallbackPage.screenshot({ path: `${outputDir}/terrain-zero-fallback.png`, fullPage: true });
+if (!evidence.fallback.usable || !evidence.fallback.terrainRendererAbsent || evidence.fallback.formations < 4) {
+  throw new Error(`terrain=0 fallback unusable: ${JSON.stringify(evidence.fallback)}`);
+}
+persistEvidence();
+await fallbackBrowser.close();
 console.log(JSON.stringify(evidence, null, 2));

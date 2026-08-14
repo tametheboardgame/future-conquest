@@ -32,6 +32,7 @@ One P2 presentation debt from that acceptance is intentionally carried into WP3.
 - Real elevation describes geography, never political ownership: political territories remain overlays on one continuous landscape.
 - Runtime browser code must not contain private geospatial-service credentials.
 - The stable SVG/DOM campaign map remains the explicit `?terrain=0` accessibility/diagnostic/failure fallback.
+- This reconciles, rather than replaces, the historical WP1 renderer decision: the existing SVG/DOM map remained primary while measured evidence compared it with a WebGL/Three.js hybrid, with a clear fallback required for every accelerated presentation layer. WP3.5's measured custom-layer adoption is governed by the current package below; it does not erase that compatibility contract.
 - Major new mechanics, narrative changes or art-direction changes outside the approved broad direction require product-owner approval.
 - Any autonomous worker must inspect `docs/DEVELOPMENT_STATUS.md`, this roadmap and the current active package before selecting work.
 
@@ -239,6 +240,20 @@ Validate:
 - renderer failure;
 - `?terrain=0` SVG fallback;
 - save/load and deterministic balance parity.
+
+### Active implementation record
+
+WP3.5A/B is accepted as the exact-head technical baseline at `54be95e`. The C-F
+implementation composes lightweight city and infrastructure relief from the
+existing `STRATEGIC_NODES` catalogue only, preserves the established DOM labels
+and interaction targets, shares restrained procedural materials, applies
+importance-driven Theatre/Campaign/Selected density, samples MapLibre terrain
+with bounded presentation clearance, and follows the existing Cities/hubs,
+Ports and Airports layer controls. Browser evidence now records exact node
+coordinates, terrain elevation, clearance, visibility and LOD alongside the A/B
+formation evidence and the explicit `?terrain=0` fallback. Implementation is
+**READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE** on the active PR
+line. It remains ACTIVE—not complete—until deployed-main visual acceptance.
 
 ## Architecture direction
 

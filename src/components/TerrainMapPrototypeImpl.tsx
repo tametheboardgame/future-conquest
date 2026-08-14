@@ -48,6 +48,11 @@ import {
 } from '../presentation/r3-terrain-operational-markers';
 import { createCoalescedFrameTask } from '../presentation/r3-coalesced-frame-task';
 import type { TerrainOperationalLayers } from '../presentation/r3-terrain-operational-markers';
+import type { FormationMiniaturesLayer } from '../presentation/r3-formation-miniatures-layer';
+import type { WorldMiniaturesLayer } from '../presentation/r3-world-miniatures-layer';
+
+const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
+const R3_WORLD_MINIATURE_LAYER_ID = 'r3-wp3-5-world-miniatures';
 
 export interface TerrainMapPrototypeProps {
   state: GameState;
@@ -489,6 +494,9 @@ export function TerrainMapPrototypeImpl({
   const toolbarRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const operationalMarkersRef = useRef<ReturnType<typeof buildTerrainOperationalMarkers>>([]);
+  const formationMiniaturesRef = useRef<FormationMiniaturesLayer | null>(null);
+  const worldMiniaturesRef = useRef<WorldMiniaturesLayer | null>(null);
+  const stateRef = useRef(state);
   const selectRef = useRef(onSelect);
   const selectGroupRef = useRef(onSelectGroup);
   const fallbackRef = useRef(onFallback);
@@ -502,6 +510,7 @@ export function TerrainMapPrototypeImpl({
   selectRef.current = onSelect;
   selectGroupRef.current = onSelectGroup;
   fallbackRef.current = onFallback;
+  stateRef.current = state;
   layersRef.current = layers;
 
   useEffect(() => {
@@ -635,7 +644,26 @@ export function TerrainMapPrototypeImpl({
       map.on('moveend', refreshOperationalPresentation);
       refreshOperationalPresentation();
 
-      map.on('load', () => {
+      map.on('load', async () => {
+        try {
+          // Keep Three.js out of the already budgeted terrain bootstrap chunk.
+          const [{ FormationMiniaturesLayer }, { WorldMiniaturesLayer }] = await Promise.all([
+            import('../presentation/r3-formation-miniatures-layer'),
+            import('../presentation/r3-world-miniatures-layer')
+          ]);
+          if (disposed) return;
+          const worldLayer = new WorldMiniaturesLayer(layersRef.current);
+          map.addLayer(worldLayer);
+          worldMiniaturesRef.current = worldLayer;
+          const miniatureLayer = new FormationMiniaturesLayer(stateRef.current, layersRef.current);
+          map.addLayer(miniatureLayer);
+          formationMiniaturesRef.current = miniatureLayer;
+          if (host) host.dataset.physicalFormations = 'ready';
+        } catch (error) {
+          // Terrain remains usable through the established DOM formation layer.
+          console.warn('R3 physical formation layer unavailable; retaining compatible markers.', error);
+          if (host) host.dataset.physicalFormations = 'fallback';
+        }
         loadedRef.current = true;
         setStatus('ready');
         setMessage(`${terrainSource.label} · ${presentationProfile === 'compact' ? 'compact terrain' : 'continuous relief'} · operational overlays projected from campaign state`);
@@ -718,6 +746,12 @@ export function TerrainMapPrototypeImpl({
       loadedRef.current = false;
       removeTerrainOperationalMarkers(operationalMarkersRef.current);
       operationalMarkersRef.current = [];
+      if (ownedMap?.getLayer(R3_FORMATION_MINIATURE_LAYER_ID)) {
+        ownedMap.removeLayer(R3_FORMATION_MINIATURE_LAYER_ID);
+      }
+      if (ownedMap?.getLayer(R3_WORLD_MINIATURE_LAYER_ID)) ownedMap.removeLayer(R3_WORLD_MINIATURE_LAYER_ID);
+      formationMiniaturesRef.current = null;
+      worldMiniaturesRef.current = null;
       toolbarResizeObserver?.disconnect();
       cancelOperationalLayoutFrame?.();
       mapRef.current = null;
@@ -767,6 +801,8 @@ export function TerrainMapPrototypeImpl({
       onSelectTerritory: territoryId => selectRef.current(territoryId),
       onSelectGroup: groupId => selectGroupRef.current?.(groupId)
     });
+    formationMiniaturesRef.current?.update(state, layers);
+    worldMiniaturesRef.current?.update(layers);
     applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
 
   }, [state, status, layers]);
@@ -779,6 +815,7 @@ export function TerrainMapPrototypeImpl({
       map.setLayoutProperty(layerId, 'visibility', layers.operations ? 'visible' : 'none');
     }
     applyTerrainOperationalMarkerLayout(map, operationalMarkersRef.current, layers);
+    worldMiniaturesRef.current?.update(layers);
   }, [layers, status]);
 
   const goTo = (preset: TerrainCameraPreset) => {

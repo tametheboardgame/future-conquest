@@ -12,7 +12,7 @@ const layoutCore = fs.readFileSync('src/presentation/r3-terrain-operational-mark
 const pieceCss = fs.readFileSync('src/map-label-hierarchy.css', 'utf8');
 const pureStart = source.indexOf('const clamp01');
 const pureEnd = source.indexOf('export function formationPresentationPath');
-const pureSource = stripTypeScriptTypes(source.slice(pureStart, pureEnd).replace('export function interpolateFormationPath', 'function interpolateFormationPath'));
+const pureSource = stripTypeScriptTypes(source.slice(pureStart, pureEnd).replaceAll('export ', ''));
 const context = vm.createContext({ Math, globalThis: null });
 context.globalThis = context;
 vm.runInContext(`${pureSource}\nglobalThis.interpolate = interpolateFormationPath;`, context);
@@ -41,7 +41,7 @@ test('WP3 formation movement is presentation-only and route-aware', () => {
 });
 
 test('WP3 reconciled movement animates presentation, including completed one-turn moves', () => {
-  assert.match(presentation, /MOVEMENT_ANIMATION_MS = 520/);
+  assert.match(presentation, /FORMATION_PRESENTATION_ANIMATION_MS/);
   assert.match(presentation, /new WeakMap<Marker, FormationGeoPoint>/);
   assert.match(presentation, /new WeakSet<Marker>/);
   assert.match(presentation, /movingMarkers\.add\(marker\)/);

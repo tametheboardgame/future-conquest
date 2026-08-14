@@ -475,7 +475,6 @@ function avoidFormationLabelCollisions(
         const labelRect = placeLabelRect(label, baseRects);
         return formationDeltas.some(([dx, dy]) => rects.some(rect => overlaps(translateRect(rect, dx, dy), labelRect, 0)));
       }).sort((a, b) => (a.getElement().dataset.r3MarkerId ?? '').localeCompare(b.getElement().dataset.r3MarkerId ?? ''));
-      const fixedLabels = labels.filter(label => !conflicting.includes(label)).map(label => placeLabelRect(label, baseRects));
       const labelDeltas: Array<readonly [number, number]> = [];
       for (let dy = -48; dy <= 48; dy += 4) for (let dx = -48; dx <= 48; dx += 4) {
         if (dx * dx + dy * dy <= 48 * 48) labelDeltas.push([dx, dy]);
@@ -483,19 +482,29 @@ function avoidFormationLabelCollisions(
       labelDeltas.sort((a, b) => (a[0] * a[0] + a[1] * a[1]) - (b[0] * b[0] + b[1] * b[1])
         || b[1] - a[1] || b[0] - a[0]);
 
-      // Larger low-zoom conflicts retain their authoritative base placement;
-      // exhaustive multi-label backtracking would be exponential and block
-      // the camera transaction. Declutter has already reduced that context.
-      for (const candidateDelta of conflicting.length <= 4 ? formationDeltas : []) {
+      for (const candidateDelta of formationDeltas) {
         const formationRects = rects.map(rect => translateRect(rect, candidateDelta[0], candidateDelta[1]));
         if (formationRects.some(rect => placedFormationRects.some(placed => overlaps(rect, placed, 0)))) continue;
         if (formationRects.some(rect => (hudRect && overlaps(rect, hudRect, 0))
           || rect.left < canvasRect.left || rect.top < canvasRect.top
           || rect.right > canvasRect.right || rect.bottom > canvasRect.bottom)) continue;
+        // Only relocate labels intersecting this particular candidate. The old
+        // union across every possible formation position routinely contained
+        // more than four labels at Theatre scale and incorrectly abandoned an
+        // otherwise simple one-label solution.
+        const candidateConflicting = conflicting.filter(label => {
+          const rect = placeLabelRect(label, baseRects);
+          const element = label.getElement();
+          const previouslyMoved = Number(element.dataset.placeAvoidanceDisplacementX ?? 0) !== 0
+            || Number(element.dataset.placeAvoidanceDisplacementY ?? 0) !== 0;
+          return previouslyMoved || formationRects.some(formation => overlaps(formation, rect, 0));
+        });
+        if (candidateConflicting.length > 4) continue;
+        const fixedLabels = labels.filter(label => !candidateConflicting.includes(label)).map(label => placeLabelRect(label, baseRects));
         const moved: Array<{ marker: Marker; delta: readonly [number, number]; rect: Rect }> = [];
         const placeLabel = (index: number): boolean => {
-          if (index >= conflicting.length) return true;
-          const marker = conflicting[index];
+          if (index >= candidateConflicting.length) return true;
+          const marker = candidateConflicting[index];
           const start = placeLabelRect(marker, baseRects);
           for (const labelDelta of labelDeltas) {
             const [dx, dy] = labelDelta;

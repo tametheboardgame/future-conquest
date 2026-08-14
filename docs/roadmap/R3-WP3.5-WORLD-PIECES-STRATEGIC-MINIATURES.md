@@ -242,6 +242,24 @@ Before WP3.5 may be accepted:
 
 WP3.5 completes when the production terrain map reads as a physical strategic war-game table rather than a terrain map with temporary markers: friendly formations are recognisable miniature armies, movement is smooth and geographically correct, key cities/infrastructure have restrained physical representation, LOD/performance remain controlled, and the system is ready for WP4 battle/front/event feedback to animate against the final piece architecture.
 
+## Implementation record
+
+- WP3.5A/B technical baseline: exact head `54be95ed99cb235dc237c63160def2123869ec07`.
+- WP3.5C/D: procedural city clusters and distinct port, airport, rail/logistics
+  and crossing silhouettes derive exclusively from existing strategic-node type,
+  importance and coordinates.
+- WP3.5E: deterministic importance-based Theatre/Campaign/Selected visibility,
+  shared materials and bounded geometry; no render-loop object construction.
+- WP3.5F: existing layer toggles control the physical objects, DOM labels and
+  interaction targets remain authoritative, custom-layer failure retains them,
+  and the explicit SVG fallback remains unchanged. Chromium evidence covers
+  exact geographic anchors, terrain elevation/clearance and all three LODs.
+
+This record does not declare the package accepted. The active PR implementation
+is **READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE**; exact-head validation,
+deployment and product-owner visual acceptance remain mandatory, and WP4 remains
+blocked.
+
 ## Programme dependency
 
 **R3-WP4 is hard-blocked by WP3.5.**

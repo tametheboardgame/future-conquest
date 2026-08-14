@@ -8,6 +8,7 @@ R3 Visualisation & Command Experience is now in **R3-WP3.5 - World Pieces & Stra
 
 Authoritative active package: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
 Programme roadmap: `docs/roadmap/R3-ROADMAP.md`.
+Active implementation line: `agent/r3-wp3-5-implementation` (single WP3.5 implementation branch; all WP3.5 code, tests and review work belongs here until this package is complete).
 
 **R3-WP4 is blocked.** PR #137 remains closed/unmerged historical reference material only. No worker, scheduled task or future development thread should resume WP4 until WP3.5 has been implemented, deployed and visually accepted.
 
@@ -65,6 +66,17 @@ Primary outcomes:
 - maintain compact, reduced-motion, performance and `?terrain=0` SVG fallback behaviour.
 
 See `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md` for the complete approved package.
+
+Implementation status on the active PR line: WP3.5A/B is technically accepted at
+`54be95ed99cb235dc237c63160def2123869ec07`. WP3.5C-F now adds a second derived
+Three.js custom layer for authoritative strategic nodes: importance-scaled city
+clusters and distinct port, airport, rail/logistics and crossing miniatures,
+terrain elevation plus bounded clearance, deterministic Theatre/Campaign/Selected
+LOD, existing Layers-state visibility, browser diagnostics and automatic DOM/SVG
+fallback. Final hardening is **READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE** on
+the active PR line after exact-head browser, performance, build, persistence and
+deterministic-balance validation. This is not deployed-main visual acceptance;
+WP4 remains blocked until the product-owner exit gate is satisfied.
 
 ## Authoritative sequence
 

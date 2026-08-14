@@ -4,6 +4,7 @@ import type { TaskGroup } from '../game/types';
 export type FormationGeoPoint = readonly [number, number];
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+export const FORMATION_PRESENTATION_ANIMATION_MS = 520;
 
 // WP3 derives display geometry only. Engine-owned location, route progress and
 // arrival timing remain unchanged and continue to resolve in game state.
@@ -14,32 +15,51 @@ const pointDistance = (a: FormationGeoPoint, b: FormationGeoPoint) => {
   return Math.hypot(longitudeDistance, latitudeDistance);
 };
 
+const pathSegments = (points: readonly FormationGeoPoint[]) => points.slice(1).map((point, index) => ({
+  from: points[index],
+  to: point,
+  length: pointDistance(points[index], point)
+}));
+
+function activePathSegment(points: readonly FormationGeoPoint[], progress: number) {
+  const segments = pathSegments(points);
+  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
+  let remaining = totalLength * clamp01(progress);
+  for (const segment of segments) {
+    if (remaining <= segment.length || segment === segments.at(-1)) return { segment, remaining };
+    remaining -= segment.length;
+  }
+  return undefined;
+}
+
+/** The endpoint of the same length-weighted segment used for interpolation. */
+export function formationForwardPathTarget(points: readonly FormationGeoPoint[], progress: number) {
+  return activePathSegment(points, progress)?.segment.to;
+}
+
+/** Shared cubic presentation tween used by both visible pieces and DOM hit targets. */
+export function interpolateFormationPresentation(
+  from: FormationGeoPoint, to: FormationGeoPoint, elapsedMs: number
+): FormationGeoPoint {
+  const t = clamp01(elapsedMs / FORMATION_PRESENTATION_ANIMATION_MS);
+  const eased = 1 - Math.pow(1 - t, 3);
+  return [from[0] + (to[0] - from[0]) * eased, from[1] + (to[1] - from[1]) * eased];
+}
+
 export function interpolateFormationPath(
   points: readonly FormationGeoPoint[],
   progress: number
 ): FormationGeoPoint | undefined {
   if (!points.length) return undefined;
   if (points.length === 1) return points[0];
-  const segments = points.slice(1).map((point, index) => ({
-    from: points[index],
-    to: point,
-    length: pointDistance(points[index], point)
-  }));
-  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
-  if (totalLength <= 0) return points[points.length - 1];
-
-  let remaining = totalLength * clamp01(progress);
-  for (const segment of segments) {
-    if (remaining <= segment.length || segment === segments[segments.length - 1]) {
-      const ratio = segment.length <= 0 ? 1 : clamp01(remaining / segment.length);
-      return [
-        segment.from[0] + (segment.to[0] - segment.from[0]) * ratio,
-        segment.from[1] + (segment.to[1] - segment.from[1]) * ratio
-      ];
-    }
-    remaining -= segment.length;
-  }
-  return points[points.length - 1];
+  const active = activePathSegment(points, progress);
+  if (!active) return points[points.length - 1];
+  const { segment, remaining } = active;
+  const ratio = segment.length <= 0 ? 1 : clamp01(remaining / segment.length);
+  return [
+    segment.from[0] + (segment.to[0] - segment.from[0]) * ratio,
+    segment.from[1] + (segment.to[1] - segment.from[1]) * ratio
+  ];
 }
 
 export function formationPresentationPath(
