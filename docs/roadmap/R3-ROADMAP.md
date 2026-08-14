@@ -118,7 +118,7 @@ Product-owner review of the live WP2C build explicitly approved the broad direct
 - operational markers can intrude beneath the terrain status/control box;
 - the strong top-down <-> pitched 2.5D camera capability should be retained and refined rather than simplified away.
 
-WP2D therefore owns:
+WP2D therefore owned:
 
 - terrain tile/source robustness;
 - expansion/regeneration of the terrain footprint for the intended Europe theatre;
@@ -129,7 +129,7 @@ WP2D therefore owns:
 - intensive browser visual/runtime validation across top-down and pitched views;
 - performance/accessibility/fallback preservation and exact simulation parity.
 
-The product owner visually accepted WP2D on 2026-08-12. WP3 remains paused while the focused WP2E terrain performance and streaming pass is active.
+The product owner visually accepted WP2D on 2026-08-12. At that point WP3 remained paused while the focused WP2E terrain performance and streaming pass proceeded; WP2E through WP2I and the post-WP2I corrections have since completed.
 
 ---
 
@@ -153,17 +153,26 @@ WP3 delivered physical friendly formation pieces, status-specific material langu
 
 ## R3 Production Coherence Recovery
 
-Status: ACTIVE
+Status: COMPLETE / MERGED (#138)
 
-The authoritative specification is `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`. Recovery makes MapLibre/Copernicus terrain and WP3 the normal supported production path, retains automatic compact/WebGL fallback and explicit `?terrain=0` SVG selection, adds no-query exact-browser proof, and reconciles programme governance. PR #137 (WP4) was paused and closed unmerged on 2026-08-14.
+The authoritative specification is `docs/roadmap/R3-PRODUCTION-COHERENCE-RECOVERY.md`. Recovery made MapLibre/Copernicus terrain and WP3 the normal supported production path, retained automatic compact/WebGL fallback and explicit `?terrain=0` SVG selection, added no-query exact-browser proof, and reconciled programme governance. PR #138 merged as `5809d08b63a34df6c8aa111f6e300378a1eeb5b3` and was successfully deployed to GitHub Pages. PR #137 (WP4) remains paused and closed unmerged.
 
 ---
 
 ## R3 Stabilisation Gate - Map & WP3 Bug Remediation
 
-Status: MANDATORY NEXT / WP4 BLOCKING
+Status: ACTIVE / WP4 BLOCKING
 
-Before WP4, audit the production-default map in Theatre, Campaign and Selected views; reproduce and fix/verify the low-zoom land-mask artefact and ambiguous front/orange segments; inspect pieces, movement routes, labels, contacts, operations, collisions and camera stability; validate compact, reduced-motion and SVG fallback; run full regression, build, persistence, balance, performance and browser gates; and obtain human visual acceptance of deployed `main`. CI alone cannot close visual defects.
+Authoritative package detail: `docs/roadmap/R3-STABILISATION-MAP-WP3-BUGS.md`.
+
+Before WP4, audit and repair the production-default map in Theatre, Campaign and Selected views. The gate must explicitly reproduce and fix/verify:
+
+- **P1 territory-selection marker reprojection/layout drift:** selecting Düsseldorf / entering attack-target-selected state currently causes labels and TG formation pieces to move away from their correct geographic anchors; at wider zoom the displacement becomes extreme, with formations and labels translated far down the screen while the terrain remains correctly positioned. The fix must preserve authoritative lon/lat anchoring through selection, camera settlement, zoom/pitch and Theatre/Campaign/Selected transitions and must be protected by an exact-browser `map.project()` geographic-anchor regression;
+- the low-zoom land-mask polygon artefact;
+- ambiguous orange/front short-segment visual language;
+- any additional P0/P1/P2 map/WP3 defects found by the full production audit.
+
+The gate must also inspect pieces, movement routes, labels, contacts, operations, collisions and camera stability; validate compact, reduced-motion and SVG fallback; run full regression, build, persistence, balance, performance and browser gates; and obtain human visual acceptance before WP4 resumes. CI alone cannot close visual defects.
 
 ---
 
