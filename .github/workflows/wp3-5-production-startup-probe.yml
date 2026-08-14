@@ -7,20 +7,24 @@ on:
     paths:
       - 'scripts/probe-wp3-5-production-startup.mjs'
       - '.github/workflows/wp3-5-production-startup-probe.yml'
+      - 'src/components/TerrainMapPrototype.tsx'
       - 'src/components/TerrainMapPrototypeImpl.tsx'
       - 'src/presentation/r3-formation-miniatures-layer.ts'
       - 'src/presentation/r3-world-miniatures-layer.ts'
       - 'src/presentation/r3-terrain-operational-markers-core.ts'
       - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
   pull_request:
     paths:
       - 'scripts/probe-wp3-5-production-startup.mjs'
       - '.github/workflows/wp3-5-production-startup-probe.yml'
+      - 'src/components/TerrainMapPrototype.tsx'
       - 'src/components/TerrainMapPrototypeImpl.tsx'
       - 'src/presentation/r3-formation-miniatures-layer.ts'
       - 'src/presentation/r3-world-miniatures-layer.ts'
       - 'src/presentation/r3-terrain-operational-markers-core.ts'
       - 'src/r3-terrain-prototype.css'
+      - 'src/wp3-5-physical-overlay.css'
 
 jobs:
   production-startup:
