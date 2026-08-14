@@ -57,6 +57,7 @@ jobs:
           import { chromium } from 'playwright';
 
           const browser = await chromium.launch({ headless: true });
+          // WP2D gates settled visual states; normal camera animation behaviour remains owned by other gates.
           const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, reducedMotion: 'reduce' });
           const terrainResponses = new Map();
           page.on('response', response => {
@@ -215,6 +216,7 @@ jobs:
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
           };
 
+          // The renderer already starts at Campaign. Assert that settled state in place rather than issuing a redundant camera transaction.
           await verifyView('campaign', 'campaign', 'physical', false);
           await verifyView('theatre', 'theatre', 'strategic-flat');
           await verifyView('selected', 'local', 'physical');
