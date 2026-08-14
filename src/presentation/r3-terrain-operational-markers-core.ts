@@ -114,7 +114,13 @@ const stopMapClick = (element: MarkerElementDescriptor, action: () => void) => {
 };
 
 const updateElement = (element: HTMLElement, descriptor: MarkerElementDescriptor) => {
-  element.className = descriptor.className;
+  // Reconciliation updates product styling without deleting the structural
+  // classes MapLibre added to the supplied element. In particular,
+  // `maplibregl-marker` supplies absolute positioning; dropping it puts every
+  // reconciled marker back into normal DOM flow, adding the preceding marker
+  // heights to its projected Y coordinate.
+  const mapLibreClasses = [...element.classList].filter(name => name.startsWith('maplibregl-'));
+  element.className = [...descriptor.className.split(/\s+/).filter(Boolean), ...mapLibreClasses].join(' ');
   if (descriptor.label) element.setAttribute('aria-label', descriptor.label);
   else element.removeAttribute('aria-label');
   if (descriptor.ariaHidden) element.setAttribute('aria-hidden', 'true');

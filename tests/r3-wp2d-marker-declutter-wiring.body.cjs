@@ -27,6 +27,11 @@ test('WP2D-D tags every terrain marker with stable priority metadata and explici
   ]) assert.match(markers, new RegExp(`'${kind}'`));
 });
 
+test('WP2D-D reconciliation preserves MapLibre structural positioning classes', () => {
+  assert.match(markers, /mapLibreClasses = \[\.\.\.element\.classList\]\.filter\(name => name\.startsWith\('maplibregl-'\)\)/);
+  assert.match(markers, /element\.className = \[\.\.\.descriptor\.className\.split/);
+});
+
 test('WP2D-D declutters from projected screen coordinates without altering authoritative marker geography', () => {
   assert.match(markers, /map\.project\(marker\.getLngLat\(\)\)/);
   assert.match(markers, /visibleTerrainMarkerIds\([\s\S]*candidates,[\s\S]*terrainMarkerLodForZoom\(map\.getZoom\(\)\),[\s\S]*reservedRects[\s\S]*\)/);
