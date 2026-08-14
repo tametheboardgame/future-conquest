@@ -40,9 +40,8 @@ test('WP2D uses a flat Theatre LOD while preserving physical terrain for Campaig
   assert.match(hillshade, /'hillshade-exaggeration': compact \? 0\.48 : 0\.72/);
   assert.match(renderer, /let terrainMeshMode: 'physical' \| 'strategic-flat' = 'physical'/);
   assert.match(renderer, /const nextMode = map\.getZoom\(\) < 4\.8 \? 'strategic-flat' : 'physical'/);
-  assert.match(renderer, /map\.setTerrain\(nextMode === 'physical' \? \{/);
-  assert.match(renderer, /source: 'r3-wp2b-terrain-dem'/);
-  assert.match(renderer, /\} : null\)/);
+  assert.match(renderer, /map\.setTerrain\(\{[\s\S]*source: 'r3-wp2b-terrain-dem',[\s\S]*exaggeration: nextMode === 'physical'[\s\S]*\? terrainExaggerationForProfile\(presentationProfile\)[\s\S]*: 0[\s\S]*\}\);/);
+  assert.doesNotMatch(renderer, /map\.setTerrain\(nextMode === 'physical' \? \{/);
   assert.match(renderer, /host\.dataset\.terrainRelief = terrainMeshMode/);
 });
 
