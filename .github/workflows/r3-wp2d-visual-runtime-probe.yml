@@ -198,7 +198,6 @@ jobs:
             if (result.visible < 3) throw new Error(`${viewName} declutter removed too much strategic context.`);
             if (viewName === 'theatre' && result.hidden < 1) throw new Error('Theatre view did not declutter any dense operational markers.');
 
-            await captureEvidence(viewName);
           };
 
           await verifyView('campaign', 'campaign', 'physical');
@@ -206,6 +205,7 @@ jobs:
           await verifyView('selected', 'local', 'physical');
 
           console.log('WP2D unique terrain requests:', terrainResponses.size, 'tiles /', [...terrainResponses.values()].reduce((a, b) => a + b, 0), 'declared bytes');
+          await captureEvidence('selected');
           await browser.close();
           NODE
       - name: Upload WP2D visual evidence

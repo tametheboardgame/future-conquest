@@ -18,14 +18,19 @@ test('WP2D evidence screenshots are bounded and non-gating', () => {
   assert.doesNotMatch(capture, /throw error/);
 });
 
-test('WP2D assertions remain gating and Selected runs after best-effort Theatre capture', () => {
+test('WP2D assertions remain gating before a single post-Selected evidence capture', () => {
   const lodAssertion = workflow.indexOf('if (result.lod !== expectedLod) throw new Error');
-  const captureCall = workflow.indexOf('await captureEvidence(viewName);');
   const campaign = workflow.indexOf("await verifyView('campaign', 'campaign', 'physical');");
   const theatre = workflow.indexOf("await verifyView('theatre', 'theatre', 'strategic-flat');");
   const selected = workflow.indexOf("await verifyView('selected', 'local', 'physical');");
+  const captureCall = workflow.indexOf("await captureEvidence('selected');");
+  const browserClose = workflow.indexOf('await browser.close();', captureCall);
+  const captureCalls = [...workflow.matchAll(/await captureEvidence\(/g)].map(match => match.index);
 
-  assert.ok(lodAssertion >= 0 && lodAssertion < captureCall, 'runtime assertions must gate before evidence capture');
-  assert.ok(campaign < theatre && theatre < selected, 'Selected verification must still run after Theatre');
+  assert.ok(lodAssertion >= 0 && lodAssertion < campaign, 'runtime assertions must remain inside gating verification');
+  assert.ok(campaign < theatre && theatre < selected, 'views must gate in Campaign, Theatre, Selected order');
+  assert.ok(selected < captureCall, 'evidence capture must occur only after Selected verification');
+  assert.deepEqual(captureCalls, [captureCall], 'no evidence capture may run inside or before the three view gates');
+  assert.ok(captureCall < browserClose, 'browser close must immediately follow best-effort capture');
   assert.match(workflow, /if-no-files-found: ignore/);
 });
