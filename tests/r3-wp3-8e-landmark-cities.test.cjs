@@ -21,7 +21,7 @@ test('WP3.8E scope is exactly Namur Chur and Innsbruck on existing strategic nod
 test('Pass 5 completes the current 15-city authored landmark registry',()=>{
   const expected=['N-LONDON','N-PARIS','N-BRUSSELS','N-AMSTERDAM','N-FRANKFURT','N-BERN','N-STRASBOURG','N-LYON','N-LUXEMBOURG','N-DUSSELDORF','N-STUTTGART','N-RENNES','N-NAMUR','N-CHUR','N-INNSBRUCK'];
   for(const id of expected)assert.match(assets,new RegExp(`nodeId: '${id}'`));
-  assert.equal((assets.match(/nodeId: 'N-/g)??[]).length,15);
+  assert.equal((assets.match(/\n  'N-[A-Z-]+': \{/g)??[]).length,15);
 });
 
 test('Pass 5 assets use the established authored Campaign and Selected runtime path',()=>{
