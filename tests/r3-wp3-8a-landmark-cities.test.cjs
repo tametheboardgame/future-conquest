@@ -10,9 +10,12 @@ const strategicNodes = fs.readFileSync('src/game/strategic-network-data.ts', 'ut
 const design = fs.readFileSync('docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DESIGN.md', 'utf8');
 
 const londonSources = [
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64',
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.tail01',
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.tail02'
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe01',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe02',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe03',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe04',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe05',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.safe06'
 ];
 
 test('WP3.8A v2 preserves the approved London, Paris and Brussels strategic-node scope', () => {
@@ -35,14 +38,15 @@ test('approved board-game miniature manifest drives the new authored asset path'
   assert.match(assets, /wp3\.8a-v2-brussels-selected/);
 });
 
-test('committed London source reconstructs exactly to a non-trivial embedded glTF 2.0 miniature', () => {
+test('clean London source parts reconstruct exactly to a non-trivial embedded glTF 2.0 miniature', () => {
   const encoded = londonSources
     .map(file => fs.readFileSync(file, 'utf8'))
     .join('')
     .replace(/\s+/g, '');
   assert.equal(encoded.length, 35972, 'London compressed source was truncated or duplicated');
-  assert.ok(fs.statSync(londonSources[1]).size <= 8000 && fs.statSync(londonSources[2]).size <= 8997,
-    'London continuation parts exceed connector-safe size');
+  assert.ok(londonSources.slice(0, 5).every(file => fs.statSync(file).size === 6000),
+    'London full-size source parts must remain exactly 6000 bytes');
+  assert.equal(fs.statSync(londonSources[5]).size, 5972, 'London final source part size changed');
   const document = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8'));
   assert.equal(document.asset.version, '2.0');
   assert.ok(document.meshes.length >= 8, 'authored miniature should contain multiple detailed mesh/material groups');
@@ -54,8 +58,8 @@ test('build emits self-hosted landmark assets rather than using third-party runt
   assert.match(build, /gunzipSync/);
   assert.match(build, /public\/miniatures\/wp3-8a/);
   assert.match(build, /expectedEncodedLength: 35_972/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.tail01/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.tail02/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.safe01/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.safe06/);
   assert.match(build, /createHash\('sha256'\)/);
   assert.doesNotMatch(build, /https?:\/\//);
 });
