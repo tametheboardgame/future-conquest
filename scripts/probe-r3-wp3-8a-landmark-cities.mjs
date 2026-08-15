@@ -30,12 +30,18 @@ try {
     && Boolean(window.__r3TerrainMap)
   , null, { timeout: 45_000 });
 
+  // The normal operational overlays are validated by the existing WP2F probe.
+  // Suppress only DOM markers in these art-review captures so labels/contacts do
+  // not sit over the physical landmark silhouettes. Three.js world pieces and
+  // the real terrain remain unchanged.
+  await page.addStyleTag({ content: '[data-r3-marker-id] { visibility: hidden !important; }' });
+
   const evidence = { cities: {}, genericFallback: null };
   for (const city of cities) {
     await page.evaluate(({ position }) => {
       const map = window.__r3TerrainMap;
       if (!map) throw new Error('terrain map diagnostic unavailable');
-      map.jumpTo({ center: position, zoom: 7.2, pitch: 55, bearing: 0 });
+      map.jumpTo({ center: position, zoom: 9, pitch: 58, bearing: 0 });
     }, city);
     await page.waitForTimeout(850);
 
