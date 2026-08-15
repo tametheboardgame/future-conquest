@@ -1,10 +1,12 @@
 # R3-WP3.8D Landmark Cities Pass 4 Design Lock
 
-Status: **IMPLEMENTATION ACTIVE / PRODUCT-OWNER VISUAL REVIEW REQUIRED**
+Status: **ACCEPTED / MERGE APPROVED**
 
 Parent programme: `R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`
 
 Preceding accepted pass: WP3.8C, product-owner accepted 2026-08-15 with minor detail refinements deferred to the later integrated second-pass polish.
+
+Product-owner visual acceptance: **2026-08-15**. Düsseldorf, Stuttgart and Rennes are accepted at the first-pass landmark standard. Minor architectural/micro-detail refinements are explicitly deferred to the later integrated second-pass polish and do not block WP3.8E.
 
 ## Scope
 
@@ -111,16 +113,16 @@ The browser captures must demonstrate that the two cities remain visually differ
 
 ## Acceptance gate
 
-Pass 4 is not complete until all of the following hold:
+Pass 4 completed after all of the following held:
 
-1. Düsseldorf, Stuttgart and Rennes build as self-hosted authored glTF assets.
-2. Each loads in Campaign and Selected LOD in Chromium.
-3. Exact strategic-node coordinate anchoring is unchanged.
-4. Terrain elevation is finite and clearance remains 22 m.
-5. Existing WP3.8A, WP3.8B and WP3.8C cities continue to pass their regression gates.
-6. A Pass 5 city remains on the generic fallback path.
-7. Production build, browser and exact-head performance gates are acceptable.
-8. Browser/deployed captures make Düsseldorf and Stuttgart visually distinguishable despite both using television-tower landmarks.
-9. Captures are reviewed and explicitly accepted by the product owner.
+1. Düsseldorf, Stuttgart and Rennes built as self-hosted authored glTF assets.
+2. Each loaded in Campaign and Selected LOD in Chromium.
+3. Exact strategic-node coordinate anchoring remained unchanged.
+4. Terrain elevation was finite and clearance remained 22 m.
+5. Existing WP3.8A, WP3.8B and WP3.8C cities continued to pass their regression gates.
+6. A Pass 5 city remained on the generic fallback path.
+7. Production build, browser and exact-head performance gates were acceptable.
+8. Browser captures made Düsseldorf and Stuttgart visually distinguishable despite both using television-tower landmarks.
+9. Captures were reviewed and explicitly accepted by the product owner.
 
-R3-WP4 remains blocked after this pass. WP3.8E may be prepared but cannot be marked accepted until WP3.8D receives visual acceptance.
+R3-WP4 remains blocked after this pass. WP3.8E is now authorised to proceed.
