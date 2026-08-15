@@ -141,7 +141,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: -0.10,
     landmarks: ['Rheinturm', 'Media Harbour / Rhine waterfront'],
     visualReference: 'WP3.8D roadmap landmark lock',
-    authoredFaceCount: 1200,
+    authoredFaceCount: 1736,
     rollout: 'runtime'
   },
   'N-STUTTGART': {
@@ -153,7 +153,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: 0.08,
     landmarks: ['Fernsehturm Stuttgart', 'Neues Schloss / Schlossplatz roofline'],
     visualReference: 'WP3.8D roadmap landmark lock',
-    authoredFaceCount: 1200,
+    authoredFaceCount: 2280,
     rollout: 'runtime'
   },
   'N-RENNES': {
@@ -165,7 +165,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: -0.08,
     landmarks: ['Parliament of Brittany', 'Rennes half-timbered old town'],
     visualReference: 'WP3.8D roadmap landmark lock',
-    authoredFaceCount: 1200,
+    authoredFaceCount: 2668,
     rollout: 'runtime'
   }
 };
