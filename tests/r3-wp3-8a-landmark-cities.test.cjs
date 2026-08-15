@@ -11,8 +11,8 @@ const design = fs.readFileSync('docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DE
 
 const londonSources = [
   'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64',
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.suffix01',
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.suffix02'
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.tail01',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.tail02'
 ];
 
 test('WP3.8A v2 preserves the approved London, Paris and Brussels strategic-node scope', () => {
@@ -41,8 +41,8 @@ test('committed London source reconstructs exactly to a non-trivial embedded glT
     .join('')
     .replace(/\s+/g, '');
   assert.equal(encoded.length, 35972, 'London compressed source was truncated or duplicated');
-  assert.ok(fs.statSync(londonSources[1]).size < 9000 && fs.statSync(londonSources[2]).size < 9000,
-    'London suffix parts exceed connector-safe size');
+  assert.ok(fs.statSync(londonSources[1]).size <= 8000 && fs.statSync(londonSources[2]).size <= 8997,
+    'London continuation parts exceed connector-safe size');
   const document = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8'));
   assert.equal(document.asset.version, '2.0');
   assert.ok(document.meshes.length >= 8, 'authored miniature should contain multiple detailed mesh/material groups');
@@ -54,8 +54,8 @@ test('build emits self-hosted landmark assets rather than using third-party runt
   assert.match(build, /gunzipSync/);
   assert.match(build, /public\/miniatures\/wp3-8a/);
   assert.match(build, /expectedEncodedLength: 35_972/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.suffix01/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.suffix02/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.tail01/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.tail02/);
   assert.match(build, /createHash\('sha256'\)/);
   assert.doesNotMatch(build, /https?:\/\//);
 });
