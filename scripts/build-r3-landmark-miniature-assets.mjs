@@ -8,9 +8,16 @@ const OUTPUT_ROOT = 'public/miniatures/wp3-8a';
 
 // Asset rollout is intentionally staged. London proves the authored-asset path
 // end to end before Paris and Brussels are switched away from their procedural
-// fallbacks. Later assets can use either one source bundle or numbered parts.
+// fallbacks. Source bundles are split into bounded text parts so repository
+// writes cannot silently truncate a compressed model payload.
 const assets = [
-  { name: 'london-selected', sourceFiles: ['london-selected.gltf.gz.b64'] }
+  {
+    name: 'london-selected',
+    sourceFiles: [
+      'london-selected.gltf.gz.b64.part01',
+      'london-selected.gltf.gz.b64.part02'
+    ]
+  }
 ];
 
 fs.mkdirSync(OUTPUT_ROOT, { recursive: true });
