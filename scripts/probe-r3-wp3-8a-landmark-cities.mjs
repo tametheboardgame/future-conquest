@@ -7,7 +7,8 @@ const london = {
   id: 'N-LONDON', name: 'London', variant: 'london', position: [-0.1276, 51.5072],
   landmarks: ['Elizabeth Tower / Big Ben', 'Palace of Westminster'],
   assetId: 'wp3.8a-v2-london-selected',
-  camera: { zoom: 8.1, pitch: 50, bearing: -18 }
+  campaignCamera: { zoom: 5.35, pitch: 51, bearing: -9 },
+  selectedCamera: { zoom: 8.1, pitch: 50, bearing: -18 }
 };
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -43,33 +44,25 @@ try {
   await layerControl.evaluate(element => { element.open = false; });
   await page.addStyleTag({ content: '[data-r3-marker-id] { visibility: hidden !important; }' });
 
-  // Theatre/Campaign must not eagerly fetch the Selected asset. The initial
-  // London evidence should still be the procedural fallback.
-  const beforeSelected = await page.evaluate(id => {
-    const object = window.__r3WorldMiniatures?.objects.find(candidate => candidate.id === id);
-    return object ? { assetStatus: object.assetStatus, presentationModel: object.presentationModel } : null;
-  }, london.id);
-  if (!beforeSelected || beforeSelected.presentationModel !== 'procedural-fallback') {
-    throw new Error(`London authored model loaded outside Selected view: ${JSON.stringify(beforeSelected)}`);
-  }
-
-  await page.evaluate(({ position, camera }) => {
+  // The authored landmark must now be visible in the normal Campaign camera,
+  // not only after entering the Selected/local zoom band.
+  await page.evaluate(({ position, campaignCamera }) => {
     const map = window.__r3TerrainMap;
     if (!map) throw new Error('terrain map diagnostic unavailable');
-    map.jumpTo({ center: position, ...camera });
+    map.jumpTo({ center: position, ...campaignCamera });
   }, london);
 
   await page.waitForFunction(({ id, assetId }) => {
     const diagnostic = window.__r3WorldMiniatures;
     const object = diagnostic?.objects.find(candidate => candidate.id === id);
-    return diagnostic?.lod === 'selected'
+    return diagnostic?.lod === 'campaign'
       && object?.assetStatus === 'ready'
       && object?.assetId === assetId
       && object?.presentationModel === 'authored-gltf';
   }, { id: london.id, assetId: london.assetId }, { timeout: 20_000 });
   await page.waitForTimeout(400);
 
-  const observed = await page.evaluate(({ id }) => {
+  const campaignObserved = await page.evaluate(({ id }) => {
     const diagnostic = window.__r3WorldMiniatures;
     const nodes = window.__r3StrategicNodes ?? [];
     if (!diagnostic) throw new Error('world-miniature diagnostic unavailable');
@@ -83,21 +76,47 @@ try {
     };
   }, london);
 
-  if (!observed.visible || observed.lod !== 'selected') throw new Error(`London authored miniature is not visible at Selected LOD`);
-  if (observed.cityVariant !== london.variant) throw new Error(`London variant mismatch: ${observed.cityVariant}`);
-  if (observed.assetStatus !== 'ready' || observed.presentationModel !== 'authored-gltf') {
-    throw new Error(`London did not swap to authored glTF: ${JSON.stringify(observed)}`);
+  if (!campaignObserved.visible || campaignObserved.lod !== 'campaign') throw new Error('London authored miniature is not visible at Campaign LOD');
+  if (campaignObserved.cityVariant !== london.variant) throw new Error(`London variant mismatch: ${campaignObserved.cityVariant}`);
+  if (campaignObserved.assetStatus !== 'ready' || campaignObserved.presentationModel !== 'authored-gltf') {
+    throw new Error(`London did not swap to authored glTF in Campaign view: ${JSON.stringify(campaignObserved)}`);
   }
-  if (observed.assetId !== london.assetId || observed.authoredFaceCount < 3000) {
-    throw new Error(`London authored asset identity/detail contract failed: ${JSON.stringify(observed)}`);
+  if (campaignObserved.assetId !== london.assetId || campaignObserved.authoredFaceCount < 3000) {
+    throw new Error(`London authored asset identity/detail contract failed: ${JSON.stringify(campaignObserved)}`);
   }
-  if (observed.anchorErrorDegrees !== 0) throw new Error('London geographic anchor changed');
-  if (!Number.isFinite(observed.elevation) || observed.clearance !== 22) throw new Error('London terrain grounding changed');
-  if (JSON.stringify(observed.landmarks) !== JSON.stringify(london.landmarks)) {
-    throw new Error(`London landmark metadata mismatch: ${JSON.stringify(observed.landmarks)}`);
+  if (campaignObserved.anchorErrorDegrees !== 0) throw new Error('London geographic anchor changed');
+  if (!Number.isFinite(campaignObserved.elevation) || campaignObserved.clearance !== 22) throw new Error('London terrain grounding changed');
+  if (JSON.stringify(campaignObserved.landmarks) !== JSON.stringify(london.landmarks)) {
+    throw new Error(`London landmark metadata mismatch: ${JSON.stringify(campaignObserved.landmarks)}`);
   }
 
-  await host.screenshot({ path: `${outputDir}/london-authored.png` });
+  await host.screenshot({ path: `${outputDir}/london-authored-campaign.png` });
+
+  // Selected/local remains the richer close inspection mode and must keep using
+  // the same authored object rather than reverting to the fallback.
+  await page.evaluate(({ position, selectedCamera }) => {
+    const map = window.__r3TerrainMap;
+    if (!map) throw new Error('terrain map diagnostic unavailable');
+    map.jumpTo({ center: position, ...selectedCamera });
+  }, london);
+
+  await page.waitForFunction(({ id, assetId }) => {
+    const diagnostic = window.__r3WorldMiniatures;
+    const object = diagnostic?.objects.find(candidate => candidate.id === id);
+    return diagnostic?.lod === 'selected'
+      && object?.assetStatus === 'ready'
+      && object?.assetId === assetId
+      && object?.presentationModel === 'authored-gltf';
+  }, { id: london.id, assetId: london.assetId }, { timeout: 20_000 });
+
+  const selectedObserved = await page.evaluate(id => {
+    const diagnostic = window.__r3WorldMiniatures;
+    const object = diagnostic?.objects.find(candidate => candidate.id === id);
+    return object ? { ...object, lod: diagnostic?.lod } : null;
+  }, london.id);
+  if (!selectedObserved || selectedObserved.presentationModel !== 'authored-gltf' || selectedObserved.lod !== 'selected') {
+    throw new Error(`London authored model did not persist into Selected view: ${JSON.stringify(selectedObserved)}`);
+  }
 
   const migration = await page.evaluate(() => {
     const objects = window.__r3WorldMiniatures?.objects ?? [];
@@ -125,7 +144,7 @@ try {
     throw new Error(`later-pass generic fallback changed: ${JSON.stringify(migration.amsterdam)}`);
   }
 
-  const evidence = { schemaVersion: 2, beforeSelected, london: observed, migration };
+  const evidence = { schemaVersion: 3, campaign: campaignObserved, selected: selectedObserved, migration };
   fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(JSON.stringify(evidence, null, 2));
 } finally {

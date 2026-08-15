@@ -78,7 +78,7 @@ function cityBase(radius = 1.08) {
   return base;
 }
 
-/** Cheap deterministic fallback used for distant LOD, loading and renderer failure. */
+/** Cheap deterministic fallback used for Theatre LOD, loading and renderer failure. */
 function genericCityCluster(node: StrategicNodeDefinition) {
   const root = new Group();
   const major = node.type === 'capital' || node.importance >= 3;
@@ -262,10 +262,14 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
       const lodVisible = lod === 'selected' || (lod === 'campaign' ? piece.node.importance >= 2 : piece.node.importance >= 3);
       const inViewport = worldPieceInViewport(this.map, piece.node, lod);
       const rootVisible = enabled && lodVisible && inViewport;
+      const authoredAssetLod = lod === 'campaign' || lod === 'selected';
       piece.root.visible = rootVisible;
 
-      if (rootVisible && lod === 'selected' && piece.asset) this.ensureAuthoredAsset(piece);
-      const useAuthoredAsset = rootVisible && lod === 'selected' && piece.assetStatus === 'ready' && Boolean(piece.assetRoot);
+      // Landmark miniatures are part of the normal campaign-table presentation.
+      // Theatre remains deliberately cheap, while Campaign and Selected use the
+      // authored model whenever it is visible and successfully loaded.
+      if (rootVisible && authoredAssetLod && piece.asset) this.ensureAuthoredAsset(piece);
+      const useAuthoredAsset = rootVisible && authoredAssetLod && piece.assetStatus === 'ready' && Boolean(piece.assetRoot);
       piece.fallbackRoot.visible = rootVisible && !useAuthoredAsset;
       if (piece.assetRoot) piece.assetRoot.visible = useAuthoredAsset;
 
