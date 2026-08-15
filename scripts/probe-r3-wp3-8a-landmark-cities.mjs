@@ -4,9 +4,21 @@ import { chromium } from 'playwright';
 const origin = process.env.R3_WP38A_ORIGIN ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.R3_WP38A_ARTIFACTS ?? 'artifacts/r3-wp3-8a';
 const cities = [
-  { id: 'N-LONDON', name: 'London', variant: 'london', position: [-0.1276, 51.5072], landmarks: ['Elizabeth Tower / Big Ben', 'Palace of Westminster'] },
-  { id: 'N-PARIS', name: 'Paris', variant: 'paris', position: [2.3522, 48.8566], landmarks: ['Eiffel Tower', 'Arc de Triomphe'] },
-  { id: 'N-BRUSSELS', name: 'Brussels', variant: 'brussels', position: [4.3517, 50.8503], landmarks: ['Atomium', 'Brussels Town Hall / Grand-Place spire'] }
+  {
+    id: 'N-LONDON', name: 'London', variant: 'london', position: [-0.1276, 51.5072],
+    landmarks: ['Elizabeth Tower / Big Ben', 'Palace of Westminster'],
+    camera: { zoom: 8.1, pitch: 50, bearing: -18 }
+  },
+  {
+    id: 'N-PARIS', name: 'Paris', variant: 'paris', position: [2.3522, 48.8566],
+    landmarks: ['Eiffel Tower', 'Arc de Triomphe'],
+    camera: { zoom: 8.2, pitch: 52, bearing: -24 }
+  },
+  {
+    id: 'N-BRUSSELS', name: 'Brussels', variant: 'brussels', position: [4.3517, 50.8503],
+    landmarks: ['Atomium', 'Brussels Town Hall / Grand-Place spire'],
+    camera: { zoom: 8.0, pitch: 50, bearing: 24 }
+  }
 ];
 
 fs.mkdirSync(outputDir, { recursive: true });
@@ -38,10 +50,10 @@ try {
 
   const evidence = { cities: {}, genericFallback: null };
   for (const city of cities) {
-    await page.evaluate(({ position }) => {
+    await page.evaluate(({ position, camera }) => {
       const map = window.__r3TerrainMap;
       if (!map) throw new Error('terrain map diagnostic unavailable');
-      map.jumpTo({ center: position, zoom: 9, pitch: 58, bearing: 0 });
+      map.jumpTo({ center: position, ...camera });
     }, city);
     await page.waitForTimeout(850);
 
