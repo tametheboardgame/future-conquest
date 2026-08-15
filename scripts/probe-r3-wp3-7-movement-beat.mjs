@@ -128,24 +128,41 @@ try {
   if (distance(beforePiece.current, beforePiece.target) > 0.00001) throw new Error('Formation was already travelling before End Day.');
 
   await page.locator('.global-resolve').click();
-  await page.locator('.r3-movement-resolution-lock[data-phase="playing"]').waitFor({ state: 'visible', timeout: 5_000 });
-  await page.waitForTimeout(450);
+  const movementOverlay = page.locator('.r3-movement-resolution-lock[data-phase="playing"]');
+  await movementOverlay.waitFor({ state: 'visible', timeout: 5_000 });
+  const beatStartedAt = Date.now();
+  await page.waitForTimeout(320);
 
-  const midPiece = await piece();
-  const midTurn = Number((await page.locator('.turn-block strong').textContent())?.trim());
-  const midTargetClass = await page.locator(`.r3-terrain-territory-label[data-territory-id="${targetTerritory}"]`).getAttribute('class');
-  const midStatus = await page.locator('.r3-movement-resolution-lock strong').textContent();
+  // Capture the transient beat in one browser-side read. This avoids serial
+  // locator waits consuming the deliberately short 1.75-second presentation.
+  const midSnapshot = await page.evaluate(({ id, territoryId }) => {
+    const physicalEvidence = window.__r3FormationMiniatures;
+    const item = physicalEvidence?.pieces?.find(candidate => candidate.id === id);
+    const turnText = document.querySelector('.turn-block strong')?.textContent?.trim();
+    const targetClass = document.querySelector(`.r3-terrain-territory-label[data-territory-id="${territoryId}"]`)?.getAttribute('class') ?? null;
+    const overlay = document.querySelector('.r3-movement-resolution-lock[data-phase="playing"]');
+    return {
+      piece: item ? { current: item.current, target: item.target, reducedMotion: physicalEvidence.reducedMotion } : null,
+      turn: Number(turnText),
+      targetClass,
+      status: overlay?.querySelector('strong')?.textContent ?? null,
+      overlayPresent: Boolean(overlay)
+    };
+  }, { id: groupId, territoryId: targetTerritory });
+  const midElapsedMs = Date.now() - beatStartedAt;
 
-  if (!midPiece) throw new Error('Physical formation evidence disappeared during movement beat.');
-  if (midTurn !== startTurn) throw new Error(`Command day advanced early during movement beat: ${midTurn}.`);
-  if (!midTargetClass?.includes('enemy')) throw new Error('Target ownership changed before movement presentation completed.');
-  const wholeJourney = distance(beforePiece.current, midPiece.target);
-  const travelled = distance(beforePiece.current, midPiece.current);
-  const remaining = distance(midPiece.current, midPiece.target);
+  if (!midSnapshot.piece) throw new Error('Physical formation evidence disappeared during movement beat.');
+  if (!midSnapshot.overlayPresent || !midSnapshot.status?.includes('Movement resolution')) {
+    throw new Error(`Movement-resolution overlay was not present at ${midElapsedMs} ms.`);
+  }
+  if (midSnapshot.turn !== startTurn) throw new Error(`Command day advanced early during movement beat: ${midSnapshot.turn}.`);
+  if (!midSnapshot.targetClass?.includes('enemy')) throw new Error('Target ownership changed before movement presentation completed.');
+  const wholeJourney = distance(beforePiece.current, midSnapshot.piece.target);
+  const travelled = distance(beforePiece.current, midSnapshot.piece.current);
+  const remaining = distance(midSnapshot.piece.current, midSnapshot.piece.target);
   if (!(wholeJourney > 0.01 && travelled > 0.001 && remaining > 0.001)) {
     throw new Error(`Formation did not show an in-progress invasion journey: whole=${wholeJourney}, travelled=${travelled}, remaining=${remaining}.`);
   }
-  if (!midStatus?.includes('Movement resolution')) throw new Error('Movement-resolution status was not presented during the beat.');
 
   await page.screenshot({ path: process.env.WP37_MID_SCREENSHOT ?? 'wp3-7-movement-mid.png', fullPage: true });
   await page.locator('.r3-movement-resolution-lock').waitFor({ state: 'detached', timeout: 6_000 });
@@ -166,7 +183,15 @@ try {
   evidence = {
     startTurn,
     before: { piece: beforePiece, targetClass: beforeTargetClass },
-    mid: { piece: midPiece, targetClass: midTargetClass, travelled, remaining },
+    mid: {
+      piece: midSnapshot.piece,
+      targetClass: midSnapshot.targetClass,
+      turn: midSnapshot.turn,
+      status: midSnapshot.status,
+      elapsedMs: midElapsedMs,
+      travelled,
+      remaining
+    },
     after: { piece: afterPiece, targetClass: afterTargetClass, turn: afterTurn, autosaveTurn }
   };
 } catch (error) {
