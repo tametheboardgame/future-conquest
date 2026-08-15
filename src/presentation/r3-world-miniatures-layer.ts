@@ -370,7 +370,7 @@ function brusselsLandmarkCity() {
   const centrePoint = new Vector3(0, 0, verticalOffset);
 
   for (const point of [...atomiumPoints, centrePoint]) {
-    const sphere = new Mesh(new SphereGeometry(0.13, 10, 8), atomiumMaterial);
+    const sphere = new Mesh(new SphereGeometry(0.16, 10, 8), atomiumMaterial);
     sphere.position.copy(point);
     atomium.add(sphere);
   }
@@ -379,9 +379,9 @@ function brusselsLandmarkCity() {
     for (let j = i + 1; j < cubeSigns.length; j += 1) {
       const differentAxes = cubeSigns[i].reduce((count, value, axis) =>
         count + (value === cubeSigns[j][axis] ? 0 : 1), 0);
-      if (differentAxes === 1) atomium.add(beamBetween(atomiumPoints[i], atomiumPoints[j], 0.032, atomiumMaterial, 8));
+      if (differentAxes === 1) atomium.add(beamBetween(atomiumPoints[i], atomiumPoints[j], 0.024, atomiumMaterial, 7));
     }
-    atomium.add(beamBetween(atomiumPoints[i], centrePoint, 0.03, atomiumMaterial, 8));
+    atomium.add(beamBetween(atomiumPoints[i], centrePoint, 0.023, atomiumMaterial, 7));
   }
 
   const supportIndices = atomiumPoints
@@ -392,38 +392,38 @@ function brusselsLandmarkCity() {
   for (const index of supportIndices) {
     const point = atomiumPoints[index];
     const anchor = new Vector3(point.x * 1.35, point.y * 1.35, 0.15);
-    atomium.add(beamBetween(anchor, point, 0.047, landmarkMetalMaterial, 7));
+    atomium.add(beamBetween(anchor, point, 0.03, landmarkMetalMaterial, 7));
   }
 
   const topPoint = atomiumPoints.reduce((highest, point) => point.z > highest.z ? point : highest, atomiumPoints[0]);
   const antenna = beamBetween(
     new Vector3(topPoint.x, topPoint.y, topPoint.z + 0.1),
     new Vector3(topPoint.x, topPoint.y, topPoint.z + 0.38),
-    0.012,
+    0.01,
     landmarkDarkMaterial,
     6
   );
   tagLod(antenna, 'campaign');
   atomium.add(antenna);
 
-  const entrance = new Mesh(new CylinderGeometry(0.23, 0.28, 0.16, 12), landmarkStoneMaterial);
+  const entrance = new Mesh(new CylinderGeometry(0.19, 0.24, 0.13, 10), landmarkStoneMaterial);
   entrance.rotation.x = Math.PI / 2;
-  entrance.position.set(0, 0, 0.12);
+  entrance.position.set(0, 0, 0.11);
   tagLod(entrance, 'campaign');
   atomium.add(entrance);
   atomium.userData.landmark = 'Atomium';
   root.add(atomium);
 
   const townHall = new Group();
-  const hall = centredBox(0.36, 0.24, 0.34, landmarkStoneMaterial);
-  hall.position.z = 0.31;
-  const hallTower = centredBox(0.1, 0.1, 0.6, landmarkStoneMaterial);
-  hallTower.position.set(0.05, 0, 0.62);
-  const gothicSpire = new Mesh(new ConeGeometry(0.085, 0.42, 6), roofMaterial);
+  const hall = centredBox(0.3, 0.2, 0.28, landmarkStoneMaterial);
+  hall.position.z = 0.27;
+  const hallTower = centredBox(0.08, 0.08, 0.5, landmarkStoneMaterial);
+  hallTower.position.set(0.04, 0, 0.55);
+  const gothicSpire = new Mesh(new ConeGeometry(0.07, 0.35, 6), roofMaterial);
   gothicSpire.rotation.x = Math.PI / 2;
-  gothicSpire.position.set(0.05, 0, 1.12);
+  gothicSpire.position.set(0.04, 0, 0.98);
   townHall.add(hall, hallTower, gothicSpire);
-  townHall.position.set(0.7, 0.42, 0);
+  townHall.position.set(0.72, 0.45, 0);
   townHall.userData.landmark = 'Brussels Town Hall';
   tagLod(townHall, 'campaign');
   root.add(townHall);
@@ -471,6 +471,16 @@ function worldPresentationScale(lod: WorldLod) {
   return 14_000;
 }
 
+function worldPieceInViewport(map: Map, node: StrategicNodeDefinition, lod: WorldLod) {
+  const bounds = map.getBounds();
+  const padding = lod === 'selected' ? 0.75 : 1.5;
+  const [longitude, latitude] = node.position;
+  return longitude >= bounds.getWest() - padding
+    && longitude <= bounds.getEast() + padding
+    && latitude >= bounds.getSouth() - padding
+    && latitude <= bounds.getNorth() + padding;
+}
+
 /** Presentation-only objects derived exactly from the public strategic-node catalogue. */
 export class WorldMiniaturesLayer implements CustomLayerInterface {
   readonly id = R3_WORLD_MINIATURE_LAYER_ID;
@@ -516,8 +526,9 @@ export class WorldMiniaturesLayer implements CustomLayerInterface {
       const enabled = piece.kind === 'port' ? this.layers.ports
         : piece.kind === 'airport' ? this.layers.airports : this.layers.citiesHubs;
       const lodVisible = lod === 'selected' || (lod === 'campaign' ? piece.node.importance >= 2 : piece.node.importance >= 3);
+      const inViewport = worldPieceInViewport(this.map, piece.node, lod);
       applyModelLod(piece.root, lod);
-      piece.root.visible = enabled && lodVisible;
+      piece.root.visible = enabled && lodVisible && inViewport;
       piece.elevation ??= this.map.queryTerrainElevation([piece.node.position[0], piece.node.position[1]]) ?? undefined;
       const elevation = piece.elevation ?? 0;
       const coordinate = MercatorCoordinate.fromLngLat(piece.node.position, elevation + CLEARANCE_METRES);
