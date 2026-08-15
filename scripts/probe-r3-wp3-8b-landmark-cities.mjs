@@ -66,7 +66,7 @@ try{
   await layerControl.evaluate(element=>{element.open=false;});
   await page.addStyleTag({content:'[data-r3-marker-id] { visibility: hidden !important; }'});
 
-  const evidence={schemaVersion:1,cities:{}};
+  const evidence={schemaVersion:2,cities:{}};
   for(const city of cities){
     await page.evaluate(({position,rotation})=>{
       const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');
@@ -98,10 +98,10 @@ try{
 
   await page.evaluate(()=>{
     const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');
-    map.jumpTo({center:[7.7521,48.5734],zoom:5.35,pitch:51,bearing:0});
+    map.jumpTo({center:[6.7735,51.2277],zoom:5.35,pitch:51,bearing:0});
   });
   await page.waitForTimeout(300);
-  const laterPass=await page.evaluate(()=>window.__r3WorldMiniatures?.objects.find(candidate=>candidate.id==='N-STRASBOURG') ?? null);
+  const laterPass=await page.evaluate(()=>window.__r3WorldMiniatures?.objects.find(candidate=>candidate.id==='N-DUSSELDORF') ?? null);
   if(laterPass?.cityVariant!=='generic'||laterPass?.presentationModel!=='procedural-fallback')throw new Error(`later-pass generic fallback changed: ${JSON.stringify(laterPass)}`);
   evidence.laterPassFallback=laterPass;
 
