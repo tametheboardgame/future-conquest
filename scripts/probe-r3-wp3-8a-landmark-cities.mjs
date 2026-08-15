@@ -42,16 +42,18 @@ try {
     && Boolean(window.__r3TerrainMap)
   , null, { timeout: 45_000 });
 
-  // Use the product's real Layers control to hide physical formations during
-  // the isolated art-review capture. Normal gameplay compatibility remains
-  // covered by the general terrain/formation browser gates.
+  // Use the product's real Layers control to isolate the city landmark system.
+  // Full normal-play compatibility remains covered by the wider terrain gates.
   const layerControl = page.locator('details.r3-terrain-layer-control');
   await layerControl.evaluate(element => { element.open = true; });
-  const friendlyFormations = layerControl.locator('label', { hasText: 'Friendly formations' }).locator('input');
-  if (await friendlyFormations.isChecked()) await friendlyFormations.uncheck();
+  for (const label of ['Friendly formations', 'Operations, threats and fronts', 'Ports']) {
+    const toggle = layerControl.getByLabel(label, { exact: true });
+    if (await toggle.isChecked()) await toggle.uncheck();
+  }
   await page.waitForTimeout(200);
+  await layerControl.evaluate(element => { element.open = false; });
 
-  // DOM operational markers are also hidden only in these isolated reference
+  // DOM operational markers are hidden only in these isolated reference
   // captures so labels and contact cards cannot obscure the hero landmark.
   await page.addStyleTag({ content: '[data-r3-marker-id] { visibility: hidden !important; }' });
 
