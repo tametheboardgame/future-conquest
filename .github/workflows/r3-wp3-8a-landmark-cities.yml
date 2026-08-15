@@ -1,0 +1,54 @@
+name: R3 WP3.8A landmark cities gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'scripts/probe-r3-wp3-8a-landmark-cities.mjs'
+      - 'tests/r3-wp3-8a-landmark-cities.test.cjs'
+      - 'tests/r3-wp3-5-world-miniatures.test.cjs'
+      - 'docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DESIGN.md'
+      - '.github/workflows/r3-wp3-8a-landmark-cities.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  landmark-cities-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run landmark city source contracts
+        run: node --test tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-8a-landmark-cities.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp38a-preview.log 2>&1 &
+      - name: Probe landmark cities
+        run: node scripts/probe-r3-wp3-8a-landmark-cities.mjs
+      - name: Upload WP3.8A browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-8a-landmark-cities-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-8a
+            /tmp/r3-wp38a-preview.log
+          if-no-files-found: warn
