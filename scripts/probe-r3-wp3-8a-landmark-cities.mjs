@@ -50,19 +50,20 @@ try{
   await layerControl.evaluate(el=>{el.open=false;});
   await page.addStyleTag({content:'[data-r3-marker-id] { visibility: hidden !important; }'});
 
-  const evidence={schemaVersion:6,cities:{}};
+  const evidence={schemaVersion:7,cities:{}};
   for(const city of cities){
     await jump(city,'campaign');const campaign=await observe(city);assertCity(city,campaign,'campaign');await host.screenshot({path:`${outputDir}/${city.slug}-authored-campaign.png`});
     await jump(city,'selected');const selected=await observe(city);assertCity(city,selected,'selected');await host.screenshot({path:`${outputDir}/${city.slug}-authored-selected.png`});
     evidence.cities[city.slug]={campaign,selected};
   }
 
-  // Keep this sentinel on a city that has not yet graduated to an authored pass.
-  await page.evaluate(()=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:[4.8718,50.4674],zoom:5.35,pitch:51,bearing:0});});
+  const fallbackCity=cities[0];
+  await page.evaluate(({position})=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:position,zoom:4.45,pitch:44,bearing:0});},{position:fallbackCity.position});
+  await page.waitForFunction(({id})=>{const d=window.__r3WorldMiniatures,o=d?.objects.find(x=>x.id===id);return d?.lod==='theatre'&&o?.visible&&o.presentationModel==='procedural-fallback';},{id:fallbackCity.id},{timeout:20000});
   await page.waitForTimeout(300);
-  const generic=await page.evaluate(()=>{const o=window.__r3WorldMiniatures?.objects.find(x=>x.id==='N-NAMUR');return o?{cityVariant:o.cityVariant,assetId:o.assetId,assetStatus:o.assetStatus,presentationModel:o.presentationModel}:null;});
-  if(generic?.cityVariant!=='generic'||generic?.assetId||generic?.presentationModel!=='procedural-fallback')throw new Error(`later-pass generic fallback changed: ${JSON.stringify(generic)}`);
-  evidence.genericNamur=generic;
+  const theatre=await observe(fallbackCity);
+  if(theatre.cityVariant!=='london'||theatre.presentationModel!=='procedural-fallback'||theatre.anchorErrorDegrees!==0||theatre.clearance!==22||!Number.isFinite(theatre.elevation))throw new Error(`Pass 1 Theatre fallback changed: ${JSON.stringify(theatre)}`);
+  evidence.theatreFallback=theatre;
   fs.writeFileSync(`${outputDir}/evidence.json`,`${JSON.stringify(evidence,null,2)}\n`);
   console.log(JSON.stringify(evidence,null,2));
 }finally{await browser.close();}
