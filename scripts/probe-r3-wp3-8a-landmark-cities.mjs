@@ -42,10 +42,17 @@ try {
     && Boolean(window.__r3TerrainMap)
   , null, { timeout: 45_000 });
 
-  // The normal operational overlays are validated by the existing WP2F probe.
-  // Suppress only DOM markers in these art-review captures so labels/contacts do
-  // not sit over the physical landmark silhouettes. Three.js world pieces and
-  // the real terrain remain unchanged.
+  // Use the product's real Layers control to hide physical formations during
+  // the isolated art-review capture. Normal gameplay compatibility remains
+  // covered by the general terrain/formation browser gates.
+  const layerControl = page.locator('details.r3-terrain-layer-control');
+  await layerControl.evaluate(element => { element.open = true; });
+  const friendlyFormations = layerControl.locator('label', { hasText: 'Friendly formations' }).locator('input');
+  if (await friendlyFormations.isChecked()) await friendlyFormations.uncheck();
+  await page.waitForTimeout(200);
+
+  // DOM operational markers are also hidden only in these isolated reference
+  // captures so labels and contact cards cannot obscure the hero landmark.
   await page.addStyleTag({ content: '[data-r3-marker-id] { visibility: hidden !important; }' });
 
   const evidence = { cities: {}, genericFallback: null };
