@@ -23,9 +23,15 @@ import { FORMATION_PRESENTATION_ANIMATION_MS, formationForwardPathTarget, format
 import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } from './r3-terrain-operational-markers-core';
 
 export const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
+export const R3_FUTURE_SOLDIER_VISUAL_FAMILY = 'future-conquest-powered-armour';
+export const R3_FUTURE_SOLDIER_REFERENCE = 'Future Conquest Armour Revision Sheet.png';
 const CLEARANCE_METRES = 45;
 const VISUAL_GROUP_NAME = 'formation-miniature-visual';
+const SOLDIER_GROUP_NAME = 'future-soldier';
+const SOLDIER_DETAIL_GROUP_NAME = 'future-soldier-detail';
 const ELEVATION_RESAMPLE_DEGREES = 0.01;
+
+type MiniatureLod = 'theatre' | 'campaign' | 'local';
 
 type Piece = {
   root: Group;
@@ -39,6 +45,7 @@ type Piece = {
 
 export type FormationMiniatureBrowserEvidence = {
   layerId: string;
+  visualFamily: typeof R3_FUTURE_SOLDIER_VISUAL_FAMILY;
   reducedMotion: boolean;
   renderCount: number;
   pieces: Array<{
@@ -49,6 +56,8 @@ export type FormationMiniatureBrowserEvidence = {
     visible: boolean;
     clusterOffset: readonly [number, number];
     displayScale: number;
+    lod: MiniatureLod;
+    visibleFigureCount: number;
   }>;
 };
 
@@ -66,21 +75,107 @@ const statusColours: Record<TaskGroup['status'], number> = {
   interdicting: 0xc18ee8
 };
 
-function soldier(material: MeshStandardMaterial, x: number, y: number) {
+type SoldierMaterials = {
+  armour: MeshStandardMaterial;
+  undersuit: MeshStandardMaterial;
+  accent: MeshStandardMaterial;
+  weapon: MeshStandardMaterial;
+  visor: MeshStandardMaterial;
+};
+
+function makeSoldierMaterials(group: TaskGroup, selected: boolean): SoldierMaterials {
+  const statusColour = statusColours[group.status];
+  return {
+    armour: new MeshStandardMaterial({ color: 0x283238, roughness: 0.68, metalness: 0.32 }),
+    undersuit: new MeshStandardMaterial({ color: 0x10171a, roughness: 0.9, metalness: 0.08 }),
+    accent: new MeshStandardMaterial({ color: selected ? 0xeaff78 : statusColour, roughness: 0.55, metalness: 0.28 }),
+    weapon: new MeshStandardMaterial({ color: 0x182328, roughness: 0.58, metalness: 0.5 }),
+    visor: new MeshStandardMaterial({ color: selected ? 0xf5ffb0 : statusColour, roughness: 0.28, metalness: 0.42 })
+  };
+}
+
+function armouredBox(name: string, size: readonly [number, number, number], position: readonly [number, number, number], material: MeshStandardMaterial) {
+  const mesh = new Mesh(new BoxGeometry(size[0], size[1], size[2]), material);
+  mesh.name = name;
+  mesh.position.set(position[0], position[1], position[2]);
+  return mesh;
+}
+
+function verticalCylinder(name: string, topRadius: number, bottomRadius: number, height: number, position: readonly [number, number, number], material: MeshStandardMaterial, segments = 7) {
+  const mesh = new Mesh(new CylinderGeometry(topRadius, bottomRadius, height, segments), material);
+  mesh.name = name;
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.set(position[0], position[1], position[2]);
+  return mesh;
+}
+
+function futureSoldier(materials: SoldierMaterials, x: number, y: number, index: number, status: TaskGroup['status']) {
   const figure = new Group();
-  const legs = new Mesh(new BoxGeometry(0.13, 0.12, 0.45), material);
-  legs.position.z = 0.31;
-  const torso = new Mesh(new CylinderGeometry(0.14, 0.18, 0.36, 6), material);
-  torso.rotation.x = Math.PI / 2;
-  torso.position.z = 0.67;
-  const head = new Mesh(new ConeGeometry(0.12, 0.24, 7), material);
-  head.rotation.x = Math.PI / 2;
-  head.position.z = 0.99;
-  const weapon = new Mesh(new BoxGeometry(0.07, 0.48, 0.07), material);
-  weapon.position.set(0.16, -0.08, 0.7);
-  weapon.rotation.z = -0.22;
-  figure.add(legs, torso, head, weapon);
-  figure.position.set(x, y, 0);
+  figure.name = SOLDIER_GROUP_NAME;
+  figure.userData.figureIndex = index;
+  figure.userData.visualFamily = R3_FUTURE_SOLDIER_VISUAL_FAMILY;
+
+  // Powered lower body: dark articulation remains visible between replaceable armour plates.
+  figure.add(
+    armouredBox('left-powered-thigh', [0.12, 0.14, 0.25], [-0.09, 0, 0.36], materials.armour),
+    armouredBox('right-powered-thigh', [0.12, 0.14, 0.25], [0.09, 0, 0.36], materials.armour),
+    armouredBox('left-undersuit-joint', [0.09, 0.10, 0.09], [-0.09, 0, 0.22], materials.undersuit),
+    armouredBox('right-undersuit-joint', [0.09, 0.10, 0.09], [0.09, 0, 0.22], materials.undersuit),
+    armouredBox('left-powered-greave', [0.14, 0.15, 0.24], [-0.09, 0, 0.10], materials.armour),
+    armouredBox('right-powered-greave', [0.14, 0.15, 0.24], [0.09, 0, 0.10], materials.armour),
+    armouredBox('left-boot', [0.15, 0.20, 0.08], [-0.09, -0.025, -0.03], materials.undersuit),
+    armouredBox('right-boot', [0.15, 0.20, 0.08], [0.09, -0.025, -0.03], materials.undersuit)
+  );
+
+  const pelvis = verticalCylinder('powered-pelvis', 0.15, 0.17, 0.18, [0, 0, 0.51], materials.undersuit, 6);
+  const torsoCore = verticalCylinder('torso-core', 0.17, 0.20, 0.34, [0, 0, 0.69], materials.undersuit, 7);
+  const chestPlate = armouredBox('modular-chest-plate', [0.38, 0.22, 0.26], [0, -0.015, 0.72], materials.armour);
+  const chestAccent = armouredBox('status-chest-inlay', [0.18, 0.014, 0.05], [0, -0.133, 0.73], materials.accent);
+  figure.add(pelvis, torsoCore, chestPlate, chestAccent);
+
+  const detail = new Group();
+  detail.name = SOLDIER_DETAIL_GROUP_NAME;
+  detail.add(
+    armouredBox('left-knee-plate', [0.15, 0.04, 0.09], [-0.09, -0.085, 0.22], materials.accent),
+    armouredBox('right-knee-plate', [0.15, 0.04, 0.09], [0.09, -0.085, 0.22], materials.accent),
+    armouredBox('left-shoulder-plate', [0.19, 0.20, 0.13], [-0.25, 0, 0.80], materials.armour),
+    armouredBox('right-shoulder-plate', [0.19, 0.20, 0.13], [0.25, 0, 0.80], materials.armour),
+    armouredBox('left-forearm-armour', [0.10, 0.12, 0.24], [-0.25, -0.015, 0.62], materials.armour),
+    armouredBox('right-forearm-armour', [0.10, 0.12, 0.24], [0.25, -0.015, 0.62], materials.armour),
+    armouredBox('power-pack-core', [0.26, 0.14, 0.30], [0, 0.17, 0.71], materials.weapon),
+    armouredBox('power-pack-left-cell', [0.08, 0.10, 0.24], [-0.12, 0.20, 0.72], materials.accent),
+    armouredBox('power-pack-right-cell', [0.08, 0.10, 0.24], [0.12, 0.20, 0.72], materials.accent)
+  );
+  figure.add(detail);
+
+  // Sealed military helmet with an exaggerated visor band that survives strategy-map scale.
+  const neck = verticalCylinder('sealed-neck-ring', 0.10, 0.11, 0.09, [0, 0, 0.91], materials.undersuit, 7);
+  const helmet = verticalCylinder('sealed-combat-helmet', 0.14, 0.15, 0.20, [0, 0, 1.02], materials.armour, 8);
+  const helmetCrown = new Mesh(new ConeGeometry(0.14, 0.09, 8), materials.armour);
+  helmetCrown.name = 'helmet-crown';
+  helmetCrown.rotation.x = Math.PI / 2;
+  helmetCrown.position.set(0, 0, 1.16);
+  const visor = armouredBox('multispectral-visor', [0.22, 0.025, 0.055], [0, -0.13, 1.04], materials.visor);
+  figure.add(neck, helmet, helmetCrown, visor);
+
+  // The primary energy rifle is deliberately a separate carried weapon, not an arm cannon.
+  const rifle = new Group();
+  rifle.name = 'carried-energy-rifle';
+  rifle.add(
+    armouredBox('energy-rifle-body', [0.10, 0.43, 0.10], [0, -0.05, 0], materials.weapon),
+    armouredBox('energy-rifle-barrel', [0.055, 0.28, 0.055], [0, -0.37, 0.015], materials.weapon),
+    armouredBox('energy-rifle-stock', [0.12, 0.16, 0.11], [0, 0.23, 0], materials.weapon),
+    armouredBox('energy-rifle-power-cell', [0.12, 0.10, 0.12], [0.07, -0.02, -0.075], materials.accent)
+  );
+  rifle.position.set(0.18, -0.04, 0.68);
+  rifle.rotation.z = status === 'attacking' ? -0.03 : status === 'moving' ? -0.17 : -0.10;
+  rifle.rotation.x = status === 'recovering' ? -0.08 : 0.03;
+  figure.add(rifle);
+
+  // Small deterministic pose variation keeps a five-figure base from reading as cloned tokens.
+  figure.rotation.z = (index - 2) * 0.025;
+  figure.rotation.x = status === 'moving' ? 0.08 : status === 'attacking' ? 0.035 : status === 'recovering' ? -0.025 : 0;
+  figure.position.set(x, y, 0.06);
   return figure;
 }
 
@@ -108,26 +203,39 @@ function makeMiniature(group: TaskGroup, selected: boolean) {
   const root = new Group();
   const visual = new Group();
   visual.name = VISUAL_GROUP_NAME;
-  const material = new MeshStandardMaterial({ color: statusColours[group.status], roughness: 0.7, metalness: 0.18 });
+  const materials = makeSoldierMaterials(group, selected);
   const base = new Mesh(
     new CylinderGeometry(selected ? 1.25 : 1.08, selected ? 1.35 : 1.18, 0.16, 16),
-    new MeshStandardMaterial({ color: selected ? 0xeaff78 : 0x173a3f, roughness: 0.86, metalness: 0.12 })
+    new MeshStandardMaterial({ color: 0x15292d, roughness: 0.86, metalness: 0.12 })
   );
+  base.name = 'formation-plinth';
   base.rotation.x = Math.PI / 2;
   base.position.z = 0.08;
-  visual.add(base);
+  const statusRing = new Mesh(
+    new CylinderGeometry(selected ? 1.10 : 0.96, selected ? 1.18 : 1.04, 0.035, 16),
+    materials.accent
+  );
+  statusRing.name = 'formation-status-ring';
+  statusRing.rotation.x = Math.PI / 2;
+  statusRing.position.z = 0.175;
+  visual.add(base, statusRing);
+  let figureIndex = 0;
   for (const [x, y] of [[-0.5, -0.2], [0, 0.22], [0.5, -0.2], [-0.25, 0.55], [0.25, 0.55]] as const) {
-    visual.add(soldier(material, x, y));
+    visual.add(futureSoldier(materials, x, y, figureIndex, group.status));
+    figureIndex += 1;
   }
   const label = new Mesh(
     new PlaneGeometry(1.55, 0.58),
     new MeshStandardMaterial({ map: makeIdentityTexture(group), transparent: true, side: DoubleSide, roughness: 0.8 })
   );
+  label.name = 'formation-identity-plate';
   label.position.set(0, -0.88, 0.48);
   label.rotation.x = Math.PI / 2.7;
   visual.add(label);
   root.add(visual);
   root.userData.status = group.status;
+  root.userData.visualFamily = R3_FUTURE_SOLDIER_VISUAL_FAMILY;
+  root.userData.selected = selected;
   return root;
 }
 
@@ -188,6 +296,31 @@ function presentationScaleForZoom(zoom: number) {
   if (zoom < 4.8) return 44_000;
   if (zoom < 6.4) return 28_000;
   return 18_000;
+}
+
+function miniatureLodForZoom(zoom: number): MiniatureLod {
+  if (zoom < 4.8) return 'theatre';
+  if (zoom < 6.4) return 'campaign';
+  return 'local';
+}
+
+function applyMiniatureLod(root: Group, lod: MiniatureLod) {
+  const selected = Boolean(root.userData.selected);
+  const figureLimit = selected ? 5 : lod === 'theatre' ? 3 : lod === 'campaign' ? 4 : 5;
+  let visibleFigureCount = 0;
+  let figureIndex = 0;
+  const visual = root.getObjectByName(VISUAL_GROUP_NAME);
+  for (const child of visual?.children ?? []) {
+    if (child.name !== SOLDIER_GROUP_NAME) continue;
+    child.visible = figureIndex < figureLimit;
+    const detail = child.getObjectByName(SOLDIER_DETAIL_GROUP_NAME);
+    if (detail) detail.visible = selected || lod !== 'theatre';
+    if (child.visible) visibleFigureCount += 1;
+    figureIndex += 1;
+  }
+  root.userData.lod = lod;
+  root.userData.visibleFigureCount = visibleFigureCount;
+  return visibleFigureCount;
 }
 
 function needsElevationSample(piece: Piece, point: FormationGeoPoint) {
@@ -253,7 +386,6 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       if (!old || old.root.userData.status !== group.status || Boolean(old.root.userData.selected) !== selected) {
         if (old) { this.scene.remove(old.root); disposeMiniature(old.root); }
         const root = makeMiniature(group, selected);
-        root.userData.selected = selected;
         root.rotation.z = movementBearing(group);
         this.scene.add(root);
         const current = old?.current ?? target;
@@ -283,7 +415,9 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     if (!this.map || !this.renderer) return;
     const now = performance.now();
     let animating = false;
-    const displayScale = presentationScaleForZoom(this.map.getZoom());
+    const zoom = this.map.getZoom();
+    const displayScale = presentationScaleForZoom(zoom);
+    const lod = miniatureLodForZoom(zoom);
     const browserPieces: FormationMiniatureBrowserEvidence['pieces'] = [];
     for (const [id, piece] of this.pieces) {
       const elapsed = now - piece.startedAt;
@@ -303,6 +437,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
       piece.root.scale.set(metres * displayScale, -metres * displayScale, metres * displayScale);
       piece.root.visible = this.visible;
+      const visibleFigureCount = applyMiniatureLod(piece.root, lod);
       browserPieces.push({
         id,
         current: [...piece.current],
@@ -310,7 +445,9 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
         elevation,
         visible: piece.root.visible,
         clusterOffset: this.clusterOffsetById.get(id) ?? [0, 0],
-        displayScale
+        displayScale,
+        lod,
+        visibleFigureCount
       });
     }
     this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
@@ -319,6 +456,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     this.renderCount += 1;
     window.__r3FormationMiniatures = {
       layerId: this.id,
+      visualFamily: R3_FUTURE_SOLDIER_VISUAL_FAMILY,
       reducedMotion: this.reducedMotion,
       renderCount: this.renderCount,
       pieces: browserPieces
