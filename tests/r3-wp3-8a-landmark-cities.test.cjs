@@ -15,37 +15,50 @@ test('WP3.8A is limited to the approved London, Paris and Brussels strategic nod
   assert.doesNotMatch(layer, /node\.position\s*=/);
 });
 
-test('London uses Elizabeth Tower and Westminster silhouette language', () => {
-  assert.match(layer, /function londonLandmarkCity/);
+test('London is now an Elizabeth Tower hero model rather than a generic city cluster', () => {
+  assert.match(layer, /function addElizabethClockFaces/);
+  assert.match(layer, /axis: 'x'.*direction: -1/);
+  assert.match(layer, /axis: 'y'.*direction: 1/);
+  assert.match(layer, /const clockStage = centredBox\(0\.49, 0\.49, 0\.34/);
+  assert.match(layer, /const belfry = new Group/);
+  assert.match(layer, /const roof = new Mesh\(new ConeGeometry\(0\.3, 0\.46, 4\)/);
   assert.match(layer, /Elizabeth Tower \/ Big Ben/);
   assert.match(layer, /Palace of Westminster/);
-  assert.match(layer, /cityVariant = 'london'/);
+  assert.doesNotMatch(layer, /const supporting = new Group/);
 });
 
-test('Paris uses Eiffel Tower, Arc de Triomphe and supporting Haussmann blocks', () => {
-  assert.match(layer, /function parisLandmarkCity/);
+test('Paris uses a properly flared Eiffel Tower hierarchy with lattice bracing', () => {
+  assert.match(layer, /function addEiffelBracing/);
+  assert.match(layer, /const basePoints = \[/);
+  assert.match(layer, /const firstDeckPoints = \[/);
+  assert.match(layer, /const secondDeckPoints = \[/);
+  assert.match(layer, /const crownPoints = \[/);
+  assert.match(layer, /beamBetween\(basePoints\[i\], firstDeckPoints\[i\]/);
+  assert.match(layer, /addEiffelBracing\(bracing, basePoints, firstDeckPoints\)/);
   assert.match(layer, /Eiffel Tower/);
   assert.match(layer, /Arc de Triomphe/);
-  assert.match(layer, /const haussmann = new Group/);
-  assert.match(layer, /cityVariant = 'paris'/);
+  assert.doesNotMatch(layer, /const haussmann = new Group/);
 });
 
-test('Brussels uses procedural Atomium and Gothic town-hall silhouette language', () => {
-  assert.match(layer, /function brusselsLandmarkCity/);
-  assert.match(layer, /SphereGeometry/);
-  assert.match(layer, /function atomiumRod/);
+test('Brussels Atomium models the body-centred cubic nine-sphere structure', () => {
+  assert.match(layer, /new Quaternion\(\)\.setFromUnitVectors/);
+  assert.match(layer, /const cubeSigns = \[/);
+  assert.match(layer, /const centrePoint = new Vector3/);
+  assert.match(layer, /for \(const point of \[\.\.\.atomiumPoints, centrePoint\]\)/);
+  assert.match(layer, /differentAxes === 1/);
+  assert.match(layer, /beamBetween\(atomiumPoints\[i\], centrePoint/);
   assert.match(layer, /Atomium/);
   assert.match(layer, /Brussels Town Hall \/ Grand-Place spire/);
-  assert.match(layer, /cityVariant = 'brussels'/);
 });
 
-test('Pass 1 establishes reusable model LOD while preserving existing world visibility rules', () => {
+test('hero landmark detail is LOD-controlled while core silhouettes survive Theatre view', () => {
   assert.match(layer, /type WorldLod = 'theatre' \| 'campaign' \| 'selected'/);
   assert.match(layer, /function tagLod/);
   assert.match(layer, /function applyModelLod/);
-  assert.match(layer, /tagLod\(westminster, 'campaign'\)/);
-  assert.match(layer, /tagLod\(arc, 'campaign'\)/);
-  assert.match(layer, /tagLod\(townHall, 'campaign'\)/);
+  assert.match(layer, /tagLod\(clocks, 'campaign'\)/);
+  assert.match(layer, /tagLod\(bracing, 'campaign'\)/);
+  assert.match(layer, /tagLod\(antenna, 'campaign'\)/);
+  assert.match(layer, /tagLod\(finials, 'selected'\)/);
   assert.match(layer, /piece\.node\.importance >= 3/);
   assert.match(layer, /this\.layers\.citiesHubs/);
 });
@@ -57,11 +70,12 @@ test('runtime evidence identifies bespoke variants and their landmark sources', 
   assert.match(layer, /landmarks: piece\.landmarks/);
 });
 
-test('models are self-created procedural geometry and the design lock records later-pass rules', () => {
+test('design lock records the approved hero-landmark accuracy direction', () => {
+  assert.match(design, /approved visual direction/i);
+  assert.match(design, /accuracy of the hero landmark/i);
+  assert.match(design, /Elizabeth Tower/i);
+  assert.match(design, /Eiffel Tower/i);
+  assert.match(design, /body-centred cubic/i);
   assert.match(design, /No third-party meshes, textures or runtime model hosting/i);
-  assert.match(design, /dominant landmark/i);
-  assert.match(design, /Campaign/);
-  assert.match(design, /Theatre/);
-  assert.match(design, /Selected/);
   assert.match(design, /authoritative `STRATEGIC_NODES` coordinates/i);
 });
