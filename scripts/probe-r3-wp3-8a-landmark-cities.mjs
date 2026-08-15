@@ -58,11 +58,11 @@ try{
   }
 
   // Keep this sentinel on a city that has not yet graduated to an authored pass.
-  await page.evaluate(()=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:[6.7735,51.2277],zoom:5.35,pitch:51,bearing:0});});
+  await page.evaluate(()=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:[4.8718,50.4674],zoom:5.35,pitch:51,bearing:0});});
   await page.waitForTimeout(300);
-  const generic=await page.evaluate(()=>{const o=window.__r3WorldMiniatures?.objects.find(x=>x.id==='N-DUSSELDORF');return o?{cityVariant:o.cityVariant,assetId:o.assetId,assetStatus:o.assetStatus,presentationModel:o.presentationModel}:null;});
+  const generic=await page.evaluate(()=>{const o=window.__r3WorldMiniatures?.objects.find(x=>x.id==='N-NAMUR');return o?{cityVariant:o.cityVariant,assetId:o.assetId,assetStatus:o.assetStatus,presentationModel:o.presentationModel}:null;});
   if(generic?.cityVariant!=='generic'||generic?.assetId||generic?.presentationModel!=='procedural-fallback')throw new Error(`later-pass generic fallback changed: ${JSON.stringify(generic)}`);
-  evidence.genericDusseldorf=generic;
+  evidence.genericNamur=generic;
   fs.writeFileSync(`${outputDir}/evidence.json`,`${JSON.stringify(evidence,null,2)}\n`);
   console.log(JSON.stringify(evidence,null,2));
 }finally{await browser.close();}
