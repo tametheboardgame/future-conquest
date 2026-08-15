@@ -1,7 +1,7 @@
 import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map } from 'maplibre-gl';
 import {
   AmbientLight, BoxGeometry, Camera, ConeGeometry, CylinderGeometry, DirectionalLight,
-  Group, Matrix4, Mesh, MeshStandardMaterial, Scene, SphereGeometry, Vector3, WebGLRenderer,
+  Group, Matrix4, Mesh, MeshStandardMaterial, Quaternion, Scene, SphereGeometry, Vector3, WebGLRenderer,
   type Object3D
 } from 'three';
 import { STRATEGIC_NODES } from '../game/strategic-network-data';
@@ -51,6 +51,8 @@ const landmarkStoneMaterial = new MeshStandardMaterial({ color: 0xb9ad91, roughn
 const landmarkDarkMaterial = new MeshStandardMaterial({ color: 0x465355, roughness: 0.7, metalness: 0.18 });
 const landmarkMetalMaterial = new MeshStandardMaterial({ color: 0x8f9b9b, roughness: 0.58, metalness: 0.34 });
 const clockMaterial = new MeshStandardMaterial({ color: 0xe7dcc0, roughness: 0.55, metalness: 0.12 });
+const eiffelMaterial = new MeshStandardMaterial({ color: 0x756b5b, roughness: 0.52, metalness: 0.46 });
+const atomiumMaterial = new MeshStandardMaterial({ color: 0xc8d1d0, roughness: 0.26, metalness: 0.78 });
 
 const LOD_RANK: Record<WorldLod, number> = { theatre: 0, campaign: 1, selected: 2 };
 const LOD_TAG = 'r3MinimumWorldLod';
@@ -60,6 +62,24 @@ const box = (x: number, y: number, z: number, material = infrastructureMaterial)
   mesh.position.z = z / 2 + 0.08;
   return mesh;
 };
+
+const centredBox = (x: number, y: number, z: number, material: MeshStandardMaterial) =>
+  new Mesh(new BoxGeometry(x, y, z), material);
+
+function beamBetween(
+  a: Vector3,
+  b: Vector3,
+  radius = 0.035,
+  material: MeshStandardMaterial = landmarkDarkMaterial,
+  radialSegments = 6
+) {
+  const direction = new Vector3().subVectors(b, a);
+  const length = direction.length();
+  const beam = new Mesh(new CylinderGeometry(radius, radius, length, radialSegments), material);
+  beam.position.copy(a).add(b).multiplyScalar(0.5);
+  beam.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), direction.clone().normalize());
+  return beam;
+}
 
 function addBuilding(
   root: Group,
@@ -117,160 +137,296 @@ function genericCityCluster(node: StrategicNodeDefinition) {
   return root;
 }
 
-/** London: oversized Elizabeth Tower, Westminster roofline and compact masonry blocks. */
+function addElizabethClockFaces(root: Group, z: number) {
+  const clocks = new Group();
+  const faces: Array<{ axis: 'x' | 'y'; direction: -1 | 1 }> = [
+    { axis: 'x', direction: -1 }, { axis: 'x', direction: 1 },
+    { axis: 'y', direction: -1 }, { axis: 'y', direction: 1 }
+  ];
+  for (const { axis, direction } of faces) {
+    const surround = new Mesh(new CylinderGeometry(0.145, 0.145, 0.035, 20), accentMaterial);
+    const face = new Mesh(new CylinderGeometry(0.118, 0.118, 0.042, 20), clockMaterial);
+    if (axis === 'x') {
+      surround.rotation.z = Math.PI / 2;
+      face.rotation.z = Math.PI / 2;
+      surround.position.x = 0.254 * direction;
+      face.position.x = 0.273 * direction;
+    } else {
+      surround.position.y = 0.254 * direction;
+      face.position.y = 0.273 * direction;
+    }
+    surround.position.z = z;
+    face.position.z = z;
+    clocks.add(surround, face);
+  }
+  tagLod(clocks, 'campaign');
+  root.add(clocks);
+}
+
+/** London: accurate Elizabeth Tower hero model with Westminster kept deliberately secondary. */
 function londonLandmarkCity() {
   const root = new Group();
-  root.add(cityBase(1.22));
+  root.add(cityBase(1.18));
 
-  const tower = addBuilding(root, 0.43, -0.2, 0.29, 0.29, 1.7, landmarkStoneMaterial);
-  const clockBand = box(0.36, 0.34, 0.22, clockMaterial);
-  clockBand.position.set(0.43, -0.2, 1.46);
-  root.add(clockBand);
-  const clockFace = new Mesh(new CylinderGeometry(0.105, 0.105, 0.035, 16), clockMaterial);
-  clockFace.position.set(0.43, -0.39, 1.47);
-  tagLod(clockFace, 'selected');
-  root.add(clockFace);
-  const towerRoof = new Mesh(new ConeGeometry(0.2, 0.5, 4), roofMaterial);
-  towerRoof.rotation.x = Math.PI / 2;
-  towerRoof.rotation.z = Math.PI / 4;
-  towerRoof.position.set(0.43, -0.2, 2.0);
-  root.add(towerRoof);
-  tower.userData.landmark = 'Elizabeth Tower';
+  const tower = new Group();
+  tower.position.set(0.28, -0.08, 0);
+
+  const shaft = centredBox(0.37, 0.37, 1.08, landmarkStoneMaterial);
+  shaft.position.z = 0.68;
+  tower.add(shaft);
+
+  const buttresses = new Group();
+  for (const x of [-0.2, 0.2]) {
+    for (const y of [-0.2, 0.2]) {
+      const buttress = centredBox(0.055, 0.055, 1.0, capitalMaterial);
+      buttress.position.set(x, y, 0.69);
+      buttresses.add(buttress);
+    }
+  }
+  tagLod(buttresses, 'campaign');
+  tower.add(buttresses);
+
+  const lowerCornice = centredBox(0.43, 0.43, 0.1, capitalMaterial);
+  lowerCornice.position.z = 1.18;
+  tower.add(lowerCornice);
+
+  const clockStage = centredBox(0.49, 0.49, 0.34, landmarkStoneMaterial);
+  clockStage.position.z = 1.38;
+  tower.add(clockStage);
+  addElizabethClockFaces(tower, 1.39);
+
+  const clockCornice = centredBox(0.54, 0.54, 0.09, capitalMaterial);
+  clockCornice.position.z = 1.58;
+  tower.add(clockCornice);
+
+  const belfry = new Group();
+  for (const x of [-0.18, 0.18]) {
+    for (const y of [-0.18, 0.18]) {
+      const post = centredBox(0.055, 0.055, 0.32, landmarkStoneMaterial);
+      post.position.set(x, y, 1.77);
+      belfry.add(post);
+    }
+  }
+  for (const x of [-0.06, 0.06]) {
+    const frontPost = centredBox(0.035, 0.035, 0.28, landmarkStoneMaterial);
+    frontPost.position.set(x, -0.205, 1.77);
+    belfry.add(frontPost);
+  }
+  const belfryCap = centredBox(0.43, 0.43, 0.08, capitalMaterial);
+  belfryCap.position.z = 1.95;
+  belfry.add(belfryCap);
+  tagLod(belfry, 'campaign');
+  tower.add(belfry);
+
+  const roof = new Mesh(new ConeGeometry(0.3, 0.46, 4), roofMaterial);
+  roof.rotation.x = Math.PI / 2;
+  roof.rotation.z = Math.PI / 4;
+  roof.position.z = 2.19;
+  tower.add(roof);
+
+  const spire = beamBetween(new Vector3(0, 0, 2.39), new Vector3(0, 0, 2.67), 0.016, accentMaterial, 6);
+  tower.add(spire);
+  const crown = new Mesh(new ConeGeometry(0.04, 0.12, 6), accentMaterial);
+  crown.rotation.x = Math.PI / 2;
+  crown.position.z = 2.72;
+  tower.add(crown);
+
+  const finials = new Group();
+  for (const x of [-0.24, 0.24]) {
+    for (const y of [-0.24, 0.24]) {
+      const finial = new Mesh(new ConeGeometry(0.025, 0.15, 5), accentMaterial);
+      finial.rotation.x = Math.PI / 2;
+      finial.position.set(x, y, 1.73);
+      finials.add(finial);
+    }
+  }
+  tagLod(finials, 'selected');
+  tower.add(finials);
+  tower.userData.landmark = 'Elizabeth Tower / Big Ben';
+  root.add(tower);
 
   const westminster = new Group();
-  addBuilding(westminster, -0.18, 0.08, 1.15, 0.36, 0.48, capitalMaterial);
-  addBuilding(westminster, -0.42, -0.2, 0.5, 0.32, 0.58, capitalMaterial);
-  const roofline = new Mesh(new ConeGeometry(0.22, 0.34, 4), roofMaterial);
-  roofline.rotation.x = Math.PI / 2;
-  roofline.rotation.z = Math.PI / 4;
-  roofline.position.set(-0.64, -0.2, 0.82);
+  addBuilding(westminster, -0.42, 0.17, 1.18, 0.34, 0.4, capitalMaterial);
+  addBuilding(westminster, -0.76, -0.06, 0.46, 0.28, 0.5, landmarkStoneMaterial);
+  const roofline = centredBox(1.05, 0.25, 0.09, roofMaterial);
+  roofline.position.set(-0.42, 0.17, 0.53);
   westminster.add(roofline);
+  for (const x of [-0.92, -0.68, -0.44, -0.2, 0.04]) {
+    const pinnacle = new Mesh(new ConeGeometry(0.035, 0.18, 5), landmarkStoneMaterial);
+    pinnacle.rotation.x = Math.PI / 2;
+    pinnacle.position.set(x, 0.17, 0.67);
+    westminster.add(pinnacle);
+  }
   tagLod(westminster, 'campaign');
   root.add(westminster);
-
-  const supporting = new Group();
-  addBuilding(supporting, -0.55, 0.5, 0.36, 0.3, 0.42, cityMaterial);
-  addBuilding(supporting, -0.05, 0.54, 0.4, 0.3, 0.5, cityMaterial);
-  addBuilding(supporting, 0.42, 0.48, 0.32, 0.28, 0.4, cityMaterial);
-  tagLod(supporting, 'campaign');
-  root.add(supporting);
 
   root.userData.cityVariant = 'london';
   root.userData.landmarks = ['Elizabeth Tower / Big Ben', 'Palace of Westminster'];
   return root;
 }
 
-/** Paris: Eiffel Tower silhouette, secondary Arc de Triomphe and Haussmann blocks. */
+function addEiffelBracing(root: Group, start: Vector3[], end: Vector3[]) {
+  const faces = [[0, 1], [1, 3], [3, 2], [2, 0]] as const;
+  for (const [a, b] of faces) {
+    root.add(
+      beamBetween(start[a], end[b], 0.018, eiffelMaterial, 5),
+      beamBetween(start[b], end[a], 0.018, eiffelMaterial, 5)
+    );
+  }
+}
+
+/** Paris: accurate Eiffel Tower proportions and lattice hierarchy, with Arc de Triomphe secondary. */
 function parisLandmarkCity() {
   const root = new Group();
-  root.add(cityBase(1.24));
+  root.add(cityBase(1.2));
 
   const eiffel = new Group();
-  for (const [x, y, rotationX, rotationY] of [
-    [-0.23, -0.2, -0.09, 0.09],
-    [0.23, -0.2, -0.09, -0.09],
-    [-0.23, 0.2, 0.09, 0.09],
-    [0.23, 0.2, 0.09, -0.09]
-  ] as const) {
-    const leg = box(0.09, 0.09, 1.48, landmarkDarkMaterial);
-    leg.position.set(x, y, 0.83);
-    leg.rotation.x = rotationX;
-    leg.rotation.y = rotationY;
-    eiffel.add(leg);
+  const basePoints = [
+    new Vector3(-0.54, -0.43, 0.16), new Vector3(0.54, -0.43, 0.16),
+    new Vector3(-0.54, 0.43, 0.16), new Vector3(0.54, 0.43, 0.16)
+  ];
+  const firstDeckPoints = [
+    new Vector3(-0.3, -0.24, 0.74), new Vector3(0.3, -0.24, 0.74),
+    new Vector3(-0.3, 0.24, 0.74), new Vector3(0.3, 0.24, 0.74)
+  ];
+  const secondDeckPoints = [
+    new Vector3(-0.15, -0.12, 1.42), new Vector3(0.15, -0.12, 1.42),
+    new Vector3(-0.15, 0.12, 1.42), new Vector3(0.15, 0.12, 1.42)
+  ];
+  const crownPoints = [
+    new Vector3(-0.05, -0.04, 2.08), new Vector3(0.05, -0.04, 2.08),
+    new Vector3(-0.05, 0.04, 2.08), new Vector3(0.05, 0.04, 2.08)
+  ];
+
+  for (let i = 0; i < 4; i += 1) {
+    eiffel.add(
+      beamBetween(basePoints[i], firstDeckPoints[i], 0.055, eiffelMaterial, 6),
+      beamBetween(firstDeckPoints[i], secondDeckPoints[i], 0.046, eiffelMaterial, 6),
+      beamBetween(secondDeckPoints[i], crownPoints[i], 0.033, eiffelMaterial, 6)
+    );
   }
-  const lowerDeck = box(0.72, 0.62, 0.09, landmarkMetalMaterial);
-  lowerDeck.position.z = 0.66;
-  eiffel.add(lowerDeck);
-  const upperDeck = box(0.38, 0.32, 0.08, landmarkMetalMaterial);
-  upperDeck.position.z = 1.36;
-  eiffel.add(upperDeck);
-  const mast = box(0.07, 0.07, 0.52, landmarkDarkMaterial);
-  mast.position.z = 1.82;
+
+  const firstDeck = centredBox(0.76, 0.62, 0.08, eiffelMaterial);
+  firstDeck.position.z = 0.75;
+  const secondDeck = centredBox(0.42, 0.34, 0.07, eiffelMaterial);
+  secondDeck.position.z = 1.43;
+  const topDeck = centredBox(0.2, 0.16, 0.08, landmarkMetalMaterial);
+  topDeck.position.z = 2.09;
+  eiffel.add(firstDeck, secondDeck, topDeck);
+
+  const bracing = new Group();
+  addEiffelBracing(bracing, basePoints, firstDeckPoints);
+  addEiffelBracing(bracing, firstDeckPoints, secondDeckPoints);
+  addEiffelBracing(bracing, secondDeckPoints, crownPoints);
+  tagLod(bracing, 'campaign');
+  eiffel.add(bracing);
+
+  const mast = beamBetween(new Vector3(0, 0, 2.12), new Vector3(0, 0, 2.5), 0.018, eiffelMaterial, 6);
   eiffel.add(mast);
+  const antenna = beamBetween(new Vector3(0, 0, 2.5), new Vector3(0, 0, 2.65), 0.009, accentMaterial, 6);
+  tagLod(antenna, 'selected');
+  eiffel.add(antenna);
   eiffel.userData.landmark = 'Eiffel Tower';
   root.add(eiffel);
 
   const arc = new Group();
-  addBuilding(arc, -0.16, 0, 0.13, 0.22, 0.48, landmarkStoneMaterial);
-  addBuilding(arc, 0.16, 0, 0.13, 0.22, 0.48, landmarkStoneMaterial);
-  const lintel = box(0.45, 0.22, 0.18, landmarkStoneMaterial);
-  lintel.position.z = 0.5;
-  arc.add(lintel);
-  arc.position.set(0.58, 0.2, 0);
+  const leftPier = centredBox(0.12, 0.2, 0.4, landmarkStoneMaterial);
+  leftPier.position.set(-0.13, 0, 0.34);
+  const rightPier = centredBox(0.12, 0.2, 0.4, landmarkStoneMaterial);
+  rightPier.position.set(0.13, 0, 0.34);
+  const lintel = centredBox(0.38, 0.2, 0.14, landmarkStoneMaterial);
+  lintel.position.z = 0.55;
+  arc.add(leftPier, rightPier, lintel);
+  arc.position.set(0.76, 0.43, 0);
   arc.userData.landmark = 'Arc de Triomphe';
   tagLod(arc, 'campaign');
   root.add(arc);
-
-  const haussmann = new Group();
-  addBuilding(haussmann, -0.65, 0.38, 0.34, 0.3, 0.46, cityMaterial);
-  addBuilding(haussmann, -0.28, 0.53, 0.32, 0.28, 0.52, cityMaterial);
-  addBuilding(haussmann, 0.16, 0.55, 0.38, 0.28, 0.44, cityMaterial);
-  addBuilding(haussmann, 0.58, -0.34, 0.36, 0.3, 0.5, cityMaterial);
-  tagLod(haussmann, 'campaign');
-  root.add(haussmann);
 
   root.userData.cityVariant = 'paris';
   root.userData.landmarks = ['Eiffel Tower', 'Arc de Triomphe'];
   return root;
 }
 
-function atomiumRod(a: Vector3, b: Vector3) {
-  const direction = new Vector3().subVectors(b, a);
-  const length = direction.length();
-  const rod = new Mesh(new CylinderGeometry(0.035, 0.035, length, 6), landmarkMetalMaterial);
-  rod.position.copy(a).add(b).multiplyScalar(0.5);
-  rod.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), direction.clone().normalize());
-  return rod;
-}
-
-/** Brussels: Atomium topology, Gothic town-hall spire and compact historic blocks. */
+/** Brussels: Atomium built from the nine atoms of a body-centred cubic unit cell. */
 function brusselsLandmarkCity() {
   const root = new Group();
-  root.add(cityBase(1.2));
+  root.add(cityBase(1.18));
 
   const atomium = new Group();
-  const atomiumPoints = [
-    new Vector3(-0.25, -0.2, 0.55),
-    new Vector3(0.25, -0.2, 0.55),
-    new Vector3(-0.25, 0.2, 0.55),
-    new Vector3(0.25, 0.2, 0.55),
-    new Vector3(-0.25, -0.2, 1.12),
-    new Vector3(0.25, -0.2, 1.12),
-    new Vector3(0, 0, 1.55)
-  ];
-  for (const point of atomiumPoints) {
-    const sphere = new Mesh(new SphereGeometry(0.115, 8, 6), landmarkMetalMaterial);
+  const cubeSigns = [
+    [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1],
+    [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
+  ] as const;
+  const alignment = new Quaternion().setFromUnitVectors(
+    new Vector3(1, 1, 1).normalize(),
+    new Vector3(0, 0, 1)
+  );
+  const rawCorners = cubeSigns.map(([x, y, z]) =>
+    new Vector3(x, y, z).applyQuaternion(alignment).multiplyScalar(0.44)
+  );
+  const minimumZ = Math.min(...rawCorners.map(point => point.z));
+  const verticalOffset = 0.38 - minimumZ;
+  const atomiumPoints = rawCorners.map(point => point.clone().add(new Vector3(0, 0, verticalOffset)));
+  const centrePoint = new Vector3(0, 0, verticalOffset);
+
+  for (const point of [...atomiumPoints, centrePoint]) {
+    const sphere = new Mesh(new SphereGeometry(0.13, 10, 8), atomiumMaterial);
     sphere.position.copy(point);
     atomium.add(sphere);
   }
-  for (const [from, to] of [[0, 1], [0, 2], [1, 3], [2, 3], [0, 4], [1, 5], [4, 5], [4, 6], [5, 6], [2, 6], [3, 6]] as const) {
-    atomium.add(atomiumRod(atomiumPoints[from], atomiumPoints[to]));
+
+  for (let i = 0; i < cubeSigns.length; i += 1) {
+    for (let j = i + 1; j < cubeSigns.length; j += 1) {
+      const differentAxes = cubeSigns[i].reduce((count, value, axis) =>
+        count + (value === cubeSigns[j][axis] ? 0 : 1), 0);
+      if (differentAxes === 1) atomium.add(beamBetween(atomiumPoints[i], atomiumPoints[j], 0.032, atomiumMaterial, 8));
+    }
+    atomium.add(beamBetween(atomiumPoints[i], centrePoint, 0.03, atomiumMaterial, 8));
   }
-  atomium.position.x = -0.18;
+
+  const supportIndices = atomiumPoints
+    .map((point, index) => ({ point, index }))
+    .sort((a, b) => a.point.z - b.point.z)
+    .slice(1, 4)
+    .map(entry => entry.index);
+  for (const index of supportIndices) {
+    const point = atomiumPoints[index];
+    const anchor = new Vector3(point.x * 1.35, point.y * 1.35, 0.15);
+    atomium.add(beamBetween(anchor, point, 0.047, landmarkMetalMaterial, 7));
+  }
+
+  const topPoint = atomiumPoints.reduce((highest, point) => point.z > highest.z ? point : highest, atomiumPoints[0]);
+  const antenna = beamBetween(
+    new Vector3(topPoint.x, topPoint.y, topPoint.z + 0.1),
+    new Vector3(topPoint.x, topPoint.y, topPoint.z + 0.38),
+    0.012,
+    landmarkDarkMaterial,
+    6
+  );
+  tagLod(antenna, 'campaign');
+  atomium.add(antenna);
+
+  const entrance = new Mesh(new CylinderGeometry(0.23, 0.28, 0.16, 12), landmarkStoneMaterial);
+  entrance.rotation.x = Math.PI / 2;
+  entrance.position.set(0, 0, 0.12);
+  tagLod(entrance, 'campaign');
+  atomium.add(entrance);
   atomium.userData.landmark = 'Atomium';
   root.add(atomium);
 
   const townHall = new Group();
-  addBuilding(townHall, 0, 0, 0.42, 0.28, 0.5, landmarkStoneMaterial);
-  const hallTower = box(0.13, 0.13, 0.82, landmarkStoneMaterial);
-  hallTower.position.set(0, 0, 0.78);
-  townHall.add(hallTower);
-  const gothicSpire = new Mesh(new ConeGeometry(0.11, 0.52, 6), roofMaterial);
+  const hall = centredBox(0.36, 0.24, 0.34, landmarkStoneMaterial);
+  hall.position.z = 0.31;
+  const hallTower = centredBox(0.1, 0.1, 0.6, landmarkStoneMaterial);
+  hallTower.position.set(0.05, 0, 0.62);
+  const gothicSpire = new Mesh(new ConeGeometry(0.085, 0.42, 6), roofMaterial);
   gothicSpire.rotation.x = Math.PI / 2;
-  gothicSpire.position.z = 1.44;
-  townHall.add(gothicSpire);
-  townHall.position.set(0.58, 0.2, 0);
+  gothicSpire.position.set(0.05, 0, 1.12);
+  townHall.add(hall, hallTower, gothicSpire);
+  townHall.position.set(0.7, 0.42, 0);
   townHall.userData.landmark = 'Brussels Town Hall';
   tagLod(townHall, 'campaign');
   root.add(townHall);
-
-  const historic = new Group();
-  addBuilding(historic, -0.58, 0.48, 0.28, 0.28, 0.46, cityMaterial);
-  addBuilding(historic, -0.22, 0.54, 0.26, 0.26, 0.42, cityMaterial);
-  addBuilding(historic, 0.2, 0.54, 0.3, 0.28, 0.48, cityMaterial);
-  addBuilding(historic, 0.62, -0.34, 0.3, 0.28, 0.4, cityMaterial);
-  tagLod(historic, 'campaign');
-  root.add(historic);
 
   root.userData.cityVariant = 'brussels';
   root.userData.landmarks = ['Atomium', 'Brussels Town Hall / Grand-Place spire'];
