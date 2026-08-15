@@ -10,8 +10,9 @@ const strategicNodes = fs.readFileSync('src/game/strategic-network-data.ts', 'ut
 const design = fs.readFileSync('docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DESIGN.md', 'utf8');
 
 const londonSources = [
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.part01',
-  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.part02'
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.suffix01',
+  'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64.suffix02'
 ];
 
 test('WP3.8A v2 preserves the approved London, Paris and Brussels strategic-node scope', () => {
@@ -34,13 +35,14 @@ test('approved board-game miniature manifest drives the new authored asset path'
   assert.match(assets, /wp3\.8a-v2-brussels-selected/);
 });
 
-test('committed London source parts reconstruct to a non-trivial embedded glTF 2.0 miniature', () => {
+test('committed London source reconstructs exactly to a non-trivial embedded glTF 2.0 miniature', () => {
   const encoded = londonSources
     .map(file => fs.readFileSync(file, 'utf8'))
     .join('')
     .replace(/\s+/g, '');
-  assert.ok(encoded.length > 35000, 'London source bundle is unexpectedly small');
-  assert.ok(londonSources.every(file => fs.statSync(file).size < 20000), 'London source parts exceed bounded connector-safe size');
+  assert.equal(encoded.length, 35972, 'London compressed source was truncated or duplicated');
+  assert.ok(fs.statSync(londonSources[1]).size < 9000 && fs.statSync(londonSources[2]).size < 9000,
+    'London suffix parts exceed connector-safe size');
   const document = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8'));
   assert.equal(document.asset.version, '2.0');
   assert.ok(document.meshes.length >= 8, 'authored miniature should contain multiple detailed mesh/material groups');
@@ -51,8 +53,9 @@ test('committed London source parts reconstruct to a non-trivial embedded glTF 2
 test('build emits self-hosted landmark assets rather than using third-party runtime model hosting', () => {
   assert.match(build, /gunzipSync/);
   assert.match(build, /public\/miniatures\/wp3-8a/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.part01/);
-  assert.match(build, /london-selected\.gltf\.gz\.b64\.part02/);
+  assert.match(build, /expectedEncodedLength: 35_972/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.suffix01/);
+  assert.match(build, /london-selected\.gltf\.gz\.b64\.suffix02/);
   assert.match(build, /createHash\('sha256'\)/);
   assert.doesNotMatch(build, /https?:\/\//);
 });
