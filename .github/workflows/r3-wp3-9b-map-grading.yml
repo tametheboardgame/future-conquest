@@ -1,0 +1,54 @@
+name: R3 WP3.9B map visual grading gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/main.tsx'
+      - 'src/presentation/r3-map-visual-grading.ts'
+      - 'scripts/probe-r3-wp3-9b-map-grading.mjs'
+      - 'tests/r3-wp3-9b-map-grading.test.cjs'
+      - 'docs/roadmap/R3-WP3.9B-MAP-VISUAL-CLARITY-DESIGN.md'
+      - '.github/workflows/r3-wp3-9b-map-grading.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  visual-grading-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run WP3.9B source contracts
+        run: node --test tests/r3-wp3-9b-map-grading.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp39b-preview.log 2>&1 &
+      - name: Probe multi-region grading and operational colour retention
+        run: node scripts/probe-r3-wp3-9b-map-grading.mjs
+      - name: Upload WP3.9B visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9b-map-grading-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-9b
+            /tmp/r3-wp39b-preview.log
+          if-no-files-found: warn
