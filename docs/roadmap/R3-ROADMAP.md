@@ -8,13 +8,13 @@ R3 is the Visualisation & Command Experience release. Its purpose is to transfor
 
 ## CURRENT PACKAGE - READ THIS FIRST
 
-**R3-WP3.6 - Future Soldier Army Miniatures is ACTIVE and blocks WP4.**
+**R3-WP3.9A - Map UX Foundations is APPROVED / NEXT and blocks WP4.**
 
-Authoritative refinement programme: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
+Authoritative map-tightening programme: `docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md`.
 
-The deployed WP3.5 physical-map architecture is now the accepted technical baseline. PR #141 delivered the first physical army/city/infrastructure layer and PR #142 fixed the production presentation/projection regressions; #142 merged to `main` as `75d51412cb101875ca99b352ad0bb39fc40b5bd8` and GitHub Pages deployed/verified that exact merge. Product-owner live review on 2026-08-15 confirmed that the physical layer now works and is a strong starting point, while explicitly requiring further refinement before WP4.
+The deployed MapLibre/Three.js physical-map architecture, canonical future-soldier miniatures, end-of-day operational movement beat and first authored landmark pass across all 15 current city/capital nodes are now the accepted production baseline. Product-owner live review on 2026-08-15 confirmed that the result is visually strong, while identifying a final map-tightening sequence before WP4: make the map the default command surface and allow the right command sidebar to collapse, remove the unwanted green/dingy grading that mutes terrain and miniatures, then add the new-campaign portal arrival sequence.
 
-No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 until **WP3.6, WP3.7 and all WP3.8 landmark-city passes** are implemented, deployed and accepted together. The old WP4 PR #137 remains closed/unmerged historical reference material only.
+No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 until **WP3.9A, WP3.9B and WP3.9C** are implemented, deployed and accepted together in the integrated physical-map review. The old WP4 PR #137 remains closed/unmerged historical reference material only.
 
 ---
 
@@ -38,11 +38,11 @@ No worker, scheduled supervisor, future chat or autonomous development process s
 
 Completed history:
 
-R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate -> R3-WP3.5 + production hotfix
+R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate -> R3-WP3.5 + production hotfix -> R3-WP3.6 -> R3-WP3.7 -> R3-WP3.8A -> R3-WP3.8B -> R3-WP3.8C -> R3-WP3.8D -> R3-WP3.8E
 
 Current and future:
 
-**R3-WP3.6 -> R3-WP3.7 -> R3-WP3.8A -> R3-WP3.8B -> R3-WP3.8C -> R3-WP3.8D -> R3-WP3.8E -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
+**R3-WP3.9A -> R3-WP3.9B -> R3-WP3.9C -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
 
 ---
 
@@ -170,33 +170,33 @@ WP3.5 established the production physical-map architecture:
 
 PR #141 merged the initial package. Product-owner live review then found that legacy TG cards were visually covering the physical pieces and that the Three.js projection path required correction. PR #142 fixed the production overlay/projection behaviour, added Windows/Linux deployed-path startup probes, preserved performance/geographic guarantees and merged as `75d51412cb101875ca99b352ad0bb39fc40b5bd8`.
 
-The product owner reviewed that deployed hotfix on 2026-08-15 and confirmed the system now works and is a strong starting point. The **architecture is accepted; the visual identity is intentionally not final**. The approved refinements are therefore new blocking packages WP3.6-WP3.8 rather than reopening the WP3.5 technical implementation indefinitely.
+The product owner reviewed that deployed hotfix on 2026-08-15 and confirmed the system now works and is a strong starting point. The **architecture is accepted; the visual identity is intentionally not final**. The approved refinements became blocking packages WP3.6-WP3.9 rather than reopening the WP3.5 technical implementation indefinitely.
 
 ---
 
 # R3-WP3.6 - Future Soldier Army Miniatures
 
-Status: **APPROVED / ACTIVE / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / VISUALLY ACCEPTED**
 
 Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
 Objective: replace the generic formation geometry with recognisable low-poly/board-game miniatures of the canonical Future Conquest powered-armour soldiers.
 
-Required source: the approved `Future Conquest Armour Revision Sheet.png` and the locked modular powered-armour design language. The implementation must preserve the existing Three.js/MapLibre architecture, geographic roots, selection/movement behaviour, co-location handling, performance budgets and fallback.
+Required source: the approved `Future Conquest Armour Revision Sheet.png` and the locked modular powered-armour design language. The implementation preserves the existing Three.js/MapLibre architecture, geographic roots, selection/movement behaviour, co-location handling, performance budgets and fallback.
 
-Exit gate: deployed pieces are immediately recognisable as this game's future soldiers and pass the existing exact-head browser/performance/geographic/movement/balance gates plus product-owner visual review.
+Result: deployed pieces are recognisable as this game's future soldiers and preserve the existing exact-head browser/performance/geographic/movement/balance guarantees.
 
 ---
 
 # R3-WP3.7 - End-of-Day Operational Movement Beat
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / VISUALLY ACCEPTED**
 
 Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
 Objective: make committed movement visible by adding a short movement-resolution beat after the player ends the day and before the next-day command state appears.
 
-Core approved behaviour:
+Core accepted behaviour:
 
 - all eligible ordered formations animate concurrently;
 - a formation beginning an invasion visibly moves into its target province and settles on a deterministic invasion/operation anchor;
@@ -204,21 +204,21 @@ Core approved behaviour:
 - the province remains enemy/contested/under invasion according to existing authoritative rules;
 - combat/capture/attrition/supply/operation timing remains simulation-owned;
 - reduced motion and save/load remain deterministic;
-- no duplicate simulation tick may be introduced by animation/replay/skip behaviour.
+- no duplicate simulation tick is introduced by animation/replay/skip behaviour.
 
-Exit gate: the player can clearly appreciate ordered armies moving at the day boundary without changing established strategic-resolution mechanics.
+Result: the player can appreciate ordered armies moving at the day boundary without changing established strategic-resolution mechanics.
 
 ---
 
 # R3-WP3.8 - Landmark City Miniatures Programme
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / FIRST PASS VISUALLY ACCEPTED**
 
 Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
 Objective: replace generic city clusters with recognisable real-city miniatures built from one or two defining landmarks plus a small supporting building cluster.
 
-The current authoritative `STRATEGIC_NODES` city/capital catalogue contains 15 locations and all 15 are explicitly planned:
+The current authoritative `STRATEGIC_NODES` city/capital catalogue contains 15 locations and all 15 have completed their first authored pass:
 
 ### R3-WP3.8A - Pass 1
 
@@ -252,7 +252,38 @@ Purpose: establish final landmark exaggeration, materials, base, density and LOD
 - Chur: Cathedral/episcopal hill + St Martin's Church tower.
 - Innsbruck: Bergisel Ski Jump + Golden Roof/historic frontage language.
 
-Each pass is limited to three bespoke cities, receives its own browser/performance validation and product-owner visual review, and must retain exact authoritative node coordinates, terrain grounding, labels, layer controls and fallback.
+All 15 current city/capital nodes now have authored Campaign/Selected miniatures with exact authoritative node coordinates, terrain grounding, labels, layer controls and fallback preserved. Minor architectural/micro-detail improvements may be captured during later integrated polish, but the first authored city pass is accepted.
+
+---
+
+# R3-WP3.9 - Map Tightening Programme
+
+Status: **APPROVED / QUEUED / WP4 BLOCKING**
+
+Authoritative detail: `docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md`.
+
+WP3.9 is the final pre-WP4 tightening sequence identified during product-owner review of the integrated physical map.
+
+### R3-WP3.9A - Map UX Foundations
+
+- BEGIN CAMPAIGN defaults directly to the Map / Command Map view.
+- The right command/formation/intelligence sidebar gains an accessible collapse/expand control.
+- Collapsing the sidebar returns the reclaimed width to the map and preserves selection/context.
+- Map resize/reflow, keyboard access, compact layouts and `?terrain=0` fallback must remain stable.
+
+### R3-WP3.9B - Map Visual Clarity and Grading
+
+- Remove the unwanted uniform green/teal/dingy cast currently muting the real terrain and authored miniatures.
+- Keep the overall presentation restrained and military rather than bright, saturated or arcade-like.
+- Audit terrain colour treatment, CSS/translucent overlays, fog/haze, Three.js lighting/material response and strategic overlay opacity before changing values.
+- Preserve border, route, front, label, threat and control readability across lowland and Alpine views.
+
+### R3-WP3.9C - Portal Arrival Sequence
+
+- On the first command-map presentation of a new campaign, show an active arrival portal, stage the future troops appearing/arriving at their existing authoritative anchors, then close the portal.
+- The full sequence occurs at most once for a newly created campaign and does not replay on ordinary map re-entry or established-save loading.
+- Target a short 2-4 second presentation beat with reduced-motion and renderer-failure safe settling.
+- The portal sequence is presentation only and cannot alter positions, personnel, readiness, territory state, simulation timing or saves.
 
 ---
 
@@ -262,15 +293,18 @@ Before WP4 may resume, the product owner must accept the integrated deployed res
 
 - WP3.6 canonical future-soldier miniatures;
 - WP3.7 end-of-day movement presentation;
-- WP3.8A-E bespoke landmark cities.
+- WP3.8A-E bespoke landmark cities;
+- WP3.9A default-map and collapsible-sidebar UX;
+- WP3.9B cleaner map grading/visual clarity;
+- WP3.9C new-campaign portal arrival sequence.
 
-The gate must also confirm that infrastructure, labels, routes, borders and fronts remain readable and that geographic anchoring, performance, accessibility, fallback, saves, determinism and balance remain intact.
+The gate must also confirm that real terrain, all 15 authored cities, infrastructure, labels, routes, borders, fronts and physical formations remain readable and that geographic anchoring, performance, accessibility, fallback, saves, determinism and balance remain intact.
 
 ---
 
 ## R3-WP4 - Battle, Front & Strategic Event Feedback
 
-Status: **BLOCKED BY WP3.6-WP3.8 PHYSICAL-MAP REFINEMENT**
+Status: **BLOCKED BY WP3.9 MAP TIGHTENING AND INTEGRATED PHYSICAL-MAP REVIEW**
 
 Old PR #137 is CLOSED/UNMERGED reference material only. A fresh WP4 implementation must start from the accepted physical-map-refinement `main`, not from obsolete branches.
 
@@ -343,6 +377,6 @@ Final validation includes presentation regressions, full repository tests, produ
 
 ## R3 product-owner handoff
 
-Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether the canonical future-soldier miniatures and landmark cities feel satisfying without becoming busy, whether the end-of-day movement beat makes the campaign feel physically alive, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
+Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether the canonical future-soldier miniatures and landmark cities feel satisfying without becoming busy, whether the end-of-day movement beat makes the campaign feel physically alive, whether the opening portal sequence gives the campaign an appropriate arrival moment, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
 
 Small findings from final R3 review should become an R3.5 remediation pass before selecting the next major simulation/content direction.
