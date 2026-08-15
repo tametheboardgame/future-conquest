@@ -51,6 +51,7 @@ jobs:
         env:
           R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.base.sha }}
           R3_WP2E_VARIANT: base
+          R3_WP2E_TILE_CANCELLATION: cancel
           R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-base.json
         run: |
           set +e
