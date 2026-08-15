@@ -9,6 +9,8 @@ on:
       - 'src/presentation/r3-landmark-miniature-assets.ts'
       - 'src/assets/landmarks/wp3-8a/**'
       - 'scripts/build-r3-landmark-miniature-assets.mjs'
+      - 'scripts/build-r3-landmark-miniature-assets-extra.mjs'
+      - 'scripts/r3-landmark-extra-builder-lib.mjs'
       - 'scripts/probe-r3-wp3-8a-landmark-cities.mjs'
       - 'tests/r3-wp3-8a-landmark-cities.test.cjs'
       - 'tests/r3-wp3-5-world-miniatures.test.cjs'
@@ -39,9 +41,11 @@ jobs:
         run: node --test tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-8a-landmark-cities.test.cjs
       - name: Build production game and authored miniatures
         run: npm run build
-      - name: Verify emitted London authored asset
+      - name: Verify all authored Pass 1 assets
         run: |
           test -s dist/miniatures/wp3-8a/london-selected.gltf
+          test -s dist/miniatures/wp3-8a/paris-selected.gltf
+          test -s dist/miniatures/wp3-8a/brussels-selected.gltf
           test -s dist/miniatures/wp3-8a/manifest.json
       - name: Install browser probe runtime
         run: |

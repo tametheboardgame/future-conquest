@@ -16,7 +16,7 @@
     "build:motion-comic": "node scripts/repair-page2-bundle-tail.mjs && node scripts/build-title-card-asset.mjs && node scripts/build-motion-comic-assets.mjs",
     "build:endings": "node scripts/build-ending-assets.mjs",
     "build:r3-europe-land-mask": "node scripts/maps/build-r3-europe-land-mask.mjs",
-    "build:landmark-miniatures": "node scripts/build-r3-landmark-miniature-assets.mjs",
+    "build:landmark-miniatures": "node scripts/build-r3-landmark-miniature-assets.mjs && node scripts/build-r3-landmark-miniature-assets-extra.mjs",
     "prebuild": "npm run build:slice-map && npm run build:r3-europe-land-mask && npm run build:landmark-miniatures && npm run build:audio && npm run build:motion-comic && npm run build:endings",
     "build": "tsc -b && vite build",
     "postbuild": "node scripts/verify-motion-comic-build.mjs && node scripts/verify-title-card-build.mjs && node scripts/verify-ending-assets.mjs",
