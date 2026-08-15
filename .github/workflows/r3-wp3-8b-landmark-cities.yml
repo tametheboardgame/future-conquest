@@ -1,0 +1,63 @@
+name: R3 WP3.8B landmark cities gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/presentation/r3-landmark-miniature-assets.ts'
+      - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'scripts/build-r3-landmark-miniature-assets-pass2.mjs'
+      - 'scripts/probe-r3-wp3-8b-landmark-cities.mjs'
+      - 'tests/r3-wp3-8b-landmark-cities.test.cjs'
+      - 'docs/roadmap/R3-WP3.8B-LANDMARK-CITIES-PASS-2-DESIGN.md'
+      - 'package.json'
+      - '.github/workflows/r3-wp3-8b-landmark-cities.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  landmark-cities-pass2-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Pass 2 source contracts
+        run: node --test tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-8a-landmark-cities.test.cjs tests/r3-wp3-8b-landmark-cities.test.cjs
+      - name: Build production game and all authored miniatures
+        run: npm run build
+      - name: Verify all Pass 2 authored assets
+        run: |
+          test -s dist/miniatures/wp3-8b/amsterdam-selected.gltf
+          test -s dist/miniatures/wp3-8b/frankfurt-selected.gltf
+          test -s dist/miniatures/wp3-8b/bern-selected.gltf
+          test -s dist/miniatures/wp3-8b/manifest.json
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp38b-preview.log 2>&1 &
+      - name: Probe Pass 2 authored landmark runtime
+        run: node scripts/probe-r3-wp3-8b-landmark-cities.mjs
+      - name: Upload WP3.8B browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-8b-landmark-cities-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-8b
+            dist/miniatures/wp3-8b/manifest.json
+            /tmp/r3-wp38b-preview.log
+          if-no-files-found: warn
