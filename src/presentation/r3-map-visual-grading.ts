@@ -5,13 +5,6 @@ export const R3_MAP_VISUAL_GRADING_PROFILE_ID = 'clean-neutral-v1';
 export const R3_MAP_VISUAL_GRADING = {
   sea: '#19313a',
   land: '#958d77',
-  landOpacity: [
-    'interpolate', ['linear'], ['zoom'],
-    3.6, 0.42,
-    4.8, 0.39,
-    6.4, 0.31,
-    8.5, 0.22
-  ],
   hillshadeShadow: '#242321',
   hillshadeHighlight: '#eee7d8',
   hillshadeAccent: '#8a8171',
@@ -49,7 +42,13 @@ function applyMapVisualGrading(map: Map): boolean {
 
   map.setPaintProperty('r3-wp2b-sea', 'background-color', R3_MAP_VISUAL_GRADING.sea);
   map.setPaintProperty('r3-wp2b-land-wash', 'fill-color', R3_MAP_VISUAL_GRADING.land);
-  map.setPaintProperty('r3-wp2b-land-wash', 'fill-opacity', R3_MAP_VISUAL_GRADING.landOpacity);
+  map.setPaintProperty('r3-wp2b-land-wash', 'fill-opacity', [
+    'interpolate', ['linear'], ['zoom'],
+    3.6, 0.42,
+    4.8, 0.39,
+    6.4, 0.31,
+    8.5, 0.22
+  ]);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-shadow-color', R3_MAP_VISUAL_GRADING.hillshadeShadow);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-highlight-color', R3_MAP_VISUAL_GRADING.hillshadeHighlight);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-accent-color', R3_MAP_VISUAL_GRADING.hillshadeAccent);
