@@ -4,10 +4,10 @@ import type { TaskGroup } from '../game/types';
 export type FormationGeoPoint = readonly [number, number];
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
-export const FORMATION_PRESENTATION_ANIMATION_MS = 520;
+export const FORMATION_PRESENTATION_ANIMATION_MS = 1600;
 
-// WP3 derives display geometry only. Engine-owned location, route progress and
-// arrival timing remain unchanged and continue to resolve in game state.
+// WP3/WP3.7 derives display geometry only. Engine-owned location, route progress,
+// combat, territorial control and arrival timing remain unchanged in game state.
 const pointDistance = (a: FormationGeoPoint, b: FormationGeoPoint) => {
   const meanLatitude = ((a[1] + b[1]) / 2) * Math.PI / 180;
   const longitudeDistance = (b[0] - a[0]) * Math.cos(meanLatitude);
@@ -69,6 +69,17 @@ export function formationPresentationPath(
   const origin = territoryCentres[group.location];
   if (!origin) return undefined;
   const order = group.order;
+
+  // A newly issued attack remains at its origin until the authoritative day
+  // resolution has advanced the order. From day 1 of the active invasion, the
+  // miniature's geographic presentation root moves inside the target province
+  // while ownership and combat remain entirely engine-owned.
+  if (group.status === 'attacking' && order?.type === 'attack') {
+    const invasionAnchor = territoryCentres[order.target];
+    if (!invasionAnchor || order.days <= 0) return [origin];
+    return [origin, invasionAnchor];
+  }
+
   if (group.status !== 'moving' || order?.type !== 'move') return [origin];
   const target = territoryCentres[order.target];
   if (!target) return [origin];
@@ -97,6 +108,9 @@ export function formationPresentationPosition(
   const path = formationPresentationPath(group, territoryCentres);
   if (!path?.length) return undefined;
   const order = group.order;
+  if (group.status === 'attacking' && order?.type === 'attack') {
+    return order.days > 0 ? path.at(-1) ?? path[0] : path[0];
+  }
   if (group.status !== 'moving' || order?.type !== 'move') return path[0];
   return interpolateFormationPath(path, clamp01(order.progress / 100)) ?? path[0];
 }
