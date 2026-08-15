@@ -6,6 +6,7 @@ on:
       - 'src/components/TerrainMapPrototypeImpl.tsx'
       - 'src/presentation/r3-terrain-*'
       - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'src/presentation/r3-landmark-miniature-assets.ts'
       - 'src/r3-terrain-prototype.css'
       - 'scripts/run-r3-wp2f-visual-runtime.mjs'
       - '.github/workflows/r3-wp2f-visual-runtime-probe.yml'

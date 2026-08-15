@@ -1,8 +1,8 @@
-export type LandmarkMiniatureCityVariant = 'london' | 'paris' | 'brussels' | 'amsterdam' | 'frankfurt' | 'bern' | 'strasbourg' | 'lyon' | 'luxembourg';
+export type LandmarkMiniatureCityVariant = 'london' | 'paris' | 'brussels' | 'amsterdam' | 'frankfurt' | 'bern' | 'strasbourg' | 'lyon' | 'luxembourg' | 'dusseldorf' | 'stuttgart' | 'rennes';
 export type LandmarkMiniatureRollout = 'runtime' | 'authoring';
 
 export interface LandmarkMiniatureAssetDefinition {
-  nodeId: 'N-LONDON' | 'N-PARIS' | 'N-BRUSSELS' | 'N-AMSTERDAM' | 'N-FRANKFURT' | 'N-BERN' | 'N-STRASBOURG' | 'N-LYON' | 'N-LUXEMBOURG';
+  nodeId: 'N-LONDON' | 'N-PARIS' | 'N-BRUSSELS' | 'N-AMSTERDAM' | 'N-FRANKFURT' | 'N-BERN' | 'N-STRASBOURG' | 'N-LYON' | 'N-LUXEMBOURG' | 'N-DUSSELDORF' | 'N-STUTTGART' | 'N-RENNES';
   cityVariant: LandmarkMiniatureCityVariant;
   assetId: string;
   selectedUrl: string;
@@ -14,7 +14,7 @@ export interface LandmarkMiniatureAssetDefinition {
   rollout: LandmarkMiniatureRollout;
 }
 
-const assetUrl = (pass: 'wp3-8a' | 'wp3-8b' | 'wp3-8c', filename: string) => `${import.meta.env.BASE_URL}miniatures/${pass}/${filename}`;
+const assetUrl = (pass: 'wp3-8a' | 'wp3-8b' | 'wp3-8c' | 'wp3-8d', filename: string) => `${import.meta.env.BASE_URL}miniatures/${pass}/${filename}`;
 
 /**
  * Authored landmark miniatures use the premium board-game-piece direction
@@ -130,6 +130,42 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     landmarks: ['Luxembourg fortified old city / casemates', 'Adolphe Bridge'],
     visualReference: 'WP3.8C roadmap landmark lock',
     authoredFaceCount: 2968,
+    rollout: 'runtime'
+  },
+  'N-DUSSELDORF': {
+    nodeId: 'N-DUSSELDORF',
+    cityVariant: 'dusseldorf',
+    assetId: 'wp3.8d-dusseldorf-selected',
+    selectedUrl: assetUrl('wp3-8d', 'dusseldorf-selected.gltf'),
+    selectedScale: 0.82,
+    rotationZ: -0.10,
+    landmarks: ['Rheinturm', 'Media Harbour / Rhine waterfront'],
+    visualReference: 'WP3.8D roadmap landmark lock',
+    authoredFaceCount: 1736,
+    rollout: 'runtime'
+  },
+  'N-STUTTGART': {
+    nodeId: 'N-STUTTGART',
+    cityVariant: 'stuttgart',
+    assetId: 'wp3.8d-stuttgart-selected',
+    selectedUrl: assetUrl('wp3-8d', 'stuttgart-selected.gltf'),
+    selectedScale: 0.84,
+    rotationZ: 0.08,
+    landmarks: ['Fernsehturm Stuttgart', 'Neues Schloss / Schlossplatz roofline'],
+    visualReference: 'WP3.8D roadmap landmark lock',
+    authoredFaceCount: 2280,
+    rollout: 'runtime'
+  },
+  'N-RENNES': {
+    nodeId: 'N-RENNES',
+    cityVariant: 'rennes',
+    assetId: 'wp3.8d-rennes-selected',
+    selectedUrl: assetUrl('wp3-8d', 'rennes-selected.gltf'),
+    selectedScale: 0.92,
+    rotationZ: -0.08,
+    landmarks: ['Parliament of Brittany', 'Rennes half-timbered old town'],
+    visualReference: 'WP3.8D roadmap landmark lock',
+    authoredFaceCount: 2668,
     rollout: 'runtime'
   }
 };

@@ -1,20 +1,20 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const origin=process.env.R3_WP38B_ORIGIN ?? 'http://127.0.0.1:4173';
-const outputDir=process.env.R3_WP38B_ARTIFACTS ?? 'artifacts/r3-wp3-8b';
+const origin=process.env.R3_WP38D_ORIGIN ?? 'http://127.0.0.1:4173';
+const outputDir=process.env.R3_WP38D_ARTIFACTS ?? 'artifacts/r3-wp3-8d';
 const cities=[
   {
-    id:'N-AMSTERDAM',name:'Amsterdam',variant:'amsterdam',position:[4.9041,52.3676],assetId:'wp3.8b-amsterdam-selected',minimumFaces:1700,
-    landmarks:['Amsterdam canal-house gables','Westerkerk-style tower'],rotation:-8
+    id:'N-DUSSELDORF',name:'Dusseldorf',variant:'dusseldorf',position:[6.7735,51.2277],assetId:'wp3.8d-dusseldorf-selected',minimumFaces:1000,
+    landmarks:['Rheinturm','Media Harbour / Rhine waterfront'],rotation:-10
   },
   {
-    id:'N-FRANKFURT',name:'Frankfurt',variant:'frankfurt',position:[8.6821,50.1109],assetId:'wp3.8b-frankfurt-selected',minimumFaces:2200,
-    landmarks:['Main Tower-style modern skyline','Römer historic frontage'],rotation:10
+    id:'N-STUTTGART',name:'Stuttgart',variant:'stuttgart',position:[9.1829,48.7758],assetId:'wp3.8d-stuttgart-selected',minimumFaces:1000,
+    landmarks:['Fernsehturm Stuttgart','Neues Schloss / Schlossplatz roofline'],rotation:8
   },
   {
-    id:'N-BERN',name:'Bern',variant:'bern',position:[7.4474,46.948],assetId:'wp3.8b-bern-selected',minimumFaces:1600,
-    landmarks:['Zytglogge clock tower','Federal Palace dome'],rotation:-12
+    id:'N-RENNES',name:'Rennes',variant:'rennes',position:[-1.6778,48.1173],assetId:'wp3.8d-rennes-selected',minimumFaces:1200,
+    landmarks:['Parliament of Brittany','Rennes half-timbered old town'],rotation:-8
   }
 ];
 
@@ -66,7 +66,7 @@ try{
   await layerControl.evaluate(element=>{element.open=false;});
   await page.addStyleTag({content:'[data-r3-marker-id] { visibility: hidden !important; }'});
 
-  const evidence={schemaVersion:2,cities:{}};
+  const evidence={schemaVersion:1,cities:{}};
   for(const city of cities){
     await page.evaluate(({position,rotation})=>{
       const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');
@@ -102,8 +102,8 @@ try{
   });
   await page.waitForTimeout(300);
   const laterPass=await page.evaluate(()=>window.__r3WorldMiniatures?.objects.find(candidate=>candidate.id==='N-NAMUR') ?? null);
-  if(laterPass?.cityVariant!=='generic'||laterPass?.presentationModel!=='procedural-fallback')throw new Error(`later-pass generic fallback changed: ${JSON.stringify(laterPass)}`);
-  evidence.laterPassFallback=laterPass;
+  if(laterPass?.cityVariant!=='generic'||laterPass?.presentationModel!=='procedural-fallback')throw new Error(`Pass 5 generic fallback changed: ${JSON.stringify(laterPass)}`);
+  evidence.pass5Fallback=laterPass;
 
   fs.writeFileSync(`${outputDir}/evidence.json`,`${JSON.stringify(evidence,null,2)}\n`);
   console.log(JSON.stringify(evidence,null,2));

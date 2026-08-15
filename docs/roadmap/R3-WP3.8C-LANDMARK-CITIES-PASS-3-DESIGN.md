@@ -1,8 +1,10 @@
 # R3-WP3.8C Landmark Cities Pass 3 Design Lock
 
-Status: **IMPLEMENTATION ACTIVE / PRODUCT-OWNER VISUAL REVIEW REQUIRED**
+Status: **ACCEPTED / MERGED / DEPLOYED**
 
 Parent programme: `R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`
+
+Product-owner visual acceptance: 2026-08-15. Minor remaining architectural/detail refinements are explicitly deferred to the later integrated second-pass polish and do not block first-pass progression.
 
 ## Scope
 
@@ -97,15 +99,15 @@ Secondary read: **Adolphe Bridge**.
 
 ## Acceptance gate
 
-Pass 3 is not complete until all of the following hold:
+Pass 3 completed after all of the following held:
 
-1. Strasbourg, Lyon and Luxembourg build as self-hosted authored glTF assets.
-2. Each loads in Campaign and Selected LOD in Chromium.
-3. Exact strategic-node coordinate anchoring is unchanged.
-4. Terrain elevation is finite and clearance remains 22 m.
-5. Existing WP3.8A and WP3.8B cities continue to pass their regression gates.
-6. A later-pass city remains on the generic fallback path.
-7. Production build, browser and exact-head performance gates are acceptable.
-8. Deployed-main captures are reviewed and explicitly accepted by the product owner.
+1. Strasbourg, Lyon and Luxembourg built as self-hosted authored glTF assets.
+2. Each loaded in Campaign and Selected LOD in Chromium.
+3. Exact strategic-node coordinate anchoring remained unchanged.
+4. Terrain elevation was finite and clearance remained 22 m.
+5. Existing WP3.8A and WP3.8B cities continued to pass their regression gates.
+6. A later-pass city remained on the generic fallback path at acceptance time.
+7. Production build, browser and exact-head performance gates were acceptable.
+8. Deployed-main captures were reviewed and explicitly accepted by the product owner.
 
-R3-WP4 remains blocked after this pass. WP3.8D cannot be marked accepted until WP3.8C receives deployed visual acceptance.
+R3-WP4 remains blocked until the full WP3.8 programme and integrated physical-map review are accepted.
