@@ -30,6 +30,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Install browser probe runtime
+        run: npm install --no-save playwright@1.62.1
       - name: Compile deterministic game fixture
         run: npx tsc -p tsconfig.test.json
       - name: Build production game
@@ -37,7 +39,10 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Probe End Day movement beat
-        run: node scripts/probe-r3-wp3-7-movement-beat.mjs 2>&1 | tee wp3-7-browser.log
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/probe-r3-wp3-7-movement-beat.mjs 2>&1 | tee wp3-7-browser.log
       - name: Upload WP3.7 browser evidence
         if: always()
         uses: actions/upload-artifact@v4
