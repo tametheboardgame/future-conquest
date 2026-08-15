@@ -105,7 +105,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: -0.10,
     landmarks: ['Strasbourg Cathedral', 'Petite France half-timbered roofs'],
     visualReference: 'WP3.8C roadmap landmark lock',
-    authoredFaceCount: 2380,
+    authoredFaceCount: 2888,
     rollout: 'runtime'
   },
   'N-LYON': {
@@ -117,7 +117,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: 0.08,
     landmarks: ['Basilica of Notre-Dame de Fourvière', 'Part-Dieu skyline cue'],
     visualReference: 'WP3.8C roadmap landmark lock',
-    authoredFaceCount: 2160,
+    authoredFaceCount: 3692,
     rollout: 'runtime'
   },
   'N-LUXEMBOURG': {
@@ -129,7 +129,7 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     rotationZ: -0.06,
     landmarks: ['Luxembourg fortified old city / casemates', 'Adolphe Bridge'],
     visualReference: 'WP3.8C roadmap landmark lock',
-    authoredFaceCount: 2240,
+    authoredFaceCount: 2968,
     rollout: 'runtime'
   }
 };
