@@ -37,7 +37,8 @@ test('resolve day remains globally available and writes only the dedicated autos
   assert.match(app, /className="global-resolve"/);
   assert.match(app, /Resolve all orders · day \{state\.turn\}/);
   assert.match(app, /writeCampaignSlot\(storage, next, 'autosave'\)/);
-  assert.match(app, /setState\(advanceDay\(state\)\)/);
+  assert.match(app, /beginMovementResolution\(state\)/);
+  assert.match(app, /const next = advanceDay\(current\)/);
   assert.doesNotMatch(app, /persistence-save-proxy/);
 });
 

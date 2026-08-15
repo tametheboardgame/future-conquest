@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { CommandNavigation, type CommandView } from './components/CommandNavigation';
 import { ForceOrganisationPanel } from './components/ForceOrganisationPanel';
 import { FormationRoster } from './components/FormationRoster';
@@ -61,6 +61,9 @@ import { resolveContextualTarget, revalidateNavigationContext, type ContextualTa
 
 const formatNumber = (value: number) => new Intl.NumberFormat('en-GB').format(value);
 const operationTitle = (operation: Operation) => `Operation ${TERRITORIES[operation.target].centre}`;
+const MOVEMENT_RESOLUTION_BEAT_MS = 1750;
+const MOVEMENT_RESOLUTION_REDUCED_MS = 120;
+type MovementResolutionState = { phase: 'arming' | 'playing'; next: GameState; reducedMotion: boolean };
 
 export default function App() {
   const { assistanceLevel, autosaveEnabled } = useLiveGlobalSettings();
@@ -71,6 +74,8 @@ export default function App() {
   const [showSupplyWarning, setShowSupplyWarning] = useState(false);
   const [newTutorialEnabled, setNewTutorialEnabled] = useState(true);
   const [navigationContext, setNavigationContext] = useState<ResolvedContextualTarget | null>(null);
+  const [movementResolution, setMovementResolution] = useState<MovementResolutionState | null>(null);
+  const movementResolutionLockRef = useRef(false);
   // Terrain is the production renderer. Only the explicit accessibility and
   // diagnostics override opts out; the terrain host still owns compact/WebGL
   // capability detection and falls back to SVG if initialisation fails.
@@ -86,6 +91,30 @@ export default function App() {
   useEffect(() => {
     setNavigationContext(current => revalidateNavigationContext(state, current));
   }, [state]);
+
+  useEffect(() => {
+    if (!movementResolution) return;
+    if (movementResolution.phase === 'arming') {
+      const frame = window.requestAnimationFrame(() => {
+        setMovementResolution(current => current?.phase === 'arming' ? { ...current, phase: 'playing' } : current);
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+    const delay = movementResolution.reducedMotion ? MOVEMENT_RESOLUTION_REDUCED_MS : MOVEMENT_RESOLUTION_BEAT_MS;
+    const timeout = window.setTimeout(() => {
+      setState(movementResolution.next);
+      setMovementResolution(null);
+    }, delay);
+    return () => window.clearTimeout(timeout);
+  }, [movementResolution]);
+
+  useEffect(() => {
+    if (!movementResolution) movementResolutionLockRef.current = false;
+  }, [state.turn, movementResolution]);
+
+  const movementMapState: GameState = movementResolution?.phase === 'playing'
+    ? { ...state, taskGroups: movementResolution.next.taskGroups }
+    : state;
 
   const groups = Object.values(state.taskGroups);
   const operations = Object.values(state.operations).sort((a, b) => a.target.localeCompare(b.target));
@@ -252,6 +281,32 @@ export default function App() {
     return next;
   };
 
+  const beginMovementResolution = (current: GameState) => {
+    if (movementResolutionLockRef.current) return;
+    movementResolutionLockRef.current = true;
+    const next = advanceDay(current);
+    const hasVisibleMovement = Object.values(current.taskGroups).some(group => {
+      const resolved = next.taskGroups[group.id];
+      const order = group.order;
+      if (!resolved || !order) return false;
+      if (order.type === 'move') {
+        return resolved.location !== group.location || resolved.order?.progress !== order.progress;
+      }
+      if (order.type === 'attack' && order.days === 0) {
+        return resolved.location !== group.location || resolved.order?.days !== order.days || resolved.order?.type !== 'attack';
+      }
+      return false;
+    });
+    if (!hasVisibleMovement) {
+      setState(next);
+      return;
+    }
+    setNavigationContext(null);
+    setCurrentView('map');
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setMovementResolution({ phase: 'arming', next, reducedMotion });
+  };
+
   const openTerritoryOnMap = (id: string) => {
     setNavigationContext(null);
     setState(current => selectTerritory(current, id));
@@ -309,13 +364,13 @@ export default function App() {
       setShowSupplyWarning(true);
       return;
     }
-    setState(advanceDay(state));
+    beginMovementResolution(state);
   };
 
   const resolveDayAnyway = () => {
     if (collapseDecisionPending) return;
     setShowSupplyWarning(false);
-    setState(advanceDay(markSupplyWarningAcknowledged(state)));
+    beginMovementResolution(markSupplyWarningAcknowledged(state));
   };
 
   const renderPriorityOrderAction = () => {
@@ -466,12 +521,12 @@ export default function App() {
     </>}
   </section>;
 
-  return <main className={`app-shell command-app-shell ${tutorialStep ? `tutorial-step-${tutorialStep.target}` : ''}`}>
+  return <main aria-busy={Boolean(movementResolution)} className={`app-shell command-app-shell ${movementResolution ? 'movement-resolution-active ' : ''}${tutorialStep ? `tutorial-step-${tutorialStep.target}` : ''}`}>
 
     <header className="topbar command-topbar">
       <div><p className="eyebrow">PHASE VIII-D / OPERATIONAL CLARITY AND ONBOARDING · PLAYTEST 1 / WP4 DEFENCE AND THREAT CLARITY · WP5 COMBAT REPORTING · WP6 LOGISTICS UI · WP7 INFRASTRUCTURE CLARITY · WP8 GUIDED HELP</p><h1>FUTURE CONQUEST</h1></div>
       <div className="topbar-command-actions">
-        <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending}>Resolve all orders · day {state.turn}</button>
+        <button className="global-resolve" data-tutorial="resolve-day" onClick={resolveDay} disabled={state.status !== 'playing' || collapseDecisionPending || Boolean(movementResolution)}>Resolve all orders · day {state.turn}</button>
         <div className="turn-block"><span>DAY</span><strong>{String(state.turn).padStart(3, '0')}</strong><em>{state.difficulty}</em></div>
       </div>
     </header>
@@ -548,7 +603,7 @@ export default function App() {
             </div>}
             {terrainPrototypeRequested && !terrainPrototypeFailed ? <Suspense fallback={<div className="r3-terrain-prototype-loading" role="status">Loading terrain command map…</div>}>
               <TerrainMapPrototype
-                state={state}
+                state={movementMapState}
                 onSelect={openTerritoryOnMap}
                 onSelectGroup={openGroupOnMap}
                 onFallback={(reason) => {
@@ -558,7 +613,7 @@ export default function App() {
                 }}
               />
             </Suspense> : <MapView
-              state={state}
+              state={movementMapState}
               onSelect={openTerritoryOnMap}
               onSelectGroup={openGroupOnMap}
               operationConfirmation={canAttack && target ? {
@@ -829,6 +884,22 @@ export default function App() {
         </section>}
       </div>
     </section>
+
+    {movementResolution && <div
+      className="r3-movement-resolution-lock"
+      role="status"
+      aria-live="polite"
+      data-phase={movementResolution.phase}
+      data-from-turn={state.turn}
+      data-to-turn={movementResolution.next.turn}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, pointerEvents: 'auto', background: 'transparent' }}
+    >
+      <div style={{ position: 'absolute', left: '50%', bottom: 28, transform: 'translateX(-50%)', width: 'min(540px, calc(100vw - 32px))', padding: '14px 18px', border: '1px solid rgba(143,255,241,0.7)', borderRadius: 10, background: 'rgba(8,18,21,0.94)', boxShadow: '0 14px 36px rgba(0,0,0,0.42)', textAlign: 'center' }}>
+        <small style={{ display: 'block', letterSpacing: '0.14em', opacity: 0.78 }}>END-OF-DAY OPERATIONAL MOVEMENT</small>
+        <strong style={{ display: 'block', marginTop: 4, fontSize: '1.05rem' }}>{movementResolution.phase === 'arming' ? 'Orders locked' : 'Movement resolution'}</strong>
+        <span style={{ display: 'block', marginTop: 3, opacity: 0.82 }}>Day {String(state.turn).padStart(3, '0')} → {String(movementResolution.next.turn).padStart(3, '0')} · ordered formations resolving concurrently</span>
+      </div>
+    </div>}
 
     <TutorialOverlay step={tutorialStep} stepNumber={state.tutorial.step + 1} totalSteps={TUTORIAL_STEPS.length} anchorSelector={tutorialAnchorSelector} onSkip={() => setState(skipTutorial)} onBack={() => setState(current => moveTutorial(current, -1))} onForward={() => setState(current => moveTutorial(current, 1))} />
 

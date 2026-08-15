@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'src/App.tsx'
       - 'src/presentation/r3-formation-*.ts'
       - 'src/presentation/r3-terrain-operational-markers*.ts'
       - 'src/map-label-hierarchy.css'
@@ -36,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node --test tests/r3-wp3-formation-movement.test.cjs 2>&1 | tee wp3-focused.log
+          node --test tests/r3-wp3-formation-movement.test.cjs tests/r3-wp3-7-end-day-movement.test.cjs 2>&1 | tee wp3-focused.log
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
