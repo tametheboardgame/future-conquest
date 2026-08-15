@@ -9,6 +9,7 @@ import {
   DirectionalLight,
   DoubleSide,
   Group,
+  InstancedMesh,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
@@ -16,8 +17,10 @@ import {
   PlaneGeometry,
   Scene,
   SRGBColorSpace,
-  WebGLRenderer
+  WebGLRenderer,
+  type BufferGeometry
 } from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GameState, TaskGroup } from '../game/types';
 import { FORMATION_PRESENTATION_ANIMATION_MS, formationForwardPathTarget, formationPresentationPath, formationPresentationPosition, interpolateFormationPresentation, type FormationGeoPoint } from './r3-formation-movement';
 import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } from './r3-terrain-operational-markers-core';
@@ -25,13 +28,26 @@ import { terrainOperationalTerritoryCentres, type TerrainOperationalLayers } fro
 export const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 export const R3_FUTURE_SOLDIER_VISUAL_FAMILY = 'future-conquest-powered-armour';
 export const R3_FUTURE_SOLDIER_REFERENCE = 'Future Conquest Armour Revision Sheet.png';
+export const R3_FUTURE_SOLDIER_SIGNATURE_PARTS = [
+  'powered-thighs',
+  'powered-greaves',
+  'modular-chest-plate',
+  'shoulder-plates',
+  'sealed-combat-helmet',
+  'multispectral-visor',
+  'power-pack',
+  'carried-energy-rifle'
+] as const;
 const CLEARANCE_METRES = 45;
 const VISUAL_GROUP_NAME = 'formation-miniature-visual';
-const SOLDIER_GROUP_NAME = 'future-soldier';
-const SOLDIER_DETAIL_GROUP_NAME = 'future-soldier-detail';
+const SOLDIER_GROUP_NAME = 'future-soldier-batches';
+const SOLDIER_DETAIL_GROUP_NAME = 'future-soldier-detail-batches';
+const SOLDIER_BATCH_COUNT = 7;
 const ELEVATION_RESAMPLE_DEGREES = 0.01;
+const FIGURE_OFFSETS = [[-0.5, -0.2], [0, 0.22], [0.5, -0.2], [-0.25, 0.55], [0.25, 0.55]] as const;
 
 type MiniatureLod = 'theatre' | 'campaign' | 'local';
+type Vec3 = readonly [number, number, number];
 
 type Piece = {
   root: Group;
@@ -58,6 +74,7 @@ export type FormationMiniatureBrowserEvidence = {
     displayScale: number;
     lod: MiniatureLod;
     visibleFigureCount: number;
+    soldierDrawBatches: number;
   }>;
 };
 
@@ -94,89 +111,131 @@ function makeSoldierMaterials(group: TaskGroup, selected: boolean): SoldierMater
   };
 }
 
-function armouredBox(name: string, size: readonly [number, number, number], position: readonly [number, number, number], material: MeshStandardMaterial) {
-  const mesh = new Mesh(new BoxGeometry(size[0], size[1], size[2]), material);
-  mesh.name = name;
-  mesh.position.set(position[0], position[1], position[2]);
-  return mesh;
+function transformGeometry(geometry: BufferGeometry, position: Vec3, rotation: Vec3 = [0, 0, 0], parent?: Matrix4) {
+  const transform = new Object3D();
+  transform.position.set(position[0], position[1], position[2]);
+  transform.rotation.set(rotation[0], rotation[1], rotation[2]);
+  transform.updateMatrix();
+  geometry.applyMatrix4(parent ? parent.clone().multiply(transform.matrix) : transform.matrix);
+  return geometry;
 }
 
-function verticalCylinder(name: string, topRadius: number, bottomRadius: number, height: number, position: readonly [number, number, number], material: MeshStandardMaterial, segments = 7) {
-  const mesh = new Mesh(new CylinderGeometry(topRadius, bottomRadius, height, segments), material);
-  mesh.name = name;
-  mesh.rotation.x = Math.PI / 2;
-  mesh.position.set(position[0], position[1], position[2]);
-  return mesh;
+function boxGeometry(size: Vec3, position: Vec3, rotation: Vec3 = [0, 0, 0], parent?: Matrix4) {
+  return transformGeometry(new BoxGeometry(size[0], size[1], size[2]), position, rotation, parent);
 }
 
-function futureSoldier(materials: SoldierMaterials, x: number, y: number, index: number, status: TaskGroup['status']) {
-  const figure = new Group();
-  figure.name = SOLDIER_GROUP_NAME;
-  figure.userData.figureIndex = index;
-  figure.userData.visualFamily = R3_FUTURE_SOLDIER_VISUAL_FAMILY;
+function verticalCylinderGeometry(topRadius: number, bottomRadius: number, height: number, position: Vec3, segments = 7) {
+  return transformGeometry(new CylinderGeometry(topRadius, bottomRadius, height, segments), position, [Math.PI / 2, 0, 0]);
+}
 
-  // Powered lower body: dark articulation remains visible between replaceable armour plates.
-  figure.add(
-    armouredBox('left-powered-thigh', [0.12, 0.14, 0.25], [-0.09, 0, 0.36], materials.armour),
-    armouredBox('right-powered-thigh', [0.12, 0.14, 0.25], [0.09, 0, 0.36], materials.armour),
-    armouredBox('left-undersuit-joint', [0.09, 0.10, 0.09], [-0.09, 0, 0.22], materials.undersuit),
-    armouredBox('right-undersuit-joint', [0.09, 0.10, 0.09], [0.09, 0, 0.22], materials.undersuit),
-    armouredBox('left-powered-greave', [0.14, 0.15, 0.24], [-0.09, 0, 0.10], materials.armour),
-    armouredBox('right-powered-greave', [0.14, 0.15, 0.24], [0.09, 0, 0.10], materials.armour),
-    armouredBox('left-boot', [0.15, 0.20, 0.08], [-0.09, -0.025, -0.03], materials.undersuit),
-    armouredBox('right-boot', [0.15, 0.20, 0.08], [0.09, -0.025, -0.03], materials.undersuit)
-  );
+function mergeParts(parts: BufferGeometry[], label: string) {
+  const merged = mergeGeometries(parts, false);
+  for (const part of parts) part.dispose();
+  if (!merged) throw new Error(`Unable to merge Future Conquest soldier geometry batch: ${label}`);
+  merged.name = label;
+  return merged;
+}
 
-  const pelvis = verticalCylinder('powered-pelvis', 0.15, 0.17, 0.18, [0, 0, 0.51], materials.undersuit, 6);
-  const torsoCore = verticalCylinder('torso-core', 0.17, 0.20, 0.34, [0, 0, 0.69], materials.undersuit, 7);
-  const chestPlate = armouredBox('modular-chest-plate', [0.38, 0.22, 0.26], [0, -0.015, 0.72], materials.armour);
-  const chestAccent = armouredBox('status-chest-inlay', [0.18, 0.014, 0.05], [0, -0.133, 0.73], materials.accent);
-  figure.add(pelvis, torsoCore, chestPlate, chestAccent);
-
-  const detail = new Group();
-  detail.name = SOLDIER_DETAIL_GROUP_NAME;
-  detail.add(
-    armouredBox('left-knee-plate', [0.15, 0.04, 0.09], [-0.09, -0.085, 0.22], materials.accent),
-    armouredBox('right-knee-plate', [0.15, 0.04, 0.09], [0.09, -0.085, 0.22], materials.accent),
-    armouredBox('left-shoulder-plate', [0.19, 0.20, 0.13], [-0.25, 0, 0.80], materials.armour),
-    armouredBox('right-shoulder-plate', [0.19, 0.20, 0.13], [0.25, 0, 0.80], materials.armour),
-    armouredBox('left-forearm-armour', [0.10, 0.12, 0.24], [-0.25, -0.015, 0.62], materials.armour),
-    armouredBox('right-forearm-armour', [0.10, 0.12, 0.24], [0.25, -0.015, 0.62], materials.armour),
-    armouredBox('power-pack-core', [0.26, 0.14, 0.30], [0, 0.17, 0.71], materials.weapon),
-    armouredBox('power-pack-left-cell', [0.08, 0.10, 0.24], [-0.12, 0.20, 0.72], materials.accent),
-    armouredBox('power-pack-right-cell', [0.08, 0.10, 0.24], [0.12, 0.20, 0.72], materials.accent)
-  );
-  figure.add(detail);
-
-  // Sealed military helmet with an exaggerated visor band that survives strategy-map scale.
-  const neck = verticalCylinder('sealed-neck-ring', 0.10, 0.11, 0.09, [0, 0, 0.91], materials.undersuit, 7);
-  const helmet = verticalCylinder('sealed-combat-helmet', 0.14, 0.15, 0.20, [0, 0, 1.02], materials.armour, 8);
-  const helmetCrown = new Mesh(new ConeGeometry(0.14, 0.09, 8), materials.armour);
-  helmetCrown.name = 'helmet-crown';
-  helmetCrown.rotation.x = Math.PI / 2;
-  helmetCrown.position.set(0, 0, 1.16);
-  const visor = armouredBox('multispectral-visor', [0.22, 0.025, 0.055], [0, -0.13, 1.04], materials.visor);
-  figure.add(neck, helmet, helmetCrown, visor);
-
-  // The primary energy rifle is deliberately a separate carried weapon, not an arm cannon.
-  const rifle = new Group();
-  rifle.name = 'carried-energy-rifle';
-  rifle.add(
-    armouredBox('energy-rifle-body', [0.10, 0.43, 0.10], [0, -0.05, 0], materials.weapon),
-    armouredBox('energy-rifle-barrel', [0.055, 0.28, 0.055], [0, -0.37, 0.015], materials.weapon),
-    armouredBox('energy-rifle-stock', [0.12, 0.16, 0.11], [0, 0.23, 0], materials.weapon),
-    armouredBox('energy-rifle-power-cell', [0.12, 0.10, 0.12], [0.07, -0.02, -0.075], materials.accent)
-  );
+function rifleParentMatrix(status: TaskGroup['status']) {
+  const rifle = new Object3D();
   rifle.position.set(0.18, -0.04, 0.68);
   rifle.rotation.z = status === 'attacking' ? -0.03 : status === 'moving' ? -0.17 : -0.10;
   rifle.rotation.x = status === 'recovering' ? -0.08 : 0.03;
-  figure.add(rifle);
+  rifle.updateMatrix();
+  return rifle.matrix.clone();
+}
 
-  // Small deterministic pose variation keeps a five-figure base from reading as cloned tokens.
-  figure.rotation.z = (index - 2) * 0.025;
-  figure.rotation.x = status === 'moving' ? 0.08 : status === 'attacking' ? 0.035 : status === 'recovering' ? -0.025 : 0;
-  figure.position.set(x, y, 0.06);
-  return figure;
+function makeSoldierBatchGeometries(status: TaskGroup['status']) {
+  const rifleMatrix = rifleParentMatrix(status);
+  return {
+    coreArmour: mergeParts([
+      boxGeometry([0.12, 0.14, 0.25], [-0.09, 0, 0.36]),
+      boxGeometry([0.12, 0.14, 0.25], [0.09, 0, 0.36]),
+      boxGeometry([0.14, 0.15, 0.24], [-0.09, 0, 0.10]),
+      boxGeometry([0.14, 0.15, 0.24], [0.09, 0, 0.10]),
+      boxGeometry([0.38, 0.22, 0.26], [0, -0.015, 0.72]),
+      boxGeometry([0.19, 0.20, 0.13], [-0.25, 0, 0.80]),
+      boxGeometry([0.19, 0.20, 0.13], [0.25, 0, 0.80]),
+      verticalCylinderGeometry(0.14, 0.15, 0.20, [0, 0, 1.02], 8),
+      transformGeometry(new ConeGeometry(0.14, 0.09, 8), [0, 0, 1.16], [Math.PI / 2, 0, 0])
+    ], 'future-soldier-core-armour'),
+    coreUndersuit: mergeParts([
+      boxGeometry([0.09, 0.10, 0.09], [-0.09, 0, 0.22]),
+      boxGeometry([0.09, 0.10, 0.09], [0.09, 0, 0.22]),
+      boxGeometry([0.15, 0.20, 0.08], [-0.09, -0.025, -0.03]),
+      boxGeometry([0.15, 0.20, 0.08], [0.09, -0.025, -0.03]),
+      verticalCylinderGeometry(0.15, 0.17, 0.18, [0, 0, 0.51], 6),
+      verticalCylinderGeometry(0.17, 0.20, 0.34, [0, 0, 0.69], 7),
+      verticalCylinderGeometry(0.10, 0.11, 0.09, [0, 0, 0.91], 7)
+    ], 'future-soldier-core-undersuit'),
+    coreAccent: mergeParts([
+      boxGeometry([0.18, 0.014, 0.05], [0, -0.133, 0.73])
+    ], 'future-soldier-core-accent'),
+    coreWeapon: mergeParts([
+      boxGeometry([0.26, 0.14, 0.30], [0, 0.17, 0.71]),
+      boxGeometry([0.10, 0.43, 0.10], [0, -0.05, 0], [0, 0, 0], rifleMatrix),
+      boxGeometry([0.055, 0.28, 0.055], [0, -0.37, 0.015], [0, 0, 0], rifleMatrix),
+      boxGeometry([0.12, 0.16, 0.11], [0, 0.23, 0], [0, 0, 0], rifleMatrix)
+    ], 'carried-energy-rifle-and-power-pack'),
+    coreVisor: mergeParts([
+      boxGeometry([0.22, 0.025, 0.055], [0, -0.13, 1.04])
+    ], 'multispectral-visor'),
+    detailArmour: mergeParts([
+      boxGeometry([0.10, 0.12, 0.24], [-0.25, -0.015, 0.62]),
+      boxGeometry([0.10, 0.12, 0.24], [0.25, -0.015, 0.62])
+    ], 'future-soldier-detail-armour'),
+    detailAccent: mergeParts([
+      boxGeometry([0.15, 0.04, 0.09], [-0.09, -0.085, 0.22]),
+      boxGeometry([0.15, 0.04, 0.09], [0.09, -0.085, 0.22]),
+      boxGeometry([0.08, 0.10, 0.24], [-0.12, 0.20, 0.72]),
+      boxGeometry([0.08, 0.10, 0.24], [0.12, 0.20, 0.72]),
+      boxGeometry([0.12, 0.10, 0.12], [0.07, -0.02, -0.075], [0, 0, 0], rifleMatrix)
+    ], 'future-soldier-detail-accent')
+  };
+}
+
+function setFigureInstances(mesh: InstancedMesh, status: TaskGroup['status']) {
+  const transform = new Object3D();
+  FIGURE_OFFSETS.forEach(([x, y], index) => {
+    transform.position.set(x, y, 0.06);
+    transform.rotation.set(
+      status === 'moving' ? 0.08 : status === 'attacking' ? 0.035 : status === 'recovering' ? -0.025 : 0,
+      0,
+      (index - 2) * 0.025
+    );
+    transform.updateMatrix();
+    mesh.setMatrixAt(index, transform.matrix);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
+function makeSoldierBatches(materials: SoldierMaterials, status: TaskGroup['status']) {
+  const geometries = makeSoldierBatchGeometries(status);
+  const soldier = new Group();
+  soldier.name = SOLDIER_GROUP_NAME;
+  const detail = new Group();
+  detail.name = SOLDIER_DETAIL_GROUP_NAME;
+
+  const definitions: Array<[BufferGeometry, MeshStandardMaterial, Group]> = [
+    [geometries.coreArmour, materials.armour, soldier],
+    [geometries.coreUndersuit, materials.undersuit, soldier],
+    [geometries.coreAccent, materials.accent, soldier],
+    [geometries.coreWeapon, materials.weapon, soldier],
+    [geometries.coreVisor, materials.visor, soldier],
+    [geometries.detailArmour, materials.armour, detail],
+    [geometries.detailAccent, materials.accent, detail]
+  ];
+
+  for (const [geometry, material, parent] of definitions) {
+    const batch = new InstancedMesh(geometry, material, FIGURE_OFFSETS.length);
+    batch.name = geometry.name;
+    batch.userData.futureSoldierBatch = true;
+    setFigureInstances(batch, status);
+    parent.add(batch);
+  }
+  soldier.add(detail);
+  soldier.userData.drawBatchCount = SOLDIER_BATCH_COUNT;
+  return soldier;
 }
 
 function makeIdentityTexture(group: TaskGroup) {
@@ -218,12 +277,7 @@ function makeMiniature(group: TaskGroup, selected: boolean) {
   statusRing.name = 'formation-status-ring';
   statusRing.rotation.x = Math.PI / 2;
   statusRing.position.z = 0.175;
-  visual.add(base, statusRing);
-  let figureIndex = 0;
-  for (const [x, y] of [[-0.5, -0.2], [0, 0.22], [0.5, -0.2], [-0.25, 0.55], [0.25, 0.55]] as const) {
-    visual.add(futureSoldier(materials, x, y, figureIndex, group.status));
-    figureIndex += 1;
-  }
+  visual.add(base, statusRing, makeSoldierBatches(materials, group.status));
   const label = new Mesh(
     new PlaneGeometry(1.55, 0.58),
     new MeshStandardMaterial({ map: makeIdentityTexture(group), transparent: true, side: DoubleSide, roughness: 0.8 })
@@ -307,20 +361,15 @@ function miniatureLodForZoom(zoom: number): MiniatureLod {
 function applyMiniatureLod(root: Group, lod: MiniatureLod) {
   const selected = Boolean(root.userData.selected);
   const figureLimit = selected ? 5 : lod === 'theatre' ? 3 : lod === 'campaign' ? 4 : 5;
-  let visibleFigureCount = 0;
-  let figureIndex = 0;
-  const visual = root.getObjectByName(VISUAL_GROUP_NAME);
-  for (const child of visual?.children ?? []) {
-    if (child.name !== SOLDIER_GROUP_NAME) continue;
-    child.visible = figureIndex < figureLimit;
-    const detail = child.getObjectByName(SOLDIER_DETAIL_GROUP_NAME);
-    if (detail) detail.visible = selected || lod !== 'theatre';
-    if (child.visible) visibleFigureCount += 1;
-    figureIndex += 1;
-  }
+  const soldier = root.getObjectByName(SOLDIER_GROUP_NAME);
+  soldier?.traverse(child => {
+    if (child instanceof InstancedMesh && child.userData.futureSoldierBatch) child.count = figureLimit;
+  });
+  const detail = root.getObjectByName(SOLDIER_DETAIL_GROUP_NAME);
+  if (detail) detail.visible = selected || lod === 'local';
   root.userData.lod = lod;
-  root.userData.visibleFigureCount = visibleFigureCount;
-  return visibleFigureCount;
+  root.userData.visibleFigureCount = figureLimit;
+  return figureLimit;
 }
 
 function needsElevationSample(piece: Piece, point: FormationGeoPoint) {
@@ -447,7 +496,8 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
         clusterOffset: this.clusterOffsetById.get(id) ?? [0, 0],
         displayScale,
         lod,
-        visibleFigureCount
+        visibleFigureCount,
+        soldierDrawBatches: SOLDIER_BATCH_COUNT
       });
     }
     this.camera.projectionMatrix = new Matrix4().fromArray(options.defaultProjectionData.mainMatrix);
