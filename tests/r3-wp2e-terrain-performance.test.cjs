@@ -73,10 +73,12 @@ test('exact-head Chromium gate waits for useful paint and completed terrain bodi
   assert.match(probe, /process\.exit\(75\)/);
   assert.match(workflow, /if \[ \"\$status\" -eq 75 \]/);
   assert.match(workflow, /elif \[ \"\$status\" -ne 0 \]/);
+  assert.match(workflow, /R3_WP2E_VARIANT: base[\s\S]+R3_WP2E_TILE_CANCELLATION: cancel/);
   assert.match(workflow, /R3_WP2E_TILE_CANCELLATION: cancel/);
   assert.match(workflow, /head-cancel-pending-tiles/);
   assert.match(implementation, /cancelPendingTileRequestsWhileZooming: cancelTilesWhileZooming/);
-  assert.match(implementation, /presentationProfile === 'compact'[\s\S]+tileCancellationOverride === 'cancel'/);
+  assert.match(implementation, /presentationProfile === 'compact'[\s\S]+tileCancellationOverride !== 'retain'/);
+  assert.doesNotMatch(implementation, /tileCancellationOverride === 'cancel'/);
   assert.doesNotMatch(workflow, /R3_WP2E_TILE_CANCELLATION: retain/);
   assert.doesNotMatch(probe, /process\.env\.GITHUB_SHA/);
   assert.match(comparison, /evidence identity mismatch/);

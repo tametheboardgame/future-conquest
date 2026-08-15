@@ -563,7 +563,7 @@ export function TerrainMapPrototypeImpl({
       const [west, south, east, north] = R3_TERRAIN_PROTOTYPE_BOUNDS;
       const tileCancellationOverride = new URLSearchParams(window.location.search).get('tileCancellation');
       const cancelTilesWhileZooming = presentationProfile === 'compact'
-        || tileCancellationOverride === 'cancel';
+        || tileCancellationOverride !== 'retain';
       const map = new Map({
         container: containerRef.current,
         style: mapStyle(politicalData, frontData, routeData, nodeData, terrainSource.source, presentationProfile),
@@ -576,9 +576,10 @@ export function TerrainMapPrototypeImpl({
         maxPitch: presentationProfile === 'compact' ? 52 : 70,
         maxBounds: [[west, south], [east, north]],
         renderWorldCopies: false,
-        // Full presentation retains prior-zoom tiles for a smoother progressive
-        // reveal. Compact remains conservative; ?tileCancellation=cancel keeps
-        // an explicit full-profile comparison/debug path.
+        // Cancel superseded terrain requests by default so rapid Theatre/Campaign/
+        // Selected transitions cannot leave obsolete DEM requests blocking settlement.
+        // Compact always cancels; ?tileCancellation=retain preserves an explicit
+        // full-profile retained-request comparison/debug path.
         cancelPendingTileRequestsWhileZooming: cancelTilesWhileZooming,
         keyboard: true,
         canvasContextAttributes: { antialias: presentationProfile === 'full' },

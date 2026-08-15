@@ -2,21 +2,19 @@
 
 Status: APPROVED / ACTIVE PROGRAMME
 
-Last reconciled: 2026-08-14
+Last reconciled: 2026-08-15
 
 R3 is the Visualisation & Command Experience release. Its purpose is to transform the mechanically stabilised strategy game into a coherent, readable and visually distinctive grand-strategy command experience without destabilising the simulation.
 
 ## CURRENT PACKAGE - READ THIS FIRST
 
-**R3-WP3.5 - World Pieces & Strategic Miniatures is ACTIVE and blocks WP4.**
+**R3-WP3.6 - Future Soldier Army Miniatures is ACTIVE and blocks WP4.**
 
-Authoritative package: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
+Authoritative refinement programme: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
-No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 while WP3.5 is incomplete. The old WP4 PR #137 is closed/unmerged historical reference material only.
+The deployed WP3.5 physical-map architecture is now the accepted technical baseline. PR #141 delivered the first physical army/city/infrastructure layer and PR #142 fixed the production presentation/projection regressions; #142 merged to `main` as `75d51412cb101875ca99b352ad0bb39fc40b5bd8` and GitHub Pages deployed/verified that exact merge. Product-owner live review on 2026-08-15 confirmed that the physical layer now works and is a strong starting point, while explicitly requiring further refinement before WP4.
 
-The R3 Stabilisation Gate is complete. PR #139 merged to `main` as `1e6560cd871fc918d9914eb9cbf6da27b5a4e1c3`, GitHub Pages deployed and verified that commit, and the product owner visually accepted the deployed map on 2026-08-14. Geographic anchoring is therefore the accepted production baseline.
-
-One P2 presentation debt from that acceptance is intentionally carried into WP3.5: current marker/piece movement can feel slightly sticky/stepped/guttery during camera movement/layout settlement. Do not reopen the temporary marker implementation merely to polish this. WP3.5 owns replacing/superseding that behaviour with the final physical-piece movement architecture.
+No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 until **WP3.6, WP3.7 and all WP3.8 landmark-city passes** are implemented, deployed and accepted together. The old WP4 PR #137 remains closed/unmerged historical reference material only.
 
 ---
 
@@ -32,7 +30,7 @@ One P2 presentation debt from that acceptance is intentionally carried into WP3.
 - Real elevation describes geography, never political ownership: political territories remain overlays on one continuous landscape.
 - Runtime browser code must not contain private geospatial-service credentials.
 - The stable SVG/DOM campaign map remains the explicit `?terrain=0` accessibility/diagnostic/failure fallback.
-- This reconciles, rather than replaces, the historical WP1 renderer decision: the existing SVG/DOM map remained primary while measured evidence compared it with a WebGL/Three.js hybrid, with a clear fallback required for every accelerated presentation layer. WP3.5's measured custom-layer adoption is governed by the current package below; it does not erase that compatibility contract.
+- The MapLibre/Three.js hybrid remains governed by measured browser/performance evidence and must retain a stable compatibility fallback.
 - Major new mechanics, narrative changes or art-direction changes outside the approved broad direction require product-owner approval.
 - Any autonomous worker must inspect `docs/DEVELOPMENT_STATUS.md`, this roadmap and the current active package before selecting work.
 
@@ -40,11 +38,11 @@ One P2 presentation debt from that acceptance is intentionally carried into WP3.
 
 Completed history:
 
-R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate
+R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate -> R3-WP3.5 + production hotfix
 
 Current and future:
 
-**R3-WP3.5 -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
+**R3-WP3.6 -> R3-WP3.7 -> R3-WP3.8A -> R3-WP3.8B -> R3-WP3.8C -> R3-WP3.8D -> R3-WP3.8E -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
 
 ---
 
@@ -120,7 +118,7 @@ Status: COMPLETE / MERGED (#136)
 
 WP3 delivered the first physical-friendly-formation presentation, status-specific visual states, selected-piece emphasis, route-aware presentation-only movement interpolation and terrain route cues.
 
-Important clarification: WP3 proved the **technical formation-piece and movement system**, but its current markers are not the final visual end-state. The product owner has now approved WP3.5 to replace that temporary representation with actual miniature army pieces and strategic world objects before battle feedback is added.
+WP3 proved the technical formation-piece and movement system. Its temporary marker representation was superseded by WP3.5.
 
 ---
 
@@ -149,139 +147,132 @@ Closed issues included:
 - ambiguous orange/front short-segment presentation;
 - camera/layout/performance regressions found during remediation.
 
-The deployed build was visually accepted by the product owner on 2026-08-14. Formations, labels and operational markers remain in the correct places through selection, zoom, pitch and view changes.
-
-Accepted P2 debt transferred to WP3.5: movement can feel somewhat sticky/stepped during camera/layout activity. Geographic correctness is stable; the final physical-piece architecture should solve presentation smoothness rather than polishing the temporary marker implementation twice.
+The deployed build was visually accepted by the product owner on 2026-08-14. Geographic anchoring remains the accepted correctness baseline.
 
 ---
 
 # R3-WP3.5 - World Pieces & Strategic Miniatures
 
+Status: **COMPLETE / MERGED / DEPLOYED / ACCEPTED AS PHYSICAL-MAP BASELINE**
+
+Authoritative historical detail: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
+
+WP3.5 established the production physical-map architecture:
+
+- Three.js custom-layer friendly Task Group miniatures;
+- smooth presentation interpolation and terrain grounding;
+- co-located formation handling;
+- terrain-grounded city and strategic-infrastructure miniatures;
+- Theatre/Campaign/Selected LOD;
+- Layers integration and compatibility interaction targets;
+- reduced-motion and explicit `?terrain=0` fallback;
+- browser/runtime/performance/geographic-anchor evidence.
+
+PR #141 merged the initial package. Product-owner live review then found that legacy TG cards were visually covering the physical pieces and that the Three.js projection path required correction. PR #142 fixed the production overlay/projection behaviour, added Windows/Linux deployed-path startup probes, preserved performance/geographic guarantees and merged as `75d51412cb101875ca99b352ad0bb39fc40b5bd8`.
+
+The product owner reviewed that deployed hotfix on 2026-08-15 and confirmed the system now works and is a strong starting point. The **architecture is accepted; the visual identity is intentionally not final**. The approved refinements are therefore new blocking packages WP3.6-WP3.8 rather than reopening the WP3.5 technical implementation indefinitely.
+
+---
+
+# R3-WP3.6 - Future Soldier Army Miniatures
+
 Status: **APPROVED / ACTIVE / WP4 BLOCKING**
 
-Authoritative detail: `docs/roadmap/R3-WP3.5-WORLD-PIECES-STRATEGIC-MINIATURES.md`.
+Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
-## Objective
+Objective: replace the generic formation geometry with recognisable low-poly/board-game miniatures of the canonical Future Conquest powered-armour soldiers.
 
-Turn the accepted real-terrain map into a physical strategic war-game table before battle/event effects are built.
+Required source: the approved `Future Conquest Armour Revision Sheet.png` and the locked modular powered-armour design language. The implementation must preserve the existing Three.js/MapLibre architecture, geographic roots, selection/movement behaviour, co-location handling, performance budgets and fallback.
 
-The package replaces current temporary formation markers with actual stylised miniature army pieces, introduces terrain-grounded miniature cities and key structures, improves movement smoothness as part of the new piece architecture, and establishes controlled LOD/performance behaviour across Local/Selected, Campaign and Theatre scales.
+Exit gate: deployed pieces are immediately recognisable as this game's future soldiers and pass the existing exact-head browser/performance/geographic/movement/balance gates plus product-owner visual review.
 
-## WP3.5A - Physical formation-piece system
+---
 
-- actual 2.5D/3D miniature Task Group representation;
-- initial direction: small groups of stylised future infantry or equivalent readable miniature formation;
-- strong silhouettes and slightly exaggerated board-game proportions;
-- stable terrain contact/base treatment;
-- state language for ready/selected/moving/attacking/recovering/holding and other existing authoritative states;
-- co-located formation usability;
-- no hidden-information leakage for enemy contacts;
-- no gameplay authority changes.
+# R3-WP3.7 - End-of-Day Operational Movement Beat
 
-## WP3.5B - Smooth movement & terrain attachment
+Status: **APPROVED / QUEUED / WP4 BLOCKING**
 
-- solve the accepted sticky/stepped movement debt here;
-- smooth interpolation between authoritative positions without changing simulation timing;
-- route-following where existing route information permits;
-- optional movement-facing/orientation;
-- stable terrain-height placement so pieces neither float nor bury into slopes;
-- no geographic drift through selection, zoom, pitch, resize or view changes;
-- natural settlement at authoritative destinations;
-- reduced-motion equivalent;
-- extend existing geographic-anchor regressions to the physical-piece layer where practical.
+Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
-## WP3.5C - City miniatures
+Objective: make committed movement visible by adding a short movement-resolution beat after the player ends the day and before the next-day command state appears.
 
-- major/capital city clusters;
-- important/standard city clusters;
-- symbolic scale rather than literal real-world scale;
-- terrain-grounded placement;
-- persistent/collision-aware labels retained;
-- recognisable broad skyline language where useful without requiring bespoke landmark modelling.
+Core approved behaviour:
 
-## WP3.5D - Strategic infrastructure miniatures
+- all eligible ordered formations animate concurrently;
+- a formation beginning an invasion visibly moves into its target province and settles on a deterministic invasion/operation anchor;
+- physical arrival does **not** imply immediate ownership/capture;
+- the province remains enemy/contested/under invasion according to existing authoritative rules;
+- combat/capture/attrition/supply/operation timing remains simulation-owned;
+- reduced motion and save/load remain deterministic;
+- no duplicate simulation tick may be introduced by animation/replay/skip behaviour.
 
-Where existing authoritative data supports them, add recognisable strategic objects such as:
+Exit gate: the player can clearly appreciate ordered armies moving at the day boundary without changing established strategic-resolution mechanics.
 
-- logistics/supply hubs;
-- ports;
-- airports/airfields;
-- rail/logistics nodes;
-- industrial centres;
-- command/administrative facilities already represented by game state;
-- portal/future-force strategic site presentation where appropriate.
+---
 
-No new infrastructure mechanics are introduced by this package.
+# R3-WP3.8 - Landmark City Miniatures Programme
 
-## WP3.5E - LOD, scale & performance
+Status: **APPROVED / QUEUED / WP4 BLOCKING**
 
-- Local/Selected: richest miniature detail and terrain contact;
-- Campaign: simplified geometry/materials while retaining strategic identity;
-- Theatre: strongly simplified/low-poly/silhouette/billboard/counter form where necessary;
-- use instancing/batching/shared materials where appropriate;
-- deterministic culling/LOD;
-- controlled model/texture budgets;
-- preserve established terrain performance budgets unless a measured, separately approved revision is justified.
+Authoritative detail: `docs/roadmap/R3-WP3.6-WP3.8-PHYSICAL-MAP-REFINEMENT.md`.
 
-## WP3.5F - Integration, accessibility & fallback
+Objective: replace generic city clusters with recognisable real-city miniatures built from one or two defining landmarks plus a small supporting building cluster.
 
-Validate:
+The current authoritative `STRATEGIC_NODES` city/capital catalogue contains 15 locations and all 15 are explicitly planned:
 
-- Theatre/Campaign/Selected;
-- territory, formation and attack-target selection;
-- moving/stationary pieces;
-- crowded/co-located formations;
-- labels around miniature cities/structures;
-- layers;
-- resize/sidebar changes;
-- compact/touch;
-- reduced motion;
-- keyboard where applicable;
-- renderer failure;
-- `?terrain=0` SVG fallback;
-- save/load and deterministic balance parity.
+### R3-WP3.8A - Pass 1
 
-### Active implementation record
+- London: Elizabeth Tower / Big Ben + Palace of Westminster roofline.
+- Paris: Eiffel Tower + simplified Arc de Triomphe language.
+- Brussels: Atomium + Brussels Town Hall / Grand-Place spire language.
 
-WP3.5A/B is accepted as the exact-head technical baseline at `54be95e`. The C-F
-implementation composes lightweight city and infrastructure relief from the
-existing `STRATEGIC_NODES` catalogue only, preserves the established DOM labels
-and interaction targets, shares restrained procedural materials, applies
-importance-driven Theatre/Campaign/Selected density, samples MapLibre terrain
-with bounded presentation clearance, and follows the existing Cities/hubs,
-Ports and Airports layer controls. Browser evidence now records exact node
-coordinates, terrain elevation, clearance, visibility and LOD alongside the A/B
-formation evidence and the explicit `?terrain=0` fallback. Implementation is
-**READY FOR PRODUCT-OWNER VISUAL ACCEPTANCE** on the active PR
-line. It remains ACTIVE—not complete—until deployed-main visual acceptance.
+Purpose: establish final landmark exaggeration, materials, base, density and LOD rules.
 
-## Architecture direction
+### R3-WP3.8B - Pass 2
 
-Three.js through a MapLibre custom 3D layer is the preferred implementation direction for physical pieces/world objects unless measured browser evidence shows a better compatible solution.
+- Amsterdam: canal-house gables + Westerkerk-style tower.
+- Frankfurt: modern skyscraper/Main Tower-style skyline + Römer historic language.
+- Bern: Zytglogge + Federal Palace dome.
 
-MapLibre remains camera/geospatial authority. Simulation state remains gameplay authority. 3D objects are derived presentation only.
+### R3-WP3.8C - Pass 3
 
-## Exit gate
+- Strasbourg: Strasbourg Cathedral + Petite France half-timbered language.
+- Lyon: Notre-Dame de Fourvière + optional simplified Part-Dieu skyline cue.
+- Luxembourg: fortified old-city/casemate language + Adolphe Bridge.
 
-WP3.5 does not complete until:
+### R3-WP3.8D - Pass 4
 
-- miniature formations are visibly preferable to the temporary markers;
-- movement is geographically correct and materially smoother;
-- cities/key structures read as physical map objects without overwhelming labels/fronts;
-- LOD is coherent across all three map scales;
-- performance/accessibility/fallback remain acceptable;
-- relevant browser/runtime/performance tests and full build/test/balance gates pass;
-- deployed `main` receives product-owner visual acceptance.
+- Düsseldorf: Rheinturm + Media Harbour/Rhine waterfront blocks.
+- Stuttgart: Fernsehturm + Neues Schloss/Schlossplatz roofline.
+- Rennes: Parliament of Brittany + half-timbered old-town language.
 
-**Only then may WP4 resume.**
+### R3-WP3.8E - Pass 5
+
+- Namur: Citadel of Namur + Saint-Aubain Cathedral language.
+- Chur: Cathedral/episcopal hill + St Martin's Church tower.
+- Innsbruck: Bergisel Ski Jump + Golden Roof/historic frontage language.
+
+Each pass is limited to three bespoke cities, receives its own browser/performance validation and product-owner visual review, and must retain exact authoritative node coordinates, terrain grounding, labels, layer controls and fallback.
+
+---
+
+## Integrated physical-map refinement gate
+
+Before WP4 may resume, the product owner must accept the integrated deployed result of:
+
+- WP3.6 canonical future-soldier miniatures;
+- WP3.7 end-of-day movement presentation;
+- WP3.8A-E bespoke landmark cities.
+
+The gate must also confirm that infrastructure, labels, routes, borders and fronts remain readable and that geographic anchoring, performance, accessibility, fallback, saves, determinism and balance remain intact.
 
 ---
 
 ## R3-WP4 - Battle, Front & Strategic Event Feedback
 
-Status: BLOCKED BY WP3.5
+Status: **BLOCKED BY WP3.6-WP3.8 PHYSICAL-MAP REFINEMENT**
 
-Old PR #137 is CLOSED/UNMERGED reference material only. A fresh WP4 implementation should start from the accepted WP3.5 `main`, not from the obsolete pre-stabilisation branch.
+Old PR #137 is CLOSED/UNMERGED reference material only. A fresh WP4 implementation must start from the accepted physical-map-refinement `main`, not from obsolete branches.
 
 Objective: make attacks, counterattacks, captures, retreats and major campaign changes visible on the map without turning the game into tactical spectacle.
 
@@ -291,7 +282,7 @@ Key requirements:
 - attacks/counterattacks have clear direction;
 - front-line changes, capture, retreat, reinforcement, isolation and critical supply disruption receive concise cues;
 - restrained impacts/smoke/fire may be used where readable at campaign scale;
-- effects interact with the final WP3.5 physical-piece architecture;
+- effects interact with the final accepted physical-piece architecture;
 - after-action reports remain the authoritative detailed explanation;
 - effects never expose hidden information or block simulation timing;
 - reduced-motion behaviour is supported.
@@ -352,6 +343,6 @@ Final validation includes presentation regressions, full repository tests, produ
 
 ## R3 product-owner handoff
 
-Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether miniature armies and world structures feel satisfying without becoming busy, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
+Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether the canonical future-soldier miniatures and landmark cities feel satisfying without becoming busy, whether the end-of-day movement beat makes the campaign feel physically alive, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
 
 Small findings from final R3 review should become an R3.5 remediation pass before selecting the next major simulation/content direction.
