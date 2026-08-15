@@ -13,7 +13,8 @@ test('WP3.5 formation miniatures use a MapLibre custom 3D layer with procedural 
   assert.match(layer, /new WebGLRenderer\(\{ canvas: map\.getCanvas\(\), context: gl/);
   assert.match(layer, /defaultProjectionData\.mainMatrix/);
   assert.doesNotMatch(layer, /options\.modelViewProjectionMatrix/);
-  assert.match(layer, /for \(const \[x, y\] of \[\[-0\.5, -0\.2\].*\[0\.25, 0\.55\]/s);
+  assert.match(layer, /FIGURE_OFFSETS = \[\[-0\.5, -0\.2\], \[0, 0\.22\], \[0\.5, -0\.2\], \[-0\.25, 0\.55\], \[0\.25, 0\.55\]\] as const/);
+  assert.match(layer, /new InstancedMesh\(geometry, material, FIGURE_OFFSETS\.length\)/);
   assert.match(layer, /CylinderGeometry/);
   assert.match(layer, /ConeGeometry/);
 });
