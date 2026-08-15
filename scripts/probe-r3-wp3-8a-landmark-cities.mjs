@@ -3,23 +3,12 @@ import { chromium } from 'playwright';
 
 const origin = process.env.R3_WP38A_ORIGIN ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.R3_WP38A_ARTIFACTS ?? 'artifacts/r3-wp3-8a';
-const cities = [
-  {
-    id: 'N-LONDON', name: 'London', variant: 'london', position: [-0.1276, 51.5072],
-    landmarks: ['Elizabeth Tower / Big Ben', 'Palace of Westminster'],
-    camera: { zoom: 8.1, pitch: 50, bearing: -18 }
-  },
-  {
-    id: 'N-PARIS', name: 'Paris', variant: 'paris', position: [2.3522, 48.8566],
-    landmarks: ['Eiffel Tower', 'Arc de Triomphe'],
-    camera: { zoom: 8.2, pitch: 52, bearing: -24 }
-  },
-  {
-    id: 'N-BRUSSELS', name: 'Brussels', variant: 'brussels', position: [4.3517, 50.8503],
-    landmarks: ['Atomium', 'Brussels Town Hall / Grand-Place spire'],
-    camera: { zoom: 8.0, pitch: 50, bearing: 24 }
-  }
-];
+const london = {
+  id: 'N-LONDON', name: 'London', variant: 'london', position: [-0.1276, 51.5072],
+  landmarks: ['Elizabeth Tower / Big Ben', 'Palace of Westminster'],
+  assetId: 'wp3.8a-v2-london-selected',
+  camera: { zoom: 8.1, pitch: 50, bearing: -18 }
+};
 
 fs.mkdirSync(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -42,8 +31,8 @@ try {
     && Boolean(window.__r3TerrainMap)
   , null, { timeout: 45_000 });
 
-  // Use the product's real Layers control to isolate the city landmark system.
-  // Full normal-play compatibility remains covered by the wider terrain gates.
+  // Isolate art review using the real Layers controls. General terrain gates
+  // separately prove formations/operations/ports in normal play.
   const layerControl = page.locator('details.r3-terrain-layer-control');
   await layerControl.evaluate(element => { element.open = true; });
   for (const label of ['Friendly formations', 'Operations, threats and fronts', 'Ports']) {
@@ -52,55 +41,91 @@ try {
   }
   await page.waitForTimeout(200);
   await layerControl.evaluate(element => { element.open = false; });
-
-  // DOM operational markers are hidden only in these isolated reference
-  // captures so labels and contact cards cannot obscure the hero landmark.
   await page.addStyleTag({ content: '[data-r3-marker-id] { visibility: hidden !important; }' });
 
-  const evidence = { cities: {}, genericFallback: null };
-  for (const city of cities) {
-    await page.evaluate(({ position, camera }) => {
-      const map = window.__r3TerrainMap;
-      if (!map) throw new Error('terrain map diagnostic unavailable');
-      map.jumpTo({ center: position, ...camera });
-    }, city);
-    await page.waitForTimeout(850);
-
-    const observed = await page.evaluate(({ id }) => {
-      const diagnostic = window.__r3WorldMiniatures;
-      const nodes = window.__r3StrategicNodes ?? [];
-      if (!diagnostic) throw new Error('world-miniature diagnostic unavailable');
-      const object = diagnostic.objects.find(candidate => candidate.id === id);
-      const node = nodes.find(candidate => candidate.id === id);
-      if (!object || !node) throw new Error(`missing city diagnostic ${id}`);
-      return {
-        ...object,
-        lod: diagnostic.lod,
-        anchorErrorDegrees: Math.hypot(object.position[0] - node.position[0], object.position[1] - node.position[1])
-      };
-    }, city);
-
-    if (!observed.visible) throw new Error(`${city.name} landmark miniature is not visible at Selected LOD`);
-    if (observed.lod !== 'selected') throw new Error(`${city.name} did not reach Selected world LOD`);
-    if (observed.cityVariant !== city.variant) throw new Error(`${city.name} variant mismatch: ${observed.cityVariant}`);
-    if (observed.anchorErrorDegrees !== 0) throw new Error(`${city.name} geographic anchor changed`);
-    if (!Number.isFinite(observed.elevation) || observed.clearance !== 22) throw new Error(`${city.name} terrain grounding changed`);
-    if (JSON.stringify(observed.landmarks) !== JSON.stringify(city.landmarks)) {
-      throw new Error(`${city.name} landmark metadata mismatch: ${JSON.stringify(observed.landmarks)}`);
-    }
-
-    evidence.cities[city.id] = observed;
-    await host.screenshot({ path: `${outputDir}/${city.variant}.png` });
+  // Theatre/Campaign must not eagerly fetch the Selected asset. The initial
+  // London evidence should still be the procedural fallback.
+  const beforeSelected = await page.evaluate(id => {
+    const object = window.__r3WorldMiniatures?.objects.find(candidate => candidate.id === id);
+    return object ? { assetStatus: object.assetStatus, presentationModel: object.presentationModel } : null;
+  }, london.id);
+  if (!beforeSelected || beforeSelected.presentationModel !== 'procedural-fallback') {
+    throw new Error(`London authored model loaded outside Selected view: ${JSON.stringify(beforeSelected)}`);
   }
 
-  evidence.genericFallback = await page.evaluate(() => {
-    const object = window.__r3WorldMiniatures?.objects.find(candidate => candidate.id === 'N-AMSTERDAM');
-    return object ? { id: object.id, cityVariant: object.cityVariant, landmarks: object.landmarks } : null;
+  await page.evaluate(({ position, camera }) => {
+    const map = window.__r3TerrainMap;
+    if (!map) throw new Error('terrain map diagnostic unavailable');
+    map.jumpTo({ center: position, ...camera });
+  }, london);
+
+  await page.waitForFunction(({ id, assetId }) => {
+    const diagnostic = window.__r3WorldMiniatures;
+    const object = diagnostic?.objects.find(candidate => candidate.id === id);
+    return diagnostic?.lod === 'selected'
+      && object?.assetStatus === 'ready'
+      && object?.assetId === assetId
+      && object?.presentationModel === 'authored-gltf';
+  }, { id: london.id, assetId: london.assetId }, { timeout: 20_000 });
+  await page.waitForTimeout(400);
+
+  const observed = await page.evaluate(({ id }) => {
+    const diagnostic = window.__r3WorldMiniatures;
+    const nodes = window.__r3StrategicNodes ?? [];
+    if (!diagnostic) throw new Error('world-miniature diagnostic unavailable');
+    const object = diagnostic.objects.find(candidate => candidate.id === id);
+    const node = nodes.find(candidate => candidate.id === id);
+    if (!object || !node) throw new Error(`missing city diagnostic ${id}`);
+    return {
+      ...object,
+      lod: diagnostic.lod,
+      anchorErrorDegrees: Math.hypot(object.position[0] - node.position[0], object.position[1] - node.position[1])
+    };
+  }, london);
+
+  if (!observed.visible || observed.lod !== 'selected') throw new Error(`London authored miniature is not visible at Selected LOD`);
+  if (observed.cityVariant !== london.variant) throw new Error(`London variant mismatch: ${observed.cityVariant}`);
+  if (observed.assetStatus !== 'ready' || observed.presentationModel !== 'authored-gltf') {
+    throw new Error(`London did not swap to authored glTF: ${JSON.stringify(observed)}`);
+  }
+  if (observed.assetId !== london.assetId || observed.authoredFaceCount < 3000) {
+    throw new Error(`London authored asset identity/detail contract failed: ${JSON.stringify(observed)}`);
+  }
+  if (observed.anchorErrorDegrees !== 0) throw new Error('London geographic anchor changed');
+  if (!Number.isFinite(observed.elevation) || observed.clearance !== 22) throw new Error('London terrain grounding changed');
+  if (JSON.stringify(observed.landmarks) !== JSON.stringify(london.landmarks)) {
+    throw new Error(`London landmark metadata mismatch: ${JSON.stringify(observed.landmarks)}`);
+  }
+
+  await host.screenshot({ path: `${outputDir}/london-authored.png` });
+
+  const migration = await page.evaluate(() => {
+    const objects = window.__r3WorldMiniatures?.objects ?? [];
+    const pick = id => {
+      const object = objects.find(candidate => candidate.id === id);
+      return object ? {
+        id: object.id,
+        cityVariant: object.cityVariant,
+        assetId: object.assetId,
+        assetStatus: object.assetStatus,
+        presentationModel: object.presentationModel
+      } : null;
+    };
+    return {
+      london: pick('N-LONDON'),
+      paris: pick('N-PARIS'),
+      brussels: pick('N-BRUSSELS'),
+      amsterdam: pick('N-AMSTERDAM')
+    };
   });
-  if (!evidence.genericFallback || evidence.genericFallback.cityVariant !== 'generic') {
-    throw new Error(`Later-pass generic city fallback changed: ${JSON.stringify(evidence.genericFallback)}`);
+  if (migration.paris?.assetStatus !== 'authoring' || migration.brussels?.assetStatus !== 'authoring') {
+    throw new Error(`staged Pass 1 rollout not explicit: ${JSON.stringify(migration)}`);
+  }
+  if (migration.amsterdam?.cityVariant !== 'generic') {
+    throw new Error(`later-pass generic fallback changed: ${JSON.stringify(migration.amsterdam)}`);
   }
 
+  const evidence = { schemaVersion: 2, beforeSelected, london: observed, migration };
   fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(JSON.stringify(evidence, null, 2));
 } finally {
