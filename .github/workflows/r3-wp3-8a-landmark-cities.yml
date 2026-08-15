@@ -1,0 +1,63 @@
+name: R3 WP3.8A landmark cities gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/presentation/r3-world-miniatures-layer.ts'
+      - 'src/presentation/r3-landmark-miniature-assets.ts'
+      - 'src/assets/landmarks/wp3-8a/**'
+      - 'scripts/build-r3-landmark-miniature-assets.mjs'
+      - 'scripts/probe-r3-wp3-8a-landmark-cities.mjs'
+      - 'tests/r3-wp3-8a-landmark-cities.test.cjs'
+      - 'tests/r3-wp3-5-world-miniatures.test.cjs'
+      - 'docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DESIGN.md'
+      - 'package.json'
+      - '.github/workflows/r3-wp3-8a-landmark-cities.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  landmark-cities-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run landmark city source contracts
+        run: node --test tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-8a-landmark-cities.test.cjs
+      - name: Build production game and authored miniatures
+        run: npm run build
+      - name: Verify emitted London authored asset
+        run: |
+          test -s dist/miniatures/wp3-8a/london-selected.gltf
+          test -s dist/miniatures/wp3-8a/manifest.json
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp38a-preview.log 2>&1 &
+      - name: Probe authored landmark runtime
+        run: node scripts/probe-r3-wp3-8a-landmark-cities.mjs
+      - name: Upload WP3.8A browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-8a-landmark-cities-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-8a
+            dist/miniatures/wp3-8a/manifest.json
+            /tmp/r3-wp38a-preview.log
+          if-no-files-found: warn
