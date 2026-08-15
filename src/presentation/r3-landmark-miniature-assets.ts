@@ -1,8 +1,8 @@
-export type LandmarkMiniatureCityVariant = 'london' | 'paris' | 'brussels' | 'amsterdam' | 'frankfurt' | 'bern' | 'strasbourg' | 'lyon' | 'luxembourg' | 'dusseldorf' | 'stuttgart' | 'rennes';
+export type LandmarkMiniatureCityVariant = 'london' | 'paris' | 'brussels' | 'amsterdam' | 'frankfurt' | 'bern' | 'strasbourg' | 'lyon' | 'luxembourg' | 'dusseldorf' | 'stuttgart' | 'rennes' | 'namur' | 'chur' | 'innsbruck';
 export type LandmarkMiniatureRollout = 'runtime' | 'authoring';
 
 export interface LandmarkMiniatureAssetDefinition {
-  nodeId: 'N-LONDON' | 'N-PARIS' | 'N-BRUSSELS' | 'N-AMSTERDAM' | 'N-FRANKFURT' | 'N-BERN' | 'N-STRASBOURG' | 'N-LYON' | 'N-LUXEMBOURG' | 'N-DUSSELDORF' | 'N-STUTTGART' | 'N-RENNES';
+  nodeId: 'N-LONDON' | 'N-PARIS' | 'N-BRUSSELS' | 'N-AMSTERDAM' | 'N-FRANKFURT' | 'N-BERN' | 'N-STRASBOURG' | 'N-LYON' | 'N-LUXEMBOURG' | 'N-DUSSELDORF' | 'N-STUTTGART' | 'N-RENNES' | 'N-NAMUR' | 'N-CHUR' | 'N-INNSBRUCK';
   cityVariant: LandmarkMiniatureCityVariant;
   assetId: string;
   selectedUrl: string;
@@ -14,7 +14,7 @@ export interface LandmarkMiniatureAssetDefinition {
   rollout: LandmarkMiniatureRollout;
 }
 
-const assetUrl = (pass: 'wp3-8a' | 'wp3-8b' | 'wp3-8c' | 'wp3-8d', filename: string) => `${import.meta.env.BASE_URL}miniatures/${pass}/${filename}`;
+const assetUrl = (pass: 'wp3-8a' | 'wp3-8b' | 'wp3-8c' | 'wp3-8d' | 'wp3-8e', filename: string) => `${import.meta.env.BASE_URL}miniatures/${pass}/${filename}`;
 
 /**
  * Authored landmark miniatures use the premium board-game-piece direction
@@ -166,6 +166,42 @@ export const WP38A_LANDMARK_MINIATURE_ASSETS: Readonly<Record<LandmarkMiniatureA
     landmarks: ['Parliament of Brittany', 'Rennes half-timbered old town'],
     visualReference: 'WP3.8D roadmap landmark lock',
     authoredFaceCount: 2668,
+    rollout: 'runtime'
+  },
+  'N-NAMUR': {
+    nodeId: 'N-NAMUR',
+    cityVariant: 'namur',
+    assetId: 'wp3.8e-namur-selected',
+    selectedUrl: assetUrl('wp3-8e', 'namur-selected.gltf'),
+    selectedScale: 0.94,
+    rotationZ: -0.08,
+    landmarks: ['Citadel of Namur', 'Saint-Aubain Cathedral'],
+    visualReference: 'WP3.8E official-reference silhouette lock',
+    authoredFaceCount: 1332,
+    rollout: 'runtime'
+  },
+  'N-CHUR': {
+    nodeId: 'N-CHUR',
+    cityVariant: 'chur',
+    assetId: 'wp3.8e-chur-selected',
+    selectedUrl: assetUrl('wp3-8e', 'chur-selected.gltf'),
+    selectedScale: 0.90,
+    rotationZ: -0.10,
+    landmarks: ['Cathedral of the Assumption / Episcopal Court', 'St Martin\'s Church tower'],
+    visualReference: 'WP3.8E official-reference silhouette lock',
+    authoredFaceCount: 1240,
+    rollout: 'runtime'
+  },
+  'N-INNSBRUCK': {
+    nodeId: 'N-INNSBRUCK',
+    cityVariant: 'innsbruck',
+    assetId: 'wp3.8e-innsbruck-selected',
+    selectedUrl: assetUrl('wp3-8e', 'innsbruck-selected.gltf'),
+    selectedScale: 0.80,
+    rotationZ: 0.14,
+    landmarks: ['Bergisel Ski Jump', 'Golden Roof / historic frontage'],
+    visualReference: 'WP3.8E official-reference silhouette lock',
+    authoredFaceCount: 1288,
     rollout: 'runtime'
   }
 };
