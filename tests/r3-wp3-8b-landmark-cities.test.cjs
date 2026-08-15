@@ -63,17 +63,20 @@ test('Amsterdam builder encodes canal houses and Westerkerk-style vertical landm
 test('Frankfurt builder encodes modern skyline and historic Römer contrast',()=>{
   assert.match(build,/function skyscraper/);
   assert.match(build,/glass_light/);
-  assert.match(build,/Main-Tower language/);
+  assert.match(build,/skyscraper\(B,-\.42,-\.15,\.34,\.32,2\.85,true\)/);
+  assert.match(build,/cyl\('glass_light',\.17,2\.46/);
   assert.match(build,/timber/);
+  assert.match(design,/Main Tower-style/i);
   assert.match(design,/Römer/i);
   assert.match(design,/modern\/historic contrast/i);
 });
 
 test('Bern builder encodes Zytglogge clock and Federal Palace dome',()=>{
-  assert.match(build,/Zytglogge/);
   assert.match(build,/clock_dark/);
-  assert.match(build,/Federal Palace/);
-  assert.match(build,/sphere\('copper'/);
+  assert.match(build,/cyl\('clock',\.15,\.035/);
+  assert.match(build,/sphere\('copper',\.30/);
+  assert.match(build,/box\('sandstone',\[1\.30,\.42,\.48\]/);
+  assert.match(design,/Zytglogge/i);
   assert.match(design,/Federal Palace dome/i);
 });
 
