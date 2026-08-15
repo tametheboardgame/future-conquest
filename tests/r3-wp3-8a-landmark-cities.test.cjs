@@ -1,81 +1,84 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const { gunzipSync } = require('node:zlib');
 
 const layer = fs.readFileSync('src/presentation/r3-world-miniatures-layer.ts', 'utf8');
+const assets = fs.readFileSync('src/presentation/r3-landmark-miniature-assets.ts', 'utf8');
+const build = fs.readFileSync('scripts/build-r3-landmark-miniature-assets.mjs', 'utf8');
 const strategicNodes = fs.readFileSync('src/game/strategic-network-data.ts', 'utf8');
 const design = fs.readFileSync('docs/roadmap/R3-WP3.8A-LANDMARK-CITIES-PASS-1-DESIGN.md', 'utf8');
 
-test('WP3.8A is limited to the approved London, Paris and Brussels strategic nodes', () => {
+const londonSource = 'src/assets/landmarks/wp3-8a/london-selected.gltf.gz.b64';
+
+test('WP3.8A v2 preserves the approved London, Paris and Brussels strategic-node scope', () => {
   for (const [id, name] of [['N-LONDON', 'London'], ['N-PARIS', 'Paris'], ['N-BRUSSELS', 'Brussels']]) {
     assert.match(strategicNodes, new RegExp(`id: '${id}', name: '${name}'`));
-    assert.match(layer, new RegExp(`node\\.id === '${id}'`));
+    assert.match(assets, new RegExp(`nodeId: '${id}'`));
   }
   assert.match(layer, /return genericCityCluster\(node\)/);
   assert.doesNotMatch(layer, /node\.position\s*=/);
 });
 
-test('London is now an Elizabeth Tower hero model rather than a generic city cluster', () => {
-  assert.match(layer, /function addElizabethClockFaces/);
-  assert.match(layer, /axis: 'x'.*direction: -1/);
-  assert.match(layer, /axis: 'y'.*direction: 1/);
-  assert.match(layer, /const clockStage = centredBox\(0\.49, 0\.49, 0\.34/);
-  assert.match(layer, /const belfry = new Group/);
-  assert.match(layer, /const roof = new Mesh\(new ConeGeometry\(0\.3, 0\.46, 4\)/);
-  assert.match(layer, /Elizabeth Tower \/ Big Ben/);
-  assert.match(layer, /Palace of Westminster/);
-  assert.doesNotMatch(layer, /const supporting = new Group/);
+test('approved board-game miniature manifest drives the new authored asset path', () => {
+  assert.match(assets, /wp3\.8a-v2-london-selected/);
+  assert.match(assets, /london-approved-reference\.webp/);
+  assert.match(assets, /selectedUrl: assetUrl\('london-selected\.gltf'\)/);
+  assert.match(assets, /authoredFaceCount: 3352/);
+  assert.match(assets, /rollout: 'runtime'/);
+  assert.match(assets, /wp3\.8a-v2-paris-selected/);
+  assert.match(assets, /rollout: 'authoring'/);
+  assert.match(assets, /wp3\.8a-v2-brussels-selected/);
 });
 
-test('Paris uses a properly flared Eiffel Tower hierarchy with lattice bracing', () => {
-  assert.match(layer, /function addEiffelBracing/);
-  assert.match(layer, /const basePoints = \[/);
-  assert.match(layer, /const firstDeckPoints = \[/);
-  assert.match(layer, /const secondDeckPoints = \[/);
-  assert.match(layer, /const crownPoints = \[/);
-  assert.match(layer, /beamBetween\(basePoints\[i\], firstDeckPoints\[i\]/);
-  assert.match(layer, /addEiffelBracing\(bracing, basePoints, firstDeckPoints\)/);
-  assert.match(layer, /Eiffel Tower/);
-  assert.match(layer, /Arc de Triomphe/);
-  assert.doesNotMatch(layer, /const haussmann = new Group/);
+test('committed London source reconstructs to a non-trivial embedded glTF 2.0 miniature', () => {
+  const encoded = fs.readFileSync(londonSource, 'utf8').replace(/\s+/g, '');
+  assert.ok(encoded.length > 30000, 'London source bundle is unexpectedly small');
+  const document = JSON.parse(gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8'));
+  assert.equal(document.asset.version, '2.0');
+  assert.ok(document.meshes.length >= 8, 'authored miniature should contain multiple detailed mesh/material groups');
+  assert.ok(document.materials.length >= 6, 'authored miniature should carry a board-piece material palette');
+  assert.match(document.buffers[0].uri, /^data:application\/octet-stream;base64,/);
 });
 
-test('Brussels Atomium models the body-centred cubic nine-sphere structure', () => {
-  assert.match(layer, /new Quaternion\(\)\.setFromUnitVectors/);
-  assert.match(layer, /const cubeSigns = \[/);
-  assert.match(layer, /const centrePoint = new Vector3/);
-  assert.match(layer, /for \(const point of \[\.\.\.atomiumPoints, centrePoint\]\)/);
-  assert.match(layer, /differentAxes === 1/);
-  assert.match(layer, /beamBetween\(atomiumPoints\[i\], centrePoint/);
-  assert.match(layer, /Atomium/);
-  assert.match(layer, /Brussels Town Hall \/ Grand-Place spire/);
+test('build emits self-hosted landmark assets rather than using third-party runtime model hosting', () => {
+  assert.match(build, /gunzipSync/);
+  assert.match(build, /public\/miniatures\/wp3-8a/);
+  assert.match(build, /london-selected\.gltf/);
+  assert.match(build, /createHash\('sha256'\)/);
+  assert.doesNotMatch(build, /https?:\/\//);
 });
 
-test('hero landmark detail is LOD-controlled while core silhouettes survive Theatre view', () => {
-  assert.match(layer, /type WorldLod = 'theatre' \| 'campaign' \| 'selected'/);
-  assert.match(layer, /function tagLod/);
-  assert.match(layer, /function applyModelLod/);
-  assert.match(layer, /tagLod\(clocks, 'campaign'\)/);
-  assert.match(layer, /tagLod\(bracing, 'campaign'\)/);
-  assert.match(layer, /tagLod\(antenna, 'campaign'\)/);
-  assert.match(layer, /tagLod\(finials, 'selected'\)/);
-  assert.match(layer, /piece\.node\.importance >= 3/);
+test('Selected view lazy-loads authored glTF while procedural geometry remains a distant/loading/error fallback', () => {
+  assert.match(layer, /import\('three\/examples\/jsm\/loaders\/GLTFLoader\.js'\)/);
+  assert.match(layer, /loader\.loadAsync\(asset\.selectedUrl\)/);
+  assert.match(layer, /rootVisible && lod === 'selected' && piece\.asset/);
+  assert.match(layer, /piece\.fallbackRoot\.visible = rootVisible && !useAuthoredAsset/);
+  assert.match(layer, /piece\.assetRoot\.visible = useAuthoredAsset/);
+  assert.match(layer, /retaining procedural fallback/);
+});
+
+test('authored miniatures remain children of authoritative terrain-grounded strategic-node roots', () => {
+  assert.match(layer, /queryTerrainElevation/);
+  assert.match(layer, /MercatorCoordinate\.fromLngLat\(piece\.node\.position, elevation \+ CLEARANCE_METRES\)/);
+  assert.match(layer, /const CLEARANCE_METRES = 22/);
+  assert.match(layer, /worldPieceInViewport/);
   assert.match(layer, /this\.layers\.citiesHubs/);
+  assert.match(layer, /defaultProjectionData\.mainMatrix/);
 });
 
-test('runtime evidence identifies bespoke variants and their landmark sources', () => {
-  assert.match(layer, /cityVariant\?: CityVariant/);
-  assert.match(layer, /landmarks\?: readonly string\[\]/);
-  assert.match(layer, /cityVariant: piece\.cityVariant/);
-  assert.match(layer, /landmarks: piece\.landmarks/);
+test('runtime evidence distinguishes authored glTF from procedural fallback', () => {
+  assert.match(layer, /assetStatus: AssetStatus/);
+  assert.match(layer, /presentationModel: PresentationModel/);
+  assert.match(layer, /assetId: piece\.asset\?\.assetId/);
+  assert.match(layer, /presentationModel: useAuthoredAsset \? 'authored-gltf' : 'procedural-fallback'/);
+  assert.match(layer, /authoredFaceCount: piece\.asset\?\.authoredFaceCount/);
 });
 
-test('design lock records the approved hero-landmark accuracy direction', () => {
-  assert.match(design, /approved visual direction/i);
-  assert.match(design, /accuracy of the hero landmark/i);
-  assert.match(design, /Elizabeth Tower/i);
-  assert.match(design, /Eiffel Tower/i);
-  assert.match(design, /body-centred cubic/i);
-  assert.match(design, /No third-party meshes, textures or runtime model hosting/i);
+test('design lock records the asset-driven board-game-piece direction', () => {
+  assert.match(design, /board-game-piece/i);
+  assert.match(design, /authored/i);
+  assert.match(design, /glTF|GLB/i);
+  assert.match(design, /procedural.*fallback/i);
   assert.match(design, /authoritative `STRATEGIC_NODES` coordinates/i);
 });
