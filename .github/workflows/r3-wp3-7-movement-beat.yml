@@ -33,7 +33,10 @@ jobs:
       - name: Install browser probe runtime
         run: npm install --no-save playwright@1.62.1
       - name: Compile deterministic game fixture
-        run: npx tsc -p tsconfig.test.json
+        shell: bash
+        run: |
+          npx tsc -p tsconfig.test.json
+          printf '{"type":"commonjs"}\n' > .test-dist/package.json
       - name: Build production game
         run: npm run build
       - name: Install Chromium
