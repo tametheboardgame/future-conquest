@@ -7,6 +7,7 @@ import { INTRO_STORAGE_KEY } from '../game/intro-story';
 import { formatSaveTime, inspectStoredCampaign, type SaveInspection } from '../game/persistence';
 import { CampaignDefeatScreen, VictoryEndingComic } from './CampaignEndingExperience';
 import { GlobalSettingsPanel } from './GlobalSettingsPanel';
+import { MapUxFoundations } from './MapUxFoundations';
 import { MotionComicIntro, type ArtworkStatus } from './MotionComicIntro';
 import './prologue-build-stamp.css';
 import './startup-launcher.css';
@@ -26,7 +27,7 @@ export function useLiveGlobalSettings(): GlobalSettings {
 type CampaignEndingKind = 'victory' | 'defeat';
 type StartupMode = 'launcher' | 'intro' | 'game' | CampaignEndingKind;
 type SuccessfulInspection = Extract<SaveInspection, { ok: true }>;
-type IntroDestination = 'launcher' | 'campaign-setup';
+type IntroDestination = 'launcher' | 'campaign-map';
 
 function detectPortalTerritory(): string | undefined {
   const pageText = document.body.innerText;
@@ -148,9 +149,12 @@ export function StartupExperience({ children }: Props) {
     };
   }, [mode, refreshSaveInspection]);
 
-  const openCampaignSetup = useCallback(() => {
+  const openCampaignMap = useCallback(() => {
     setMode('game');
-    window.setTimeout(() => openCommandView('campaign'), 50);
+    // App already owns the authoritative campaign state and defaults new/load
+    // flows to Map. This only corrects the title/prologue destination so no
+    // campaign state is recreated or mutated by the launcher.
+    window.setTimeout(() => openCommandView('map'), 50);
   }, []);
 
   const beginCampaign = useCallback(() => {
@@ -158,14 +162,14 @@ export function StartupExperience({ children }: Props) {
     const storage = browserStorage();
     const introSeen = storage?.getItem(INTRO_STORAGE_KEY) === 'true';
     if (introSeen) {
-      openCampaignSetup();
+      openCampaignMap();
       return;
     }
-    setIntroDestination('campaign-setup');
+    setIntroDestination('campaign-map');
     setArtworkStatus('loading');
     refreshPortalTerritory();
     setMode('intro');
-  }, [openCampaignSetup, refreshPortalTerritory]);
+  }, [openCampaignMap, refreshPortalTerritory]);
 
   const continueCampaign = useCallback(() => {
     if (!saveInspection.ok) return;
@@ -186,9 +190,9 @@ export function StartupExperience({ children }: Props) {
   }, [refreshPortalTerritory]);
 
   const finishIntro = useCallback(() => {
-    if (introDestination === 'campaign-setup') openCampaignSetup();
+    if (introDestination === 'campaign-map') openCampaignMap();
     else setMode('launcher');
-  }, [introDestination, openCampaignSetup]);
+  }, [introDestination, openCampaignMap]);
 
   const openSettings = useCallback(() => {
     void audioManager.unlock();
@@ -249,7 +253,7 @@ export function StartupExperience({ children }: Props) {
       className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}`}
       aria-hidden={mode !== 'game'}
       inert={mode !== 'game'}
-    ><GlobalSettingsContext.Provider value={settings}>{children}</GlobalSettingsContext.Provider></div>
+    ><GlobalSettingsContext.Provider value={settings}>{children}<MapUxFoundations active={mode === 'game'} /></GlobalSettingsContext.Provider></div>
 
     {mode === 'launcher' && <section className="startup-launcher" aria-label="Future Conquest title screen">
       <div className="startup-launcher-panel">
