@@ -50,21 +50,19 @@ try{
   await layerControl.evaluate(el=>{el.open=false;});
   await page.addStyleTag({content:'[data-r3-marker-id] { visibility: hidden !important; }'});
 
-  const evidence={schemaVersion:5,cities:{}};
+  const evidence={schemaVersion:6,cities:{}};
   for(const city of cities){
     await jump(city,'campaign');const campaign=await observe(city);assertCity(city,campaign,'campaign');await host.screenshot({path:`${outputDir}/${city.slug}-authored-campaign.png`});
     await jump(city,'selected');const selected=await observe(city);assertCity(city,selected,'selected');await host.screenshot({path:`${outputDir}/${city.slug}-authored-selected.png`});
     evidence.cities[city.slug]={campaign,selected};
   }
 
-  // Pass 1's regression sentinel must remain a city not yet promoted by a
-  // later WP3.8 pass. Amsterdam graduated in WP3.8B, so Strasbourg now proves
-  // that later-pass cities still retain the generic procedural fallback.
-  await page.evaluate(()=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:[7.7521,48.5734],zoom:5.35,pitch:51,bearing:0});});
+  // Keep this sentinel on a city that has not yet graduated to an authored pass.
+  await page.evaluate(()=>{const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');map.jumpTo({center:[6.7735,51.2277],zoom:5.35,pitch:51,bearing:0});});
   await page.waitForTimeout(300);
-  const generic=await page.evaluate(()=>{const o=window.__r3WorldMiniatures?.objects.find(x=>x.id==='N-STRASBOURG');return o?{cityVariant:o.cityVariant,assetId:o.assetId,assetStatus:o.assetStatus,presentationModel:o.presentationModel}:null;});
+  const generic=await page.evaluate(()=>{const o=window.__r3WorldMiniatures?.objects.find(x=>x.id==='N-DUSSELDORF');return o?{cityVariant:o.cityVariant,assetId:o.assetId,assetStatus:o.assetStatus,presentationModel:o.presentationModel}:null;});
   if(generic?.cityVariant!=='generic'||generic?.assetId||generic?.presentationModel!=='procedural-fallback')throw new Error(`later-pass generic fallback changed: ${JSON.stringify(generic)}`);
-  evidence.genericStrasbourg=generic;
+  evidence.genericDusseldorf=generic;
   fs.writeFileSync(`${outputDir}/evidence.json`,`${JSON.stringify(evidence,null,2)}\n`);
   console.log(JSON.stringify(evidence,null,2));
 }finally{await browser.close();}

@@ -1,20 +1,20 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const origin=process.env.R3_WP38B_ORIGIN ?? 'http://127.0.0.1:4173';
-const outputDir=process.env.R3_WP38B_ARTIFACTS ?? 'artifacts/r3-wp3-8b';
+const origin=process.env.R3_WP38C_ORIGIN ?? 'http://127.0.0.1:4173';
+const outputDir=process.env.R3_WP38C_ARTIFACTS ?? 'artifacts/r3-wp3-8c';
 const cities=[
   {
-    id:'N-AMSTERDAM',name:'Amsterdam',variant:'amsterdam',position:[4.9041,52.3676],assetId:'wp3.8b-amsterdam-selected',minimumFaces:1700,
-    landmarks:['Amsterdam canal-house gables','Westerkerk-style tower'],rotation:-8
+    id:'N-STRASBOURG',name:'Strasbourg',variant:'strasbourg',position:[7.7521,48.5734],assetId:'wp3.8c-strasbourg-selected',minimumFaces:1200,
+    landmarks:['Strasbourg Cathedral','Petite France half-timbered roofs'],rotation:-10
   },
   {
-    id:'N-FRANKFURT',name:'Frankfurt',variant:'frankfurt',position:[8.6821,50.1109],assetId:'wp3.8b-frankfurt-selected',minimumFaces:2200,
-    landmarks:['Main Tower-style modern skyline','Römer historic frontage'],rotation:10
+    id:'N-LYON',name:'Lyon',variant:'lyon',position:[4.8357,45.764],assetId:'wp3.8c-lyon-selected',minimumFaces:1000,
+    landmarks:['Basilica of Notre-Dame de Fourvière','Part-Dieu skyline cue'],rotation:8
   },
   {
-    id:'N-BERN',name:'Bern',variant:'bern',position:[7.4474,46.948],assetId:'wp3.8b-bern-selected',minimumFaces:1600,
-    landmarks:['Zytglogge clock tower','Federal Palace dome'],rotation:-12
+    id:'N-LUXEMBOURG',name:'Luxembourg',variant:'luxembourg',position:[6.1296,49.6116],assetId:'wp3.8c-luxembourg-selected',minimumFaces:1200,
+    landmarks:['Luxembourg fortified old city / casemates','Adolphe Bridge'],rotation:-6
   }
 ];
 
@@ -66,7 +66,7 @@ try{
   await layerControl.evaluate(element=>{element.open=false;});
   await page.addStyleTag({content:'[data-r3-marker-id] { visibility: hidden !important; }'});
 
-  const evidence={schemaVersion:2,cities:{}};
+  const evidence={schemaVersion:1,cities:{}};
   for(const city of cities){
     await page.evaluate(({position,rotation})=>{
       const map=window.__r3TerrainMap;if(!map)throw new Error('terrain map diagnostic unavailable');
