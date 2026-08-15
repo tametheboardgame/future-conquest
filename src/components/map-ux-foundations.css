@@ -1,0 +1,95 @@
+.command-map-workspace {
+  transition: grid-template-columns 160ms ease;
+}
+
+.command-map-workspace.wp39a-sidebar-collapsed {
+  grid-template-columns: minmax(700px, 1fr) 42px;
+}
+
+.map-context-panel.wp39a-sidebar-collapsed {
+  position: relative;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.map-context-panel.wp39a-sidebar-collapsed > * {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.map-context-panel.wp39a-sidebar-collapsed::after {
+  content: 'COMMAND';
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  color: #607f8a;
+  font: 600 8px IBM Plex Mono, monospace;
+  letter-spacing: .16em;
+  writing-mode: vertical-rl;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+.map-ux-sidebar-toggle {
+  position: fixed;
+  z-index: 45;
+  width: 28px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #4f8f91;
+  border-radius: 4px;
+  background: rgba(8, 28, 36, .96);
+  color: #bafdf5;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .34);
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+
+.map-ux-sidebar-toggle span {
+  display: block;
+  margin-top: -2px;
+  font: 600 26px/1 Barlow Condensed, sans-serif;
+}
+
+.map-ux-sidebar-toggle:hover {
+  border-color: #8ff9ed;
+  background: #123841;
+  color: #effffc;
+}
+
+.map-ux-sidebar-toggle:focus-visible {
+  outline: 2px solid #8ff9ed;
+  outline-offset: 3px;
+}
+
+@media (max-width: 1250px) {
+  .command-map-workspace.wp39a-sidebar-collapsed {
+    grid-template-columns: minmax(620px, 1fr) 42px;
+  }
+}
+
+@media (max-width: 900px) {
+  .command-map-workspace {
+    transition: none;
+  }
+
+  .command-map-workspace.wp39a-sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-context-panel.wp39a-sidebar-collapsed > * {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .map-context-panel.wp39a-sidebar-collapsed::after,
+  .map-ux-sidebar-toggle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-map-workspace {
+    transition: none;
+  }
+}
