@@ -8,14 +8,16 @@ const OUTPUT_ROOT = 'public/miniatures/wp3-8a';
 
 // Asset rollout is intentionally staged. London proves the authored-asset path
 // end to end before Paris and Brussels are switched away from their procedural
-// fallbacks. Source bundles are split into bounded text parts so repository
-// writes cannot silently truncate a compressed model payload.
+// fallbacks. The connector-preserved 18,978-character prefix is completed by
+// two bounded suffixes. Tests enforce the exact reconstructed source length.
 const assets = [
   {
     name: 'london-selected',
+    expectedEncodedLength: 35_972,
     sourceFiles: [
-      'london-selected.gltf.gz.b64.part01',
-      'london-selected.gltf.gz.b64.part02'
+      'london-selected.gltf.gz.b64',
+      'london-selected.gltf.gz.b64.suffix01',
+      'london-selected.gltf.gz.b64.suffix02'
     ]
   }
 ];
@@ -28,6 +30,9 @@ for (const asset of assets) {
     .map(file => fs.readFileSync(path.join(SOURCE_ROOT, file), 'utf8'))
     .join('')
     .replace(/\s+/g, '');
+  if (encoded.length !== asset.expectedEncodedLength) {
+    throw new Error(`${asset.name} source length ${encoded.length} does not match ${asset.expectedEncodedLength}`);
+  }
   const gltfBytes = gunzipSync(Buffer.from(encoded, 'base64'));
   const document = JSON.parse(gltfBytes.toString('utf8'));
   if (document?.asset?.version !== '2.0') throw new Error(`${asset.name} is not glTF 2.0`);
