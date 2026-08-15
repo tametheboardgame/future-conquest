@@ -8,16 +8,17 @@ const OUTPUT_ROOT = 'public/miniatures/wp3-8a';
 
 // Asset rollout is intentionally staged. London proves the authored-asset path
 // end to end before Paris and Brussels are switched away from their procedural
-// fallbacks. The connector-preserved 18,978-character prefix is completed by
-// two bounded suffixes. Tests enforce the exact reconstructed source length.
+// fallbacks. The first repository file contains 18,975 meaningful base64
+// characters plus three whitespace bytes, so the bounded tails continue from
+// meaningful offset 18,975. Exact source length is enforced before gunzip.
 const assets = [
   {
     name: 'london-selected',
     expectedEncodedLength: 35_972,
     sourceFiles: [
       'london-selected.gltf.gz.b64',
-      'london-selected.gltf.gz.b64.suffix01',
-      'london-selected.gltf.gz.b64.suffix02'
+      'london-selected.gltf.gz.b64.tail01',
+      'london-selected.gltf.gz.b64.tail02'
     ]
   }
 ];
