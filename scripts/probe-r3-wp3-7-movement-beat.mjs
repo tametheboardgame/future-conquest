@@ -127,44 +127,71 @@ try {
   if (!beforeTargetClass?.includes('enemy')) throw new Error('Target province was not visibly enemy-held before End Day.');
   if (distance(beforePiece.current, beforePiece.target) > 0.00001) throw new Error('Formation was already travelling before End Day.');
 
-  await page.locator('.global-resolve').click();
-  const movementOverlay = page.locator('.r3-movement-resolution-lock[data-phase="playing"]');
-  await movementOverlay.waitFor({ state: 'visible', timeout: 5_000 });
-  const beatStartedAt = Date.now();
-  await page.waitForTimeout(320);
-
-  // Capture the transient beat in one browser-side read. This avoids serial
-  // locator waits consuming the deliberately short 1.75-second presentation.
-  const midSnapshot = await page.evaluate(({ id, territoryId }) => {
-    const physicalEvidence = window.__r3FormationMiniatures;
-    const item = physicalEvidence?.pieces?.find(candidate => candidate.id === id);
-    const turnText = document.querySelector('.turn-block strong')?.textContent?.trim();
-    const targetClass = document.querySelector(`.r3-terrain-territory-label[data-territory-id="${territoryId}"]`)?.getAttribute('class') ?? null;
-    const overlay = document.querySelector('.r3-movement-resolution-lock[data-phase="playing"]');
-    return {
-      piece: item ? { current: item.current, target: item.target, reducedMotion: physicalEvidence.reducedMotion } : null,
-      turn: Number(turnText),
-      targetClass,
-      status: overlay?.querySelector('strong')?.textContent ?? null,
-      overlayPresent: Boolean(overlay)
+  // Observe the renderer from inside the page so CI scheduling cannot miss the
+  // deliberately short beat. The observer records the first actual frame where
+  // the piece has left its origin but has not yet reached its target.
+  await page.evaluate(({ id, territoryId, origin }) => {
+    const frameDistance = (a, b) => Math.hypot((a?.[0] ?? 0) - (b?.[0] ?? 0), (a?.[1] ?? 0) - (b?.[1] ?? 0));
+    window.__wp37MovementProbe = {
+      sawPlaying: false,
+      startedAt: null,
+      mid: null,
+      endedWithoutMid: false
     };
-  }, { id: groupId, territoryId: targetTerritory });
-  const midElapsedMs = Date.now() - beatStartedAt;
+    const observe = now => {
+      const probe = window.__wp37MovementProbe;
+      if (!probe || probe.mid || probe.endedWithoutMid) return;
+      const overlay = document.querySelector('.r3-movement-resolution-lock[data-phase="playing"]');
+      if (overlay) {
+        if (!probe.sawPlaying) {
+          probe.sawPlaying = true;
+          probe.startedAt = now;
+        }
+        const physicalEvidence = window.__r3FormationMiniatures;
+        const item = physicalEvidence?.pieces?.find(candidate => candidate.id === id);
+        if (item) {
+          const wholeJourney = frameDistance(origin, item.target);
+          const travelled = frameDistance(origin, item.current);
+          const remaining = frameDistance(item.current, item.target);
+          if (wholeJourney > 0.01 && travelled > 0.001 && remaining > 0.001) {
+            probe.mid = {
+              piece: { current: item.current, target: item.target, reducedMotion: physicalEvidence.reducedMotion },
+              turn: Number(document.querySelector('.turn-block strong')?.textContent?.trim()),
+              targetClass: document.querySelector(`.r3-terrain-territory-label[data-territory-id="${territoryId}"]`)?.getAttribute('class') ?? null,
+              status: overlay.querySelector('strong')?.textContent ?? null,
+              elapsedMs: probe.startedAt === null ? null : now - probe.startedAt,
+              wholeJourney,
+              travelled,
+              remaining
+            };
+            return;
+          }
+        }
+      } else if (probe.sawPlaying) {
+        probe.endedWithoutMid = true;
+        return;
+      }
+      window.requestAnimationFrame(observe);
+    };
+    window.requestAnimationFrame(observe);
+  }, { id: groupId, territoryId: targetTerritory, origin: beforePiece.current });
 
-  if (!midSnapshot.piece) throw new Error('Physical formation evidence disappeared during movement beat.');
-  if (!midSnapshot.overlayPresent || !midSnapshot.status?.includes('Movement resolution')) {
-    throw new Error(`Movement-resolution overlay was not present at ${midElapsedMs} ms.`);
+  await page.locator('.global-resolve').click();
+  await page.waitForFunction(() => Boolean(window.__wp37MovementProbe?.mid || window.__wp37MovementProbe?.endedWithoutMid), undefined, { timeout: 7_000 });
+  const movementProbe = await page.evaluate(() => window.__wp37MovementProbe);
+  const midSnapshot = movementProbe?.mid;
+
+  if (!midSnapshot) {
+    throw new Error(`Movement beat ended without an observable in-transit frame: ${JSON.stringify(movementProbe)}`);
   }
+  if (!midSnapshot.piece) throw new Error('Physical formation evidence disappeared during movement beat.');
+  if (!midSnapshot.status?.includes('Movement resolution')) throw new Error('Movement-resolution status was not presented during the in-transit frame.');
   if (midSnapshot.turn !== startTurn) throw new Error(`Command day advanced early during movement beat: ${midSnapshot.turn}.`);
   if (!midSnapshot.targetClass?.includes('enemy')) throw new Error('Target ownership changed before movement presentation completed.');
-  const wholeJourney = distance(beforePiece.current, midSnapshot.piece.target);
-  const travelled = distance(beforePiece.current, midSnapshot.piece.current);
-  const remaining = distance(midSnapshot.piece.current, midSnapshot.piece.target);
-  if (!(wholeJourney > 0.01 && travelled > 0.001 && remaining > 0.001)) {
-    throw new Error(`Formation did not show an in-progress invasion journey: whole=${wholeJourney}, travelled=${travelled}, remaining=${remaining}.`);
+  if (!(midSnapshot.wholeJourney > 0.01 && midSnapshot.travelled > 0.001 && midSnapshot.remaining > 0.001)) {
+    throw new Error(`Formation did not show an in-progress invasion journey: ${JSON.stringify(midSnapshot)}.`);
   }
 
-  await page.screenshot({ path: process.env.WP37_MID_SCREENSHOT ?? 'wp3-7-movement-mid.png', fullPage: true });
   await page.locator('.r3-movement-resolution-lock').waitFor({ state: 'detached', timeout: 6_000 });
   await page.waitForTimeout(150);
 
@@ -183,15 +210,7 @@ try {
   evidence = {
     startTurn,
     before: { piece: beforePiece, targetClass: beforeTargetClass },
-    mid: {
-      piece: midSnapshot.piece,
-      targetClass: midSnapshot.targetClass,
-      turn: midSnapshot.turn,
-      status: midSnapshot.status,
-      elapsedMs: midElapsedMs,
-      travelled,
-      remaining
-    },
+    mid: midSnapshot,
     after: { piece: afterPiece, targetClass: afterTargetClass, turn: afterTurn, autosaveTurn }
   };
 } catch (error) {
