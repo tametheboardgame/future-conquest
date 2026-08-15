@@ -1,110 +1,93 @@
-# R3-WP3.8A Landmark Cities Pass 1 - Model Design Lock
+# R3-WP3.8A Landmark Cities Pass 1 - Asset-Driven Model Design Lock
 
-Status: IMPLEMENTATION ACTIVE  
+Status: IMPLEMENTATION ACTIVE / V2 REWORK  
 Package: R3-WP3.8A  
 Cities: London, Paris, Brussels  
 Baseline: accepted R3-WP3.7 `main`
 
-## Purpose
+## Why WP3.8A changed
 
-Pass 1 establishes the reusable city-miniature visual language for WP3.8B-E. The approved visual direction is now explicitly landmark-first: each city should read immediately from one highly recognisable hero landmark, with accuracy of the hero landmark taking priority over generic city density.
+The first procedural implementation proved the geographic, LOD and performance architecture but failed the product-owner visual bar. More boxes, cylinders and cones made the landmarks more accurate without producing the detailed premium board-game-piece quality established by the approved concept renders.
 
-The approved art references created during visual review showed the intended hierarchy:
+WP3.8A is therefore reworked around **authored self-hosted 3D miniature assets**. The approved board-game-piece renders are now the visual specification rather than loose inspiration.
 
-- London should read first and unmistakably as Elizabeth Tower / Big Ben;
-- Paris should read first and unmistakably as the Eiffel Tower;
-- Brussels should read first and unmistakably as the Atomium.
+## Canonical visual targets
 
-Secondary architecture exists only to establish place and scale. It must not compete visually with the hero landmark.
+The approved visual review establishes these targets:
 
-All runtime models in this pass remain self-created procedural Three.js geometry. No third-party meshes, textures or runtime model hosting are used.
+- London: an ornate Elizabeth Tower / Big Ben and Palace of Westminster game-piece miniature, with strong Gothic relief, clock detail, pinnacles, a deliberate miniature base and restrained supporting scenery;
+- Paris: a detailed Eiffel Tower game-piece miniature with dense readable latticework, observation decks, Arc de Triomphe, a deliberate diorama base and restrained supporting scenery;
+- Brussels: a polished Atomium game-piece miniature with prominent metallic spheres, clean tube connections, structural supports, Town Hall/Gothic language and a deliberate miniature base.
 
-## Locked model rules
+Recognition remains important, but Selected/local quality must now also communicate **crafted miniature detail**. The target is closer to a premium strategy-board sculpt than to a low-poly map icon.
 
-- The authoritative `STRATEGIC_NODES` coordinates remain the only geographic anchor.
-- Terrain elevation and the existing world-layer clearance remain unchanged.
-- Each bespoke city has one dominant hero landmark which must survive at the widest useful scale.
-- Recognisable real-world proportions and structural features of that landmark take precedence over decorative city clutter.
-- Secondary landmarks should normally be limited to one smaller supporting structure.
-- Generic supporting building clusters should be omitted when they reduce landmark clarity.
-- Landmark proportions may still be exaggerated where required for board-game readability, but not in ways which destroy the real landmark's defining geometry.
-- Shared restrained stone, roof, metal and base materials remain preferable to city-specific texture assets.
-- Landmark geometry is presentation only and never becomes collision, ownership, territory or route authority.
-- Labels remain authoritative textual identification and must remain unobscured by the physical piece system.
-- Existing city/hub Layers controls continue to determine visibility.
-- Cities not yet covered by an accepted WP3.8 pass continue to use the existing generic city model.
+## Runtime architecture lock
 
-## Pass 1 hero models
+- The authoritative `STRATEGIC_NODES` coordinates remain the only geographic anchors.
+- MapLibre terrain elevation and the existing 22 m world-layer clearance remain unchanged.
+- The authored model is a child visual of the existing strategic-node root. It never owns longitude, latitude, territory control, collision, movement, route or save-state authority.
+- Authored Selected/local assets use self-hosted glTF/GLB-compatible delivery through the normal game build. No third-party runtime model hosting is permitted.
+- Asset source is committed in deterministic repository bundles and reconstructed during `npm run build` into ordinary files under `public/miniatures/wp3-8a/`.
+- Each generated asset receives build-time format validation and a SHA-256 manifest entry.
+- Detailed authored models are lazy-loaded only when their city is visible in Selected/local view.
+- Theatre and Campaign retain a cheap procedural fallback representation unless a later visual review demonstrates a need for authored lower-LOD assets.
+- Loading failure also retains the procedural fallback, so landmark art can never make the command map unusable.
+- Existing viewport culling remains mandatory. Off-screen detailed city models must not trigger unnecessary terrain work or rendering cost.
+- Existing city/hub Layers controls remain authoritative for presentation visibility.
 
-### London
+## Staged rollout
 
-Hero landmark:
-- Elizabeth Tower / Big Ben.
+The V2 migration is intentionally staged rather than switching all three cities in one unproven step.
 
-Accuracy requirements:
-- tall, narrow Gothic Revival stone shaft;
-- clearly enlarged square clock stage near the top;
-- four clock faces, one on each side of the tower;
-- ornamental cornice and open belfry language above the clocks;
-- steep pyramidal roof and narrow upper spire;
-- corner buttress/pinnacle detail at closer LODs.
+### Stage 1 - London end-to-end proof
 
-Secondary/supporting language:
-- Palace of Westminster retained as a low horizontal Gothic wing only;
-- no generic surrounding city blocks competing with the tower.
+London is the first runtime-authored model. Its Selected asset is committed, reconstructed by the build, loaded through Three.js `GLTFLoader`, attached beneath the London strategic-node root, and explicitly identified in browser evidence as `authored-gltf`.
 
-### Paris
+The initial authored London asset is deliberately much denser than the procedural predecessor, at approximately 3.3k authored faces. It includes the clock tower, four clock faces and hands, Gothic ribs/buttresses, roof/spire/weather-vane, a more substantial Westminster wing, repeated windows/pinnacles, supporting trees and a deliberate tiered game-piece base.
 
-Hero landmark:
-- Eiffel Tower.
+### Stage 2 - Paris
 
-Accuracy requirements:
-- four strongly flared legs at ground level;
-- legs converge progressively through the first and second platform levels;
-- clearly readable first, second and upper observation decks;
-- open lattice/bracing language rather than four near-vertical solid posts;
-- narrow upper crown and mast/antenna.
+Paris remains on the procedural fallback while its approved detailed asset completes the same build/runtime/performance path. The authored target is approximately 7.4k faces and emphasises much denser Eiffel latticework, multiple platform/railing levels, Arc de Triomphe, supporting urban forms/trees and a diorama base.
 
-Secondary/supporting language:
-- Arc de Triomphe retained as a much smaller secondary silhouette;
-- generic Haussmann blocks removed from Pass 1 so the Eiffel Tower remains dominant.
+### Stage 3 - Brussels
 
-### Brussels
+Brussels remains on the procedural fallback while its approved detailed asset completes the same path. The authored target is approximately 5.9k faces and emphasises prominent Atomium spheres, complete tube structure, trussed supports, Town Hall/Gothic detail, trees and an octagonal game-piece base.
 
-Hero landmark:
-- Atomium.
+WP3.8A is not complete until all three stages have passed browser/performance validation and received product-owner visual acceptance.
 
-Accuracy requirements:
-- nine metallic spheres representing the atoms of a body-centred cubic iron unit cell;
-- eight outer/corner spheres plus one central sphere;
-- twelve outer cube-edge connections plus eight centre-to-corner connections;
-- the cubic cell is rotated so one body diagonal reads vertically, producing the characteristic bottom-to-top Atomium composition;
-- reflective metallic material and visible structural support legs;
-- a narrow antenna above the upper sphere.
-
-Secondary/supporting language:
-- Brussels Town Hall / Grand-Place Gothic spire retained at deliberately smaller scale;
-- generic historic city blocks removed where they compete with the Atomium.
-
-## LOD lock for later passes
+## LOD rules
 
 Theatre:
-- retain the full defining hero-landmark silhouette and base;
-- suppress secondary landmarks and fine recognition detail where possible;
-- existing strategic-node importance rules still decide whether the city is shown.
+- cheap procedural city silhouette only;
+- existing strategic-node importance rules continue to decide visibility;
+- no authored high-detail asset fetch.
 
 Campaign:
-- hero landmark remains primary;
-- structural recognition detail becomes visible, such as London clock faces, Eiffel lattice bracing and Atomium support/antenna detail;
-- one secondary landmark may become visible if it does not interfere with the hero silhouette.
+- cheap procedural fallback only during the V2 rollout;
+- no authored high-detail asset fetch unless a later approved lower-LOD asset is added.
 
-Selected:
-- retain the complete Campaign silhouette;
-- permit small recognition details such as London finials and Paris antenna detail;
-- do not add geometry which materially changes the authoritative node anchor or label behaviour.
-
-Later WP3.8 passes should use the same hero-first hierarchy and the same LOD tagging mechanism unless measured visual or performance evidence justifies a separately documented change.
+Selected/local:
+- if an approved authored asset is available and the city is in the viewport, begin lazy loading;
+- retain the procedural fallback while loading;
+- swap to the authored glTF only after a successful load;
+- revert/retain fallback on failure without affecting the map or campaign;
+- cull the complete strategic-node root when outside the padded viewport.
 
 ## Performance and provenance boundary
 
-The models use reusable primitive geometry and shared materials. Pass 1 adds no runtime network requests, external model assets, texture downloads, gameplay state or save data. Browser/performance validation must compare against the accepted WP3.7 head before visual acceptance.
+The detailed miniature assets are self-created for Future Conquest from the approved project visual direction. Third-party game meshes are not copied and external runtime model/CDN dependencies are not introduced.
+
+Higher geometric detail is permitted only behind the lazy Selected-view boundary. Exact-head browser and terrain-performance evidence remains mandatory. A visual improvement is not accepted by weakening the existing performance budget.
+
+## Acceptance criteria
+
+WP3.8A V2 completes only when:
+
+- London, Paris and Brussels visibly approach the approved premium board-game-piece renders rather than the old primitive landmark approximations;
+- each city uses an authored self-hosted close-up asset at Selected/local view;
+- Theatre/Campaign remain inexpensive and readable;
+- loading/error fallback is deterministic and usable;
+- the authoritative `STRATEGIC_NODES` coordinates, terrain grounding and 22 m clearance are unchanged;
+- no gameplay, balance, save, route, territory or hidden-information authority changes;
+- exact-head production build, dedicated landmark browser gate, general terrain visual gate and performance gate are green;
+- final deployed visual evidence is accepted by the product owner.
