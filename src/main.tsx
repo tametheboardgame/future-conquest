@@ -31,8 +31,10 @@ import './r3-map-hierarchy.css';
 import './r3-terrain-prototype.css';
 import './responsive-command-fit.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
+import { installR3MapVisualGrading } from './presentation/r3-map-visual-grading';
 
 installMapTrackpadGuard();
+installR3MapVisualGrading();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
