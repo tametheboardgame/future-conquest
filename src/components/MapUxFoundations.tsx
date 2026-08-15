@@ -29,22 +29,13 @@ function samePosition(current: TogglePosition | null, next: TogglePosition): boo
   return Boolean(current && Math.abs(current.top - next.top) < 0.5 && Math.abs(current.left - next.left) < 0.5);
 }
 
-function clearAppliedLayout() {
-  mapWorkspace()?.classList.remove('wp39a-sidebar-collapsed');
-  const panel = mapContextPanel();
-  if (!panel) return;
-  panel.classList.remove('wp39a-sidebar-collapsed');
-  panel.inert = false;
-  panel.removeAttribute('aria-hidden');
-}
-
 export function MapUxFoundations({ active }: Props) {
   // Deliberately session-only: leaving/re-entering views retains the player's
   // preference, while a fresh browser session starts with the command panel open.
   const [collapsed, setCollapsed] = useState(false);
   const [available, setAvailable] = useState(false);
   const [togglePosition, setTogglePosition] = useState<TogglePosition | null>(null);
-  const settleTimerRef = useRef<number>();
+  const settleTimerRef = useRef<number | undefined>(undefined);
 
   const resizeRenderedMap = useCallback(() => {
     const resize = () => {
@@ -109,14 +100,12 @@ export function MapUxFoundations({ active }: Props) {
       media.removeEventListener('change', onViewportChange);
       window.removeEventListener('resize', reconcileLayout);
       if (settleTimerRef.current !== undefined) window.clearTimeout(settleTimerRef.current);
-      clearAppliedLayout();
     };
   }, [reconcileLayout, resizeRenderedMap]);
 
   useEffect(() => {
-    if (!active) return;
     reconcileLayout();
-    resizeRenderedMap();
+    if (active) resizeRenderedMap();
   }, [active, collapsed, reconcileLayout, resizeRenderedMap]);
 
   if (!available || !togglePosition) return null;
