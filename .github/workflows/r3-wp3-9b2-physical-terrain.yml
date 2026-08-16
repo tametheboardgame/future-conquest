@@ -1,0 +1,63 @@
+name: R3 WP3.9B2 physical terrain colour gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/presentation/r3-physical-terrain-colour.ts'
+      - 'src/presentation/r3-map-visual-grading.ts'
+      - 'src/assets/r3-wp3-9b2-physical-terrain/**'
+      - 'public/generated/r3-terrain/europe-physical-colour-v1.json'
+      - 'scripts/maps/materialise-r3-physical-terrain-texture.mjs'
+      - 'scripts/probe-r3-wp3-9b2-physical-terrain.mjs'
+      - 'tests/r3-wp3-9b2-physical-terrain.test.cjs'
+      - 'package.json'
+      - '.github/workflows/r3-wp3-9b2-physical-terrain.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  physical-terrain-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run WP3.9B and B2 source contracts
+        run: |
+          node --test tests/r3-wp3-9b-map-grading.test.cjs
+          node --test tests/r3-wp3-9b2-physical-terrain.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Verify generated physical terrain asset
+        run: |
+          test -s public/generated/r3-terrain/europe-physical-colour-v1.webp
+          test "$(stat -c%s public/generated/r3-terrain/europe-physical-colour-v1.webp)" -eq 24672
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp39b2-preview.log 2>&1 &
+      - name: Probe physical terrain and strategic readability
+        run: node scripts/probe-r3-wp3-9b2-physical-terrain.mjs
+      - name: Upload WP3.9B2 visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9b2-physical-terrain-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-9b2
+            /tmp/r3-wp39b2-preview.log
+          if-no-files-found: warn
