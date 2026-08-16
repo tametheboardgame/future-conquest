@@ -24,6 +24,7 @@ async function readPaintEvidence() {
     return {
       grading: window.__r3MapVisualGrading,
       hostGrade: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-visual-grading'),
+      detailedLandSourceLoaded: map.isSourceLoaded('r3-wp2b-land'),
       sea: map.getPaintProperty('r3-wp2b-sea', 'background-color'),
       land: map.getPaintProperty('r3-wp2b-land-wash', 'fill-color'),
       landOpacity: map.getPaintProperty('r3-wp2b-land-wash', 'fill-opacity'),
@@ -61,6 +62,13 @@ function assertPaintEvidence(evidence) {
   if (!evidence.grading?.applied || evidence.grading.profileId !== 'clean-border-v2') {
     throw new Error(`grading runtime evidence missing: ${JSON.stringify(evidence.grading)}`);
   }
+  if (evidence.grading.coastlineGeometry?.status !== '50m-static') {
+    throw new Error(`high-detail coastline was not promoted: ${JSON.stringify(evidence.grading.coastlineGeometry)}`);
+  }
+  if (!evidence.grading.coastlineGeometry.sourceUrl?.includes('generated/r3-terrain/europe-land-mask-50m.geojson')) {
+    throw new Error(`unexpected detailed coastline URL: ${evidence.grading.coastlineGeometry.sourceUrl}`);
+  }
+  if (!evidence.detailedLandSourceLoaded) throw new Error('promoted 50m MapLibre land source is not loaded');
   if (evidence.hostGrade !== 'clean-border-v2') throw new Error(`host grading marker missing: ${evidence.hostGrade}`);
   if (evidence.sea !== '#19313a') throw new Error(`sea grade mismatch: ${evidence.sea}`);
   if (evidence.land !== '#777a72') throw new Error(`land grade mismatch: ${evidence.land}`);
@@ -100,7 +108,9 @@ try {
     document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready'
     && window.__r3MapVisualGrading?.applied === true
     && window.__r3MapVisualGrading?.profileId === 'clean-border-v2'
+    && window.__r3MapVisualGrading?.coastlineGeometry?.status === '50m-static'
     && Boolean(window.__r3TerrainMap)
+    && window.__r3TerrainMap.isSourceLoaded('r3-wp2b-land')
   ), null, { timeout: 45000 });
 
   const collapse = page.getByRole('button', { name: 'Collapse command sidebar' });
@@ -112,7 +122,7 @@ try {
   const paint = await readPaintEvidence();
   assertPaintEvidence(paint);
 
-  const evidence = { schemaVersion: 2, paint, captures: {} };
+  const evidence = { schemaVersion: 3, paint, captures: {} };
 
   await jump([6.5, 51.0], 4.35, 43, -5);
   await host.screenshot({ path: `${outputDir}/theatre-western-central.png` });
