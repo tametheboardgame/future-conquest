@@ -9,7 +9,8 @@ const materialiser = fs.readFileSync('scripts/maps/materialise-r3-physical-terra
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const metadata = JSON.parse(fs.readFileSync('public/generated/r3-terrain/europe-physical-colour-v1.json', 'utf8'));
 const sourceDir = 'src/assets/r3-wp3-9b2-physical-terrain';
-const expectedSha = 'b4eed87ed7b4eb4989f365d4d2b1565038e07d798e6ea602a06ab4466a34e4ef';
+const expectedBytes = 37032;
+const expectedSha = '35026f0b6366ae2f2bbcadce369431cc671e6f2097f61cdcede1da27739e7f56';
 
 function decodeSourceAsset() {
   const parts = fs.readdirSync(sourceDir).filter(name => /^part-\d{2}\.b64$/.test(name)).sort();
@@ -18,29 +19,33 @@ function decodeSourceAsset() {
 }
 
 test('WP3.9B2 ships deterministic self-hosted physical-colour source with provenance', () => {
-  assert.equal(metadata.id, 'r3-wp3-9b2-natural-earth-physical-colour-v1');
-  assert.equal(metadata.sourceLicense, 'public domain');
+  assert.equal(metadata.id, 'r3-wp3-9b2-nasa-blue-marble-june-v1');
+  assert.equal(metadata.source, 'NASA Blue Marble: Next Generation, June 2004 base map');
+  assert.match(metadata.sourceUrl, /^https:\/\/assets\.science\.nasa\.gov\//);
   assert.deepEqual(metadata.bounds, [-30, 28, 55, 76]);
   assert.deepEqual(metadata.dimensions, [640, 685]);
   assert.equal(metadata.deliveryProjection, 'Web Mercator latitude-warped image source');
-  assert.equal(metadata.runtimeBytes, 24672);
+  assert.equal(metadata.buildEncoding, 'five base64 chunks materialised locally');
+  assert.equal(metadata.runtimeBytes, expectedBytes);
   assert.equal(metadata.sha256, expectedSha);
   assert.equal(metadata.normalBuildDependency, false);
 
   const image = decodeSourceAsset();
-  assert.equal(image.length, 24672);
+  assert.equal(image.length, expectedBytes);
   assert.equal(crypto.createHash('sha256').update(image).digest('hex'), expectedSha);
   assert.equal(image.subarray(0, 4).toString('ascii'), 'RIFF');
   assert.equal(image.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.equal(image.readUInt32LE(4) + 8, image.length);
 });
 
 test('normal dev/build materialises the compact texture locally with no upstream network dependency', () => {
   assert.match(packageJson.scripts['build:r3-physical-terrain'], /materialise-r3-physical-terrain-texture\.mjs/);
   assert.match(packageJson.scripts.predev, /build:r3-physical-terrain/);
   assert.match(packageJson.scripts.prebuild, /build:r3-physical-terrain/);
-  assert.match(materialiser, /expectedBytes = 24672/);
+  assert.match(materialiser, /expectedBytes = 37032/);
   assert.match(materialiser, new RegExp(expectedSha));
   assert.match(materialiser, /parts\.length !== 5/);
+  assert.match(materialiser, /readUInt32LE\(4\)/);
   assert.doesNotMatch(materialiser, /https?:\/\//);
 });
 
