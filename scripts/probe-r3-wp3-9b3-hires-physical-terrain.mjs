@@ -11,7 +11,11 @@ const localTileResponses = new Map();
 page.on('response', response => {
   const url = response.url();
   if (!url.includes('/generated/r3-terrain/physical-colour-tiles/7/')) return;
-  localTileResponses.set(url, Number(response.headers()['content-length'] ?? 0));
+  localTileResponses.set(url, {
+    ok: response.ok(),
+    status: response.status(),
+    bytes: Number(response.headers()['content-length'] ?? 0)
+  });
 });
 
 async function jump(center, zoom, pitch, bearing = 0) {
@@ -23,13 +27,26 @@ async function jump(center, zoom, pitch, bearing = 0) {
   await page.waitForTimeout(750);
 }
 
-async function waitForLocalTiles() {
+async function waitForNewLocalTileResponses(previousUrls) {
   await page.waitForFunction(() => {
     const map = window.__r3TerrainMap;
-    return Boolean(map?.getSource('r3-wp3-9b3-physical-colour-local'))
-      && map.isSourceLoaded('r3-wp3-9b3-physical-colour-local');
+    return window.__r3PhysicalTerrainColour?.localDetailStatus === 'ready'
+      && Boolean(map?.getSource('r3-wp3-9b3-physical-colour-local'))
+      && Boolean(map?.getLayer('r3-wp3-9b3-physical-colour-local'));
   }, null, { timeout: 15000 });
-  await page.waitForFunction(() => performance.getEntriesByType('resource').some(entry => entry.name.includes('/generated/r3-terrain/physical-colour-tiles/7/')), null, { timeout: 10000 });
+
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    const freshSuccessful = [...localTileResponses.entries()].filter(([url, response]) => !previousUrls.has(url) && response.ok);
+    if (freshSuccessful.length > 0) {
+      // Allow the successfully decoded raster a bounded moment to reach paint.
+      await page.waitForTimeout(500);
+      return freshSuccessful;
+    }
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error(`local zoom produced no new successful WP3.9B3 tile responses: ${JSON.stringify([...localTileResponses.entries()])}`);
 }
 
 async function waitForCities(ids) {
@@ -60,9 +77,9 @@ try {
     && window.__r3MapVisualGrading?.applied === true
     && window.__r3MapVisualGrading?.coastlineGeometry?.status === '50m-static'
     && window.__r3PhysicalTerrainColour?.status === 'ready'
-    && window.__r3PhysicalTerrainColour?.localDetailStatus === 'ready'
+    && window.__r3PhysicalTerrainColour?.localDetailStatus === 'deferred'
     && window.__r3TerrainMap?.isSourceLoaded('r3-wp3-9b2-physical-colour') === true
-    && Boolean(window.__r3TerrainMap?.getSource('r3-wp3-9b3-physical-colour-local'))
+    && !window.__r3TerrainMap?.getSource('r3-wp3-9b3-physical-colour-local')
   ), null, { timeout: 45000 });
 
   const collapse = page.getByRole('button', { name: 'Collapse command sidebar' });
@@ -71,22 +88,18 @@ try {
     await page.waitForTimeout(250);
   }
 
-  const paint = await page.evaluate(() => {
+  const initialPaint = await page.evaluate(() => {
     const map = window.__r3TerrainMap;
     if (!map) throw new Error('terrain map diagnostic unavailable');
-    const localLayer = map.getLayer('r3-wp3-9b3-physical-colour-local');
     return {
       physical: window.__r3PhysicalTerrainColour,
       grading: window.__r3MapVisualGrading,
       hostPhysical: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-physical-terrain'),
       broadSourceLoaded: map.isSourceLoaded('r3-wp3-9b2-physical-colour'),
       broadLayerType: map.getLayer('r3-wp3-9b2-physical-colour')?.type,
-      localLayerType: localLayer?.type,
-      localLayerMinZoom: localLayer?.minzoom,
+      localSourceInitiallyPresent: Boolean(map.getSource('r3-wp3-9b3-physical-colour-local')),
+      localLayerInitiallyPresent: Boolean(map.getLayer('r3-wp3-9b3-physical-colour-local')),
       broadOpacity: map.getPaintProperty('r3-wp3-9b2-physical-colour', 'raster-opacity'),
-      localOpacity: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-opacity'),
-      localSaturation: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-saturation'),
-      localContrast: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-contrast'),
       hillshadeExaggeration: map.getPaintProperty('r3-wp2b-hillshade', 'hillshade-exaggeration'),
       territoryFillOpacity: map.getPaintProperty('campaign-territories-fill', 'fill-opacity'),
       stateWashOpacity: map.getPaintProperty('campaign-territory-state-wash', 'fill-opacity'),
@@ -97,17 +110,16 @@ try {
     };
   });
 
-  if (paint.physical?.status !== 'ready' || paint.physical?.profileId !== 'physical-colour-v3-local-tiles') throw new Error(`physical terrain evidence missing: ${JSON.stringify(paint.physical)}`);
-  if (paint.physical?.localDetailStatus !== 'ready') throw new Error(`local detail unavailable: ${JSON.stringify(paint.physical)}`);
-  if (paint.hostPhysical !== 'physical-colour-v3-local-tiles' || !paint.broadSourceLoaded) throw new Error(`broad physical base did not settle: ${JSON.stringify(paint)}`);
-  if (paint.broadLayerType !== 'raster' || paint.localLayerType !== 'raster' || paint.localLayerMinZoom !== 7) throw new Error(`dual LOD layers mismatch: ${JSON.stringify(paint)}`);
-  if (paint.broadOpacity !== 0.98 || paint.localOpacity !== 0.98 || paint.localSaturation !== 0.1 || paint.localContrast !== 0.08) throw new Error(`physical raster paint mismatch: ${JSON.stringify(paint)}`);
-  if (paint.hillshadeExaggeration !== 0.36) throw new Error(`hillshade mismatch: ${paint.hillshadeExaggeration}`);
-  if (paint.territoryFillOpacity !== 0 || paint.stateWashOpacity !== 0 || paint.administrativeBorderOpacity !== 0) throw new Error(`political wash regressed: ${JSON.stringify(paint)}`);
-  if (!containsControllerColours(paint.controlBorderColour) || !containsControllerColours(paint.controlGlowColour)) throw new Error(`controller colours regressed: ${JSON.stringify(paint)}`);
-  if (paint.frontColour !== '#ffad66') throw new Error(`front colour regressed: ${paint.frontColour}`);
+  if (initialPaint.physical?.status !== 'ready' || initialPaint.physical?.profileId !== 'physical-colour-v3-local-tiles') throw new Error(`physical terrain evidence missing: ${JSON.stringify(initialPaint.physical)}`);
+  if (initialPaint.physical?.localDetailStatus !== 'deferred') throw new Error(`local detail was not deferred at Campaign LOD: ${JSON.stringify(initialPaint.physical)}`);
+  if (initialPaint.localSourceInitiallyPresent || initialPaint.localLayerInitiallyPresent) throw new Error(`local-detail raster was registered before local zoom: ${JSON.stringify(initialPaint)}`);
+  if (initialPaint.hostPhysical !== 'physical-colour-v3-local-tiles' || !initialPaint.broadSourceLoaded || initialPaint.broadLayerType !== 'raster') throw new Error(`broad physical base did not settle: ${JSON.stringify(initialPaint)}`);
+  if (initialPaint.broadOpacity !== 0.98 || initialPaint.hillshadeExaggeration !== 0.36) throw new Error(`broad physical paint mismatch: ${JSON.stringify(initialPaint)}`);
+  if (initialPaint.territoryFillOpacity !== 0 || initialPaint.stateWashOpacity !== 0 || initialPaint.administrativeBorderOpacity !== 0) throw new Error(`political wash regressed: ${JSON.stringify(initialPaint)}`);
+  if (!containsControllerColours(initialPaint.controlBorderColour) || !containsControllerColours(initialPaint.controlGlowColour)) throw new Error(`controller colours regressed: ${JSON.stringify(initialPaint)}`);
+  if (initialPaint.frontColour !== '#ffad66') throw new Error(`front colour regressed: ${initialPaint.frontColour}`);
 
-  const evidence = { schemaVersion: 4, paint, captures: {} };
+  const evidence = { schemaVersion: 5, initialPaint, captures: {} };
 
   await jump([6.5, 51.0], 4.35, 43, -5);
   await host.screenshot({ path: `${outputDir}/theatre-western-central.png` });
@@ -123,31 +135,48 @@ try {
   await host.screenshot({ path: `${outputDir}/campaign-central-europe.png` });
   evidence.captures.centralEurope = { center: [9.5, 50.1], zoom: 5.5, pitch: 50, bearing: -6 };
 
-  const requestsBeforeLocal = localTileResponses.size;
+  const lowlandBefore = new Set(localTileResponses.keys());
   await jump([8.9, 50.25], 7.7, 56, -15);
-  await waitForLocalTiles();
-  await page.waitForTimeout(300);
-  if (localTileResponses.size <= requestsBeforeLocal) throw new Error('local zoom did not request any WP3.9B3 physical-colour tiles');
+  const lowlandResponses = await waitForNewLocalTileResponses(lowlandBefore);
+
+  const localPaint = await page.evaluate(() => {
+    const map = window.__r3TerrainMap;
+    if (!map) throw new Error('terrain map diagnostic unavailable');
+    const localLayer = map.getLayer('r3-wp3-9b3-physical-colour-local');
+    return {
+      physical: window.__r3PhysicalTerrainColour,
+      sourcePresent: Boolean(map.getSource('r3-wp3-9b3-physical-colour-local')),
+      layerType: localLayer?.type,
+      layerMinZoom: localLayer?.minzoom,
+      opacity: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-opacity'),
+      saturation: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-saturation'),
+      contrast: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-contrast')
+    };
+  });
+  if (localPaint.physical?.localDetailStatus !== 'ready' || !localPaint.sourcePresent || localPaint.layerType !== 'raster' || localPaint.layerMinZoom !== 7) throw new Error(`local detail did not activate correctly: ${JSON.stringify(localPaint)}`);
+  if (localPaint.opacity !== 0.98 || localPaint.saturation !== 0.1 || localPaint.contrast !== 0.08) throw new Error(`local raster paint mismatch: ${JSON.stringify(localPaint)}`);
+
   await host.screenshot({ path: `${outputDir}/selected-central-lowlands.png` });
-  evidence.captures.lowlandsSelected = { center: [8.9, 50.25], zoom: 7.7, pitch: 56, bearing: -15 };
+  evidence.captures.lowlandsSelected = { center: [8.9, 50.25], zoom: 7.7, pitch: 56, bearing: -15, successfulTileResponses: lowlandResponses.length };
 
   await jump([8.35, 47.15], 5.4, 53, -7);
   await waitForCities(['N-BERN', 'N-CHUR', 'N-INNSBRUCK']);
   await host.screenshot({ path: `${outputDir}/campaign-alps.png` });
   evidence.captures.alpsCampaign = { center: [8.35, 47.15], zoom: 5.4, pitch: 53, bearing: -7 };
 
+  const alpsBefore = new Set(localTileResponses.keys());
   await jump([8.55, 47.05], 7.7, 56, -15);
-  await waitForLocalTiles();
-  await page.waitForTimeout(300);
+  const alpsResponses = await waitForNewLocalTileResponses(alpsBefore);
   await host.screenshot({ path: `${outputDir}/selected-alps.png` });
-  evidence.captures.alpsSelected = { center: [8.55, 47.05], zoom: 7.7, pitch: 56, bearing: -15 };
+  evidence.captures.alpsSelected = { center: [8.55, 47.05], zoom: 7.7, pitch: 56, bearing: -15, successfulTileResponses: alpsResponses.length };
 
   const formationEvidence = await page.evaluate(() => window.__r3FormationMiniatures);
   if (!formationEvidence?.pieces.some(piece => piece.visible)) throw new Error('friendly physical formation evidence is not visible');
   evidence.visibleFormationCount = formationEvidence.pieces.filter(piece => piece.visible).length;
   evidence.localTileRequests = localTileResponses.size;
-  evidence.localTileDeclaredBytes = [...localTileResponses.values()].reduce((sum, bytes) => sum + bytes, 0);
-  if (evidence.localTileRequests < 1) throw new Error('no local-detail tile request evidence captured');
+  evidence.localTileSuccessfulRequests = [...localTileResponses.values()].filter(response => response.ok).length;
+  evidence.localTileDeclaredBytes = [...localTileResponses.values()].reduce((sum, response) => sum + response.bytes, 0);
+  if (evidence.localTileSuccessfulRequests < 1) throw new Error('no successful local-detail tile response evidence captured');
 
   fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(JSON.stringify(evidence, null, 2));
