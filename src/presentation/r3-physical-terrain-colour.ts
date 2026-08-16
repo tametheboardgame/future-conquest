@@ -1,9 +1,9 @@
 import type { Map } from 'maplibre-gl';
 
-export const R3_PHYSICAL_TERRAIN_PROFILE_ID = 'physical-colour-v1';
-export const R3_PHYSICAL_TERRAIN_SOURCE_ID = 'r3-wp3-9b2-physical-colour';
-export const R3_PHYSICAL_TERRAIN_LAYER_ID = 'r3-wp3-9b2-physical-colour';
-export const R3_PHYSICAL_TERRAIN_ASSET_PATH = 'generated/r3-terrain/europe-physical-colour-v1.webp';
+export const R3_PHYSICAL_TERRAIN_PROFILE_ID = 'physical-colour-v2-hires';
+export const R3_PHYSICAL_TERRAIN_SOURCE_ID = 'r3-wp3-9b3-physical-colour';
+export const R3_PHYSICAL_TERRAIN_LAYER_ID = 'r3-wp3-9b3-physical-colour';
+export const R3_PHYSICAL_TERRAIN_ASSET_PATH = 'generated/r3-terrain/europe-physical-colour-v2.webp';
 export const R3_PHYSICAL_TERRAIN_BOUNDS = [-30, 28, 55, 76] as const;
 
 export type R3PhysicalTerrainColourEvidence = {
@@ -42,7 +42,7 @@ function writeEvidence(
     sourceUrl: assetUrl(),
     bounds: R3_PHYSICAL_TERRAIN_BOUNDS,
     rasterOpacity: 0.98,
-    hillshadeExaggeration: 0.40,
+    hillshadeExaggeration: 0.36,
     ...(failureReason ? { failureReason } : {})
   };
 }
@@ -62,9 +62,9 @@ function markReadyWhenLoaded(map: Map): void {
 }
 
 /**
- * R3-WP3.9B2 presentation-only physical-colour layer.
+ * R3-WP3.9B3 presentation-only high-resolution physical-colour layer.
  *
- * The self-hosted Natural Earth-derived texture supplies low-frequency
+ * The self-hosted NASA Blue Marble-derived 2048px texture supplies detailed
  * vegetation/farmland/rock/water colour. Copernicus GLO-30 remains the actual
  * 3D terrain/elevation authority, and strategic ownership remains in the
  * existing border/front overlay system.
@@ -108,8 +108,8 @@ export function installR3PhysicalTerrainColour(map: Map): void {
         }, 'r3-wp2b-hillshade');
       }
 
-      // Preserve Copernicus relief while allowing the physical colour material
-      // to remain visibly green/brown/rocky instead of being muddied by shade.
+      // Preserve Copernicus relief while allowing high-resolution physical
+      // material colour to stay readable rather than being muddied by shade.
       map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-exaggeration', 0.36);
       map.triggerRepaint();
       markReadyWhenLoaded(map);
