@@ -1,4 +1,4 @@
-import type { Map } from 'maplibre-gl';
+import type { GeoJSONSource, Map } from 'maplibre-gl';
 
 export const R3_MAP_VISUAL_GRADING_PROFILE_ID = 'clean-border-v2';
 
@@ -12,7 +12,8 @@ export const R3_MAP_VISUAL_GRADING = {
   coastlineOpacity: 0.13,
   friendlyBorder: '#76f2e1',
   enemyBorder: '#ff776f',
-  controlGlowLayerId: 'campaign-control-border-glow'
+  controlGlowLayerId: 'campaign-control-border-glow',
+  detailedLandMaskPath: 'generated/r3-terrain/europe-land-mask-50m.geojson'
 } as const;
 
 export type R3MapVisualGradingEvidence = {
@@ -35,6 +36,10 @@ export type R3MapVisualGradingEvidence = {
     stateWashOpacity: number;
     glowLayerId: string;
   };
+  coastlineGeometry: {
+    status: 'loading' | '50m-static' | '110m-fallback';
+    sourceUrl: string;
+  };
 };
 
 declare global {
@@ -47,6 +52,55 @@ declare global {
 const gradedMaps = new WeakSet<Map>();
 let observer: MutationObserver | undefined;
 let applyFrame: number | undefined;
+let detailedLandMaskPromise: Promise<unknown> | undefined;
+
+const detailedLandMaskUrl = () => `${import.meta.env.BASE_URL}${R3_MAP_VISUAL_GRADING.detailedLandMaskPath}`;
+
+function loadDetailedLandMask(): Promise<unknown> {
+  detailedLandMaskPromise ??= fetch(detailedLandMaskUrl(), { cache: 'default' })
+    .then(response => {
+      if (!response.ok) throw new Error(`detailed land mask returned ${response.status}`);
+      return response.json();
+    })
+    .catch(error => {
+      detailedLandMaskPromise = undefined;
+      throw error;
+    });
+  return detailedLandMaskPromise;
+}
+
+function setCoastlineGeometryStatus(status: R3MapVisualGradingEvidence['coastlineGeometry']['status']) {
+  if (!window.__r3MapVisualGrading) return;
+  window.__r3MapVisualGrading = {
+    ...window.__r3MapVisualGrading,
+    coastlineGeometry: {
+      status,
+      sourceUrl: detailedLandMaskUrl()
+    }
+  };
+}
+
+function promoteDetailedLandMask(map: Map) {
+  const landSource = map.getSource('r3-wp2b-land') as GeoJSONSource | undefined;
+  if (!landSource) {
+    setCoastlineGeometryStatus('110m-fallback');
+    return;
+  }
+
+  void loadDetailedLandMask()
+    .then(data => {
+      if (!gradedMaps.has(map)) return;
+      landSource.setData(data as Parameters<GeoJSONSource['setData']>[0]);
+      setCoastlineGeometryStatus('50m-static');
+      map.triggerRepaint();
+    })
+    .catch(() => {
+      // The committed 110m GeoJSON already present in the MapLibre source is a
+      // deliberate graceful fallback. A missing optional refinement asset must
+      // not blank the terrain or fail the command map.
+      setCoastlineGeometryStatus('110m-fallback');
+    });
+}
 
 function applyMapVisualGrading(map: Map): boolean {
   if (!map.getLayer('r3-wp2b-land-wash') || !map.getLayer('r3-wp2b-hillshade')) return false;
@@ -124,6 +178,10 @@ function applyMapVisualGrading(map: Map): boolean {
       territoryFillOpacity: 0,
       stateWashOpacity: 0,
       glowLayerId: R3_MAP_VISUAL_GRADING.controlGlowLayerId
+    },
+    coastlineGeometry: {
+      status: 'loading',
+      sourceUrl: detailedLandMaskUrl()
     }
   };
   map.triggerRepaint();
@@ -139,7 +197,10 @@ function scheduleApply() {
 
     const finish = () => {
       if (gradedMaps.has(map)) return;
-      if (applyMapVisualGrading(map)) gradedMaps.add(map);
+      if (applyMapVisualGrading(map)) {
+        gradedMaps.add(map);
+        promoteDetailedLandMask(map);
+      }
     };
 
     if (map.isStyleLoaded()) finish();
@@ -153,7 +214,9 @@ function scheduleApply() {
  * Candidate v2 removes broad political colouring from the terrain. The DEM is
  * presented on one opaque neutral board surface, while territory ownership is
  * carried by a crisp controller-coloured border with a restrained luminous
- * underglow. Operational state remains on dedicated outlines/fronts.
+ * underglow. The higher-detail coastline is delivered as a static MapLibre
+ * GeoJSON refinement so it does not inflate the lazy terrain JavaScript chunk.
+ * Operational state remains on dedicated outlines/fronts.
  */
 export function installR3MapVisualGrading(): void {
   scheduleApply();
