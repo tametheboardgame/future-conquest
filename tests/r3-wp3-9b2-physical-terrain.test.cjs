@@ -86,26 +86,30 @@ test('normal dev/build remains network-free and materialises only the tiny broad
   assert.doesNotMatch(materialiser, /https?:\/\//);
 });
 
-test('B3 keeps Campaign/Theatre on the B2 path and lazily registers z7 local raster detail', () => {
+test('B3 keeps Campaign/Theatre on B2 and warms 2x z7 raster during the Selected transition', () => {
   assert.match(physical, /R3_PHYSICAL_TERRAIN_PROFILE_ID = 'physical-colour-v3-local-tiles'/);
   assert.match(physical, /europe-physical-colour-v1\.webp/);
   assert.match(physical, /physical-colour-tiles\/\{z\}\/\{x\}\/\{y\}\.webp/);
-  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM = 7/);
+  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM = 7/);
+  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM = 6/);
+  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM = 5\.6/);
+  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE = 256/);
+  assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_ENCODED_TILE_SIZE = 512/);
   assert.match(physical, /localDetailStatus: 'deferred' \| 'checking' \| 'ready' \| 'fallback'/);
   assert.match(physical, /writeEvidence\('checking', 'deferred'\)/);
-  assert.match(physical, /if \(map\.getZoom\(\) < R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM\) return/);
+  assert.match(physical, /if \(map\.getZoom\(\) < R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM\) return/);
+  assert.match(physical, /map\.on\('zoom', activate\)/);
   assert.match(physical, /map\.on\('zoomend', activate\)/);
-  assert.match(physical, /map\.on\('moveend', activate\)/);
-  assert.match(physical, /fetch\(localManifestUrl\(\), \{ method: 'HEAD', cache: 'default' \}\)/);
   assert.match(physical, /addLocalDetailTiles\(map\)/);
   assert.match(physical, /type: 'image'/);
   assert.match(physical, /type: 'raster'/);
-  assert.match(physical, /tileSize: 512/);
-  assert.match(physical, /minzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM/);
-  assert.match(physical, /maxzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM/);
+  assert.match(physical, /tileSize: R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE/);
+  assert.match(physical, /minzoom: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM/);
+  assert.match(physical, /maxzoom: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM/);
+  assert.match(physical, /minzoom: R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM/);
   assert.match(physical, /map\.addLayer\([\s\S]*?'r3-wp2b-hillshade'\)/);
   assert.match(physical, /hillshade-exaggeration', 0\.36/);
-  assert.doesNotMatch(physical, /Promise\.all\(\[\s*fetch\(assetUrl\(\)[\s\S]*localManifestUrl/);
+  assert.doesNotMatch(physical, /localManifestUrl/);
   assert.doesNotMatch(physical, /europe-physical-colour-v2\.webp/);
 });
 
