@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   generate:
@@ -42,57 +42,34 @@ jobs:
             artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json
           test -s artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp
           test "$(stat -c%s artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp)" -lt 3000000
-      - name: Verify authored dimensions and provenance
-        run: |
-          python - <<'PY'
-          import json
-          from PIL import Image
-          metadata = json.load(open('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json', encoding='utf-8'))
-          image = Image.open('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp')
-          assert image.size == (2048, 2192), image.size
-          assert metadata['dimensions'] == [2048, 2192]
-          assert metadata['sourceResolution'].startswith('2 km/pixel')
-          assert metadata['runtimeBytes'] == 396994, metadata['runtimeBytes']
-          assert metadata['sha256'] == 'f6257502818ac444c64fc94897f9fcfecfddd3e5525f00880a06b48e49577af4'
-          print(metadata)
-          PY
-      - name: Package deterministic runtime source
-        if: github.event_name == 'pull_request'
+      - name: Verify authored asset matches committed runtime contract
         run: |
           python - <<'PY'
           import base64
+          import hashlib
           import json
-          import math
           from pathlib import Path
+          from PIL import Image
 
+          metadata = json.load(open('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json', encoding='utf-8'))
           image_path = Path('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp')
-          metadata_path = Path('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json')
-          source_dir = Path('src/assets/r3-wp3-9b3-physical-terrain')
-          committed_metadata = Path('public/generated/r3-terrain/europe-physical-colour-v2.json')
+          image = Image.open(image_path)
+          payload = image_path.read_bytes()
+          committed = json.load(open('public/generated/r3-terrain/europe-physical-colour-v2.json', encoding='utf-8'))
+          parts = sorted(Path('src/assets/r3-wp3-9b3-physical-terrain').glob('part-*.b64'))
+          packaged = base64.b64decode(''.join(part.read_text(encoding='utf-8').strip() for part in parts))
 
-          encoded = base64.b64encode(image_path.read_bytes()).decode('ascii')
-          chunk_size = math.ceil(len(encoded) / 4 / 4) * 4
-          parts = [encoded[offset:offset + chunk_size] for offset in range(0, len(encoded), chunk_size)]
-          assert len(parts) == 4, len(parts)
-
-          source_dir.mkdir(parents=True, exist_ok=True)
-          for existing in source_dir.glob('part-*.b64'):
-              existing.unlink()
-          for index, part in enumerate(parts, start=1):
-              (source_dir / f'part-{index:02}.b64').write_text(part + '\n', encoding='utf-8')
-
-          metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
-          metadata['buildEncoding'] = 'four base64 chunks materialised locally'
-          committed_metadata.parent.mkdir(parents=True, exist_ok=True)
-          committed_metadata.write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
+          assert image.size == (2048, 2192), image.size
+          assert metadata['dimensions'] == [2048, 2192]
+          assert metadata['sourceResolution'].startswith('2 km/pixel')
+          assert len(payload) == 396994, len(payload)
+          assert hashlib.sha256(payload).hexdigest() == 'f6257502818ac444c64fc94897f9fcfecfddd3e5525f00880a06b48e49577af4'
+          assert committed['runtimeBytes'] == len(payload)
+          assert committed['sha256'] == hashlib.sha256(payload).hexdigest()
+          assert len(parts) == 4
+          assert packaged == payload
+          print(committed)
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/assets/r3-wp3-9b3-physical-terrain public/generated/r3-terrain/europe-physical-colour-v2.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'WP3.9B3 package high-resolution terrain asset'
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
       - name: Upload authoring evidence
         uses: actions/upload-artifact@v4
         with:
