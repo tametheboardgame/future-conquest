@@ -1,4 +1,5 @@
 import type { GeoJSONSource, Map } from 'maplibre-gl';
+import { installR3PhysicalTerrainColour } from './r3-physical-terrain-colour';
 
 export const R3_MAP_VISUAL_GRADING_PROFILE_ID = 'clean-border-v2';
 
@@ -95,9 +96,6 @@ function promoteDetailedLandMask(map: Map) {
       map.triggerRepaint();
     })
     .catch(() => {
-      // The committed 110m GeoJSON already present in the MapLibre source is a
-      // deliberate graceful fallback. A missing optional refinement asset must
-      // not blank the terrain or fail the command map.
       setCoastlineGeometryStatus('110m-fallback');
     });
 }
@@ -106,27 +104,16 @@ function applyMapVisualGrading(map: Map): boolean {
   if (!map.getLayer('r3-wp2b-land-wash') || !map.getLayer('r3-wp2b-hillshade')) return false;
 
   map.setPaintProperty('r3-wp2b-sea', 'background-color', R3_MAP_VISUAL_GRADING.sea);
-
-  // The DEM needs a land material beneath its hillshade, but it should read as
-  // the map surface itself rather than as a translucent coloured overlay. An
-  // opaque neutral ground also prevents the dark sea colour bleeding through
-  // the coast and producing the previous doubled/dirty shoreline treatment.
   map.setPaintProperty('r3-wp2b-land-wash', 'fill-color', R3_MAP_VISUAL_GRADING.land);
   map.setPaintProperty('r3-wp2b-land-wash', 'fill-opacity', 1);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-shadow-color', R3_MAP_VISUAL_GRADING.hillshadeShadow);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-highlight-color', R3_MAP_VISUAL_GRADING.hillshadeHighlight);
   map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-accent-color', R3_MAP_VISUAL_GRADING.hillshadeAccent);
 
-  // Coastline is now only a restrained geographic edge. Ownership is carried
-  // by the controller border below instead of by generic pale admin outlines.
   map.setPaintProperty('r3-wp2b-coastline', 'line-color', R3_MAP_VISUAL_GRADING.coastline);
   map.setPaintProperty('r3-wp2b-coastline', 'line-opacity', R3_MAP_VISUAL_GRADING.coastlineOpacity);
   map.setPaintProperty('r3-wp2b-coastline', 'line-width', 0.55);
   map.setPaintProperty('campaign-administrative-borders', 'line-opacity', 0);
-
-  // Remove broad political/state washes. Selection, targeting, combat and
-  // threat remain legible through the existing high-priority state outline and
-  // orange/red operational front language rather than colouring whole regions.
   map.setPaintProperty('campaign-territories-fill', 'fill-opacity', 0);
   map.setPaintProperty('campaign-territory-state-wash', 'fill-opacity', 0);
 
@@ -200,6 +187,7 @@ function scheduleApply() {
       if (applyMapVisualGrading(map)) {
         gradedMaps.add(map);
         promoteDetailedLandMask(map);
+        installR3PhysicalTerrainColour(map);
       }
     };
 
@@ -208,16 +196,7 @@ function scheduleApply() {
   });
 }
 
-/**
- * R3-WP3.9B presentation-only grading hook.
- *
- * Candidate v2 removes broad political colouring from the terrain. The DEM is
- * presented on one opaque neutral board surface, while territory ownership is
- * carried by a crisp controller-coloured border with a restrained luminous
- * underglow. The higher-detail coastline is delivered as a static MapLibre
- * GeoJSON refinement so it does not inflate the lazy terrain JavaScript chunk.
- * Operational state remains on dedicated outlines/fronts.
- */
+/** R3-WP3.9B/B2 presentation-only grading hook. */
 export function installR3MapVisualGrading(): void {
   scheduleApply();
   if (observer || typeof MutationObserver === 'undefined') return;
