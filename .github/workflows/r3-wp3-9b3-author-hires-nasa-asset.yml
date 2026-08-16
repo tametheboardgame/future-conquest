@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -45,7 +45,7 @@ jobs:
             /tmp/nasa-blue-marble-june-500m-c1.jpg \
             artifacts/r3-wp3-9b3-local-tiles/tiles \
             artifacts/r3-wp3-9b3-local-tiles/manifest.json
-      - name: Verify candidate tile count and bounded static cost
+      - name: Verify candidate tile count and final static cost
         run: |
           python - <<'PY'
           import json
@@ -57,12 +57,26 @@ jobs:
           assert manifest['minzoom'] == 7 and manifest['maxzoom'] == 7
           assert manifest['tileCount'] == 1023, manifest['tileCount']
           assert len(files) == 1023, len(files)
-          # First experiment is allowed up to 32 MiB; final runtime target will
-          # be held below existing repository terrain budget before merge.
-          assert manifest['totalBytes'] < 32 * 1024 * 1024, manifest['totalBytes']
+          assert manifest['totalBytes'] == 9338146, manifest['totalBytes']
+          assert manifest['contentSha256'] == '7185e1629fd3c65f76eb9b5005eeb7582e8c16cff749ec6be297b7269e0b30d2'
+          assert manifest['totalBytes'] < 10 * 1024 * 1024
           print(json.dumps(manifest, indent=2))
           PY
-      - name: Upload 500m local-detail candidate
+      - name: Commit verified runtime tiles to PR branch
+        if: github.event_name == 'pull_request'
+        run: |
+          rm -rf public/generated/r3-terrain/physical-colour-tiles
+          mkdir -p public/generated/r3-terrain/physical-colour-tiles
+          cp -R artifacts/r3-wp3-9b3-local-tiles/tiles/. public/generated/r3-terrain/physical-colour-tiles/
+          cp artifacts/r3-wp3-9b3-local-tiles/manifest.json public/generated/r3-terrain/physical-colour-tiles-manifest.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/generated/r3-terrain/physical-colour-tiles public/generated/r3-terrain/physical-colour-tiles-manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'WP3.9B3 package NASA 500m local terrain tiles'
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
+      - name: Upload 500m local-detail evidence
         uses: actions/upload-artifact@v4
         with:
           name: r3-wp3-9b3-500m-local-tiles-${{ github.event.pull_request.head.sha || github.sha }}
