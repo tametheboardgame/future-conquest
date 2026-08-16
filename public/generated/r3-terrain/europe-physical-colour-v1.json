@@ -1,10 +1,12 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "r3-wp3-9b2-natural-earth-physical-colour-v1",
   "source": "Natural Earth II 1:50m NE2_50M_LC_SR_W",
   "sourceRepository": "nvkelso/natural-earth-raster",
   "sourcePath": "50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif",
   "sourceLicense": "public domain",
+  "sourceProjection": "equirectangular",
+  "deliveryProjection": "Web Mercator latitude-warped image source",
   "bounds": [
     -30.0,
     28.0,
@@ -13,7 +15,7 @@
   ],
   "dimensions": [
     2048,
-    1157
+    2192
   ],
   "format": "webp",
   "quality": 82,
