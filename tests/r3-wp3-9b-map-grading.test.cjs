@@ -5,6 +5,7 @@ const { readFileSync } = require('node:fs');
 const grading = readFileSync('src/presentation/r3-map-visual-grading.ts', 'utf8');
 const main = readFileSync('src/main.tsx', 'utf8');
 const terrain = readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
+const landMaskBuilder = readFileSync('scripts/maps/build-r3-europe-land-mask.mjs', 'utf8');
 const formations = readFileSync('src/presentation/r3-formation-miniatures-layer.ts', 'utf8');
 const world = readFileSync('src/presentation/r3-world-miniatures-layer.ts', 'utf8');
 
@@ -19,6 +20,13 @@ test('land is one opaque neutral terrain surface instead of a translucent wash',
   assert.match(grading, /land: '#777a72'/);
   assert.match(grading, /'r3-wp2b-land-wash', 'fill-color'/);
   assert.match(grading, /'r3-wp2b-land-wash', 'fill-opacity', 1\)/);
+});
+
+test('opaque terrain uses the higher fidelity 50m coastline source', () => {
+  assert.match(landMaskBuilder, /world-atlas\/land-50m\.json/);
+  assert.match(landMaskBuilder, /id: 'r3-europe-land-mask-v3'/);
+  assert.match(landMaskBuilder, /source: 'world-atlas\/land-50m'/);
+  assert.doesNotMatch(landMaskBuilder, /import worldLand from 'world-atlas\/land-110m\.json'/);
 });
 
 test('broad political fills and the generic pale administrative outline are removed', () => {
