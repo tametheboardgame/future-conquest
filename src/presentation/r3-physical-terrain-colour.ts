@@ -7,8 +7,11 @@ export const R3_PHYSICAL_TERRAIN_ASSET_PATH = 'generated/r3-terrain/europe-physi
 export const R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ID = 'r3-wp3-9b3-physical-colour-local';
 export const R3_PHYSICAL_TERRAIN_LOCAL_LAYER_ID = 'r3-wp3-9b3-physical-colour-local';
 export const R3_PHYSICAL_TERRAIN_LOCAL_TILE_PATH = 'generated/r3-terrain/physical-colour-tiles/{z}/{x}/{y}.webp';
-export const R3_PHYSICAL_TERRAIN_LOCAL_MANIFEST_PATH = 'generated/r3-terrain/physical-colour-tiles-manifest.json';
-export const R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM = 7;
+export const R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM = 7;
+export const R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM = 6;
+export const R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM = 5.6;
+export const R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE = 256;
+export const R3_PHYSICAL_TERRAIN_LOCAL_ENCODED_TILE_SIZE = 512;
 export const R3_PHYSICAL_TERRAIN_BOUNDS = [-30, 28, 55, 76] as const;
 
 export type R3PhysicalTerrainColourEvidence = {
@@ -20,7 +23,11 @@ export type R3PhysicalTerrainColourEvidence = {
   localDetailSourceId: typeof R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ID;
   localDetailLayerId: typeof R3_PHYSICAL_TERRAIN_LOCAL_LAYER_ID;
   localDetailTileUrl: string;
-  localDetailMinZoom: typeof R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM;
+  localDetailSourceZoom: typeof R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM;
+  localDetailRenderMinZoom: typeof R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM;
+  localDetailActivationZoom: typeof R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM;
+  localDetailLogicalTileSize: typeof R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE;
+  localDetailEncodedTileSize: typeof R3_PHYSICAL_TERRAIN_LOCAL_ENCODED_TILE_SIZE;
   localDetailStatus: 'deferred' | 'checking' | 'ready' | 'fallback';
   bounds: typeof R3_PHYSICAL_TERRAIN_BOUNDS;
   rasterOpacity: number;
@@ -45,10 +52,6 @@ function localTileUrl(): string {
   return `${import.meta.env.BASE_URL}${R3_PHYSICAL_TERRAIN_LOCAL_TILE_PATH}`;
 }
 
-function localManifestUrl(): string {
-  return `${import.meta.env.BASE_URL}${R3_PHYSICAL_TERRAIN_LOCAL_MANIFEST_PATH}`;
-}
-
 function writeEvidence(
   status: R3PhysicalTerrainColourEvidence['status'],
   localDetailStatus: R3PhysicalTerrainColourEvidence['localDetailStatus'],
@@ -63,7 +66,11 @@ function writeEvidence(
     localDetailSourceId: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ID,
     localDetailLayerId: R3_PHYSICAL_TERRAIN_LOCAL_LAYER_ID,
     localDetailTileUrl: localTileUrl(),
-    localDetailMinZoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM,
+    localDetailSourceZoom: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM,
+    localDetailRenderMinZoom: R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM,
+    localDetailActivationZoom: R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM,
+    localDetailLogicalTileSize: R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE,
+    localDetailEncodedTileSize: R3_PHYSICAL_TERRAIN_LOCAL_ENCODED_TILE_SIZE,
     localDetailStatus,
     bounds: R3_PHYSICAL_TERRAIN_BOUNDS,
     rasterOpacity: 0.98,
@@ -126,9 +133,12 @@ function addLocalDetailTiles(map: Map): void {
     map.addSource(R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ID, {
       type: 'raster',
       tiles: [localTileUrl()],
-      tileSize: 512,
-      minzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM,
-      maxzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM,
+      // The committed files are 512px images, intentionally advertised as
+      // logical 256px raster tiles. MapLibre therefore selects source z7 at
+      // map zoom 6, giving the normal 6.4 Selected camera genuine 500m detail.
+      tileSize: R3_PHYSICAL_TERRAIN_LOCAL_LOGICAL_TILE_SIZE,
+      minzoom: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM,
+      maxzoom: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ZOOM,
       bounds: [...R3_PHYSICAL_TERRAIN_BOUNDS]
     });
   }
@@ -138,7 +148,7 @@ function addLocalDetailTiles(map: Map): void {
       id: R3_PHYSICAL_TERRAIN_LOCAL_LAYER_ID,
       type: 'raster',
       source: R3_PHYSICAL_TERRAIN_LOCAL_SOURCE_ID,
-      minzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM,
+      minzoom: R3_PHYSICAL_TERRAIN_LOCAL_RENDER_MIN_ZOOM,
       paint: {
         'raster-opacity': 0.98,
         'raster-fade-duration': 0,
@@ -156,30 +166,30 @@ function installDeferredLocalDetail(map: Map): void {
 
   const activate = () => {
     if (activationStarted || localActivationMaps.has(map)) return;
-    if (map.getZoom() < R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM) return;
+    if (map.getZoom() < R3_PHYSICAL_TERRAIN_LOCAL_ACTIVATION_ZOOM) return;
 
     activationStarted = true;
     writeEvidence(currentBroadStatus(), 'checking');
 
-    void fetch(localManifestUrl(), { method: 'HEAD', cache: 'default' })
-      .then(response => {
-        if (!response.ok) throw new Error(`local physical terrain manifest returned ${response.status}`);
-        if (!map.getLayer('r3-wp2b-hillshade')) throw new Error('hillshade layer unavailable during local-detail activation');
-        addLocalDetailTiles(map);
-        localActivationMaps.add(map);
-        writeEvidence(currentBroadStatus(), 'ready');
-        map.triggerRepaint();
-      })
-      .catch(error => {
-        const reason = error instanceof Error ? error.message : String(error);
-        writeEvidence(currentBroadStatus(), 'fallback', reason);
-      });
+    try {
+      if (!map.getLayer('r3-wp2b-hillshade')) throw new Error('hillshade layer unavailable during local-detail activation');
+      addLocalDetailTiles(map);
+      localActivationMaps.add(map);
+      writeEvidence(currentBroadStatus(), 'ready');
+      map.triggerRepaint();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      writeEvidence(currentBroadStatus(), 'fallback', reason);
+    }
   };
 
-  // Keep Campaign/Theatre identical to WP3.9B2. The extra raster source is
-  // not registered, probed or fetched until the camera first enters local LOD.
+  // Campaign is 5.35 and Theatre 3.45, so they retain the exact B2 path.
+  // During the normal Selected transition the continuous zoom event crosses
+  // 5.6 before reaching the full-profile Selected camera at 6.4. Registering
+  // the source there overlaps tile fetch/decode with the existing camera move
+  // instead of serialising it after zoomend.
+  map.on('zoom', activate);
   map.on('zoomend', activate);
-  map.on('moveend', activate);
   activate();
 }
 
@@ -187,10 +197,10 @@ function installDeferredLocalDetail(map: Map): void {
  * R3-WP3.9B3 dual-LOD presentation-only physical-colour system.
  *
  * WP3.9B2's 37 KB broad image remains the low-cost theatre/campaign base.
- * From zoom 7, self-hosted NASA Blue Marble 500 m Web Mercator tiles replace
- * stretched continent-scale colour with viewport-loaded local detail.
- * The local raster source itself is deferred until local zoom so normal wide
- * camera transactions retain the exact lightweight B2 map path.
+ * The 512px NASA Blue Marble 500m z7 files are delivered as 2x raster tiles,
+ * becoming visible from map zoom 6 while their source is warmed from zoom 5.6.
+ * This gives the normal 6.4 Selected camera real local land-cover detail while
+ * leaving Campaign/Theatre on the exact lightweight B2 startup path.
  * Copernicus GLO-30 remains the 3D elevation authority and political meaning
  * remains exclusively in the accepted border/front overlay system.
  */
@@ -200,7 +210,7 @@ export function installR3PhysicalTerrainColour(map: Map): void {
   writeEvidence('checking', 'deferred');
 
   // This startup path intentionally mirrors WP3.9B2: one tiny broad asset,
-  // one raster layer, and no local-detail source or manifest request.
+  // one raster layer, and no local-detail source or request.
   void fetch(assetUrl(), { method: 'HEAD', cache: 'default' })
     .then(response => {
       if (!response.ok) throw new Error(`physical terrain texture returned ${response.status}`);
