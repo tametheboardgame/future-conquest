@@ -4,7 +4,7 @@ import { bboxClip } from '@turf/turf';
 import { feature as topojsonFeature } from 'topojson-client';
 import worldLand from 'world-atlas/land-50m.json' with { type: 'json' };
 
-const OUTPUT = path.resolve('src/assets/r3-europe-land-mask.json');
+const OUTPUT = path.resolve('public/generated/r3-terrain/europe-land-mask-50m.geojson');
 
 // This presentation mask deliberately extends a few degrees beyond the
 // playable terrain envelope so pitched Campaign/Selected views never reveal
@@ -42,13 +42,12 @@ const cleanClippedFeature = feature => {
   return null;
 };
 
-// MapLibre triangulates each GeoJSON geometry as one render unit. The World
-// Atlas source is a single continent-spanning MultiPolygon; keeping that shape
-// intact allowed low-zoom fill triangulation to connect distant polygon parts
-// into large Theatre-scale wedges. Clip first, then emit each polygon as its
-// own RFC 7946-wound feature. WP3.9B now uses the 50m atlas rather than the
-// former 110m source so an opaque board surface does not expose blocky coast
-// simplification around the Channel, North Sea and smaller European islands.
+// Keep the production terrain JavaScript lean: the renderer retains its small
+// committed 110m mask as an immediate startup/failure fallback, while this 50m
+// presentation asset is emitted separately and swapped into the existing
+// MapLibre GeoJSON source once WP3.9B grading is applied. This preserves the
+// smoother Channel/North Sea coastline without embedding 197 polygons in the
+// lazy terrain code chunk.
 const clippedFeatures = worldFeatures
   .filter(feature => feature?.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon'))
   .map(feature => cleanClippedFeature(bboxClip(feature, R3_EUROPE_LAND_MASK_BOUNDS)))
@@ -71,6 +70,7 @@ const output = {
   futureConquest: {
     id: 'r3-europe-land-mask-v3',
     source: 'world-atlas/land-50m',
+    delivery: 'static-maplibre-geojson',
     purpose: 'presentation-only physical land surface and coastline',
     clipBounds: R3_EUROPE_LAND_MASK_BOUNDS
   },
