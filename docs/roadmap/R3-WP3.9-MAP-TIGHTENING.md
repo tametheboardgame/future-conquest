@@ -1,6 +1,6 @@
 # R3-WP3.9 - Map Tightening Programme
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **APPROVED / ACTIVE / WP4 BLOCKING**
 
 Approved by product owner: 2026-08-15
 
@@ -8,17 +8,18 @@ Preceding baseline: R3-WP3.8E merged to `main` as `1722499b4ce7214a5b6590c4493c2
 
 This programme is the second-pass tightening of the production command map before R3-WP4 resumes. It responds to product-owner live review of the integrated terrain, city miniatures and command-map layout. The underlying MapLibre/Three.js physical-map architecture is accepted; this programme improves how that work is presented and how the player first experiences it.
 
-R3-WP4 remains blocked until WP3.9A, WP3.9B and WP3.9C are implemented, deployed and accepted together in an integrated map review.
+R3-WP4 remains blocked until WP3.9A, WP3.9B, WP3.9B2 and WP3.9C are implemented, deployed and accepted together in an integrated map review.
 
 ## Hard sequence
 
 1. **R3-WP3.9A - Map UX Foundations**
 2. **R3-WP3.9B - Map Visual Clarity and Grading**
-3. **R3-WP3.9C - Portal Arrival Sequence**
-4. Product-owner integrated physical-map review
-5. Only after acceptance: R3-WP4
+3. **R3-WP3.9B2 - Physical Terrain Colour Pass**
+4. **R3-WP3.9C - Portal Arrival Sequence**
+5. Product-owner integrated physical-map review
+6. Only after acceptance: R3-WP4
 
-The sequence is deliberate. First make the map the default command surface and give it enough screen space; then tune the visual treatment against that final layout; then add the opening portal arrival beat on top of the accepted map presentation.
+The sequence is deliberate. First make the map the default command surface and give it enough screen space; then remove the broad dingy/green cast and move ownership onto clear borders; then give the physical terrain itself richer satellite-inspired land-cover variation; then add the opening portal arrival beat on top of the accepted map presentation.
 
 ## Programme boundaries
 
@@ -37,7 +38,7 @@ The production MapLibre terrain, Three.js world-piece architecture, existing aut
 
 # R3-WP3.9A - Map UX Foundations
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / VISUALLY ACCEPTED**
 
 ## Objective
 
@@ -92,7 +93,7 @@ WP3.9A completes only when:
 
 # R3-WP3.9B - Map Visual Clarity and Grading
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / VISUALLY ACCEPTED**
 
 ## Objective
 
@@ -127,6 +128,19 @@ Before changing values, identify where the current cast is introduced. Audit at 
 
 Do not simply remove every tint globally. The pass should determine which layers are creating the unwanted wash and rebalance them deliberately.
 
+## Accepted refinement
+
+The accepted WP3.9B production treatment now:
+
+- removes broad political/controller fills and broad state washes from the terrain surface;
+- removes the generic pale administrative-outline stack that was creating dirty/doubled edges;
+- retains one restrained physical coastline treatment;
+- carries political ownership primarily through strong controller-coloured illuminated borders;
+- preserves selected/combat/front/threat outline language above the controller border;
+- uses higher-detail static coastline geometry without inflating the terrain JavaScript bundle.
+
+This solved the ownership/coastline clarity problem, but product-owner live review on 2026-08-16 identified a separate remaining issue: the physical terrain itself still reads as too uniform, grey and murky. That follow-on visual requirement is now owned by WP3.9B2 rather than reopening the accepted border-led ownership architecture.
+
 ## Visual validation matrix
 
 Capture before/after evidence at minimum for:
@@ -151,6 +165,92 @@ WP3.9B completes only when:
 - no geographic or gameplay authority changes are introduced;
 - performance remains within the existing accepted envelope unless a separately measured/approved adjustment is required;
 - product-owner review accepts the deployed grading across several map regions, not only one hero view.
+
+---
+
+# R3-WP3.9B2 - Physical Terrain Colour Pass
+
+Status: **APPROVED / NEXT / WP4 BLOCKING**
+
+Authoritative detail: `docs/roadmap/R3-WP3.9B2-PHYSICAL-TERRAIN-COLOUR-PASS.md`.
+
+Approved by product owner: 2026-08-16
+
+## Objective
+
+Transform the accepted WP3.9B physical terrain from a mostly uniform neutral relief surface into a **stylised satellite-inspired physical map** with clear natural land-cover and elevation variation.
+
+The visual direction is the product-owner-approved 2026-08-16 mock-up: the map should visibly distinguish grassland, woodland, farmland/open plains, rocky mountains, snow/high alpine terrain and water, while remaining a readable strategy-game command surface rather than raw satellite photography.
+
+## Required terrain vocabulary
+
+- grassland/mixed lowland should read as recognisable natural green;
+- woodland/forest should use deeper/darker green material treatment;
+- farmland/open plains should introduce warmer green, olive, straw and muted-earth variation;
+- rocky high ground should shift into grey/brown/stone tones based on physical geography rather than territory boundaries;
+- Alpine/high mountain terrain should have substantially stronger exposed-rock contrast and restrained snow/bright high-altitude accents where appropriate;
+- sea/major water should use a richer blue/slate-blue treatment with clean coastline separation;
+- rivers/drainage may gain cool blue detail where available, provided routes and operational overlays remain dominant.
+
+The production result must show visible regional variation: France, Benelux/Germany lowlands and the Alps should not look like one material with different hillshade.
+
+## Implementation direction
+
+- Do not restore territory ownership fills or translucent political washes.
+- Controller ownership remains on the accepted illuminated border system.
+- Do not solve this with another full-screen colour filter/fog/saturation overlay.
+- Prefer stylised/derived physical data: elevation/slope ramps, self-hosted/build-time land-cover masks, forest/biome data, procedural low-frequency variation, snow/high-alpine masks, or preprocessed imagery/land-cover textures where licensing/performance are acceptable.
+- Raw satellite imagery may be investigated but should not be used unprocessed if it makes the command map noisy or reduces label/miniature readability.
+- Prefer static/build-time/self-hosted assets over new third-party runtime dependencies.
+- No private geospatial-service credentials may ship to the browser.
+- Large terrain/land-cover assets must not be embedded into the terrain JavaScript bundle when they can be delivered separately.
+
+## Strategic-readability constraints
+
+The richer terrain must preserve or improve:
+
+- controller border glow/core hierarchy;
+- selected/active-combat/threat/front outlines;
+- orange/red operational language;
+- city labels and authored landmark miniatures;
+- future-soldier formation miniatures;
+- infrastructure, rail hubs and corridor cues;
+- operation markers and routes;
+- coastline clarity;
+- Theatre/Campaign/Selected LOD.
+
+Where physical terrain colour competes with operational information, operational information wins.
+
+## Visual validation
+
+Validate at minimum:
+
+- Theatre over Western/Central Europe;
+- Campaign over Channel / France / Benelux;
+- Campaign over Central Europe / Germany;
+- Campaign and Selected over Switzerland / Austria / Alps;
+- at least one threat/front-heavy operational state.
+
+The product-owner-approved mock-up is the reference for **direction**, not a pixel-perfect target. Production geography, camera, authored assets and UI remain authoritative.
+
+## Acceptance criteria
+
+WP3.9B2 completes only when:
+
+- the deployed map no longer reads as uniformly foggy, murky, grey or grey-green;
+- grassland, woodland, farmland/open plains, rocky mountains and water have visibly distinct physical colour/material identities;
+- Alpine terrain reads materially differently from lowlands, with stronger rock/high-altitude character and restrained snow/bright high-elevation treatment where appropriate;
+- the map achieves the approved stylised satellite/physical-map direction without becoming raw-photographic, over-saturated or visually noisy;
+- regional terrain variation is evident across several parts of Europe rather than being one colour ramp everywhere;
+- the accepted WP3.9B border-led ownership treatment remains intact and no broad political wash returns;
+- cities, soldiers, infrastructure, labels, routes, operations, fronts and threat cues remain legible against the richer terrain;
+- the improved coastline treatment does not regress;
+- territory geometry, strategic geography, authoritative anchors and simulation state remain unchanged;
+- GitHub Pages/static delivery, `?terrain=0`, accessibility/failure fallback and established camera/LOD behaviour remain safe;
+- exact-head production/browser/geographic/performance gates remain within the accepted envelope, or any measured exception is separately approved;
+- the product owner accepts the deployed result across Theatre, lowland, Central European and Alpine views.
+
+WP3.9C remains blocked until WP3.9B2 is implemented, deployed and visually accepted.
 
 ---
 
@@ -230,13 +330,15 @@ WP3.9C completes only when:
 
 # WP3.9 integrated exit gate
 
-WP3.9 is complete only when A, B and C are merged, deployed and reviewed together.
+WP3.9 is complete only when A, B, B2 and C are merged, deployed and reviewed together.
 
 The final review must confirm:
 
 - BEGIN CAMPAIGN lands directly on the command map;
 - the right command sidebar can be collapsed to provide a substantially larger map surface;
-- the map grading is cleaner and no longer carries the unwanted uniform green/dingy wash;
+- the map grading no longer carries the unwanted uniform green/dingy political wash;
+- the physical terrain now has clear satellite-inspired regional/land-cover colour variation across lowlands, forests, farmland, mountains, snow/high alpine terrain and water;
+- the accepted illuminated border-led ownership treatment remains clear without recolouring whole territories;
 - real terrain relief, all 15 authored city miniatures and future-soldier pieces remain clear and cohesive;
 - the new-campaign portal arrival sequence works once, closes cleanly and leaves the correct Day 1 state;
 - labels, borders, routes, fronts, infrastructure and operational overlays remain readable;
