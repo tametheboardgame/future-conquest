@@ -1,0 +1,51 @@
+name: R3 WP3.9B2 author NASA terrain asset
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/maps/build-r3-nasa-physical-terrain-texture.py'
+      - '.github/workflows/r3-wp3-9b2-author-nasa-asset.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install authoring dependencies
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0 numpy==2.2.6
+      - name: Download NASA Blue Marble June composite
+        run: |
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/nasa-blue-marble-june.jpg \
+            https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x5400x2700.jpg
+          test "$(stat -c%s /tmp/nasa-blue-marble-june.jpg)" -gt 1000000
+      - name: Build projected Europe physical colour
+        run: |
+          mkdir -p artifacts/r3-wp3-9b2-nasa
+          python scripts/maps/build-r3-nasa-physical-terrain-texture.py \
+            /tmp/nasa-blue-marble-june.jpg \
+            artifacts/r3-wp3-9b2-nasa/europe-physical-colour-v1.webp \
+            artifacts/r3-wp3-9b2-nasa/europe-physical-colour-v1.json
+          test -s artifacts/r3-wp3-9b2-nasa/europe-physical-colour-v1.webp
+          test "$(stat -c%s artifacts/r3-wp3-9b2-nasa/europe-physical-colour-v1.webp)" -lt 600000
+      - name: Upload authoring evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9b2-nasa-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/r3-wp3-9b2-nasa/
+          if-no-files-found: error
+          retention-days: 7

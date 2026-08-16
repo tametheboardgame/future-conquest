@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 6,
+  "id": "r3-wp3-9b2-nasa-blue-marble-june-v1",
+  "source": "NASA Blue Marble: Next Generation, June 2004 base map",
+  "sourceUrl": "https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x5400x2700.jpg",
+  "sourceResolution": "8 km/pixel global distribution image derived from MODIS composites",
+  "sourceProjection": "equirectangular",
+  "deliveryProjection": "Web Mercator latitude-warped image source",
+  "bounds": [-30, 28, 55, 76],
+  "dimensions": [640, 685],
+  "format": "webp",
+  "quality": 68,
+  "normalBuildDependency": false,
+  "buildEncoding": "five base64 chunks materialised locally",
+  "runtimeBytes": 37032,
+  "sha256": "35026f0b6366ae2f2bbcadce369431cc671e6f2097f61cdcede1da27739e7f56",
+  "purpose": "presentation-only satellite-derived physical colour beneath Copernicus DEM relief"
+}
