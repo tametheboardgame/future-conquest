@@ -1,10 +1,9 @@
 {
-  "schemaVersion": 4,
-  "id": "r3-wp3-9b2-natural-earth-physical-colour-v1",
-  "source": "Natural Earth II 1:50m NE2_50M_LC_SR_W",
-  "sourceRepository": "nvkelso/natural-earth-raster",
-  "sourcePath": "50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif",
-  "sourceLicense": "public domain",
+  "schemaVersion": 6,
+  "id": "r3-wp3-9b2-nasa-blue-marble-june-v1",
+  "source": "NASA Blue Marble: Next Generation, June 2004 base map",
+  "sourceUrl": "https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x5400x2700.jpg",
+  "sourceResolution": "8 km/pixel global distribution image derived from MODIS composites",
   "sourceProjection": "equirectangular",
   "deliveryProjection": "Web Mercator latitude-warped image source",
   "bounds": [-30, 28, 55, 76],
@@ -13,7 +12,7 @@
   "quality": 68,
   "normalBuildDependency": false,
   "buildEncoding": "five base64 chunks materialised locally",
-  "runtimeBytes": 24672,
-  "sha256": "b4eed87ed7b4eb4989f365d4d2b1565038e07d798e6ea602a06ab4466a34e4ef",
-  "purpose": "presentation-only stylised physical terrain colour beneath Copernicus DEM relief"
+  "runtimeBytes": 37032,
+  "sha256": "35026f0b6366ae2f2bbcadce369431cc671e6f2097f61cdcede1da27739e7f56",
+  "purpose": "presentation-only satellite-derived physical colour beneath Copernicus DEM relief"
 }
