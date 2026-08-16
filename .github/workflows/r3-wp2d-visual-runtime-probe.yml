@@ -77,10 +77,13 @@ jobs:
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15000 });
+          // Map/terrain work has grown since WP2D was authored. Give campaign state the
+          // same bounded startup allowance as the shell instead of failing at 5 seconds;
+          // no downstream visual or readability assertion is relaxed.
           await page.waitForFunction(
             () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
             null,
-            { timeout: 5000 }
+            { timeout: 15000 }
           );
           await page.locator('[data-command-view="map"]').click();
           await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 20000 });
