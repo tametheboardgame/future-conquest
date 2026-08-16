@@ -13,6 +13,7 @@ deterministic base64 chunks and never contact NASA.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -23,8 +24,8 @@ from PIL import Image, ImageEnhance, ImageFilter
 SOURCE_WIDTH = 5400
 SOURCE_HEIGHT = 2700
 BOUNDS = (-30.0, 28.0, 55.0, 76.0)
-TARGET_WIDTH = 1280
-OUTPUT_QUALITY = 82
+TARGET_WIDTH = 640
+OUTPUT_QUALITY = 68
 
 
 def mercator_y(latitude: float) -> float:
@@ -124,16 +125,19 @@ def build(source: Path, output: Path, metadata: Path) -> None:
             pixel_y(south, src.height),
         ))
 
-    # Preserve the source crop's native information before the Mercator row warp.
+    # Keep the runtime image compact: colour provides broad geographic material
+    # identity while Copernicus GLO-30 remains the authoritative elevation detail.
     crop = crop.resize((TARGET_WIDTH, round(TARGET_WIDTH * 48 / 85)), Image.Resampling.LANCZOS)
     crop = art_direct(crop)
     crop = warp_to_web_mercator(crop)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     crop.save(output, 'WEBP', quality=OUTPUT_QUALITY, method=6)
+    payload = output.read_bytes()
+    sha256 = hashlib.sha256(payload).hexdigest()
 
     metadata.write_text(json.dumps({
-        'schemaVersion': 5,
+        'schemaVersion': 6,
         'id': 'r3-wp3-9b2-nasa-blue-marble-june-v1',
         'source': 'NASA Blue Marble: Next Generation, June 2004 base map',
         'sourceUrl': 'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x5400x2700.jpg',
@@ -144,10 +148,15 @@ def build(source: Path, output: Path, metadata: Path) -> None:
         'dimensions': [TARGET_WIDTH, TARGET_HEIGHT],
         'format': 'webp',
         'quality': OUTPUT_QUALITY,
+        'runtimeBytes': len(payload),
+        'sha256': sha256,
         'normalBuildDependency': False,
         'purpose': 'presentation-only satellite-derived physical colour beneath Copernicus DEM relief',
     }, indent=2) + '\n', encoding='utf-8')
-    print(f'Wrote {output} ({output.stat().st_size:,} bytes, {TARGET_WIDTH}x{TARGET_HEIGHT})')
+    print(
+        f'Wrote {output} ({len(payload):,} bytes, {TARGET_WIDTH}x{TARGET_HEIGHT}, '
+        f'sha256 {sha256[:12]}…)'
+    )
 
 
 def main() -> None:
