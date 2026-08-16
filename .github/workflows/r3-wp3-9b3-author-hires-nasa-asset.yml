@@ -1,4 +1,4 @@
-name: R3 WP3.9B3 author NASA 500m local terrain tiles
+name: R3 WP3.9B3 verify NASA 500m local terrain tiles
 
 on:
   pull_request:
@@ -6,11 +6,12 @@ on:
       - main
     paths:
       - 'scripts/maps/build-r3-nasa-physical-terrain-local-tiles.py'
+      - 'public/generated/r3-terrain/physical-colour-tiles-manifest.json'
       - '.github/workflows/r3-wp3-9b3-author-hires-nasa-asset.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   generate:
@@ -35,9 +36,7 @@ jobs:
           curl --fail --location --retry 3 --retry-delay 2 \
             --output /tmp/nasa-blue-marble-june-500m-c1.jpg \
             https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x21600x21600.C1.jpg
-          test "$(stat -c%s /tmp/nasa-blue-marble-june-500m-b1.jpg)" -gt 20000000
-          test "$(stat -c%s /tmp/nasa-blue-marble-june-500m-c1.jpg)" -gt 20000000
-      - name: Build Europe zoom-7 local-detail raster tiles
+      - name: Rebuild exact zoom-7 local-detail raster tiles
         run: |
           mkdir -p artifacts/r3-wp3-9b3-local-tiles
           python scripts/maps/build-r3-nasa-physical-terrain-local-tiles.py \
@@ -45,41 +44,32 @@ jobs:
             /tmp/nasa-blue-marble-june-500m-c1.jpg \
             artifacts/r3-wp3-9b3-local-tiles/tiles \
             artifacts/r3-wp3-9b3-local-tiles/manifest.json
-      - name: Verify candidate tile count and final static cost
+      - name: Verify committed runtime tile tree is deterministic
         run: |
           python - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
-          manifest = json.load(open('artifacts/r3-wp3-9b3-local-tiles/manifest.json', encoding='utf-8'))
-          files = list(Path('artifacts/r3-wp3-9b3-local-tiles/tiles/7').glob('*/*.webp'))
-          assert manifest['sourceResolution'] == '500 m/pixel'
-          assert manifest['tileSize'] == 512
-          assert manifest['minzoom'] == 7 and manifest['maxzoom'] == 7
-          assert manifest['tileCount'] == 1023, manifest['tileCount']
-          assert len(files) == 1023, len(files)
-          assert manifest['totalBytes'] == 9338146, manifest['totalBytes']
-          assert manifest['contentSha256'] == '7185e1629fd3c65f76eb9b5005eeb7582e8c16cff749ec6be297b7269e0b30d2'
-          assert manifest['totalBytes'] < 10 * 1024 * 1024
-          print(json.dumps(manifest, indent=2))
+
+          authored_manifest = json.load(open('artifacts/r3-wp3-9b3-local-tiles/manifest.json', encoding='utf-8'))
+          committed_manifest = json.load(open('public/generated/r3-terrain/physical-colour-tiles-manifest.json', encoding='utf-8'))
+          authored = Path('artifacts/r3-wp3-9b3-local-tiles/tiles')
+          committed = Path('public/generated/r3-terrain/physical-colour-tiles')
+          authored_files = sorted(path.relative_to(authored) for path in authored.rglob('*.webp'))
+          committed_files = sorted(path.relative_to(committed) for path in committed.rglob('*.webp'))
+          assert authored_manifest == committed_manifest
+          assert authored_manifest['tileCount'] == 1023
+          assert authored_manifest['totalBytes'] == 9338146
+          assert authored_manifest['contentSha256'] == '7185e1629fd3c65f76eb9b5005eeb7582e8c16cff749ec6be297b7269e0b30d2'
+          assert authored_files == committed_files
+          for relative in authored_files:
+              assert authored.joinpath(relative).read_bytes() == committed.joinpath(relative).read_bytes(), relative
+          print(json.dumps(committed_manifest, indent=2))
           PY
-      - name: Commit verified runtime tiles to PR branch
-        if: github.event_name == 'pull_request'
-        run: |
-          rm -rf public/generated/r3-terrain/physical-colour-tiles
-          mkdir -p public/generated/r3-terrain/physical-colour-tiles
-          cp -R artifacts/r3-wp3-9b3-local-tiles/tiles/. public/generated/r3-terrain/physical-colour-tiles/
-          cp artifacts/r3-wp3-9b3-local-tiles/manifest.json public/generated/r3-terrain/physical-colour-tiles-manifest.json
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/generated/r3-terrain/physical-colour-tiles public/generated/r3-terrain/physical-colour-tiles-manifest.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'WP3.9B3 package NASA 500m local terrain tiles'
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          fi
-      - name: Upload 500m local-detail evidence
+      - name: Upload regenerated verification evidence
         uses: actions/upload-artifact@v4
         with:
-          name: r3-wp3-9b3-500m-local-tiles-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/r3-wp3-9b3-local-tiles/
+          name: r3-wp3-9b3-500m-verification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/r3-wp3-9b3-local-tiles/manifest.json
           if-no-files-found: error
           retention-days: 7
