@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -37,16 +37,35 @@ jobs:
 
       - name: Build Europe physical-colour texture
         run: |
+          mkdir -p public/generated/r3-terrain
           python scripts/maps/build-r3-physical-terrain-texture.py \
             /tmp/NE2_50M_LC_SR_W.tif \
-            artifacts/r3-wp3-9b2/europe-physical-colour-v1.webp \
-            artifacts/r3-wp3-9b2/europe-physical-colour-v1.json
-          test -s artifacts/r3-wp3-9b2/europe-physical-colour-v1.webp
+            public/generated/r3-terrain/europe-physical-colour-v1.webp \
+            public/generated/r3-terrain/europe-physical-colour-v1.json
+          test -s public/generated/r3-terrain/europe-physical-colour-v1.webp
+          test "$(stat -c%s public/generated/r3-terrain/europe-physical-colour-v1.webp)" -lt 350000
 
-      - name: Upload generated texture
+      - name: Commit generated asset to the PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add public/generated/r3-terrain/europe-physical-colour-v1.webp public/generated/r3-terrain/europe-physical-colour-v1.json
+          if git diff --cached --quiet; then
+            echo 'Generated physical terrain asset is unchanged.'
+          else
+            git commit -m 'WP3.9B2: publish physical terrain colour asset'
+            git push origin "HEAD:${HEAD_REF}"
+          fi
+
+      - name: Upload generated texture evidence
         uses: actions/upload-artifact@v4
         with:
           name: r3-wp3-9b2-physical-terrain-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/r3-wp3-9b2/
+          path: |
+            public/generated/r3-terrain/europe-physical-colour-v1.webp
+            public/generated/r3-terrain/europe-physical-colour-v1.json
           if-no-files-found: error
           retention-days: 7
