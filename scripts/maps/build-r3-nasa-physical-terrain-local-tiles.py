@@ -81,11 +81,14 @@ def build_mesh(x: int, y: int, eastern: bool) -> list[tuple[tuple[int, int, int,
         wy1 = y + py1 / TILE_SIZE
         sy0 = source_y(tile_lat(wy0, ZOOM))
         sy1 = source_y(tile_lat(wy1, ZOOM))
+        # Pillow QUAD/MESH source corners are NW, SW, SE, NE. The first
+        # candidate used clockwise NW, NE, SE, SW ordering, twisting each
+        # horizontal strip into streaks. Keep the documented ordering here.
         mesh.append(((0, py0, TILE_SIZE, py1), (
             sx_left, sy0,
-            sx_right, sy0,
-            sx_right, sy1,
             sx_left, sy1,
+            sx_right, sy1,
+            sx_right, sy0,
         )))
     return mesh
 
