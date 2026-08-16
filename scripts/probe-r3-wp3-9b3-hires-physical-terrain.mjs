@@ -39,7 +39,6 @@ async function waitForNewLocalTileResponses(previousUrls) {
   while (Date.now() < deadline) {
     const freshSuccessful = [...localTileResponses.entries()].filter(([url, response]) => !previousUrls.has(url) && response.ok);
     if (freshSuccessful.length > 0) {
-      // Allow the successfully decoded raster a bounded moment to reach paint.
       await page.waitForTimeout(500);
       return freshSuccessful;
     }
@@ -112,14 +111,16 @@ try {
 
   if (initialPaint.physical?.status !== 'ready' || initialPaint.physical?.profileId !== 'physical-colour-v3-local-tiles') throw new Error(`physical terrain evidence missing: ${JSON.stringify(initialPaint.physical)}`);
   if (initialPaint.physical?.localDetailStatus !== 'deferred') throw new Error(`local detail was not deferred at Campaign LOD: ${JSON.stringify(initialPaint.physical)}`);
-  if (initialPaint.localSourceInitiallyPresent || initialPaint.localLayerInitiallyPresent) throw new Error(`local-detail raster was registered before local zoom: ${JSON.stringify(initialPaint)}`);
+  if (initialPaint.physical?.localDetailActivationZoom !== 5.6 || initialPaint.physical?.localDetailRenderMinZoom !== 6 || initialPaint.physical?.localDetailSourceZoom !== 7) throw new Error(`local LOD evidence mismatch: ${JSON.stringify(initialPaint.physical)}`);
+  if (initialPaint.physical?.localDetailLogicalTileSize !== 256 || initialPaint.physical?.localDetailEncodedTileSize !== 512) throw new Error(`2x raster evidence mismatch: ${JSON.stringify(initialPaint.physical)}`);
+  if (initialPaint.localSourceInitiallyPresent || initialPaint.localLayerInitiallyPresent) throw new Error(`local-detail raster was registered before local transition: ${JSON.stringify(initialPaint)}`);
   if (initialPaint.hostPhysical !== 'physical-colour-v3-local-tiles' || !initialPaint.broadSourceLoaded || initialPaint.broadLayerType !== 'raster') throw new Error(`broad physical base did not settle: ${JSON.stringify(initialPaint)}`);
   if (initialPaint.broadOpacity !== 0.98 || initialPaint.hillshadeExaggeration !== 0.36) throw new Error(`broad physical paint mismatch: ${JSON.stringify(initialPaint)}`);
   if (initialPaint.territoryFillOpacity !== 0 || initialPaint.stateWashOpacity !== 0 || initialPaint.administrativeBorderOpacity !== 0) throw new Error(`political wash regressed: ${JSON.stringify(initialPaint)}`);
   if (!containsControllerColours(initialPaint.controlBorderColour) || !containsControllerColours(initialPaint.controlGlowColour)) throw new Error(`controller colours regressed: ${JSON.stringify(initialPaint)}`);
   if (initialPaint.frontColour !== '#ffad66') throw new Error(`front colour regressed: ${initialPaint.frontColour}`);
 
-  const evidence = { schemaVersion: 5, initialPaint, captures: {} };
+  const evidence = { schemaVersion: 6, initialPaint, captures: {} };
 
   await jump([6.5, 51.0], 4.35, 43, -5);
   await host.screenshot({ path: `${outputDir}/theatre-western-central.png` });
@@ -135,8 +136,11 @@ try {
   await host.screenshot({ path: `${outputDir}/campaign-central-europe.png` });
   evidence.captures.centralEurope = { center: [9.5, 50.1], zoom: 5.5, pitch: 50, bearing: -6 };
 
+  // Full-profile gameplay caps Selected at 6.4. Prove the 2x z7 raster is
+  // actually requested and visible at that real gameplay zoom, not only at a
+  // deeper diagnostic zoom.
   const lowlandBefore = new Set(localTileResponses.keys());
-  await jump([8.9, 50.25], 7.7, 56, -15);
+  await jump([8.9, 50.25], 6.4, 57, -8);
   const lowlandResponses = await waitForNewLocalTileResponses(lowlandBefore);
 
   const localPaint = await page.evaluate(() => {
@@ -153,11 +157,11 @@ try {
       contrast: map.getPaintProperty('r3-wp3-9b3-physical-colour-local', 'raster-contrast')
     };
   });
-  if (localPaint.physical?.localDetailStatus !== 'ready' || !localPaint.sourcePresent || localPaint.layerType !== 'raster' || localPaint.layerMinZoom !== 7) throw new Error(`local detail did not activate correctly: ${JSON.stringify(localPaint)}`);
+  if (localPaint.physical?.localDetailStatus !== 'ready' || !localPaint.sourcePresent || localPaint.layerType !== 'raster' || localPaint.layerMinZoom !== 6) throw new Error(`local detail did not activate correctly: ${JSON.stringify(localPaint)}`);
   if (localPaint.opacity !== 0.98 || localPaint.saturation !== 0.1 || localPaint.contrast !== 0.08) throw new Error(`local raster paint mismatch: ${JSON.stringify(localPaint)}`);
 
   await host.screenshot({ path: `${outputDir}/selected-central-lowlands.png` });
-  evidence.captures.lowlandsSelected = { center: [8.9, 50.25], zoom: 7.7, pitch: 56, bearing: -15, successfulTileResponses: lowlandResponses.length };
+  evidence.captures.lowlandsSelected = { center: [8.9, 50.25], zoom: 6.4, pitch: 57, bearing: -8, successfulTileResponses: lowlandResponses.length };
 
   await jump([8.35, 47.15], 5.4, 53, -7);
   await waitForCities(['N-BERN', 'N-CHUR', 'N-INNSBRUCK']);
@@ -165,10 +169,10 @@ try {
   evidence.captures.alpsCampaign = { center: [8.35, 47.15], zoom: 5.4, pitch: 53, bearing: -7 };
 
   const alpsBefore = new Set(localTileResponses.keys());
-  await jump([8.55, 47.05], 7.7, 56, -15);
+  await jump([8.55, 47.05], 6.4, 57, -8);
   const alpsResponses = await waitForNewLocalTileResponses(alpsBefore);
   await host.screenshot({ path: `${outputDir}/selected-alps.png` });
-  evidence.captures.alpsSelected = { center: [8.55, 47.05], zoom: 7.7, pitch: 56, bearing: -15, successfulTileResponses: alpsResponses.length };
+  evidence.captures.alpsSelected = { center: [8.55, 47.05], zoom: 6.4, pitch: 57, bearing: -8, successfulTileResponses: alpsResponses.length };
 
   const formationEvidence = await page.evaluate(() => window.__r3FormationMiniatures);
   if (!formationEvidence?.pieces.some(piece => piece.visible)) throw new Error('friendly physical formation evidence is not visible');
