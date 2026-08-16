@@ -29,6 +29,11 @@ BOUNDS = (-30.0, 28.0, 55.0, 76.0)
 TARGET_WIDTH = 2048
 OUTPUT_QUALITY = 78
 
+# Pillow's generic decompression-bomb threshold is below this known NASA source.
+# Allow exactly the expected 21600x10800 trusted authoring input; build() still
+# rejects any image whose dimensions differ from that contract.
+Image.MAX_IMAGE_PIXELS = SOURCE_WIDTH * SOURCE_HEIGHT
+
 
 def mercator_y(latitude: float) -> float:
     latitude = max(-85.05112878, min(85.05112878, latitude))
