@@ -14,7 +14,7 @@ async function jump(position, zoom, pitch, bearing = 0) {
     if (!map) throw new Error('terrain map diagnostic unavailable');
     map.jumpTo({ center: position, zoom, pitch, bearing });
   }, { position, zoom, pitch, bearing });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(650);
 }
 
 async function readPaintEvidence() {
@@ -24,6 +24,7 @@ async function readPaintEvidence() {
     return {
       grading: window.__r3MapVisualGrading,
       hostGrade: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-visual-grading'),
+      detailedLandSourceLoaded: map.isSourceLoaded('r3-wp2b-land'),
       sea: map.getPaintProperty('r3-wp2b-sea', 'background-color'),
       land: map.getPaintProperty('r3-wp2b-land-wash', 'fill-color'),
       landOpacity: map.getPaintProperty('r3-wp2b-land-wash', 'fill-opacity'),
@@ -31,27 +32,66 @@ async function readPaintEvidence() {
       hillshadeHighlight: map.getPaintProperty('r3-wp2b-hillshade', 'hillshade-highlight-color'),
       hillshadeAccent: map.getPaintProperty('r3-wp2b-hillshade', 'hillshade-accent-color'),
       coastline: map.getPaintProperty('r3-wp2b-coastline', 'line-color'),
-      front: map.getPaintProperty('campaign-fronts-core', 'line-color'),
-      controlFill: map.getPaintProperty('campaign-territories-fill', 'fill-color')
+      coastlineOpacity: map.getPaintProperty('r3-wp2b-coastline', 'line-opacity'),
+      administrativeBorderOpacity: map.getPaintProperty('campaign-administrative-borders', 'line-opacity'),
+      territoryFillOpacity: map.getPaintProperty('campaign-territories-fill', 'fill-opacity'),
+      stateWashOpacity: map.getPaintProperty('campaign-territory-state-wash', 'fill-opacity'),
+      controlBorder: {
+        colour: map.getPaintProperty('campaign-control-borders', 'line-color'),
+        opacity: map.getPaintProperty('campaign-control-borders', 'line-opacity'),
+        width: map.getPaintProperty('campaign-control-borders', 'line-width')
+      },
+      controlGlow: map.getLayer('campaign-control-border-glow') ? {
+        colour: map.getPaintProperty('campaign-control-border-glow', 'line-color'),
+        opacity: map.getPaintProperty('campaign-control-border-glow', 'line-opacity'),
+        width: map.getPaintProperty('campaign-control-border-glow', 'line-width'),
+        blur: map.getPaintProperty('campaign-control-border-glow', 'line-blur')
+      } : null,
+      stateOutline: map.getPaintProperty('campaign-state-outline', 'line-color'),
+      front: map.getPaintProperty('campaign-fronts-core', 'line-color')
     };
   });
 }
 
+function includesControllerColours(expression) {
+  const serialised = JSON.stringify(expression);
+  return serialised.includes('#76f2e1') && serialised.includes('#ff776f');
+}
+
 function assertPaintEvidence(evidence) {
-  if (!evidence.grading?.applied || evidence.grading.profileId !== 'clean-neutral-v1') {
+  if (!evidence.grading?.applied || evidence.grading.profileId !== 'clean-border-v2') {
     throw new Error(`grading runtime evidence missing: ${JSON.stringify(evidence.grading)}`);
   }
-  if (evidence.hostGrade !== 'clean-neutral-v1') throw new Error(`host grading marker missing: ${evidence.hostGrade}`);
+  if (evidence.grading.coastlineGeometry?.status !== '50m-static') {
+    throw new Error(`high-detail coastline was not promoted: ${JSON.stringify(evidence.grading.coastlineGeometry)}`);
+  }
+  if (!evidence.grading.coastlineGeometry.sourceUrl?.includes('generated/r3-terrain/europe-land-mask-50m.geojson')) {
+    throw new Error(`unexpected detailed coastline URL: ${evidence.grading.coastlineGeometry.sourceUrl}`);
+  }
+  if (!evidence.detailedLandSourceLoaded) throw new Error('promoted 50m MapLibre land source is not loaded');
+  if (evidence.hostGrade !== 'clean-border-v2') throw new Error(`host grading marker missing: ${evidence.hostGrade}`);
   if (evidence.sea !== '#19313a') throw new Error(`sea grade mismatch: ${evidence.sea}`);
-  if (evidence.land !== '#958d77') throw new Error(`land grade mismatch: ${evidence.land}`);
+  if (evidence.land !== '#777a72') throw new Error(`land grade mismatch: ${evidence.land}`);
+  if (evidence.landOpacity !== 1) throw new Error(`land must be an opaque surface rather than a translucent wash: ${JSON.stringify(evidence.landOpacity)}`);
   if (evidence.hillshadeShadow !== '#242321') throw new Error(`hillshade shadow mismatch: ${evidence.hillshadeShadow}`);
   if (evidence.hillshadeHighlight !== '#eee7d8') throw new Error(`hillshade highlight mismatch: ${evidence.hillshadeHighlight}`);
   if (evidence.hillshadeAccent !== '#8a8171') throw new Error(`hillshade accent mismatch: ${evidence.hillshadeAccent}`);
-  if (evidence.coastline !== '#c6c9bc') throw new Error(`coastline mismatch: ${evidence.coastline}`);
+  if (evidence.coastline !== '#b9c0b8' || evidence.coastlineOpacity !== 0.13) {
+    throw new Error(`coastline treatment mismatch: ${JSON.stringify({ colour: evidence.coastline, opacity: evidence.coastlineOpacity })}`);
+  }
+  if (evidence.administrativeBorderOpacity !== 0) throw new Error(`generic administrative overlay still visible: ${JSON.stringify(evidence.administrativeBorderOpacity)}`);
+  if (evidence.territoryFillOpacity !== 0) throw new Error(`broad controller fill still visible: ${JSON.stringify(evidence.territoryFillOpacity)}`);
+  if (evidence.stateWashOpacity !== 0) throw new Error(`broad operational state wash still visible: ${JSON.stringify(evidence.stateWashOpacity)}`);
+  if (!includesControllerColours(evidence.controlBorder.colour)) throw new Error(`controller core colours missing: ${JSON.stringify(evidence.controlBorder.colour)}`);
+  if (!evidence.controlGlow || !includesControllerColours(evidence.controlGlow.colour)) throw new Error(`controller glow layer missing or miscoloured: ${JSON.stringify(evidence.controlGlow)}`);
   if (evidence.front !== '#ffad66') throw new Error(`operational front colour regressed: ${evidence.front}`);
-  const control = JSON.stringify(evidence.controlFill);
-  if (!control.includes('#2db8a4') || !control.includes('#7c6669')) {
-    throw new Error(`friendly/enemy control semantics changed: ${control}`);
+  const stateOutline = JSON.stringify(evidence.stateOutline);
+  if (!stateOutline.includes('#ff7a63') || !stateOutline.includes('#effffc')) {
+    throw new Error(`state outline semantics regressed: ${stateOutline}`);
+  }
+  const ownership = evidence.grading.ownershipTreatment;
+  if (!ownership || ownership.territoryFillOpacity !== 0 || ownership.administrativeBorderOpacity !== 0 || ownership.stateWashOpacity !== 0) {
+    throw new Error(`runtime ownership evidence does not prove wash removal: ${JSON.stringify(ownership)}`);
   }
 }
 
@@ -67,8 +107,10 @@ try {
   await page.waitForFunction(() => (
     document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready'
     && window.__r3MapVisualGrading?.applied === true
-    && window.__r3MapVisualGrading?.profileId === 'clean-neutral-v1'
+    && window.__r3MapVisualGrading?.profileId === 'clean-border-v2'
+    && window.__r3MapVisualGrading?.coastlineGeometry?.status === '50m-static'
     && Boolean(window.__r3TerrainMap)
+    && window.__r3TerrainMap.isSourceLoaded('r3-wp2b-land')
   ), null, { timeout: 45000 });
 
   const collapse = page.getByRole('button', { name: 'Collapse command sidebar' });
@@ -80,11 +122,18 @@ try {
   const paint = await readPaintEvidence();
   assertPaintEvidence(paint);
 
-  const evidence = { schemaVersion: 1, paint, captures: {} };
+  const evidence = { schemaVersion: 3, paint, captures: {} };
 
   await jump([6.5, 51.0], 4.35, 43, -5);
   await host.screenshot({ path: `${outputDir}/theatre-western-central.png` });
   evidence.captures.theatre = { center: [6.5, 51.0], zoom: 4.35, pitch: 43, bearing: -5 };
+
+  // Direct regression view for the product-owner report: Atlantic/Channel
+  // shorelines must read as geography, not as stacked translucent polygons.
+  await jump([-0.7, 48.45], 5.25, 49, -8);
+  await page.waitForTimeout(400);
+  await host.screenshot({ path: `${outputDir}/campaign-france-atlantic-channel.png` });
+  evidence.captures.atlanticChannel = { center: [-0.7, 48.45], zoom: 5.25, pitch: 49, bearing: -8 };
 
   await jump([2.8, 50.65], 5.35, 51, -9);
   await page.waitForFunction(() => {
