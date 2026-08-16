@@ -6,6 +6,7 @@ const grading = readFileSync('src/presentation/r3-map-visual-grading.ts', 'utf8'
 const main = readFileSync('src/main.tsx', 'utf8');
 const terrain = readFileSync('src/components/TerrainMapPrototypeImpl.tsx', 'utf8');
 const landMaskBuilder = readFileSync('scripts/maps/build-r3-europe-land-mask.mjs', 'utf8');
+const packageJson = readFileSync('package.json', 'utf8');
 const formations = readFileSync('src/presentation/r3-formation-miniatures-layer.ts', 'utf8');
 const world = readFileSync('src/presentation/r3-world-miniatures-layer.ts', 'utf8');
 
@@ -22,11 +23,17 @@ test('land is one opaque neutral terrain surface instead of a translucent wash',
   assert.match(grading, /'r3-wp2b-land-wash', 'fill-opacity', 1\)/);
 });
 
-test('opaque terrain uses the higher fidelity 50m coastline source', () => {
+test('higher fidelity 50m coastline is delivered as a static MapLibre refinement, not bundled into terrain JS', () => {
   assert.match(landMaskBuilder, /world-atlas\/land-50m\.json/);
+  assert.match(landMaskBuilder, /public\/generated\/r3-terrain\/europe-land-mask-50m\.geojson/);
   assert.match(landMaskBuilder, /id: 'r3-europe-land-mask-v3'/);
-  assert.match(landMaskBuilder, /source: 'world-atlas\/land-50m'/);
-  assert.doesNotMatch(landMaskBuilder, /import worldLand from 'world-atlas\/land-110m\.json'/);
+  assert.match(landMaskBuilder, /delivery: 'static-maplibre-geojson'/);
+  assert.match(grading, /detailedLandMaskPath: 'generated\/r3-terrain\/europe-land-mask-50m\.geojson'/);
+  assert.match(grading, /fetch\(detailedLandMaskUrl\(\)/);
+  assert.match(grading, /landSource\.setData/);
+  assert.match(grading, /'110m-fallback'/);
+  assert.doesNotMatch(terrain, /land-50m\.json|europe-land-mask-50m/);
+  assert.match(packageJson, /"predev": "npm run build:r3-europe-land-mask/);
 });
 
 test('broad political fills and the generic pale administrative outline are removed', () => {
@@ -59,9 +66,10 @@ test('Three.js lighting remains untouched by the terrain ownership revision', ()
   assert.doesNotMatch(grading, /AmbientLight|DirectionalLight/);
 });
 
-test('grading is presentation-only and exposes runtime ownership evidence', () => {
+test('grading is presentation-only and exposes runtime ownership/coastline evidence', () => {
   assert.match(grading, /__r3MapVisualGrading/);
   assert.match(grading, /ownershipTreatment/);
+  assert.match(grading, /coastlineGeometry/);
   assert.match(grading, /dataset\.visualGrading/);
   assert.doesNotMatch(grading, /GameState|newGame|endTurn|saveGame|selectedTerritory|taskGroups/);
 });
