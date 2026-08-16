@@ -22,8 +22,9 @@ from PIL import Image, ImageEnhance
 SOURCE_WIDTH = 10_800
 SOURCE_HEIGHT = 5_400
 BOUNDS = (-30.0, 28.0, 55.0, 76.0)  # west, south, east, north
-TARGET_WIDTH = 4096
+TARGET_WIDTH = 2048
 TARGET_HEIGHT = round(TARGET_WIDTH * ((BOUNDS[3] - BOUNDS[1]) / (BOUNDS[2] - BOUNDS[0])))
+OUTPUT_QUALITY = 82
 
 
 def pixel_x(longitude: float, width: int) -> int:
@@ -65,8 +66,6 @@ def art_direct(image: Image.Image) -> Image.Image:
     red = pixels[:, :, 0]
     green = pixels[:, :, 1]
     blue = pixels[:, :, 2]
-    maximum = np.max(pixels, axis=2)
-    minimum = np.min(pixels, axis=2)
     luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
     # Source colours are intentionally soft. Increase material separation and
@@ -91,9 +90,8 @@ def art_direct(image: Image.Image) -> Image.Image:
     water_weight = water_mask[:, :, None] * 0.55
     pixels = pixels * (1.0 - water_weight) + water_target * water_weight
 
-    # Add broad wooded identities in real, recognisable European forest belts.
-    # The masks are intentionally soft and presentation-only: they are not
-    # gameplay geography or a claim of fine-grained land-cover authority.
+    # Add broad wooded identities in recognisable European forest belts. These
+    # soft masks are visual direction only, not gameplay or land-cover authority.
     forest = np.zeros((height, width), dtype=np.float32)
     for region in (
         (5.5, 49.7, 2.4, 1.4, 1.00),   # Ardennes / western Germany
@@ -194,7 +192,7 @@ def build(source: Path, output: Path, metadata: Path) -> None:
     crop = art_direct(crop)
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    crop.save(output, "WEBP", quality=90, method=6)
+    crop.save(output, "WEBP", quality=OUTPUT_QUALITY, method=6)
 
     metadata.parent.mkdir(parents=True, exist_ok=True)
     metadata.write_text(
@@ -209,7 +207,7 @@ def build(source: Path, output: Path, metadata: Path) -> None:
                 "bounds": list(BOUNDS),
                 "dimensions": [TARGET_WIDTH, TARGET_HEIGHT],
                 "format": "webp",
-                "quality": 90,
+                "quality": OUTPUT_QUALITY,
                 "normalBuildDependency": False,
                 "artDirection": {
                     "water": "deeper slate/ocean blue",
