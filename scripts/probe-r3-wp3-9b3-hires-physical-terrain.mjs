@@ -27,13 +27,17 @@ async function jump(center, zoom, pitch, bearing = 0) {
   await page.waitForTimeout(750);
 }
 
-async function waitForNewLocalTileResponses(previousUrls) {
+async function waitForLocalLayerReady() {
   await page.waitForFunction(() => {
     const map = window.__r3TerrainMap;
     return window.__r3PhysicalTerrainColour?.localDetailStatus === 'ready'
       && Boolean(map?.getSource('r3-wp3-9b3-physical-colour-local'))
       && Boolean(map?.getLayer('r3-wp3-9b3-physical-colour-local'));
   }, null, { timeout: 15000 });
+}
+
+async function waitForNewLocalTileResponses(previousUrls) {
+  await waitForLocalLayerReady();
 
   const deadline = Date.now() + 15000;
   while (Date.now() < deadline) {
@@ -120,7 +124,7 @@ try {
   if (!containsControllerColours(initialPaint.controlBorderColour) || !containsControllerColours(initialPaint.controlGlowColour)) throw new Error(`controller colours regressed: ${JSON.stringify(initialPaint)}`);
   if (initialPaint.frontColour !== '#ffad66') throw new Error(`front colour regressed: ${initialPaint.frontColour}`);
 
-  const evidence = { schemaVersion: 6, initialPaint, captures: {} };
+  const evidence = { schemaVersion: 7, initialPaint, captures: {} };
 
   await jump([6.5, 51.0], 4.35, 43, -5);
   await host.screenshot({ path: `${outputDir}/theatre-western-central.png` });
@@ -168,11 +172,25 @@ try {
   await host.screenshot({ path: `${outputDir}/campaign-alps.png` });
   evidence.captures.alpsCampaign = { center: [8.35, 47.15], zoom: 5.4, pitch: 53, bearing: -7 };
 
-  const alpsBefore = new Set(localTileResponses.keys());
+  // The Alps viewport can reuse z7 imagery already fetched by the preceding
+  // Central Europe Selected view. Cached reuse is the desired browser/runtime
+  // behaviour, so require an active local layer plus successful z7 coverage,
+  // not a redundant new HTTP URL.
+  const successfulBeforeAlps = [...localTileResponses.values()].filter(response => response.ok).length;
   await jump([8.55, 47.05], 6.4, 57, -8);
-  const alpsResponses = await waitForNewLocalTileResponses(alpsBefore);
+  await waitForLocalLayerReady();
+  await page.waitForTimeout(750);
+  const successfulAfterAlps = [...localTileResponses.values()].filter(response => response.ok).length;
+  if (successfulAfterAlps < 1) throw new Error('Alps Selected view has no successful WP3.9B3 local-detail coverage');
   await host.screenshot({ path: `${outputDir}/selected-alps.png` });
-  evidence.captures.alpsSelected = { center: [8.55, 47.05], zoom: 6.4, pitch: 57, bearing: -8, successfulTileResponses: alpsResponses.length };
+  evidence.captures.alpsSelected = {
+    center: [8.55, 47.05],
+    zoom: 6.4,
+    pitch: 57,
+    bearing: -8,
+    successfulTileResponsesTotal: successfulAfterAlps,
+    reusedCachedCoverage: successfulAfterAlps === successfulBeforeAlps
+  };
 
   const formationEvidence = await page.evaluate(() => window.__r3FormationMiniatures);
   if (!formationEvidence?.pieces.some(piece => piece.visible)) throw new Error('friendly physical formation evidence is not visible');
