@@ -1,0 +1,52 @@
+name: R3 WP3.9B2 build physical terrain asset
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/maps/build-r3-physical-terrain-texture.py'
+      - '.github/workflows/r3-wp3-9b2-build-physical-terrain-asset.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+
+      - name: Download Natural Earth II source raster
+        run: |
+          curl --fail --location --retry 3 --retry-delay 3 \
+            --output /tmp/NE2_50M_LC_SR_W.tif \
+            https://raw.githubusercontent.com/nvkelso/natural-earth-raster/master/50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif
+          test "$(stat -c%s /tmp/NE2_50M_LC_SR_W.tif)" -gt 150000000
+
+      - name: Build Europe physical-colour texture
+        run: |
+          python scripts/maps/build-r3-physical-terrain-texture.py \
+            /tmp/NE2_50M_LC_SR_W.tif \
+            artifacts/r3-wp3-9b2/europe-physical-colour-v1.webp \
+            artifacts/r3-wp3-9b2/europe-physical-colour-v1.json
+          test -s artifacts/r3-wp3-9b2/europe-physical-colour-v1.webp
+
+      - name: Upload generated texture
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9b2-physical-terrain-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/r3-wp3-9b2/
+          if-no-files-found: error
+          retention-days: 7
