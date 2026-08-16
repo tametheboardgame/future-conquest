@@ -22,5 +22,6 @@
   "sha256": "f6257502818ac444c64fc94897f9fcfecfddd3e5525f00880a06b48e49577af4",
   "normalBuildDependency": false,
   "purpose": "presentation-only high-resolution satellite-derived physical colour beneath Copernicus DEM relief",
-  "buildEncoding": "four base64 chunks materialised locally"
+  "buildEncoding": "four base64 chunks materialised locally",
+  "runtimeProfile": "physical-colour-v2-hires"
 }
