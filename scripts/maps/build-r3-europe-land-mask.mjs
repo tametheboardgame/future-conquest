@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { bboxClip } from '@turf/turf';
 import { feature as topojsonFeature } from 'topojson-client';
-import worldLand from 'world-atlas/land-110m.json' with { type: 'json' };
+import worldLand from 'world-atlas/land-50m.json' with { type: 'json' };
 
 const OUTPUT = path.resolve('src/assets/r3-europe-land-mask.json');
 
@@ -45,10 +45,10 @@ const cleanClippedFeature = feature => {
 // MapLibre triangulates each GeoJSON geometry as one render unit. The World
 // Atlas source is a single continent-spanning MultiPolygon; keeping that shape
 // intact allowed low-zoom fill triangulation to connect distant polygon parts
-// into the large Theatre-scale wedges reported during production review. Clip
-// first, then emit each polygon as its own RFC 7946-wound feature. This changes
-// neither the land union nor coastline, but gives the renderer independent,
-// bounded triangulation units.
+// into large Theatre-scale wedges. Clip first, then emit each polygon as its
+// own RFC 7946-wound feature. WP3.9B now uses the 50m atlas rather than the
+// former 110m source so an opaque board surface does not expose blocky coast
+// simplification around the Channel, North Sea and smaller European islands.
 const clippedFeatures = worldFeatures
   .filter(feature => feature?.geometry && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon'))
   .map(feature => cleanClippedFeature(bboxClip(feature, R3_EUROPE_LAND_MASK_BOUNDS)))
@@ -69,9 +69,9 @@ if (!clippedFeatures.length) {
 const output = {
   type: 'FeatureCollection',
   futureConquest: {
-    id: 'r3-europe-land-mask-v2',
-    source: 'world-atlas/land-110m',
-    purpose: 'presentation-only physical land wash and coastline',
+    id: 'r3-europe-land-mask-v3',
+    source: 'world-atlas/land-50m',
+    purpose: 'presentation-only physical land surface and coastline',
     clipBounds: R3_EUROPE_LAND_MASK_BOUNDS
   },
   features: clippedFeatures
