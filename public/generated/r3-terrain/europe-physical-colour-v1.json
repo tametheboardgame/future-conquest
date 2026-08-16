@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 2,
+  "id": "r3-wp3-9b2-natural-earth-physical-colour-v1",
+  "source": "Natural Earth II 1:50m NE2_50M_LC_SR_W",
+  "sourceRepository": "nvkelso/natural-earth-raster",
+  "sourcePath": "50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif",
+  "sourceLicense": "public domain",
+  "bounds": [
+    -30.0,
+    28.0,
+    55.0,
+    76.0
+  ],
+  "dimensions": [
+    2048,
+    1157
+  ],
+  "format": "webp",
+  "quality": 82,
+  "normalBuildDependency": false,
+  "artDirection": {
+    "water": "deeper slate/ocean blue",
+    "lowlands": "stronger natural green with warm cultivated variation",
+    "woodland": "soft regional dark-green forest belts",
+    "mountains": "stronger stone with restrained source-derived snow highlights"
+  },
+  "purpose": "presentation-only stylised physical terrain colour beneath Copernicus DEM relief"
+}
