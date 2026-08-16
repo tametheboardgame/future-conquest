@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 4,
+  "id": "r3-wp3-9b2-natural-earth-physical-colour-v1",
+  "source": "Natural Earth II 1:50m NE2_50M_LC_SR_W",
+  "sourceRepository": "nvkelso/natural-earth-raster",
+  "sourcePath": "50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif",
+  "sourceLicense": "public domain",
+  "sourceProjection": "equirectangular",
+  "deliveryProjection": "Web Mercator latitude-warped image source",
+  "bounds": [-30, 28, 55, 76],
+  "dimensions": [640, 685],
+  "format": "webp",
+  "quality": 68,
+  "normalBuildDependency": false,
+  "buildEncoding": "five base64 chunks materialised locally",
+  "runtimeBytes": 24672,
+  "sha256": "b4eed87ed7b4eb4989f365d4d2b1565038e07d798e6ea602a06ab4466a34e4ef",
+  "purpose": "presentation-only stylised physical terrain colour beneath Copernicus DEM relief"
+}
