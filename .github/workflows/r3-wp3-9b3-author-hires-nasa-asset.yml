@@ -1,11 +1,11 @@
-name: R3 WP3.9B3 author high-resolution NASA terrain asset
+name: R3 WP3.9B3 author NASA 500m local terrain tiles
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - 'scripts/maps/build-r3-hires-nasa-physical-terrain-texture.py'
+      - 'scripts/maps/build-r3-nasa-physical-terrain-local-tiles.py'
       - '.github/workflows/r3-wp3-9b3-author-hires-nasa-asset.yml'
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout exact head
         uses: actions/checkout@v4
@@ -27,53 +27,45 @@ jobs:
           python-version: '3.12'
       - name: Install authoring dependencies
         run: python -m pip install --disable-pip-version-check pillow==11.3.0 numpy==2.2.6
-      - name: Download NASA Blue Marble June 2 km composite
+      - name: Download NASA Blue Marble June 500m Europe source tiles
         run: |
           curl --fail --location --retry 3 --retry-delay 2 \
-            --output /tmp/nasa-blue-marble-june-2km.jpg \
-            https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x21600x10800.jpg
-          test "$(stat -c%s /tmp/nasa-blue-marble-june-2km.jpg)" -gt 15000000
-      - name: Build projected high-resolution Europe physical colour
+            --output /tmp/nasa-blue-marble-june-500m-b1.jpg \
+            https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x21600x21600.B1.jpg
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/nasa-blue-marble-june-500m-c1.jpg \
+            https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-base/june/world.200406.3x21600x21600.C1.jpg
+          test "$(stat -c%s /tmp/nasa-blue-marble-june-500m-b1.jpg)" -gt 20000000
+          test "$(stat -c%s /tmp/nasa-blue-marble-june-500m-c1.jpg)" -gt 20000000
+      - name: Build Europe zoom-7 local-detail raster tiles
         run: |
-          mkdir -p artifacts/r3-wp3-9b3-nasa
-          python scripts/maps/build-r3-hires-nasa-physical-terrain-texture.py \
-            /tmp/nasa-blue-marble-june-2km.jpg \
-            artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp \
-            artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json
-          test -s artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp
-          test "$(stat -c%s artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp)" -lt 3000000
-      - name: Verify authored asset matches committed runtime contract
+          mkdir -p artifacts/r3-wp3-9b3-local-tiles
+          python scripts/maps/build-r3-nasa-physical-terrain-local-tiles.py \
+            /tmp/nasa-blue-marble-june-500m-b1.jpg \
+            /tmp/nasa-blue-marble-june-500m-c1.jpg \
+            artifacts/r3-wp3-9b3-local-tiles/tiles \
+            artifacts/r3-wp3-9b3-local-tiles/manifest.json
+      - name: Verify candidate tile count and bounded static cost
         run: |
           python - <<'PY'
-          import base64
-          import hashlib
           import json
           from pathlib import Path
-          from PIL import Image
-
-          metadata = json.load(open('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.json', encoding='utf-8'))
-          image_path = Path('artifacts/r3-wp3-9b3-nasa/europe-physical-colour-v2.webp')
-          image = Image.open(image_path)
-          payload = image_path.read_bytes()
-          committed = json.load(open('public/generated/r3-terrain/europe-physical-colour-v2.json', encoding='utf-8'))
-          parts = sorted(Path('src/assets/r3-wp3-9b3-physical-terrain').glob('part-*.b64'))
-          packaged = base64.b64decode(''.join(part.read_text(encoding='utf-8').strip() for part in parts))
-
-          assert image.size == (2048, 2192), image.size
-          assert metadata['dimensions'] == [2048, 2192]
-          assert metadata['sourceResolution'].startswith('2 km/pixel')
-          assert len(payload) == 396994, len(payload)
-          assert hashlib.sha256(payload).hexdigest() == 'f6257502818ac444c64fc94897f9fcfecfddd3e5525f00880a06b48e49577af4'
-          assert committed['runtimeBytes'] == len(payload)
-          assert committed['sha256'] == hashlib.sha256(payload).hexdigest()
-          assert len(parts) == 4
-          assert packaged == payload
-          print(committed)
+          manifest = json.load(open('artifacts/r3-wp3-9b3-local-tiles/manifest.json', encoding='utf-8'))
+          files = list(Path('artifacts/r3-wp3-9b3-local-tiles/tiles/7').glob('*/*.webp'))
+          assert manifest['sourceResolution'] == '500 m/pixel'
+          assert manifest['tileSize'] == 512
+          assert manifest['minzoom'] == 7 and manifest['maxzoom'] == 7
+          assert manifest['tileCount'] == 1023, manifest['tileCount']
+          assert len(files) == 1023, len(files)
+          # First experiment is allowed up to 32 MiB; final runtime target will
+          # be held below existing repository terrain budget before merge.
+          assert manifest['totalBytes'] < 32 * 1024 * 1024, manifest['totalBytes']
+          print(json.dumps(manifest, indent=2))
           PY
-      - name: Upload authoring evidence
+      - name: Upload 500m local-detail candidate
         uses: actions/upload-artifact@v4
         with:
-          name: r3-wp3-9b3-nasa-${{ github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/r3-wp3-9b3-nasa/
+          name: r3-wp3-9b3-500m-local-tiles-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/r3-wp3-9b3-local-tiles/
           if-no-files-found: error
           retention-days: 7
