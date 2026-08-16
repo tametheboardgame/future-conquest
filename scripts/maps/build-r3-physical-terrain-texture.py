@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -23,8 +24,24 @@ SOURCE_WIDTH = 10_800
 SOURCE_HEIGHT = 5_400
 BOUNDS = (-30.0, 28.0, 55.0, 76.0)  # west, south, east, north
 TARGET_WIDTH = 2048
-TARGET_HEIGHT = round(TARGET_WIDTH * ((BOUNDS[3] - BOUNDS[1]) / (BOUNDS[2] - BOUNDS[0])))
+EQUIRECT_WORK_HEIGHT = round(TARGET_WIDTH * ((BOUNDS[3] - BOUNDS[1]) / (BOUNDS[2] - BOUNDS[0])))
 OUTPUT_QUALITY = 82
+
+
+def mercator_y(latitude: float) -> float:
+    latitude = max(-85.05112878, min(85.05112878, latitude))
+    radians = math.radians(latitude)
+    return math.log(math.tan(math.pi / 4.0 + radians / 2.0))
+
+
+def mercator_output_height() -> int:
+    west, south, east, north = BOUNDS
+    horizontal_radians = math.radians(east - west)
+    vertical_mercator = mercator_y(north) - mercator_y(south)
+    return round(TARGET_WIDTH * vertical_mercator / horizontal_radians)
+
+
+TARGET_HEIGHT = mercator_output_height()
 
 
 def pixel_x(longitude: float, width: int) -> int:
@@ -68,15 +85,11 @@ def art_direct(image: Image.Image) -> Image.Image:
     blue = pixels[:, :, 2]
     luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
-    # Source colours are intentionally soft. Increase material separation and
-    # darken the whole map before applying targeted land/water treatment.
     mean = pixels.mean(axis=2, keepdims=True)
     pixels = mean + (pixels - mean) * 1.42
     pixels = (pixels - 0.5) * 1.16 + 0.5
     pixels *= 0.82
 
-    # Natural Earth water is visually useful but too bright/cyan for the game.
-    # Detect it from source colour, then pull it toward a deeper slate/ocean blue.
     water_mask = np.clip((blue - (red + green) / 2.0) * 4.0 + 0.45, 0.0, 1.0)
     land_mask = 1.0 - water_mask
     water_target = np.stack(
@@ -90,18 +103,16 @@ def art_direct(image: Image.Image) -> Image.Image:
     water_weight = water_mask[:, :, None] * 0.55
     pixels = pixels * (1.0 - water_weight) + water_target * water_weight
 
-    # Add broad wooded identities in recognisable European forest belts. These
-    # soft masks are visual direction only, not gameplay or land-cover authority.
     forest = np.zeros((height, width), dtype=np.float32)
     for region in (
-        (5.5, 49.7, 2.4, 1.4, 1.00),   # Ardennes / western Germany
-        (8.2, 48.2, 1.0, 1.5, 1.10),   # Black Forest
-        (7.1, 48.1, 0.8, 1.2, 0.80),   # Vosges
-        (12.7, 49.0, 1.5, 1.3, 0.90),  # Bavarian / Bohemian forest
-        (3.0, 45.3, 2.0, 1.8, 0.65),   # Massif Central wooded uplands
-        (14.8, 47.5, 2.5, 1.0, 0.75),  # eastern Alpine foothills
-        (10.0, 53.0, 3.2, 1.3, 0.45),  # north German mixed woodland
-        (17.0, 50.2, 3.0, 1.8, 0.60),  # central/eastern European forests
+        (5.5, 49.7, 2.4, 1.4, 1.00),
+        (8.2, 48.2, 1.0, 1.5, 1.10),
+        (7.1, 48.1, 0.8, 1.2, 0.80),
+        (12.7, 49.0, 1.5, 1.3, 0.90),
+        (3.0, 45.3, 2.0, 1.8, 0.65),
+        (14.8, 47.5, 2.5, 1.0, 0.75),
+        (10.0, 53.0, 3.2, 1.3, 0.45),
+        (17.0, 50.2, 3.0, 1.8, 0.60),
     ):
         forest += gaussian_region(longitude, latitude, *region)
     forest = np.clip(forest, 0.0, 1.0) * land_mask
@@ -116,8 +127,6 @@ def art_direct(image: Image.Image) -> Image.Image:
     forest_weight = forest[:, :, None] * 0.28
     pixels = pixels * (1.0 - forest_weight) + forest_target * forest_weight
 
-    # Give cultivated lowlands visible warm/cool patch variation. This is a
-    # low-frequency cartographic texture, not a political or territory mask.
     field_pattern = (
         np.sin(longitude * 3.1)
         + np.sin(latitude * 5.7)
@@ -139,8 +148,6 @@ def art_direct(image: Image.Image) -> Image.Image:
     pixels[:, :, 1] += warm * 0.45
     pixels[:, :, 2] -= warm * 0.20
 
-    # Strengthen high Alpine/Pyrenean rock and restrained snow from the source's
-    # own bright high-relief pixels so mountains no longer read as green hills.
     pyrenees = gaussian_region(longitude, latitude, 1.0, 42.8, 2.0, 0.7, 0.8)
     mountain_mask = np.clip(alpine + pyrenees, 0.0, 1.0) * land_mask
     snow = np.clip((luminance - 0.62) * 3.5, 0.0, 1.0) * mountain_mask
@@ -171,6 +178,26 @@ def art_direct(image: Image.Image) -> Image.Image:
     return ImageEnhance.Sharpness(result).enhance(1.15)
 
 
+def warp_to_web_mercator(image: Image.Image) -> Image.Image:
+    """Pre-warp equirectangular rows for MapLibre's Web Mercator image source."""
+    source = np.asarray(image.convert("RGB"), dtype=np.float32)
+    source_height = source.shape[0]
+    _west, south, _east, north = BOUNDS
+
+    north_y = mercator_y(north)
+    south_y = mercator_y(south)
+    destination_fraction = np.linspace(0.0, 1.0, TARGET_HEIGHT, dtype=np.float64)
+    projected_y = north_y + destination_fraction * (south_y - north_y)
+    latitude = np.degrees(np.arctan(np.sinh(projected_y)))
+    source_y = (north - latitude) / (north - south) * (source_height - 1)
+
+    lower = np.floor(source_y).astype(np.int32)
+    upper = np.minimum(lower + 1, source_height - 1)
+    weight = (source_y - lower).astype(np.float32)[:, None, None]
+    warped = source[lower] * (1.0 - weight) + source[upper] * weight
+    return Image.fromarray(np.clip(warped, 0, 255).astype(np.uint8), "RGB")
+
+
 def build(source: Path, output: Path, metadata: Path) -> None:
     with Image.open(source) as src:
         src.load()
@@ -188,8 +215,9 @@ def build(source: Path, output: Path, metadata: Path) -> None:
         )
         crop = src.convert("RGB").crop(crop_box)
 
-    crop = crop.resize((TARGET_WIDTH, TARGET_HEIGHT), Image.Resampling.LANCZOS)
+    crop = crop.resize((TARGET_WIDTH, EQUIRECT_WORK_HEIGHT), Image.Resampling.LANCZOS)
     crop = art_direct(crop)
+    crop = warp_to_web_mercator(crop)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     crop.save(output, "WEBP", quality=OUTPUT_QUALITY, method=6)
@@ -198,12 +226,14 @@ def build(source: Path, output: Path, metadata: Path) -> None:
     metadata.write_text(
         json.dumps(
             {
-                "schemaVersion": 2,
+                "schemaVersion": 3,
                 "id": "r3-wp3-9b2-natural-earth-physical-colour-v1",
                 "source": "Natural Earth II 1:50m NE2_50M_LC_SR_W",
                 "sourceRepository": "nvkelso/natural-earth-raster",
                 "sourcePath": "50m_rasters/NE2_50M_LC_SR_W/NE2_50M_LC_SR_W.tif",
                 "sourceLicense": "public domain",
+                "sourceProjection": "equirectangular",
+                "deliveryProjection": "Web Mercator latitude-warped image source",
                 "bounds": list(BOUNDS),
                 "dimensions": [TARGET_WIDTH, TARGET_HEIGHT],
                 "format": "webp",
