@@ -14,7 +14,9 @@ test('WP3.9B2 ships a small self-hosted physical-colour asset with provenance', 
   assert.equal(metadata.id, 'r3-wp3-9b2-natural-earth-physical-colour-v1');
   assert.equal(metadata.sourceLicense, 'public domain');
   assert.deepEqual(metadata.bounds, [-30, 28, 55, 76]);
-  assert.deepEqual(metadata.dimensions, [2048, 1157]);
+  assert.deepEqual(metadata.dimensions, [2048, 2192]);
+  assert.equal(metadata.sourceProjection, 'equirectangular');
+  assert.equal(metadata.deliveryProjection, 'Web Mercator latitude-warped image source');
   assert.equal(metadata.normalBuildDependency, false);
   const bytes = fs.statSync(imagePath).size;
   assert.ok(bytes > 100_000, `physical terrain texture unexpectedly tiny: ${bytes}`);
@@ -29,6 +31,13 @@ test('physical colour is a static image/raster presentation layer below Copernic
   assert.match(physical, /hillshade-exaggeration', 0\.40/);
   assert.match(physical, /fetch\(assetUrl\(\), \{ method: 'HEAD'/);
   assert.match(physical, /status: 'checking' \| 'ready' \| 'fallback'/);
+});
+
+test('asset builder pre-warps equirectangular latitude into MapLibre Web Mercator', () => {
+  assert.match(builder, /def mercator_y/);
+  assert.match(builder, /def warp_to_web_mercator/);
+  assert.match(builder, /np\.degrees\(np\.arctan\(np\.sinh\(projected_y\)\)\)/);
+  assert.match(builder, /crop = warp_to_web_mercator\(crop\)/);
 });
 
 test('accepted border-led ownership semantics remain the political authority', () => {
