@@ -5,7 +5,7 @@
   "description": "Design data and tooling for the Future Conquest strategy game.",
   "type": "module",
   "scripts": {
-    "predev": "npm run build:audio && npm run build:motion-comic && npm run build:endings",
+    "predev": "npm run build:r3-europe-land-mask && npm run build:audio && npm run build:motion-comic && npm run build:endings",
     "dev": "vite",
     "test": "node scripts/run-engine-tests.mjs",
     "simulate:current-balance": "node scripts/simulate-current-engine-balance.mjs",
