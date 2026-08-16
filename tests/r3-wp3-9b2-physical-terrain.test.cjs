@@ -86,11 +86,18 @@ test('normal dev/build remains network-free and materialises only the tiny broad
   assert.doesNotMatch(materialiser, /https?:\/\//);
 });
 
-test('B3 uses broad image plus viewport-loaded z7 raster LOD below Copernicus hillshade', () => {
+test('B3 keeps Campaign/Theatre on the B2 path and lazily registers z7 local raster detail', () => {
   assert.match(physical, /R3_PHYSICAL_TERRAIN_PROFILE_ID = 'physical-colour-v3-local-tiles'/);
   assert.match(physical, /europe-physical-colour-v1\.webp/);
   assert.match(physical, /physical-colour-tiles\/\{z\}\/\{x\}\/\{y\}\.webp/);
   assert.match(physical, /R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM = 7/);
+  assert.match(physical, /localDetailStatus: 'deferred' \| 'checking' \| 'ready' \| 'fallback'/);
+  assert.match(physical, /writeEvidence\('checking', 'deferred'\)/);
+  assert.match(physical, /if \(map\.getZoom\(\) < R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM\) return/);
+  assert.match(physical, /map\.on\('zoomend', activate\)/);
+  assert.match(physical, /map\.on\('moveend', activate\)/);
+  assert.match(physical, /fetch\(localManifestUrl\(\), \{ method: 'HEAD', cache: 'default' \}\)/);
+  assert.match(physical, /addLocalDetailTiles\(map\)/);
   assert.match(physical, /type: 'image'/);
   assert.match(physical, /type: 'raster'/);
   assert.match(physical, /tileSize: 512/);
@@ -98,6 +105,7 @@ test('B3 uses broad image plus viewport-loaded z7 raster LOD below Copernicus hi
   assert.match(physical, /maxzoom: R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM/);
   assert.match(physical, /map\.addLayer\([\s\S]*?'r3-wp2b-hillshade'\)/);
   assert.match(physical, /hillshade-exaggeration', 0\.36/);
+  assert.doesNotMatch(physical, /Promise\.all\(\[\s*fetch\(assetUrl\(\)[\s\S]*localManifestUrl/);
   assert.doesNotMatch(physical, /europe-physical-colour-v2\.webp/);
 });
 
