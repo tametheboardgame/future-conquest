@@ -21,7 +21,7 @@ export type R3PhysicalTerrainColourEvidence = {
   localDetailLayerId: typeof R3_PHYSICAL_TERRAIN_LOCAL_LAYER_ID;
   localDetailTileUrl: string;
   localDetailMinZoom: typeof R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM;
-  localDetailStatus: 'checking' | 'ready' | 'fallback';
+  localDetailStatus: 'deferred' | 'checking' | 'ready' | 'fallback';
   bounds: typeof R3_PHYSICAL_TERRAIN_BOUNDS;
   rasterOpacity: number;
   hillshadeExaggeration: number;
@@ -35,6 +35,7 @@ declare global {
 }
 
 const installedMaps = new WeakSet<Map>();
+const localActivationMaps = new WeakSet<Map>();
 
 function assetUrl(): string {
   return `${import.meta.env.BASE_URL}${R3_PHYSICAL_TERRAIN_ASSET_PATH}`;
@@ -71,12 +72,16 @@ function writeEvidence(
   };
 }
 
-function markBroadBaseReady(map: Map, localDetailStatus: R3PhysicalTerrainColourEvidence['localDetailStatus']): void {
+function currentBroadStatus(): R3PhysicalTerrainColourEvidence['status'] {
+  return window.__r3PhysicalTerrainColour?.status ?? 'checking';
+}
+
+function markBroadBaseReady(map: Map): void {
   const finish = () => {
     if (!installedMaps.has(map) || !map.getSource(R3_PHYSICAL_TERRAIN_SOURCE_ID)) return;
     if (!map.isSourceLoaded(R3_PHYSICAL_TERRAIN_SOURCE_ID)) return;
     map.off('sourcedata', finish);
-    writeEvidence('ready', localDetailStatus);
+    writeEvidence('ready', window.__r3PhysicalTerrainColour?.localDetailStatus ?? 'deferred');
     const host = document.querySelector<HTMLElement>('.r3-terrain-prototype');
     if (host) host.dataset.physicalTerrain = R3_PHYSICAL_TERRAIN_PROFILE_ID;
   };
@@ -146,38 +151,66 @@ function addLocalDetailTiles(map: Map): void {
   }
 }
 
+function installDeferredLocalDetail(map: Map): void {
+  let activationStarted = false;
+
+  const activate = () => {
+    if (activationStarted || localActivationMaps.has(map)) return;
+    if (map.getZoom() < R3_PHYSICAL_TERRAIN_LOCAL_MIN_ZOOM) return;
+
+    activationStarted = true;
+    writeEvidence(currentBroadStatus(), 'checking');
+
+    void fetch(localManifestUrl(), { method: 'HEAD', cache: 'default' })
+      .then(response => {
+        if (!response.ok) throw new Error(`local physical terrain manifest returned ${response.status}`);
+        if (!map.getLayer('r3-wp2b-hillshade')) throw new Error('hillshade layer unavailable during local-detail activation');
+        addLocalDetailTiles(map);
+        localActivationMaps.add(map);
+        writeEvidence(currentBroadStatus(), 'ready');
+        map.triggerRepaint();
+      })
+      .catch(error => {
+        const reason = error instanceof Error ? error.message : String(error);
+        writeEvidence(currentBroadStatus(), 'fallback', reason);
+      });
+  };
+
+  // Keep Campaign/Theatre identical to WP3.9B2. The extra raster source is
+  // not registered, probed or fetched until the camera first enters local LOD.
+  map.on('zoomend', activate);
+  map.on('moveend', activate);
+  activate();
+}
+
 /**
  * R3-WP3.9B3 dual-LOD presentation-only physical-colour system.
  *
  * WP3.9B2's 37 KB broad image remains the low-cost theatre/campaign base.
  * From zoom 7, self-hosted NASA Blue Marble 500 m Web Mercator tiles replace
  * stretched continent-scale colour with viewport-loaded local detail.
+ * The local raster source itself is deferred until local zoom so normal wide
+ * camera transactions retain the exact lightweight B2 map path.
  * Copernicus GLO-30 remains the 3D elevation authority and political meaning
  * remains exclusively in the accepted border/front overlay system.
  */
 export function installR3PhysicalTerrainColour(map: Map): void {
   if (installedMaps.has(map)) return;
   installedMaps.add(map);
-  writeEvidence('checking', 'checking');
+  writeEvidence('checking', 'deferred');
 
-  void Promise.all([
-    fetch(assetUrl(), { method: 'HEAD', cache: 'default' }),
-    fetch(localManifestUrl(), { method: 'HEAD', cache: 'default' }).catch(() => null)
-  ])
-    .then(([baseResponse, localManifestResponse]) => {
-      if (!baseResponse.ok) throw new Error(`physical terrain base returned ${baseResponse.status}`);
+  // This startup path intentionally mirrors WP3.9B2: one tiny broad asset,
+  // one raster layer, and no local-detail source or manifest request.
+  void fetch(assetUrl(), { method: 'HEAD', cache: 'default' })
+    .then(response => {
+      if (!response.ok) throw new Error(`physical terrain texture returned ${response.status}`);
       if (!map.getLayer('r3-wp2b-hillshade')) throw new Error('hillshade layer unavailable');
 
       addBroadBase(map);
-      let localStatus: R3PhysicalTerrainColourEvidence['localDetailStatus'] = 'fallback';
-      if (localManifestResponse?.ok) {
-        addLocalDetailTiles(map);
-        localStatus = 'ready';
-      }
-
       map.setPaintProperty('r3-wp2b-hillshade', 'hillshade-exaggeration', 0.36);
       map.triggerRepaint();
-      markBroadBaseReady(map, localStatus);
+      markBroadBaseReady(map);
+      installDeferredLocalDetail(map);
     })
     .catch(error => {
       const reason = error instanceof Error ? error.message : String(error);
