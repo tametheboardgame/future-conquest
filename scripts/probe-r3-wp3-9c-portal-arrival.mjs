@@ -49,6 +49,8 @@ async function arrivalEvidence(page) {
       portalTerritory: arrival.portalTerritory ?? null,
       formationCount: arrival.formations.length,
       rendererFormationCount: pieces.length,
+      rendererVisibility: pieces.map(piece => ({ id: piece.id, visible: piece.visible })),
+      visibleFormationCount: pieces.filter(piece => piece.visible).length,
       maxAnchorDeltaPx: deltas.reduce((max, item) => Math.max(max, item.distance), 0),
       deltas
     };
@@ -68,15 +70,22 @@ try {
   const page = await newCampaignPage();
   await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap), null, { timeout: 45000 });
   await waitForArrival(page);
+  await page.waitForFunction(() => window.__r3PortalArrival?.phase === 'opening'
+    && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0
+    && window.__r3FormationMiniatures.pieces.every(piece => piece.visible === false), null, { timeout: 2000 });
 
   const opening = await arrivalEvidence(page);
   if (opening.reducedMotion) throw new Error('normal-motion probe unexpectedly entered reduced-motion mode');
   if (opening.formationCount === 0 || opening.formationCount !== opening.rendererFormationCount) throw new Error(`arrival formation count mismatch (${opening.formationCount}/${opening.rendererFormationCount})`);
+  if (opening.visibleFormationCount !== 0) throw new Error(`${opening.visibleFormationCount} formations were visible before materialisation`);
   if (opening.maxAnchorDeltaPx > 1.25) throw new Error(`arrival anchors diverged from renderer targets by ${opening.maxAnchorDeltaPx.toFixed(2)}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/portal-opening.png` });
 
   await page.waitForFunction(() => window.__r3PortalArrival?.phase === 'materialising', null, { timeout: 4000 });
+  await page.waitForFunction(() => (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0
+    && window.__r3FormationMiniatures.pieces.every(piece => piece.visible === true), null, { timeout: 2000 });
   const materialising = await arrivalEvidence(page);
+  if (materialising.visibleFormationCount !== materialising.rendererFormationCount) throw new Error('formations did not become visible at materialisation');
   if (materialising.maxAnchorDeltaPx > 1.25) throw new Error(`materialisation anchors diverged by ${materialising.maxAnchorDeltaPx.toFixed(2)}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/formations-materialising.png` });
 
@@ -126,7 +135,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     normal: { opening, materialising },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
