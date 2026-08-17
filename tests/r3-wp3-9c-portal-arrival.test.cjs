@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
+const tutorial = fs.readFileSync('src/components/TutorialOverlay.tsx', 'utf8');
 const arrival = fs.readFileSync('src/components/PortalArrivalSequence.tsx', 'utf8');
 const miniatures = fs.readFileSync('src/presentation/r3-formation-miniatures-layer.ts', 'utf8');
 const css = fs.readFileSync('src/components/portal-arrival.css', 'utf8');
@@ -22,11 +23,19 @@ test('portal arrival is requested for every fresh campaign entry and bypassed by
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
 });
 
-test('portal arrival owns first presentation and the tutorial is released only after it completes', () => {
+test('portal arrival owns first presentation and tutorial DOM/effects are released only after completion', () => {
   assert.match(startup, /mode === 'game' && arrivalRequested \? ' portal-arrival-active' : ''/);
   assert.match(startup, /<PortalArrivalSequence[\s\S]{0,180}active=\{mode === 'game' && arrivalRequested\}/);
   assert.match(startup, /const completePortalArrival = useCallback\(\(\) => \{\s*setArrivalRequested\(false\);\s*\}, \[\]\)/);
   assert.match(css, /\.startup-game-shell\.portal-arrival-active \.tutorial-guide\s*\{\s*display: none !important;/);
+  assert.match(tutorial, /const \[portalArrivalActive, setPortalArrivalActive\] = useState/);
+  assert.match(tutorial, /querySelector\('\.startup-game-shell\.portal-arrival-active'\)/);
+  assert.match(tutorial, /new MutationObserver\(syncPortalArrival\)/);
+  assert.match(tutorial, /observer\.observe\(shell, \{ attributes: true, attributeFilter: \['class'\] \}\)/);
+  assert.match(tutorial, /if \(portalArrivalActive \|\| !step \|\| !tutorialSeen \|\| replayRequested\) return/);
+  assert.match(tutorial, /if \(portalArrivalActive\) return;[\s\S]{0,120}const previous = previousStepId\.current/);
+  assert.match(tutorial, /const suppressAutomaticTutorial = portalArrivalActive \|\| Boolean\(step && tutorialSeen && !replayRequested\)/);
+  assert.match(tutorial, /if \(suppressAutomaticTutorial \|\| \(!step && !currentExplanationPhase\)\) return null/);
 });
 
 test('arrival waits for stable terrain plus the physical renderer and derives authoritative materialisation points', () => {
