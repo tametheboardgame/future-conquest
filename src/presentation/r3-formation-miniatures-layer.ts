@@ -64,6 +64,7 @@ export type FormationMiniatureBrowserEvidence = {
   visualFamily: typeof R3_FUTURE_SOLDIER_VISUAL_FAMILY;
   reducedMotion: boolean;
   renderCount: number;
+  presentationWithheld: boolean;
   pieces: Array<{
     id: string;
     current: FormationGeoPoint;
@@ -467,6 +468,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     const zoom = this.map.getZoom();
     const displayScale = presentationScaleForZoom(zoom);
     const lod = miniatureLodForZoom(zoom);
+    const presentationWithheld = document.documentElement.dataset.r3WithholdFormations === 'true';
     const browserPieces: FormationMiniatureBrowserEvidence['pieces'] = [];
     for (const [id, piece] of this.pieces) {
       const elapsed = now - piece.startedAt;
@@ -485,7 +487,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       const metres = coordinate.meterInMercatorCoordinateUnits();
       piece.root.position.set(coordinate.x, coordinate.y, coordinate.z);
       piece.root.scale.set(metres * displayScale, -metres * displayScale, metres * displayScale);
-      piece.root.visible = this.visible;
+      piece.root.visible = this.visible && !presentationWithheld;
       const visibleFigureCount = applyMiniatureLod(piece.root, lod);
       browserPieces.push({
         id,
@@ -509,6 +511,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       visualFamily: R3_FUTURE_SOLDIER_VISUAL_FAMILY,
       reducedMotion: this.reducedMotion,
       renderCount: this.renderCount,
+      presentationWithheld,
       pieces: browserPieces
     };
     if (animating) this.map.triggerRepaint();
