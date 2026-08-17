@@ -34,8 +34,8 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('renderer failure and accessible terrain fallback settle immediately into the normal Day 1 command map', () => {
-  assert.match(arrival, /READY_TIMEOUT_MS = 5000/);
+test('renderer rebuild is bounded while explicit terrain fallback still settles immediately', () => {
+  assert.match(arrival, /READY_TIMEOUT_MS = 12000/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
   assert.match(arrival, /data-physical-formations="fallback"/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
