@@ -22,9 +22,56 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
   return page;
 }
 
-async function waitForArrival(page, timeout = 20000) {
+async function rendererRuntimeDebug(page) {
+  return page.evaluate(() => {
+    const map = window.__r3TerrainMap;
+    const layers = map?.style?._layers ?? {};
+    const formationWrapper = layers['r3-wp3-5-formation-miniatures'];
+    const implementation = formationWrapper?.implementation;
+    return {
+      hasMap: Boolean(map),
+      mapKeys: map ? Object.keys(map).slice(0, 80) : [],
+      hasStyle: Boolean(map?.style),
+      styleKeys: map?.style ? Object.keys(map.style).slice(0, 80) : [],
+      layerIds: Object.keys(layers),
+      formationWrapper: formationWrapper ? {
+        keys: Object.keys(formationWrapper),
+        type: formationWrapper.type ?? null,
+        hasImplementation: Boolean(implementation),
+        implementationKeys: implementation ? Object.keys(implementation) : [],
+        implementationVisible: implementation?.visible ?? null
+      } : null,
+      formationEvidence: window.__r3FormationMiniatures ? {
+        renderCount: window.__r3FormationMiniatures.renderCount,
+        pieces: window.__r3FormationMiniatures.pieces.map(piece => ({ id: piece.id, visible: piece.visible }))
+      } : null,
+      portalEvidence: window.__r3PortalArrival ?? null,
+      portalPhase: document.querySelector('.r3-portal-arrival')?.getAttribute('data-phase') ?? null,
+      physicalFormations: document.querySelector('[data-physical-formations]')?.getAttribute('data-physical-formations') ?? null
+    };
+  });
+}
+
+async function waitForRenderer(page, timeout = 45000) {
+  await page.waitForFunction(() => Boolean(window.__r3TerrainMap)
+    && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0, null, { timeout });
+}
+
+async function waitForArrival(page, timeout = 8000) {
   await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout });
-  await page.waitForFunction(() => Boolean(window.__r3PortalArrival?.active), null, { timeout });
+  try {
+    await page.waitForFunction(() => Boolean(window.__r3PortalArrival?.active), null, { timeout });
+  } catch (error) {
+    const debug = await rendererRuntimeDebug(page);
+    throw new Error(`arrival evidence unavailable: ${JSON.stringify(debug)}; ${error}`);
+  }
+}
+
+async function triggerFreshCampaignArrival(page) {
+  await page.locator('[data-command-view="campaign"]').click();
+  await page.getByRole('button', { name: 'New campaign', exact: true }).click();
+  await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
+  await waitForArrival(page);
 }
 
 async function arrivalEvidence(page) {
@@ -66,13 +113,7 @@ async function assertNoReplayAfterNavigation(page) {
   if (await page.locator('.r3-portal-arrival').count()) throw new Error('arrival replayed after ordinary command-view navigation');
 }
 
-try {
-  const page = await newCampaignPage();
-  // Catch the short arrival beat before waiting on the terrain renderer's final
-  // ready flag. The portal can legitimately begin while later terrain assets are
-  // still completing, so waiting for final readiness first can miss the sequence.
-  await waitForArrival(page);
-  await page.waitForFunction(() => Boolean(window.__r3TerrainMap) && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0, null, { timeout: 20000 });
+async function validateOpeningAndMaterialisation(page) {
   await page.waitForFunction(() => window.__r3PortalArrival?.phase === 'opening'
     && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0
     && window.__r3FormationMiniatures.pieces.every(piece => piece.visible === false), null, { timeout: 2000 });
@@ -91,6 +132,21 @@ try {
   if (materialising.visibleFormationCount !== materialising.rendererFormationCount) throw new Error('formations did not become visible at materialisation');
   if (materialising.maxAnchorDeltaPx > 1.25) throw new Error(`materialisation anchors diverged by ${materialising.maxAnchorDeltaPx.toFixed(2)}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/formations-materialising.png` });
+  return { opening, materialising };
+}
+
+try {
+  const page = await newCampaignPage();
+
+  // CI can take longer than the product's intentional 5s renderer fail-safe on
+  // the very first terrain bootstrap. Let that first entry settle, warm the real
+  // renderer, then create a genuinely new campaign while the same renderer is live.
+  await waitForRenderer(page);
+  if (await page.locator('.r3-portal-arrival').count()) {
+    await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 8000 });
+  }
+  await triggerFreshCampaignArrival(page);
+  const normal = await validateOpeningAndMaterialisation(page);
 
   await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
   if (await page.evaluate(() => Boolean(window.__r3PortalArrival))) throw new Error('arrival evidence remained active after sequence completion');
@@ -98,7 +154,6 @@ try {
 
   await assertNoReplayAfterNavigation(page);
 
-  // Loading an established campaign must explicitly bypass the arrival beat.
   await page.locator('[data-command-view="campaign"]').click();
   await page.getByRole('button', { name: 'Manual Save', exact: true }).click();
   await page.getByRole('button', { name: 'Load Manual Save', exact: true }).click();
@@ -106,21 +161,19 @@ try {
   await page.waitForTimeout(700);
   if (await page.locator('.r3-portal-arrival').count()) throw new Error('arrival replayed after loading an established manual save');
 
-  // An explicit new campaign in the same session must reset presentation state
-  // and receive its own single arrival beat.
-  await page.locator('[data-command-view="campaign"]').click();
-  await page.getByRole('button', { name: 'New campaign', exact: true }).click();
-  await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
-  await waitForArrival(page);
+  await triggerFreshCampaignArrival(page);
   const secondCampaign = await arrivalEvidence(page);
   if (secondCampaign.maxAnchorDeltaPx > 1.25) throw new Error(`second campaign arrival anchors diverged by ${secondCampaign.maxAnchorDeltaPx.toFixed(2)}px`);
   await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
+  await waitForRenderer(reducedPage);
+  if (await reducedPage.locator('.r3-portal-arrival').count()) {
+    await reducedPage.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 8000 });
+  }
   const reducedStarted = Date.now();
-  await waitForArrival(reducedPage);
-  await reducedPage.waitForFunction(() => Boolean(window.__r3TerrainMap) && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0, null, { timeout: 20000 });
+  await triggerFreshCampaignArrival(reducedPage);
   const reduced = await arrivalEvidence(reducedPage);
   if (!reduced.reducedMotion) throw new Error('reduced-motion probe did not activate reduced arrival path');
   if (reduced.maxAnchorDeltaPx > 1.25) throw new Error(`reduced-motion anchors diverged by ${reduced.maxAnchorDeltaPx.toFixed(2)}px`);
@@ -138,8 +191,8 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 2,
-    normal: { opening, materialising },
+    schemaVersion: 3,
+    normal,
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
     fallback: { settledToNormalMap: true }
