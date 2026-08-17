@@ -26,7 +26,9 @@ type CustomStyleLayerBridge = {
 type ArrivalMapBridge = {
   project: (point: [number, number]) => { x: number; y: number };
   getContainer: () => HTMLElement;
-  getLayer?: (id: string) => CustomStyleLayerBridge | undefined;
+  style?: {
+    _layers?: Record<string, CustomStyleLayerBridge>;
+  };
   triggerRepaint?: () => void;
 };
 
@@ -74,7 +76,10 @@ function bridge(): ArrivalWindowBridge {
 
 function formationLayerImplementation(): FormationLayerImplementationBridge | undefined {
   const map = bridge().__r3TerrainMap as unknown as ArrivalMapBridge | undefined;
-  return map?.getLayer?.(R3_FORMATION_MINIATURE_LAYER_ID)?.implementation;
+  // MapLibre's public getLayer() serialises normal style layers and intentionally
+  // omits the CustomLayerInterface instance. The live custom wrapper retained by
+  // this pinned renderer version owns the actual implementation used for render().
+  return map?.style?._layers?.[R3_FORMATION_MINIATURE_LAYER_ID]?.implementation;
 }
 
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
