@@ -110,7 +110,7 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     const synchronise = () => {
       if (disposed) return;
       const map = (window as TerrainWindow).__r3TerrainMap;
-      if (!map || !map.isStyleLoaded()) {
+      if (!map) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
@@ -120,6 +120,9 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
+      // GeoJSON source enrichment does not depend on terrain tiles settling. This
+      // keeps strategic data available during slow DEM/WebGL settlement while
+      // MapLibre layer styling still waits for a fully loaded style below.
       territorySource.setData(strategicData);
       nodeSource.setData(strategicNodeData);
       if (!applyR3StrategicInformationOverlay(map, preferences.overlay, preferences.resource)) {
