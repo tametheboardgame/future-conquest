@@ -17,8 +17,9 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
   await page.goto(`${origin}/?terrain=${terrain ? '1' : '0'}`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  await page.waitForFunction(() => document.querySelector('[data-command-view="map"]')?.getAttribute('aria-current') === 'page');
-  await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
+  // Do not wait for the command-map view or lazy terrain renderer here. The
+  // arrival presentation intentionally starts as soon as its map bridge is
+  // available and can finish before those later startup waits settle.
   return page;
 }
 
