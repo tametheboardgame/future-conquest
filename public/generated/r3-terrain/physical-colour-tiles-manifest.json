@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "r3-wp3-9b3-nasa-blue-marble-500m-local-z7-v1",
+  "source": "NASA Blue Marble: Next Generation, June 2004, 500 m tiled distribution",
+  "sourceTiles": [
+    "B1",
+    "C1"
+  ],
+  "sourceResolution": "500 m/pixel",
+  "projection": "Web Mercator XYZ",
+  "bounds": [
+    -30.0,
+    28.0,
+    55.0,
+    76.0
+  ],
+  "tileSize": 512,
+  "minzoom": 7,
+  "maxzoom": 7,
+  "format": "webp",
+  "quality": 72,
+  "xRange": [
+    53,
+    83
+  ],
+  "yRange": [
+    21,
+    53
+  ],
+  "tileCount": 1023,
+  "totalBytes": 9338146,
+  "averageBytes": 9128.2,
+  "maximumBytes": 46242,
+  "contentSha256": "7185e1629fd3c65f76eb9b5005eeb7582e8c16cff749ec6be297b7269e0b30d2",
+  "normalBuildDependency": false,
+  "purpose": "local-zoom physical colour detail above the WP3.9B2 broad physical colour base"
+}
