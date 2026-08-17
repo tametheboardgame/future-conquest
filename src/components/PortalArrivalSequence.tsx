@@ -55,7 +55,10 @@ interface Props {
   onComplete: () => void;
 }
 
-const READY_TIMEOUT_MS = 5000;
+// A new campaign can briefly rebuild the physical formation layer even when the
+// terrain map itself is already live. Keep the arrival veil in place while that
+// authoritative layer comes back, rather than timing out just before it appears.
+const READY_TIMEOUT_MS = 12000;
 const POSITION_REFRESH_MS = 80;
 const FORMATION_WITHHOLD_SETTLE_MS = 48;
 const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
