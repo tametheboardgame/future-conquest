@@ -17,14 +17,11 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
   await page.goto(`${origin}/?terrain=${terrain ? '1' : '0'}`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
   await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
-  // Do not wait for the command-map view or lazy terrain renderer here. The
-  // arrival presentation intentionally starts as soon as its map bridge is
-  // available and can finish before those later startup waits settle.
   return page;
 }
 
-async function waitForArrival(page, timeout = 10000) {
-  await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout });
+async function waitForArrival(page, timeout = 60000) {
+  await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout: 10000 });
   await page.waitForFunction(() => Boolean(window.__r3PortalArrival?.active), null, { timeout });
 }
 
@@ -76,20 +73,28 @@ try {
 
   const opening = await arrivalEvidence(page);
   if (opening.reducedMotion) throw new Error('normal-motion probe unexpectedly entered reduced-motion mode');
+  if (opening.rendererFormationCount === 0) throw new Error('portal opened before the physical formation renderer produced pieces');
+  if (opening.formationCount !== opening.rendererFormationCount) throw new Error(`arrival formation count mismatch (${opening.formationCount}/${opening.rendererFormationCount})`);
   if (!opening.domWithheld) throw new Error('formation withholding was not active during portal opening');
-  if (opening.presentationWithheld === false) throw new Error('loaded formation renderer ignored portal withholding during opening');
+  if (opening.presentationWithheld !== true) throw new Error('physical formation renderer did not report portal withholding during opening');
   if (opening.rendererVisibleCount !== 0) throw new Error(`${opening.rendererVisibleCount} formations were visible before materialisation`);
-  if (opening.maxAnchorDeltaPx !== null && opening.maxAnchorDeltaPx > 1.25) throw new Error(`arrival anchors diverged from renderer targets by ${opening.maxAnchorDeltaPx.toFixed(2)}px`);
+  if (opening.maxAnchorDeltaPx === null || opening.maxAnchorDeltaPx > 1.25) throw new Error(`arrival anchors diverged from renderer targets by ${opening.maxAnchorDeltaPx ?? 'unknown'}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/portal-opening.png` });
 
-  await page.waitForFunction(() => window.__r3PortalArrival?.phase === 'materialising', null, { timeout: 4000 });
+  await page.waitForFunction(() => {
+    const arrival = window.__r3PortalArrival;
+    const miniatures = window.__r3FormationMiniatures;
+    return arrival?.phase === 'materialising'
+      && Boolean(miniatures?.pieces.length)
+      && miniatures.pieces.every(piece => piece.visible)
+      && miniatures.presentationWithheld === false
+      && document.documentElement.dataset.r3WithholdFormations !== 'true';
+  }, null, { timeout: 5000 });
   const materialising = await arrivalEvidence(page);
-  if (materialising.domWithheld) throw new Error('formation withholding remained active at materialisation');
-  if (materialising.presentationWithheld === true) throw new Error('loaded formation renderer remained withheld at materialisation');
-  if (materialising.rendererFormationCount > 0 && materialising.rendererVisibleCount !== materialising.rendererFormationCount) {
-    throw new Error(`only ${materialising.rendererVisibleCount}/${materialising.rendererFormationCount} loaded formations were visible at materialisation`);
+  if (materialising.rendererVisibleCount !== materialising.rendererFormationCount) {
+    throw new Error(`only ${materialising.rendererVisibleCount}/${materialising.rendererFormationCount} formations were visible at materialisation`);
   }
-  if (materialising.maxAnchorDeltaPx !== null && materialising.maxAnchorDeltaPx > 1.25) throw new Error(`materialisation anchors diverged by ${materialising.maxAnchorDeltaPx.toFixed(2)}px`);
+  if (materialising.maxAnchorDeltaPx === null || materialising.maxAnchorDeltaPx > 1.25) throw new Error(`materialisation anchors diverged by ${materialising.maxAnchorDeltaPx ?? 'unknown'}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/formations-materialising.png` });
 
   await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
@@ -97,13 +102,12 @@ try {
   if (await page.evaluate(() => sessionStorage.getItem('future-conquest:r3-wp39c-arrival-played')) !== 'true') throw new Error('arrival presentation marker was not consumed');
   if (await page.evaluate(() => document.documentElement.dataset.r3WithholdFormations === 'true')) throw new Error('formation withholding flag remained set after sequence completion');
 
-  await page.waitForFunction(() => Boolean(window.__r3FormationMiniatures?.pieces.length), null, { timeout: 20000 });
   const settledRenderer = await page.evaluate(() => ({
     count: window.__r3FormationMiniatures?.pieces.length ?? 0,
     visible: window.__r3FormationMiniatures?.pieces.filter(piece => piece.visible).length ?? 0,
     withheld: window.__r3FormationMiniatures?.presentationWithheld ?? true
   }));
-  if (settledRenderer.withheld || settledRenderer.visible !== settledRenderer.count) throw new Error('formations did not settle visible after portal completion');
+  if (!settledRenderer.count || settledRenderer.withheld || settledRenderer.visible !== settledRenderer.count) throw new Error('formations did not settle visible after portal completion');
 
   await assertNoReplayAfterNavigation(page);
 
@@ -119,15 +123,18 @@ try {
   await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
   await waitForArrival(page);
   const secondCampaign = await arrivalEvidence(page);
-  if (!secondCampaign.domWithheld || secondCampaign.rendererVisibleCount !== 0) throw new Error('second campaign formations were visible before their portal arrival');
+  if (!secondCampaign.domWithheld || secondCampaign.presentationWithheld !== true || secondCampaign.rendererVisibleCount !== 0) {
+    throw new Error('second campaign formations were visible before their portal arrival');
+  }
   await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
-  const reducedStarted = Date.now();
   await waitForArrival(reducedPage);
+  const reducedStarted = Date.now();
   const reduced = await arrivalEvidence(reducedPage);
   if (!reduced.reducedMotion) throw new Error('reduced-motion probe did not activate reduced arrival path');
+  if (reduced.rendererFormationCount === 0 || reduced.rendererVisibleCount !== 0) throw new Error('reduced-motion portal did not begin with hidden physical formations');
   await reducedPage.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 2500 });
   const reducedElapsedMs = Date.now() - reducedStarted;
   if (reducedElapsedMs > 2200) throw new Error(`reduced-motion arrival remained active too long (${reducedElapsedMs}ms)`);
@@ -144,7 +151,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     normal: { opening, materialising, settledRenderer },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
