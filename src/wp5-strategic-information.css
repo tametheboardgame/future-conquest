@@ -1,0 +1,86 @@
+.r3-strategic-information-control {
+  position: absolute;
+  left: 14px;
+  bottom: 54px;
+  z-index: 8;
+  width: min(270px, calc(100% - 90px));
+  padding: 10px 11px;
+  border: 1px solid rgba(191, 215, 205, 0.28);
+  border-radius: 8px;
+  background: rgba(16, 29, 31, 0.9);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+  color: #e7eee9;
+  backdrop-filter: blur(7px);
+  pointer-events: auto;
+}
+
+.r3-strategic-information-control label {
+  display: grid;
+  grid-template-columns: minmax(86px, auto) 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 7px;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.r3-strategic-information-control select {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid rgba(191, 215, 205, 0.32);
+  border-radius: 5px;
+  background: #17292c;
+  color: #edf3ef;
+  font: inherit;
+  text-transform: none;
+}
+
+.r3-strategic-information-control select:focus-visible {
+  outline: 2px solid #8ffff1;
+  outline-offset: 2px;
+}
+
+.r3-strategic-information-legend {
+  display: grid;
+  gap: 2px;
+  margin-top: 3px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(191, 215, 205, 0.16);
+}
+
+.r3-strategic-information-legend strong {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f3f7f4;
+}
+
+.r3-strategic-information-legend span {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #b9c8c0;
+}
+
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .r3-strategic-information-control {
+  left: 10px;
+  bottom: 46px;
+  width: min(235px, calc(100% - 78px));
+  padding: 8px 9px;
+}
+
+.r3-terrain-prototype-shell[data-terrain-profile='compact'] .r3-strategic-information-control label {
+  grid-template-columns: 78px 1fr;
+  gap: 6px;
+  font-size: 0.66rem;
+}
+
+@media (max-width: 720px) {
+  .r3-strategic-information-control {
+    width: min(230px, calc(100% - 76px));
+  }
+
+  .r3-strategic-information-legend span {
+    display: none;
+  }
+}
