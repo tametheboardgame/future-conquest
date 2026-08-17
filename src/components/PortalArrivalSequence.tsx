@@ -55,11 +55,8 @@ interface Props {
   onComplete: () => void;
 }
 
-// A new campaign can briefly rebuild the physical formation layer even when the
-// terrain map itself is already live. Keep the arrival veil in place while that
-// authoritative layer comes back, rather than timing out just before it appears.
-const READY_TIMEOUT_MS = 12000;
 const POSITION_REFRESH_MS = 80;
+const READY_WITHOUT_FORMATIONS_GRACE_MS = 1500;
 const FORMATION_WITHHOLD_SETTLE_MS = 48;
 const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 const FULL_SEQUENCE = {
@@ -110,10 +107,19 @@ function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined
   };
 }
 
+function terrainRendererStatus() {
+  return document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null;
+}
+
+function physicalFormationStatus() {
+  return document.querySelector('[data-physical-formations]')?.getAttribute('data-physical-formations') ?? null;
+}
+
 function rendererUnavailable() {
   const params = new URLSearchParams(window.location.search);
   return params.get('terrain') === '0'
-    || Boolean(document.querySelector('[data-physical-formations="fallback"], .r3-terrain-compact-fallback'));
+    || physicalFormationStatus() === 'fallback'
+    || Boolean(document.querySelector('.r3-terrain-compact-fallback'));
 }
 
 function awaitingFreshCampaignState() {
@@ -138,12 +144,12 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     setPhase('waiting');
     setFrame(undefined);
 
-    const startedAt = performance.now();
     let sequenceStarted = false;
     let sequenceScheduled = false;
     let formationsReleased = false;
     let presentationConsumed = false;
     let completed = false;
+    let readyWithoutFormationsSince: number | undefined;
     let controlledFormationLayer: FormationLayerImplementationBridge | undefined;
     let originalFormationVisibility: boolean | undefined;
     const timeouts: number[] = [];
@@ -206,8 +212,10 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         finish();
         return;
       }
+
       const nextFrame = projectArrivalFrame(portalTerritory);
       if (nextFrame) {
+        readyWithoutFormationsSince = undefined;
         setFrame(nextFrame);
         if (sequenceStarted) {
           if (!formationsReleased) withholdFormationVisibility();
@@ -226,7 +234,26 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         }
         return;
       }
-      if (performance.now() - startedAt >= READY_TIMEOUT_MS) finish();
+
+      const terrainStatus = terrainRendererStatus();
+      const formationStatus = physicalFormationStatus();
+
+      // A fresh campaign remounts the physical formations. While the terrain
+      // renderer reports that lifecycle as initialising, keep the opaque arrival
+      // veil in place and let the renderer decide when it is ready or has fallen
+      // back. This avoids racing the renderer with an unrelated portal timeout.
+      if (terrainStatus === 'initialising' || formationStatus === null) {
+        readyWithoutFormationsSince = undefined;
+        return;
+      }
+
+      // If the renderer claims its physical layer is ready but never exposes the
+      // authoritative formation evidence, treat that as an effect failure rather
+      // than leaving the player behind the veil indefinitely.
+      if (terrainStatus === 'ready' && formationStatus === 'ready') {
+        readyWithoutFormationsSince ??= performance.now();
+        if (performance.now() - readyWithoutFormationsSince >= READY_WITHOUT_FORMATIONS_GRACE_MS) finish();
+      }
     };
 
     refresh();
