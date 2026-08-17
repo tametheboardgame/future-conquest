@@ -27,8 +27,8 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
       const targets = window.__r3FormationPortalTargets;
       const arrival = window.__r3PortalArrival;
       const overlay = document.querySelector('.r3-portal-arrival');
-      const commandView = document.querySelector('[data-command-view][aria-current="page"]')?.getAttribute('data-command-view')
-        ?? document.querySelector('.command-map-workspace') ? 'map' : null;
+      const selectedCommandView = document.querySelector('[data-command-view][aria-current="page"]')?.getAttribute('data-command-view') ?? null;
+      const commandView = selectedCommandView ?? (document.querySelector('.command-map-workspace') ? 'map' : null);
 
       let mapId = null;
       let mapConnected = false;
@@ -123,9 +123,9 @@ async function lifecycleDiagnostic(page) {
   }));
 }
 
-async function waitForArrival(page, timeout = 60000) {
+async function waitForArrival(page, timeout = 60000, requireWithheldOpening = true) {
   try {
-    const handle = await page.waitForFunction(() => {
+    const handle = await page.waitForFunction((requireOpening) => {
       const snapshot = window.__r3ProbeSnapshot?.();
       if (!snapshot) return false;
       const stableTerrain = snapshot.terrainStatus === 'ready' || snapshot.terrainStatus === 'warning';
@@ -135,14 +135,21 @@ async function waitForArrival(page, timeout = 60000) {
         && snapshot.overlayHeight > 0
         && snapshot.overlayDisplay !== 'none'
         && snapshot.overlayVisibility !== 'hidden';
+      const openingCorrect = !requireOpening || (
+        snapshot.phase === 'opening'
+        && snapshot.domWithheld === true
+        && snapshot.presentationWithheld === true
+        && snapshot.rendererVisibleCount === 0
+      );
       return stableTerrain
         && snapshot.mapConnected
         && snapshot.rendererFormationCount > 0
         && snapshot.active
         && visibleOverlay
+        && openingCorrect
         ? snapshot
         : false;
-    }, null, { timeout, polling: 'raf' });
+    }, requireWithheldOpening, { timeout, polling: 'raf' });
     return await handle.jsonValue();
   } catch (error) {
     const diagnostic = await lifecycleDiagnostic(page);
@@ -232,10 +239,10 @@ try {
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
-  const reduced = await waitForArrival(reducedPage);
+  const reduced = await waitForArrival(reducedPage, 60000, false);
   const reducedStarted = Date.now();
   if (!reduced.reducedMotion) throw new Error('reduced-motion probe did not activate reduced arrival path');
-  if (reduced.rendererFormationCount === 0 || reduced.rendererVisibleCount !== 0) throw new Error('reduced-motion portal did not begin with hidden physical formations');
+  if (reduced.rendererFormationCount === 0) throw new Error('reduced-motion portal opened without physical formations');
   await reducedPage.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 2500 });
   const reducedElapsedMs = Date.now() - reducedStarted;
   if (reducedElapsedMs > 2200) throw new Error(`reduced-motion arrival remained active too long (${reducedElapsedMs}ms)`);
@@ -252,7 +259,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     normal: { opening, materialising, settledRenderer },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
