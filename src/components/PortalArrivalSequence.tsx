@@ -91,6 +91,10 @@ function rendererUnavailable() {
     || Boolean(document.querySelector('[data-physical-formations="fallback"], .r3-terrain-compact-fallback'));
 }
 
+function awaitingFreshCampaignState() {
+  return Boolean(document.querySelector('.command-outcome.victory, .command-outcome.defeat'));
+}
+
 export function PortalArrivalSequence({ active, portalTerritory, onStarted, onComplete }: Props) {
   const [phase, setPhase] = useState<ArrivalPhase>('waiting');
   const [frame, setFrame] = useState<ArrivalFrame>();
@@ -143,6 +147,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
 
     const refresh = () => {
       if (completed) return;
+      if (awaitingFreshCampaignState()) return;
       if (rendererUnavailable()) {
         finish();
         return;
