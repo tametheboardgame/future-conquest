@@ -5,10 +5,17 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 type GeoPoint = readonly [number, number];
 
+export interface BattleOverlayFrontSegment {
+  readonly id: string;
+  readonly fromTerritoryId: string;
+  readonly toTerritoryId: string;
+}
+
 interface BattleOverlayState {
   overlay?: SVGSVGElement;
   cues: readonly StrategicEventCue[];
   centres: Readonly<Record<string, GeoPoint>>;
+  frontSegments: readonly BattleOverlayFrontSegment[];
   frame?: number;
   moving: boolean;
   visible: boolean;
@@ -23,7 +30,8 @@ export const battleEventMotionPolicy = (reducedMotion: boolean) => ({
   animate: !reducedMotion,
   staticDirection: true,
   staticTarget: true,
-  staticOutcome: true
+  staticOutcome: true,
+  staticFrontShift: true
 } as const);
 
 const ensureOverlay = (map: Map, state: BattleOverlayState) => {
@@ -120,6 +128,60 @@ const appendOutcomeGlyph = (
   }
 };
 
+const frontMarkGeo = (from: GeoPoint, to: GeoPoint) => {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const distance = Math.hypot(dx, dy);
+  if (!Number.isFinite(distance) || distance <= 0) return undefined;
+  const midpoint: GeoPoint = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
+  const halfLength = Math.min(0.24, Math.max(0.08, distance * 0.12));
+  const perpendicular: GeoPoint = [-dy / distance, dx / distance];
+  return [
+    [midpoint[0] - perpendicular[0] * halfLength, midpoint[1] - perpendicular[1] * halfLength] as GeoPoint,
+    [midpoint[0] + perpendicular[0] * halfLength, midpoint[1] + perpendicular[1] * halfLength] as GeoPoint
+  ] as const;
+};
+
+const appendRecentFrontShifts = (
+  map: Map,
+  overlay: SVGSVGElement,
+  state: BattleOverlayState,
+  theatre: boolean
+) => {
+  const rendered = new Set<string>();
+  for (const cue of state.cues) {
+    if (cue.kind === 'active-attack') continue;
+    const style = outcomeStyle(cue.kind);
+    for (const segment of state.frontSegments) {
+      if (segment.fromTerritoryId !== cue.territoryId && segment.toTerritoryId !== cue.territoryId) continue;
+      const key = `${segment.id}:${cue.kind}`;
+      if (rendered.has(key)) continue;
+      const from = state.centres[segment.fromTerritoryId];
+      const to = state.centres[segment.toTerritoryId];
+      if (!from || !to) continue;
+      const endpoints = frontMarkGeo(from, to);
+      if (!endpoints) continue;
+      rendered.add(key);
+      const start = map.project([endpoints[0][0], endpoints[0][1]]);
+      const end = map.project([endpoints[1][0], endpoints[1][1]]);
+      const line = svgNode('line');
+      line.classList.add('r3-wp4-front-shift', `r3-wp4-front-shift-${cue.kind}`);
+      line.dataset.frontId = segment.id;
+      line.setAttribute('x1', String(start.x));
+      line.setAttribute('y1', String(start.y));
+      line.setAttribute('x2', String(end.x));
+      line.setAttribute('y2', String(end.y));
+      line.setAttribute('stroke', style.stroke);
+      line.setAttribute('stroke-width', theatre ? '4.4' : '6.2');
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('opacity', cue.age === 0 ? '.72' : '.42');
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      line.style.filter = `drop-shadow(0 0 ${theatre ? 2 : 4}px ${style.stroke})`;
+      overlay.appendChild(line);
+    }
+  }
+};
+
 const render = (map: Map, state: BattleOverlayState) => {
   if (!state.visible || state.cues.length === 0) {
     state.overlay?.replaceChildren();
@@ -138,6 +200,8 @@ const render = (map: Map, state: BattleOverlayState) => {
   const selected = host?.dataset.overlayLod === 'selected';
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   overlay.dataset.motion = battleEventMotionPolicy(reducedMotion).animate ? 'standard' : 'reduced';
+
+  appendRecentFrontShifts(map, overlay, state, theatre);
 
   for (const cue of state.cues) {
     if (cue.kind === 'active-attack') {
@@ -233,6 +297,7 @@ export function syncBattleEventOverlay(
   map: Map,
   cues: readonly StrategicEventCue[],
   centres: Readonly<Record<string, GeoPoint>>,
+  frontSegments: readonly BattleOverlayFrontSegment[] = [],
   visible = true
 ) {
   let state = states.get(map);
@@ -240,6 +305,7 @@ export function syncBattleEventOverlay(
     state = {
       cues,
       centres,
+      frontSegments,
       moving: false,
       visible,
       onMoveStart: () => {
@@ -266,6 +332,7 @@ export function syncBattleEventOverlay(
   }
   state.cues = cues;
   state.centres = centres;
+  state.frontSegments = frontSegments;
   state.visible = visible;
   if (map.isMoving()) state.onMoveStart();
   else schedule(map, state);
