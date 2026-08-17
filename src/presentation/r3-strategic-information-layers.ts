@@ -2,7 +2,7 @@ import type {
   CircleLayerSpecification,
   FillLayerSpecification,
   LineLayerSpecification,
-  Map
+  Map as MapLibreMap
 } from 'maplibre-gl';
 import { getEnemyContacts } from '../game/operational-clarity';
 import { TERRITORY_RESOURCES, type TerritoryResourceState } from '../game/territory-resources';
@@ -75,6 +75,7 @@ const HUB_LAYER_ID = 'r3-wp5-strategic-hub-overlay';
 const transparent = 'rgba(0,0,0,0)';
 
 type PaintExpression = unknown;
+type FillPaint = NonNullable<FillLayerSpecification['paint']>;
 
 const clampPercent = (value: number): number => Math.max(0, Math.min(100, Math.round(value * 10) / 10));
 
@@ -307,7 +308,7 @@ const territoryPaint = (overlay: R3StrategicOverlay, resource: R3ResourceMetric)
   return { colour: transparent, opacity: 0 };
 };
 
-function ensureStrategicLayers(map: Map): boolean {
+function ensureStrategicLayers(map: MapLibreMap): boolean {
   if (!map.getSource('campaign-territories')) return false;
 
   if (!map.getLayer(TERRITORY_LAYER_ID)) {
@@ -364,15 +365,15 @@ function ensureStrategicLayers(map: Map): boolean {
 }
 
 export function applyR3StrategicInformationOverlay(
-  map: Map,
+  map: MapLibreMap,
   overlay: R3StrategicOverlay,
   resource: R3ResourceMetric
 ): boolean {
   if (!map.isStyleLoaded() || !ensureStrategicLayers(map)) return false;
   const paint = territoryPaint(overlay, resource);
   map.setLayoutProperty(TERRITORY_LAYER_ID, 'visibility', overlay === 'routes' ? 'none' : 'visible');
-  map.setPaintProperty(TERRITORY_LAYER_ID, 'fill-color', paint.colour);
-  map.setPaintProperty(TERRITORY_LAYER_ID, 'fill-opacity', paint.opacity);
+  map.setPaintProperty(TERRITORY_LAYER_ID, 'fill-color', paint.colour as FillPaint['fill-color']);
+  map.setPaintProperty(TERRITORY_LAYER_ID, 'fill-opacity', paint.opacity as FillPaint['fill-opacity']);
 
   const showRoutes = overlay === 'routes' || overlay === 'supply';
   if (map.getLayer(ROUTE_LAYER_ID)) {
