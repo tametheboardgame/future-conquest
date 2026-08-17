@@ -35,15 +35,16 @@ test('explanation progress survives reloads and action steps no longer need a re
   assert.doesNotMatch(overlay, /focusControl/);
 });
 
-test('guided tutorial auto-runs once and SYS can deliberately replay it', () => {
+test('guided tutorial auto-runs once, waits for portal presentation, and SYS can deliberately replay it', () => {
   const overlay = fs.readFileSync('src/components/TutorialOverlay.tsx', 'utf8');
   const css = fs.readFileSync('src/components/tutorial-explanation.css', 'utf8');
 
   assert.match(overlay, /future-conquest-tutorial-seen-v1/);
   assert.match(overlay, /future-conquest-tutorial-replay-v1/);
+  assert.match(overlay, /const \{ portalArrivalActive \} = useStartupPresentation\(\)/);
   assert.match(overlay, /button\?\.textContent\?\.trim\(\) !== 'Restart tutorial'/);
   assert.match(overlay, /previous === 'engineering' && current === undefined/);
-  assert.match(overlay, /if \(!step \|\| !tutorialSeen \|\| replayRequested\) return/);
+  assert.match(overlay, /if \(portalArrivalActive \|\| !step \|\| !tutorialSeen \|\| replayRequested\) return/);
   assert.match(css, /\.tutorial-seen \.tutorial-toggle/);
 });
 
