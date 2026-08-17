@@ -91,6 +91,7 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     if (profile === 'svg-fallback') return;
     let frame = 0;
     let disposed = false;
+    let dataSynchronised = false;
     const threats = getThreatenedTerritories(state);
     const activeCombatTerritoryIds = Object.values(state.operations).map(operation => operation.target);
     const projectedPoliticalData = buildTerrainPoliticalGeoJSON(terrainGeoJSON, state, {
@@ -124,9 +125,17 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
-      territorySource.setData(strategicData);
-      routeSource.setData(strategicRouteData);
-      nodeSource.setData(strategicNodeData);
+
+      if (!dataSynchronised) {
+        // Source data can settle independently of DEM/WebGL tile readiness. Send
+        // each authoritative snapshot once; repeatedly calling setData while the
+        // style is settling would keep GeoJSON workers perpetually invalidated.
+        territorySource.setData(strategicData);
+        routeSource.setData(strategicRouteData);
+        nodeSource.setData(strategicNodeData);
+        dataSynchronised = true;
+      }
+
       if (!applyR3StrategicInformationOverlay(map, preferences.overlay, preferences.resource)) {
         frame = window.requestAnimationFrame(synchronise);
       }
