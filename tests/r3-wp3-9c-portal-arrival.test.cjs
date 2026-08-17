@@ -20,12 +20,14 @@ test('portal arrival is requested only for fresh campaign entry and bypassed by 
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
 });
 
-test('arrival presentation derives every materialisation point from authoritative renderer targets available before first paint', () => {
+test('arrival waits for the physical renderer and derives materialisation points from its authoritative targets', () => {
   assert.match(miniatures, /__r3FormationPortalTargets/);
   assert.match(miniatures, /private publishPortalTargets\(\)/);
   assert.match(miniatures, /pieces: \[\.\.\.this\.pieces\.entries\(\)\]\.map\(\(\[id, piece\]\) => \(\{ id, target: \[\.\.\.piece\.target\] \}\)\)/);
   assert.match(miniatures, /this\.publishPortalTargets\(\);/);
-  assert.match(arrival, /__r3FormationPortalTargets\?\.pieces \?\? runtime\.__r3FormationMiniatures\?\.pieces/);
+  assert.match(arrival, /const renderedPieces = runtime\.__r3FormationMiniatures\?\.pieces/);
+  assert.match(arrival, /if \(!map \|\| !renderedPieces\?\.length\) return undefined/);
+  assert.match(arrival, /runtime\.__r3FormationPortalTargets\?\.pieces \?\? renderedPieces/);
   assert.match(arrival, /pieces\.map\(piece => \(\{ id: piece\.id, \.\.\.project\(piece\.target\) \}\)\)/);
   assert.match(arrival, /__r3TerritoryCentres\?\.\[portalTerritory\]/);
   assert.match(arrival, /map\.project\(\[point\[0\], point\[1\]\]\)/);
@@ -36,7 +38,7 @@ test('fresh-campaign formations are withheld before the portal and revealed at m
   assert.match(arrival, /useLayoutEffect\(\(\) => \{[\s\S]*setFormationWithheld\(true\)/);
   assert.match(arrival, /setFormationWithheld\(false\);\s*setPhase\('materialising'\)/);
   assert.match(arrival, /const finish = \(\) => \{[\s\S]*setFormationWithheld\(false\)/);
-  assert.match(arrival, /return \(\) => setFormationWithheld\(false\)/);
+  assert.match(arrival, /setFormationWithheld\(false\);\s*delete bridge\(\)\.__r3PortalArrival/);
   assert.match(miniatures, /presentationWithheld = document\.documentElement\.dataset\.r3WithholdFormations === 'true'/);
   assert.match(miniatures, /piece\.root\.visible = this\.visible && !presentationWithheld/);
   assert.match(miniatures, /presentationWithheld,/);
@@ -51,12 +53,14 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('renderer failure and accessible terrain fallback settle immediately into the normal Day 1 command map', () => {
-  assert.match(arrival, /READY_TIMEOUT_MS = 5000/);
+test('renderer failure and accessible terrain fallback settle safely without an arbitrary startup race', () => {
+  assert.match(arrival, /READY_WITHOUT_FORMATIONS_GRACE_MS = 1500/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
-  assert.match(arrival, /data-physical-formations="fallback"/);
+  assert.match(arrival, /physicalFormationStatus\(\) === 'fallback'/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
-  assert.match(arrival, /if \(performance\.now\(\) - startedAt >= READY_TIMEOUT_MS\) finish\(\)/);
+  assert.match(arrival, /terrainStatus === 'initialising' \|\| formationStatus === null/);
+  assert.match(arrival, /formationStatus === 'ready'/);
+  assert.doesNotMatch(arrival, /READY_TIMEOUT_MS/);
   assert.match(miniatures, /delete window\.__r3FormationPortalTargets/);
 });
 
