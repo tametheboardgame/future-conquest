@@ -8,16 +8,25 @@ const miniatures = fs.readFileSync('src/presentation/r3-formation-miniatures-lay
 const css = fs.readFileSync('src/components/portal-arrival.css', 'utf8');
 const roadmap = fs.readFileSync('docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md', 'utf8');
 
-test('portal arrival is requested only for fresh campaign entry and bypassed by load/review paths', () => {
+test('portal arrival is requested for every fresh campaign entry and bypassed by load/review paths', () => {
   assert.match(startup, /const ARRIVAL_PRESENTATION_KEY = 'future-conquest:r3-wp39c-arrival-played'/);
-  assert.match(startup, /requestPortalArrival\(\)/);
+  assert.match(startup, /const beginCampaign[\s\S]{0,180}requestPortalArrival\(true\)/);
   assert.match(startup, /label === 'New campaign'\) requestPortalArrival\(true\)/);
+  assert.match(startup, /const startNewCampaignFromDefeat[\s\S]{0,180}requestPortalArrival\(true\)/);
+  assert.match(startup, /if \(freshCampaign\) storage\?\.removeItem\(ARRIVAL_PRESENTATION_KEY\)/);
   assert.match(startup, /label === 'Load Manual Save' \|\| label === 'Load Autosave'\) setArrivalRequested\(false\)/);
   assert.match(startup, /const continueCampaign[\s\S]{0,240}setArrivalRequested\(false\)/);
   assert.match(startup, /const reloadLastSave[\s\S]{0,260}setArrivalRequested\(false\)/);
   assert.match(startup, /const reviewCampaign[\s\S]{0,180}setArrivalRequested\(false\)/);
   assert.match(startup, /sessionStorage/);
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
+});
+
+test('portal arrival owns first presentation and the tutorial is released only after it completes', () => {
+  assert.match(startup, /mode === 'game' && arrivalRequested \? ' portal-arrival-active' : ''/);
+  assert.match(startup, /<PortalArrivalSequence[\s\S]{0,180}active=\{mode === 'game' && arrivalRequested\}/);
+  assert.match(startup, /const completePortalArrival = useCallback\(\(\) => \{\s*setArrivalRequested\(false\);\s*\}, \[\]\)/);
+  assert.match(css, /\.startup-game-shell\.portal-arrival-active \.tutorial-guide\s*\{\s*display: none !important;/);
 });
 
 test('arrival waits for stable terrain plus the physical renderer and derives authoritative materialisation points', () => {

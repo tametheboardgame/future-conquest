@@ -204,7 +204,7 @@ export function StartupExperience({ children }: Props) {
 
   const beginCampaign = useCallback(() => {
     void audioManager.unlock();
-    requestPortalArrival();
+    requestPortalArrival(true);
     const storage = browserStorage();
     const introSeen = storage?.getItem(INTRO_STORAGE_KEY) === 'true';
     if (introSeen) {
@@ -302,7 +302,7 @@ export function StartupExperience({ children }: Props) {
 
   return <>
     <div
-      className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}`}
+      className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}${mode === 'game' && arrivalRequested ? ' portal-arrival-active' : ''}`}
       aria-hidden={mode !== 'game'}
       inert={mode !== 'game'}
     ><GlobalSettingsContext.Provider value={settings}>{children}<MapUxFoundations active={mode === 'game'} /></GlobalSettingsContext.Provider></div>
