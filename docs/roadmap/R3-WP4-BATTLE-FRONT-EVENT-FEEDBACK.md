@@ -1,6 +1,6 @@
 # R3-WP4 - Battle, Front & Strategic Event Feedback
 
-Status: **ACTIVE / IMPLEMENTATION IN PROGRESS**
+Status: **ACTIVE / IMPLEMENTATION COMPLETE / VALIDATION IN PROGRESS**
 
 Entry baseline: accepted `main` at `2db58cdaf3c5ea533bb1ea60910083688913f354` after the R3-WP3.9 integrated exit review was accepted and merged on 2026-08-17.
 
@@ -26,7 +26,7 @@ WP4 derives presentation from existing game state rather than adding a second ev
 
 `GameState.combatReports` already exposes concluded offensive/counterattack battles, outcome, territory, turn, duration, player losses, assessed enemy losses and the authoritative AAR note.
 
-Renderer DTOs must use only the minimum public metadata needed for map feedback. Full reports do not belong in renderer state.
+Renderer DTOs use only the minimum public metadata needed for map feedback. Full reports do not belong in renderer state.
 
 ### Territory capture history
 
@@ -49,13 +49,13 @@ Raw `enemyOrders`, exact hidden formation data and internal enemy strategy are n
 9. Reduced-motion users retain the same strategic meaning through static cues.
 10. WP2/WP3/WP3.9 performance, geography, save/load, fallback and balance guarantees remain hard gates.
 
-## Work sequence
+## Implemented work
 
 ### WP4.1 - Renderer-neutral strategic event cue model
 
-Status: **IMPLEMENTED ON ACTIVE BRANCH**
+Status: **IMPLEMENTED / VALIDATION PENDING**
 
-Initial cue vocabulary:
+Cue vocabulary:
 
 - `active-attack`
 - `recent-victory`
@@ -70,23 +70,23 @@ Recent outcome lifetime is turn-relative, currently the current or immediately p
 
 ### WP4.2 - Active combat direction over terrain
 
-Status: **IMPLEMENTED ON ACTIVE BRANCH / VALIDATION PENDING**
+Status: **IMPLEMENTED / VALIDATION PENDING**
 
 The terrain renderer receives a lightweight non-interactive SVG layer projected through `map.project` from authoritative operation origin to target.
 
-Initial presentation:
+Presentation:
 
 - warm orange/red attack direction line;
 - clear target chevron;
 - restrained target ring;
 - Theatre/Campaign/Selected scaling;
-- hidden while the camera is travelling, coalesced redraw on settled frames;
+- hidden while the camera is travelling, with coalesced redraw on settled frames;
 - Operations layer toggle controls visibility;
 - no pointer interception and no map/formation position mutation.
 
 ### WP4.3 - Recent battle outcome acknowledgement
 
-Status: **IMPLEMENTED ON ACTIVE BRANCH / VALIDATION PENDING**
+Status: **IMPLEMENTED / VALIDATION PENDING**
 
 Current/previous-turn concluded outcomes receive concise territory-centred rings/glyphs:
 
@@ -101,15 +101,37 @@ These cues expire from derived presentation automatically as turns advance.
 
 ### WP4.4 - Front-shift emphasis
 
-Status: **QUEUED**
+Status: **IMPLEMENTED / VALIDATION PENDING**
 
-Temporarily emphasise only current derived opposing-control front segments connected to an authoritative recent affected territory. Do not create a historical front-state model the simulation does not store.
+Recent outcomes temporarily emphasise only the **current** derived opposing-control front segments connected to the affected territory.
 
-### WP4.5 - Formation-local strategic feedback
+The implementation deliberately reuses `deriveR3FrontSegments(state.territories, TERRITORIES)` and the same centre-to-centre/perpendicular geometry policy as the accepted terrain front rendering. It does not store or invent previous-front geometry.
 
-Status: **QUEUED / EVIDENCE-DRIVEN**
+The emphasis colour follows the authoritative recent outcome, for example gold after a capture/victory and red after territory loss, while remaining subordinate to labels, miniatures and the base front line.
 
-Where authoritative state proves the transition, add restrained feedback for retreat/recovery, reinforcement/return-to-duty and friendly isolation/critical supply disruption. Do not manufacture transitions from generic status labels and do not expose enemy logistics.
+### WP4.5 - Formation-local strategic feedback audit
+
+Status: **AUDITED / NO NEW TRANSIENT EFFECT ADDED**
+
+The current engine exposes formation **current state** such as `recovering` and current logistics condition, but it does not retain a general renderer-safe temporal record saying that a specific formation has just entered or left recovery, just returned to duty, or just crossed a supply-state boundary.
+
+Creating a one-turn formation animation from those current labels would manufacture a transition the authoritative state does not prove. WP4 therefore does not add such an effect. Existing formation marker status, logistics presentation and combat AARs remain authoritative for those conditions.
+
+This is a deliberate information-integrity decision, not an omitted implementation. A future package may add richer formation-local transitions if the simulation later records them explicitly.
+
+## Browser evidence gate
+
+The WP4 workflow builds a deterministic one-turn victory fixture using the same compiled engine path used by the existing WP3.7 movement browser proof. The browser gate verifies on the exact PR head that:
+
+- an active operation produces the WP4 attack overlay;
+- the overlay is non-interactive;
+- combat uses the warm solid direction/chevron/target vocabulary rather than the teal dashed movement vocabulary;
+- the existing Operations toggle hides and restores WP4 presentation;
+- resolving the authoritative battle removes the active-attack cue;
+- the concluded victory/capture produces a recent outcome acknowledgement;
+- current front segments adjacent to the captured territory receive recent front-shift emphasis;
+- the territory's normal authoritative control presentation changes to player control;
+- screenshots and browser logs are retained as workflow artifacts.
 
 ## Explicit non-goals
 
@@ -122,7 +144,8 @@ WP4 does not include:
 - persistent visual-event history in saves;
 - exact hidden enemy positions/orders/strength;
 - replacing after-action reports;
-- a general particle engine unless later evidence justifies one;
+- a general particle engine;
+- manufactured formation transition animations without authoritative temporal state;
 - WP5 strategic information layers;
 - WP6 command-panel redesign;
 - WP7 audio/music.
@@ -132,6 +155,7 @@ WP4 does not include:
 Before WP4 can be accepted:
 
 - focused cue derivation and presentation contracts pass;
+- exact-head browser battle feedback proof passes;
 - full repository regression suite passes;
 - production build passes;
 - current balance/determinism simulation passes;
@@ -148,5 +172,7 @@ Before WP4 can be accepted:
 ## Current implementation branch
 
 `agent/r3-wp4-battle-front-event-feedback-v2`
+
+Draft PR: **#171 - R3-WP4: battle, front and strategic event feedback**
 
 This branch deliberately ports only architecture that remains valid from historical PR #137 and rebuilds it against the accepted post-WP3.9 physical-map system.
