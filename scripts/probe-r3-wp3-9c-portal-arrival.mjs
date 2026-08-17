@@ -22,7 +22,7 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
   return page;
 }
 
-async function waitForArrival(page, timeout = 10000) {
+async function waitForArrival(page, timeout = 20000) {
   await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout });
   await page.waitForFunction(() => Boolean(window.__r3PortalArrival?.active), null, { timeout });
 }
@@ -68,8 +68,11 @@ async function assertNoReplayAfterNavigation(page) {
 
 try {
   const page = await newCampaignPage();
-  await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap), null, { timeout: 45000 });
+  // Catch the short arrival beat before waiting on the terrain renderer's final
+  // ready flag. The portal can legitimately begin while later terrain assets are
+  // still completing, so waiting for final readiness first can miss the sequence.
   await waitForArrival(page);
+  await page.waitForFunction(() => Boolean(window.__r3TerrainMap) && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0, null, { timeout: 20000 });
   await page.waitForFunction(() => window.__r3PortalArrival?.phase === 'opening'
     && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0
     && window.__r3FormationMiniatures.pieces.every(piece => piece.visible === false), null, { timeout: 2000 });
@@ -115,9 +118,9 @@ try {
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
-  await reducedPage.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap), null, { timeout: 45000 });
   const reducedStarted = Date.now();
   await waitForArrival(reducedPage);
+  await reducedPage.waitForFunction(() => Boolean(window.__r3TerrainMap) && (window.__r3FormationMiniatures?.pieces.length ?? 0) > 0, null, { timeout: 20000 });
   const reduced = await arrivalEvidence(reducedPage);
   if (!reduced.reducedMotion) throw new Error('reduced-motion probe did not activate reduced arrival path');
   if (reduced.maxAnchorDeltaPx > 1.25) throw new Error(`reduced-motion anchors diverged by ${reduced.maxAnchorDeltaPx.toFixed(2)}px`);
