@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TutorialStep } from '../game/operational-clarity';
+import { useStartupPresentation } from './StartupExperience';
 import './tutorial-explanation.css';
 
 interface Props {
@@ -208,6 +209,7 @@ function explanationStepNumber(topic: ExplanationTopic, phase: number): number {
 }
 
 export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, onSkip, onBack, onForward }: Props) {
+  const { portalArrivalActive } = useStartupPresentation();
   const cardRef = useRef<HTMLElement>(null);
   const previousStepId = useRef(step?.id);
   const [explanation, setExplanation] = useState<ExplanationProgress | null>(() => readStoredExplanation());
@@ -253,11 +255,12 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   }, [tutorialSeen]);
 
   useEffect(() => {
-    if (!step || !tutorialSeen || replayRequested) return;
+    if (portalArrivalActive || !step || !tutorialSeen || replayRequested) return;
     onSkip();
-  }, [onSkip, replayRequested, step, tutorialSeen]);
+  }, [onSkip, portalArrivalActive, replayRequested, step, tutorialSeen]);
 
   useLayoutEffect(() => {
+    if (portalArrivalActive) return;
     const previous = previousStepId.current;
     const current = step?.id;
 
@@ -285,7 +288,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     }
 
     previousStepId.current = current;
-  }, [step?.id]);
+  }, [portalArrivalActive, step?.id]);
 
   useEffect(() => {
     try {
@@ -302,7 +305,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const displayId = currentExplanationPhase?.id ?? step?.id;
   const resolvedSelector = currentExplanationPhase?.focusSelector ?? anchorSelector;
   const explanationMode = Boolean(currentExplanationPhase);
-  const suppressAutomaticTutorial = Boolean(step && tutorialSeen && !replayRequested);
+  const suppressAutomaticTutorial = portalArrivalActive || Boolean(step && tutorialSeen && !replayRequested);
 
   const findTarget = useCallback(() => (
     resolvedSelector ? document.querySelector<HTMLElement>(resolvedSelector) : null
