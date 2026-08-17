@@ -20,11 +20,13 @@ test('portal arrival is requested only for fresh campaign entry and bypassed by 
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
 });
 
-test('arrival waits for the physical renderer and derives materialisation points from its authoritative targets', () => {
+test('arrival waits for stable terrain plus the physical renderer and derives authoritative materialisation points', () => {
   assert.match(miniatures, /__r3FormationPortalTargets/);
   assert.match(miniatures, /private publishPortalTargets\(\)/);
   assert.match(miniatures, /pieces: \[\.\.\.this\.pieces\.entries\(\)\]\.map\(\(\[id, piece\]\) => \(\{ id, target: \[\.\.\.piece\.target\] \}\)\)/);
   assert.match(miniatures, /this\.publishPortalTargets\(\);/);
+  assert.match(arrival, /function terrainRendererStable\(\)[\s\S]{0,180}status === 'ready' \|\| status === 'warning'/);
+  assert.match(arrival, /if \(!terrainRendererStable\(\)\) \{[\s\S]{0,100}return;/);
   assert.match(arrival, /const renderedPieces = runtime\.__r3FormationMiniatures\?\.pieces/);
   assert.match(arrival, /if \(!map \|\| !renderedPieces\?\.length\) return undefined/);
   assert.match(arrival, /runtime\.__r3FormationPortalTargets\?\.pieces \?\? renderedPieces/);
@@ -46,6 +48,12 @@ test('fresh-campaign formations are withheld before the portal and revealed at m
   assert.doesNotMatch(miniatures, /state\.taskGroups\[[^\]]+\]\s*=|personnel\s*=|readiness\s*=|order\s*=/);
 });
 
+test('pre-sequence renderer waiting is invisible and cannot block normal map interaction', () => {
+  assert.match(arrival, /if \(!active \|\| !frame\) return null/);
+  assert.doesNotMatch(arrival, /ACQUIRING TERRAIN LOCK/);
+  assert.doesNotMatch(arrival, /Acquiring arrival corridor/);
+});
+
 test('normal arrival duration stays inside the approved two-to-four-second presentation budget', () => {
   assert.match(arrival, /const FULL_SEQUENCE = \{[\s\S]*materialise: 720,[\s\S]*closing: 2140,[\s\S]*complete: 3260/);
   assert.match(arrival, /const REDUCED_SEQUENCE = \{[\s\S]*complete: 380/);
@@ -53,12 +61,12 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('renderer failure and accessible terrain fallback settle safely without an arbitrary startup race', () => {
+test('renderer failure and map-lifecycle loss settle safely without an arbitrary startup race', () => {
   assert.match(arrival, /READY_WITHOUT_FORMATIONS_GRACE_MS = 1500/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
   assert.match(arrival, /physicalFormationStatus\(\) === 'fallback'/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
-  assert.match(arrival, /terrainStatus === 'initialising' \|\| formationStatus === null/);
+  assert.match(arrival, /if \(sequenceStarted\) \{[\s\S]*!runtime\.__r3TerrainMap \|\| !runtime\.__r3FormationMiniatures\?\.pieces\.length\) finish\(\)/);
   assert.match(arrival, /formationStatus === 'ready'/);
   assert.doesNotMatch(arrival, /READY_TIMEOUT_MS/);
   assert.match(miniatures, /delete window\.__r3FormationPortalTargets/);
