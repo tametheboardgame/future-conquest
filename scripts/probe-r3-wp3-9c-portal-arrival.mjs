@@ -27,6 +27,7 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
       const targets = window.__r3FormationPortalTargets;
       const arrival = window.__r3PortalArrival;
       const overlay = document.querySelector('.r3-portal-arrival');
+      const overlayPhase = overlay?.getAttribute('data-phase') ?? null;
       const selectedCommandView = document.querySelector('[data-command-view][aria-current="page"]')?.getAttribute('data-command-view') ?? null;
       const commandView = selectedCommandView ?? (document.querySelector('.command-map-workspace') ? 'map' : null);
 
@@ -50,15 +51,23 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
       const overlayStyle = overlay ? getComputedStyle(overlay) : null;
       const rendererPieces = miniatures?.pieces ?? [];
       const expectedPieces = targets?.pieces ?? rendererPieces;
+      const domFormations = Array.from(document.querySelectorAll('.r3-arrival-materialisation[data-formation-id]')).flatMap(element => {
+        const id = element.getAttribute('data-formation-id');
+        const x = Number.parseFloat(element.style.left);
+        const y = Number.parseFloat(element.style.top);
+        return id && Number.isFinite(x) && Number.isFinite(y) ? [{ id, x, y }] : [];
+      });
+      const presentationFormations = domFormations.length ? domFormations : (arrival?.formations ?? []);
+
       let maxAnchorDeltaPx = null;
       let deltas = [];
-      if (arrival && map && mapConnected && mapRect && expectedPieces.length) {
+      if (map && mapConnected && mapRect && expectedPieces.length && presentationFormations.length) {
         try {
           const expected = expectedPieces.map(piece => {
             const point = map.project([piece.target[0], piece.target[1]]);
             return { id: piece.id, x: mapRect.left + point.x, y: mapRect.top + point.y };
           });
-          deltas = arrival.formations.flatMap(actual => {
+          deltas = presentationFormations.flatMap(actual => {
             const target = expected.find(item => item.id === actual.id);
             return target ? [{ id: actual.id, distance: Math.hypot(actual.x - target.x, actual.y - target.y) }] : [];
           });
@@ -82,12 +91,12 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
         rendererVisibleCount: rendererPieces.filter(piece => piece.visible).length,
         presentationWithheld: miniatures?.presentationWithheld ?? null,
         targetFormationCount: expectedPieces.length,
-        arrivalPresent: Boolean(arrival),
-        active: Boolean(arrival?.active),
-        phase: arrival?.phase ?? null,
-        reducedMotion: arrival?.reducedMotion ?? null,
+        arrivalBridgePresent: Boolean(arrival),
+        active: Boolean(overlay || arrival?.active),
+        phase: overlayPhase ?? arrival?.phase ?? null,
+        reducedMotion: overlay?.getAttribute('data-reduced-motion') === 'true' || arrival?.reducedMotion === true,
         portalTerritory: arrival?.portalTerritory ?? null,
-        formationCount: arrival?.formations.length ?? 0,
+        formationCount: presentationFormations.length,
         overlayPresent: Boolean(overlay),
         overlayConnected: Boolean(overlay?.isConnected),
         overlayWidth: overlayRect?.width ?? 0,
@@ -259,7 +268,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 8,
+    schemaVersion: 9,
     normal: { opening, materialising, settledRenderer },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
