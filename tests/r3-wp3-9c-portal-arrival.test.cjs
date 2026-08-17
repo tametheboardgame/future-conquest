@@ -34,12 +34,16 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('renderer rebuild is bounded while explicit terrain fallback still settles immediately', () => {
-  assert.match(arrival, /READY_TIMEOUT_MS = 12000/);
+test('arrival follows the terrain renderer lifecycle instead of racing it with a fixed timeout', () => {
+  assert.doesNotMatch(arrival, /READY_TIMEOUT_MS|startedAt/);
+  assert.match(arrival, /terrainRendererStatus\(\)/);
+  assert.match(arrival, /physicalFormationStatus\(\)/);
+  assert.match(arrival, /terrainStatus === 'initialising' \|\| formationStatus === null/);
+  assert.match(arrival, /READY_WITHOUT_FORMATIONS_GRACE_MS = 1500/);
+  assert.match(arrival, /terrainStatus === 'ready' && formationStatus === 'ready'/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
-  assert.match(arrival, /data-physical-formations="fallback"/);
+  assert.match(arrival, /physicalFormationStatus\(\) === 'fallback'/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
-  assert.match(arrival, /if \(performance\.now\(\) - startedAt >= READY_TIMEOUT_MS\) finish\(\)/);
 });
 
 test('the portal is a localised technological map event rather than a global colour wash', () => {
