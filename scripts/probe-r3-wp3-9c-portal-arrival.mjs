@@ -69,7 +69,6 @@ async function assertNoReplayAfterNavigation(page) {
 
 try {
   const page = await newCampaignPage();
-  await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap), null, { timeout: 45000 });
   await waitForArrival(page);
 
   const opening = await arrivalEvidence(page);
@@ -116,7 +115,6 @@ try {
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
-  await reducedPage.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap), null, { timeout: 45000 });
   const reducedStarted = Date.now();
   await waitForArrival(reducedPage);
   const reduced = await arrivalEvidence(reducedPage);
