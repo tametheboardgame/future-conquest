@@ -1,6 +1,6 @@
 # R3-WP3.9 Integrated Exit Review
 
-Status: **TECHNICAL PASS / AWAITING PRODUCT-OWNER VISUAL ACCEPTANCE / R3-WP4 BLOCKED**
+Status: **ACCEPTED / COMPLETE / R3-WP4 UNBLOCKED**
 
 Review baseline: corrected `main` after PR #168 (`1ac731f1f3f98d6ea8a563c03e12daa6e9e14f89`).
 
@@ -27,7 +27,7 @@ This second review is the authoritative R3-WP3.9 exit review against the correct
 - [x] Accessibility and reduced-motion behaviour remain safe.
 - [x] `?terrain=0` and renderer-failure fallback remain usable.
 - [x] Save/load behaviour, determinism and balance remain unchanged.
-- [ ] Product-owner integrated visual acceptance is explicitly recorded.
+- [x] Product-owner integrated visual acceptance is explicitly recorded.
 
 ## Integrated evidence result
 
@@ -86,8 +86,8 @@ The median Selected transition is inside the established practical tolerance tha
 - Representative stalled-campaign trace: PASS.
 - No simulation, save-format, formation-position, combat, supply or balance authority change is introduced by WP3.9.
 
-## Remaining gate
+## Product-owner acceptance
 
-Engineering/technical integrated review is complete and passed. The only outstanding R3-WP3.9 exit criterion is explicit product-owner visual acceptance of the live integrated result.
+Product-owner acceptance was explicitly recorded on 2026-08-17 by the instruction to **Start WP4** after the integrated technical gate had passed. This clears the final blocking criterion for R3-WP3.9.
 
-R3-WP4 remains blocked until product-owner acceptance is recorded and this review is merged as **ACCEPTED**.
+R3-WP3.9 is therefore complete and accepted. R3-WP4 may proceed from the accepted physical-map `main` baseline.
