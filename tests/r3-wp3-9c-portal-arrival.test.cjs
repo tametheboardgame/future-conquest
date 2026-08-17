@@ -23,19 +23,23 @@ test('portal arrival is requested for every fresh campaign entry and bypassed by
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
 });
 
-test('portal arrival owns first presentation and tutorial DOM/effects are released only after completion', () => {
-  assert.match(startup, /mode === 'game' && arrivalRequested \? ' portal-arrival-active' : ''/);
-  assert.match(startup, /<PortalArrivalSequence[\s\S]{0,180}active=\{mode === 'game' && arrivalRequested\}/);
+test('portal owns first presentation and releases tutorial synchronously after completion', () => {
+  assert.match(startup, /interface StartupPresentationState\s*\{\s*portalArrivalActive: boolean;/);
+  assert.match(startup, /const StartupPresentationContext = createContext<StartupPresentationState \| null>\(null\)/);
+  assert.match(startup, /export function useStartupPresentation\(\): StartupPresentationState/);
+  assert.match(startup, /const portalArrivalActive = mode === 'game' && arrivalRequested/);
+  assert.match(startup, /StartupPresentationContext\.Provider value=\{\{ portalArrivalActive \}\}/);
+  assert.match(startup, /<PortalArrivalSequence[\s\S]{0,180}active=\{portalArrivalActive\}/);
   assert.match(startup, /const completePortalArrival = useCallback\(\(\) => \{\s*setArrivalRequested\(false\);\s*\}, \[\]\)/);
   assert.match(css, /\.startup-game-shell\.portal-arrival-active \.tutorial-guide\s*\{\s*display: none !important;/);
-  assert.match(tutorial, /const \[portalArrivalActive, setPortalArrivalActive\] = useState/);
-  assert.match(tutorial, /querySelector\('\.startup-game-shell\.portal-arrival-active'\)/);
-  assert.match(tutorial, /new MutationObserver\(syncPortalArrival\)/);
-  assert.match(tutorial, /observer\.observe\(shell, \{ attributes: true, attributeFilter: \['class'\] \}\)/);
+
+  assert.match(tutorial, /import \{ useStartupPresentation \} from '\.\/StartupExperience'/);
+  assert.match(tutorial, /const \{ portalArrivalActive \} = useStartupPresentation\(\)/);
   assert.match(tutorial, /if \(portalArrivalActive \|\| !step \|\| !tutorialSeen \|\| replayRequested\) return/);
   assert.match(tutorial, /if \(portalArrivalActive\) return;[\s\S]{0,120}const previous = previousStepId\.current/);
   assert.match(tutorial, /const suppressAutomaticTutorial = portalArrivalActive \|\| Boolean\(step && tutorialSeen && !replayRequested\)/);
   assert.match(tutorial, /if \(suppressAutomaticTutorial \|\| \(!step && !currentExplanationPhase\)\) return null/);
+  assert.doesNotMatch(tutorial, /MutationObserver\(syncPortalArrival\)|querySelector\('\.startup-game-shell\.portal-arrival-active'\)/);
 });
 
 test('arrival waits for stable terrain plus the physical renderer and derives authoritative materialisation points', () => {
@@ -55,7 +59,7 @@ test('arrival waits for stable terrain plus the physical renderer and derives au
   assert.doesNotMatch(arrival, /taskGroups|location\s*=|personnel\s*=|readiness\s*=|orders\s*=/);
 });
 
-test('fresh-campaign formations stay withheld until the materialisation callback and reveal there', () => {
+test('fresh-campaign formations stay withheld until materialisation and reveal at that boundary', () => {
   assert.match(arrival, /useLayoutEffect\(\(\) => \{[\s\S]*setFormationWithheld\(true\)/);
   assert.match(arrival, /return \(\) => setFormationWithheld\(false\)/);
   assert.match(arrival, /lifecycle\.withheldAtMaterialisingBoundary = formationsWithheld\(\);[\s\S]{0,120}setFormationWithheld\(false\);[\s\S]{0,160}lifecycle\.withheldAfterMaterialisingBoundary = formationsWithheld\(\);[\s\S]{0,100}setPhase\('materialising'\)/);
@@ -68,7 +72,7 @@ test('fresh-campaign formations stay withheld until the materialisation callback
   assert.doesNotMatch(miniatures, /state\.taskGroups\[[^\]]+\]\s*=|personnel\s*=|readiness\s*=|order\s*=/);
 });
 
-test('executed lifecycle evidence survives slow headless rendering without changing campaign state', () => {
+test('executed lifecycle evidence survives slow rendering without changing campaign state', () => {
   assert.match(arrival, /__r3PortalArrivalLifecycle\?: ArrivalLifecycleEvidence/);
   assert.match(arrival, /schemaVersion: 1,[\s\S]*status: 'running',[\s\S]*formationCount: nextFrame\.formations\.length,[\s\S]*startedAt: performance\.now\(\),[\s\S]*withheldAtStart: formationsWithheld\(\)/);
   assert.match(arrival, /lifecycle\.materialisingAt = performance\.now\(\)/);
