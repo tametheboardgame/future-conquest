@@ -32,6 +32,8 @@ test('R3 WP5 covers all six resource and stockpile categories', () => {
   }
   assert.match(strategicSource, /enrichR3StrategicNodeGeoJSON/);
   assert.match(strategicSource, /hub_level/);
+  assert.match(strategicSource, /territory\.controller === 'player' \? resourceState\[territoryId\] : undefined/);
+  assert.match(strategicSource, /Enemy-held stockpiles stay hidden/);
 });
 
 test('R3 WP5 threat presentation consumes assessed contacts instead of raw enemy strength', () => {
@@ -46,6 +48,13 @@ test('R3 WP5 supply and route overlays consume authoritative logistics state', (
   assert.match(strategicSource, /flow_utilisation/);
   assert.match(strategicSource, /flow_condition/);
   assert.match(strategicSource, /bottleneck/);
+});
+
+test('R3 WP5 occupation view exposes resistance and garrison pressure without changing simulation state', () => {
+  assert.match(strategicSource, /garrison_personnel/);
+  assert.match(strategicSource, /\['get', 'resistance'\]/);
+  assert.match(strategicSource, /\['get', 'garrison_personnel'\]/);
+  assert.match(strategicSource, /Occupation and garrison pressure/);
 });
 
 test('R3 WP5 preferences remain presentation-only browser state', () => {
