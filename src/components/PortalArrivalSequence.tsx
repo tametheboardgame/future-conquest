@@ -101,6 +101,11 @@ function terrainRendererStatus() {
   return document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null;
 }
 
+function terrainRendererStable() {
+  const status = terrainRendererStatus();
+  return status === 'ready' || status === 'warning';
+}
+
 function physicalFormationStatus() {
   return document.querySelector('[data-physical-formations]')?.getAttribute('data-physical-formations') ?? null;
 }
@@ -187,6 +192,19 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         return;
       }
 
+      if (sequenceStarted) {
+        const runtime = bridge();
+        if (!runtime.__r3TerrainMap || !runtime.__r3FormationMiniatures?.pieces.length) finish();
+        return;
+      }
+
+      const terrainStatus = terrainRendererStatus();
+      const formationStatus = physicalFormationStatus();
+      if (!terrainRendererStable()) {
+        readyWithoutFormationsSince = undefined;
+        return;
+      }
+
       const nextFrame = projectArrivalFrame(portalTerritory);
       if (nextFrame) {
         readyWithoutFormationsSince = undefined;
@@ -195,9 +213,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         return;
       }
 
-      const terrainStatus = terrainRendererStatus();
-      const formationStatus = physicalFormationStatus();
-      if (terrainStatus === 'initialising' || formationStatus === null) {
+      if (formationStatus === null) {
         readyWithoutFormationsSince = undefined;
         return;
       }
@@ -230,14 +246,14 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     };
   }, [active, frame, phase, portalTerritory, reducedMotion]);
 
-  if (!active) return null;
+  if (!active || !frame) return null;
 
-  const mapStyle: CSSProperties = frame ? {
+  const mapStyle: CSSProperties = {
     left: frame.map.left,
     top: frame.map.top,
     width: frame.map.width,
     height: frame.map.height
-  } : { inset: 0 };
+  };
 
   return <div
     className="r3-portal-arrival"
@@ -245,43 +261,36 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     data-reduced-motion={reducedMotion ? 'true' : 'false'}
     role="status"
     aria-live="polite"
-    aria-label={phase === 'waiting' ? 'Acquiring arrival corridor' : 'Future formations arriving through temporal insertion gate'}
+    aria-label="Future formations arriving through temporal insertion gate"
   >
     <div className="r3-portal-map-field" style={mapStyle} aria-hidden="true" />
 
-    {frame && <>
-      <div className="r3-arrival-portal" style={{ left: frame.portal.x, top: frame.portal.y }} aria-hidden="true">
-        <span className="portal-halo" />
-        <span className="portal-ring portal-ring-outer" />
-        <span className="portal-ring portal-ring-mid" />
-        <span className="portal-ring portal-ring-inner" />
-        <span className="portal-core" />
-        <span className="portal-axis portal-axis-a" />
-        <span className="portal-axis portal-axis-b" />
-      </div>
+    <div className="r3-arrival-portal" style={{ left: frame.portal.x, top: frame.portal.y }} aria-hidden="true">
+      <span className="portal-halo" />
+      <span className="portal-ring portal-ring-outer" />
+      <span className="portal-ring portal-ring-mid" />
+      <span className="portal-ring portal-ring-inner" />
+      <span className="portal-core" />
+      <span className="portal-axis portal-axis-a" />
+      <span className="portal-axis portal-axis-b" />
+    </div>
 
-      <div className="r3-arrival-readout" style={{ left: frame.portal.x, top: frame.portal.y }}>
-        <small>TEMPORAL INSERTION GATE</small>
-        <strong>{phase === 'opening' ? 'CORRIDOR STABLE' : phase === 'materialising' ? 'FORMATIONS MATERIALISING' : 'GATE COLLAPSING'}</strong>
-        <span>{portalTerritory ? `ANCHOR ${portalTerritory}` : 'FIELD ANCHOR LOCKED'}</span>
-      </div>
+    <div className="r3-arrival-readout" style={{ left: frame.portal.x, top: frame.portal.y }}>
+      <small>TEMPORAL INSERTION GATE</small>
+      <strong>{phase === 'opening' ? 'CORRIDOR STABLE' : phase === 'materialising' ? 'FORMATIONS MATERIALISING' : 'GATE COLLAPSING'}</strong>
+      <span>{portalTerritory ? `ANCHOR ${portalTerritory}` : 'FIELD ANCHOR LOCKED'}</span>
+    </div>
 
-      {frame.formations.map((formation, index) => <div
-        key={formation.id}
-        className="r3-arrival-materialisation"
-        data-formation-id={formation.id}
-        style={{ left: formation.x, top: formation.y, '--arrival-delay': `${index * 45}ms` } as CSSProperties}
-        aria-hidden="true"
-      >
-        <i className="materialisation-ring" />
-        <i className="materialisation-column" />
-        <b>{formation.id}</b>
-      </div>)}
-    </>}
-
-    {!frame && <div className="r3-arrival-waiting-readout">
-      <small>TEMPORAL INSERTION</small>
-      <strong>ACQUIRING TERRAIN LOCK</strong>
-    </div>}
+    {frame.formations.map((formation, index) => <div
+      key={formation.id}
+      className="r3-arrival-materialisation"
+      data-formation-id={formation.id}
+      style={{ left: formation.x, top: formation.y, '--arrival-delay': `${index * 45}ms` } as CSSProperties}
+      aria-hidden="true"
+    >
+      <i className="materialisation-ring" />
+      <i className="materialisation-column" />
+      <b>{formation.id}</b>
+    </div>)}
   </div>;
 }
