@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import './portal-arrival.css';
 
 type ArrivalPhase = 'waiting' | 'opening' | 'materialising' | 'closing';
+type ArrivalCompletionReason = 'completed' | 'renderer-unavailable' | 'renderer-lost' | 'no-formations';
 
 type ArrivalPoint = {
   id: string;
@@ -18,14 +19,35 @@ type ArrivalFrame = {
 type ArrivalMapBridge = {
   project: (point: [number, number]) => { x: number; y: number };
   getContainer: () => HTMLElement;
+  triggerRepaint?: () => void;
+};
+
+type FormationTargetBridge = {
+  pieces: Array<{ id: string; target: readonly [number, number] }>;
+};
+
+type ArrivalLifecycleEvidence = {
+  schemaVersion: 1;
+  status: 'running' | 'completed' | 'aborted';
+  reason?: ArrivalCompletionReason;
+  reducedMotion: boolean;
+  portalTerritory?: string;
+  formationCount: number;
+  startedAt: number;
+  materialisingAt?: number;
+  closingAt?: number;
+  completedAt?: number;
+  withheldAtStart: boolean;
+  withheldAtMaterialisingBoundary?: boolean;
+  withheldAfterMaterialisingBoundary?: boolean;
+  withheldAtCompletion?: boolean;
 };
 
 type ArrivalWindowBridge = typeof window & {
   __r3TerrainMap?: ArrivalMapBridge;
   __r3TerritoryCentres?: Record<string, readonly [number, number]>;
-  __r3FormationMiniatures?: {
-    pieces: Array<{ id: string; target: readonly [number, number] }>;
-  };
+  __r3FormationPortalTargets?: FormationTargetBridge;
+  __r3FormationMiniatures?: FormationTargetBridge;
   __r3PortalArrival?: {
     active: boolean;
     phase: ArrivalPhase;
@@ -34,6 +56,7 @@ type ArrivalWindowBridge = typeof window & {
     portal: { x: number; y: number };
     formations: ArrivalPoint[];
   };
+  __r3PortalArrivalLifecycle?: ArrivalLifecycleEvidence;
 };
 
 interface Props {
@@ -43,8 +66,10 @@ interface Props {
   onComplete: () => void;
 }
 
-const READY_TIMEOUT_MS = 5000;
 const POSITION_REFRESH_MS = 80;
+const READY_WITHOUT_FORMATIONS_GRACE_MS = 1500;
+const RENDERER_LOSS_GRACE_MS = 1000;
+const FORMATION_WITHHOLD_DATASET_KEY = 'r3WithholdFormations';
 const FULL_SEQUENCE = {
   materialise: 720,
   closing: 2140,
@@ -60,12 +85,23 @@ function bridge(): ArrivalWindowBridge {
   return window as ArrivalWindowBridge;
 }
 
+function formationsWithheld() {
+  return document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY] === 'true';
+}
+
+function setFormationWithheld(withheld: boolean) {
+  if (withheld) document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY] = 'true';
+  else delete document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY];
+  bridge().__r3TerrainMap?.triggerRepaint?.();
+}
+
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
   const runtime = bridge();
   const map = runtime.__r3TerrainMap;
-  const pieces = runtime.__r3FormationMiniatures?.pieces;
-  if (!map || !pieces?.length) return undefined;
+  const renderedPieces = runtime.__r3FormationMiniatures?.pieces;
+  if (!map || !renderedPieces?.length) return undefined;
 
+  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? renderedPieces;
   const rect = map.getContainer().getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return undefined;
 
@@ -85,10 +121,24 @@ function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined
   };
 }
 
+function terrainRendererStatus() {
+  return document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null;
+}
+
+function terrainRendererStable() {
+  const status = terrainRendererStatus();
+  return status === 'ready' || status === 'warning';
+}
+
+function physicalFormationStatus() {
+  return document.querySelector('[data-physical-formations]')?.getAttribute('data-physical-formations') ?? null;
+}
+
 function rendererUnavailable() {
   const params = new URLSearchParams(window.location.search);
   return params.get('terrain') === '0'
-    || Boolean(document.querySelector('[data-physical-formations="fallback"], .r3-terrain-compact-fallback'));
+    || physicalFormationStatus() === 'fallback'
+    || Boolean(document.querySelector('.r3-terrain-compact-fallback, .r3-terrain-fallback-notice'));
 }
 
 function awaitingFreshCampaignState() {
@@ -99,6 +149,21 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
   const [phase, setPhase] = useState<ArrivalPhase>('waiting');
   const [frame, setFrame] = useState<ArrivalFrame>();
   const [reducedMotion, setReducedMotion] = useState(false);
+  const portalTerritoryRef = useRef(portalTerritory);
+  const onStartedRef = useRef(onStarted);
+  const onCompleteRef = useRef(onComplete);
+  portalTerritoryRef.current = portalTerritory;
+  onStartedRef.current = onStarted;
+  onCompleteRef.current = onComplete;
+
+  useLayoutEffect(() => {
+    if (!active) {
+      setFormationWithheld(false);
+      return;
+    }
+    setFormationWithheld(true);
+    return () => setFormationWithheld(false);
+  }, [active]);
 
   useEffect(() => {
     if (!active) {
@@ -113,52 +178,112 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     setPhase('waiting');
     setFrame(undefined);
 
-    const startedAt = performance.now();
     let sequenceStarted = false;
     let presentationConsumed = false;
     let completed = false;
+    let readyWithoutFormationsSince: number | undefined;
+    let rendererLostSince: number | undefined;
     const timeouts: number[] = [];
 
     const consumePresentation = () => {
       if (presentationConsumed) return;
       presentationConsumed = true;
-      onStarted?.();
+      onStartedRef.current?.();
     };
 
-    const finish = () => {
+    const finish = (reason: ArrivalCompletionReason) => {
       if (completed) return;
+      setFormationWithheld(false);
+      const lifecycle = bridge().__r3PortalArrivalLifecycle;
+      if (lifecycle?.status === 'running') {
+        lifecycle.status = reason === 'completed' ? 'completed' : 'aborted';
+        lifecycle.reason = reason;
+        lifecycle.completedAt = performance.now();
+        lifecycle.withheldAtCompletion = formationsWithheld();
+      }
       consumePresentation();
       completed = true;
       delete bridge().__r3PortalArrival;
-      onComplete();
+      onCompleteRef.current();
     };
 
     const beginSequence = (nextFrame: ArrivalFrame) => {
       if (sequenceStarted) return;
       sequenceStarted = true;
       consumePresentation();
+      const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
+      bridge().__r3PortalArrivalLifecycle = {
+        schemaVersion: 1,
+        status: 'running',
+        reducedMotion: reduced,
+        portalTerritory: portalTerritoryRef.current,
+        formationCount: nextFrame.formations.length,
+        startedAt: performance.now(),
+        withheldAtStart: formationsWithheld()
+      };
       setFrame(nextFrame);
       setPhase('opening');
-      const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
-      timeouts.push(window.setTimeout(() => setPhase('materialising'), timing.materialise));
-      timeouts.push(window.setTimeout(() => setPhase('closing'), timing.closing));
-      timeouts.push(window.setTimeout(finish, timing.complete));
+      timeouts.push(window.setTimeout(() => {
+        const lifecycle = bridge().__r3PortalArrivalLifecycle;
+        if (lifecycle?.status === 'running') {
+          lifecycle.materialisingAt = performance.now();
+          lifecycle.withheldAtMaterialisingBoundary = formationsWithheld();
+        }
+        setFormationWithheld(false);
+        if (lifecycle?.status === 'running') lifecycle.withheldAfterMaterialisingBoundary = formationsWithheld();
+        setPhase('materialising');
+      }, timing.materialise));
+      timeouts.push(window.setTimeout(() => {
+        const lifecycle = bridge().__r3PortalArrivalLifecycle;
+        if (lifecycle?.status === 'running') lifecycle.closingAt = performance.now();
+        setPhase('closing');
+      }, timing.closing));
+      timeouts.push(window.setTimeout(() => finish('completed'), timing.complete));
     };
 
     const refresh = () => {
       if (completed) return;
       if (awaitingFreshCampaignState()) return;
       if (rendererUnavailable()) {
-        finish();
+        finish('renderer-unavailable');
         return;
       }
-      const nextFrame = projectArrivalFrame(portalTerritory);
+
+      if (sequenceStarted) {
+        const refreshedFrame = terrainRendererStable() ? projectArrivalFrame(portalTerritoryRef.current) : undefined;
+        if (refreshedFrame) {
+          rendererLostSince = undefined;
+          setFrame(refreshedFrame);
+          return;
+        }
+        rendererLostSince ??= performance.now();
+        if (performance.now() - rendererLostSince >= RENDERER_LOSS_GRACE_MS) finish('renderer-lost');
+        return;
+      }
+
+      const formationStatus = physicalFormationStatus();
+      if (!terrainRendererStable()) {
+        readyWithoutFormationsSince = undefined;
+        return;
+      }
+
+      const nextFrame = projectArrivalFrame(portalTerritoryRef.current);
       if (nextFrame) {
+        readyWithoutFormationsSince = undefined;
         setFrame(nextFrame);
         beginSequence(nextFrame);
         return;
       }
-      if (performance.now() - startedAt >= READY_TIMEOUT_MS) finish();
+
+      if (formationStatus === null) {
+        readyWithoutFormationsSince = undefined;
+        return;
+      }
+
+      if (formationStatus === 'ready') {
+        readyWithoutFormationsSince ??= performance.now();
+        if (performance.now() - readyWithoutFormationsSince >= READY_WITHOUT_FORMATIONS_GRACE_MS) finish('no-formations');
+      }
     };
 
     refresh();
@@ -168,7 +293,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
       for (const timeout of timeouts) window.clearTimeout(timeout);
       delete bridge().__r3PortalArrival;
     };
-  }, [active, onComplete, onStarted, portalTerritory]);
+  }, [active]);
 
   useEffect(() => {
     if (!active || !frame) return;
@@ -182,14 +307,14 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     };
   }, [active, frame, phase, portalTerritory, reducedMotion]);
 
-  if (!active) return null;
+  if (!active || !frame) return null;
 
-  const mapStyle: CSSProperties = frame ? {
+  const mapStyle: CSSProperties = {
     left: frame.map.left,
     top: frame.map.top,
     width: frame.map.width,
     height: frame.map.height
-  } : { inset: 0 };
+  };
 
   return <div
     className="r3-portal-arrival"
@@ -197,43 +322,36 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     data-reduced-motion={reducedMotion ? 'true' : 'false'}
     role="status"
     aria-live="polite"
-    aria-label={phase === 'waiting' ? 'Acquiring arrival corridor' : 'Future formations arriving through temporal insertion gate'}
+    aria-label="Future formations arriving through temporal insertion gate"
   >
     <div className="r3-portal-map-field" style={mapStyle} aria-hidden="true" />
 
-    {frame && <>
-      <div className="r3-arrival-portal" style={{ left: frame.portal.x, top: frame.portal.y }} aria-hidden="true">
-        <span className="portal-halo" />
-        <span className="portal-ring portal-ring-outer" />
-        <span className="portal-ring portal-ring-mid" />
-        <span className="portal-ring portal-ring-inner" />
-        <span className="portal-core" />
-        <span className="portal-axis portal-axis-a" />
-        <span className="portal-axis portal-axis-b" />
-      </div>
+    <div className="r3-arrival-portal" style={{ left: frame.portal.x, top: frame.portal.y }} aria-hidden="true">
+      <span className="portal-halo" />
+      <span className="portal-ring portal-ring-outer" />
+      <span className="portal-ring portal-ring-mid" />
+      <span className="portal-ring portal-ring-inner" />
+      <span className="portal-core" />
+      <span className="portal-axis portal-axis-a" />
+      <span className="portal-axis portal-axis-b" />
+    </div>
 
-      <div className="r3-arrival-readout" style={{ left: frame.portal.x, top: frame.portal.y }}>
-        <small>TEMPORAL INSERTION GATE</small>
-        <strong>{phase === 'opening' ? 'CORRIDOR STABLE' : phase === 'materialising' ? 'FORMATIONS MATERIALISING' : 'GATE COLLAPSING'}</strong>
-        <span>{portalTerritory ? `ANCHOR ${portalTerritory}` : 'FIELD ANCHOR LOCKED'}</span>
-      </div>
+    <div className="r3-arrival-readout" style={{ left: frame.portal.x, top: frame.portal.y }}>
+      <small>TEMPORAL INSERTION GATE</small>
+      <strong>{phase === 'opening' ? 'CORRIDOR STABLE' : phase === 'materialising' ? 'FORMATIONS MATERIALISING' : 'GATE COLLAPSING'}</strong>
+      <span>{portalTerritory ? `ANCHOR ${portalTerritory}` : 'FIELD ANCHOR LOCKED'}</span>
+    </div>
 
-      {frame.formations.map((formation, index) => <div
-        key={formation.id}
-        className="r3-arrival-materialisation"
-        data-formation-id={formation.id}
-        style={{ left: formation.x, top: formation.y, '--arrival-delay': `${index * 45}ms` } as CSSProperties}
-        aria-hidden="true"
-      >
-        <i className="materialisation-ring" />
-        <i className="materialisation-column" />
-        <b>{formation.id}</b>
-      </div>)}
-    </>}
-
-    {!frame && <div className="r3-arrival-waiting-readout">
-      <small>TEMPORAL INSERTION</small>
-      <strong>ACQUIRING TERRAIN LOCK</strong>
-    </div>}
+    {frame.formations.map((formation, index) => <div
+      key={formation.id}
+      className="r3-arrival-materialisation"
+      data-formation-id={formation.id}
+      style={{ left: formation.x, top: formation.y, '--arrival-delay': `${index * 45}ms` } as CSSProperties}
+      aria-hidden="true"
+    >
+      <i className="materialisation-ring" />
+      <i className="materialisation-column" />
+      <b>{formation.id}</b>
+    </div>)}
   </div>;
 }
