@@ -102,18 +102,20 @@ try {
   await strategicControl.waitFor({ state: 'visible', timeout: 15_000 });
 
   // The accepted WP4 headless Chromium evidence also reports map/style/tiles as
-  // unsettled while every campaign source is loaded. WP5 therefore proves its
-  // production source enrichment and selector behaviour without treating
-  // software-WebGL tile settlement as a feature requirement.
+  // unsettled while campaign GeoJSON sources can still settle independently.
+  // WP5 proves the source data and selector behaviour without requiring DEM tile
+  // settlement from the software WebGL runner.
   await page.waitForFunction(() => {
     const map = window.__r3TerrainMap;
     if (!map) return false;
-    const territorySource = map.getSource('campaign-territories');
-    const routeSource = map.getSource('campaign-strategic-routes');
-    const nodeSource = map.getSource('campaign-strategic-nodes');
-    if (!territorySource || !routeSource || !nodeSource) return false;
     const territories = map.querySourceFeatures('campaign-territories');
-    return territories.some(feature => Object.prototype.hasOwnProperty.call(feature.properties ?? {}, 'friendly_strength'));
+    const routes = map.querySourceFeatures('campaign-strategic-routes');
+    const nodes = map.querySourceFeatures('campaign-strategic-nodes');
+    const has = (feature, key) => Object.prototype.hasOwnProperty.call(feature.properties ?? {}, key);
+    const territoryReady = territories.some(feature => has(feature, 'friendly_strength'));
+    const routeReady = routes.some(feature => has(feature, 'flow_utilisation') && has(feature, 'route_condition'));
+    const hubReady = nodes.some(feature => Number(feature.properties?.hub_level) > 0);
+    return territoryReady && routeReady && hubReady;
   }, undefined, { timeout: 45_000 });
 
   const snapshot = async () => page.evaluate(() => {
