@@ -47,8 +47,8 @@ interface Props {
   onComplete: () => void;
 }
 
-const READY_TIMEOUT_MS = 5000;
 const POSITION_REFRESH_MS = 80;
+const READY_WITHOUT_FORMATIONS_GRACE_MS = 1500;
 const FORMATION_WITHHOLD_DATASET_KEY = 'r3WithholdFormations';
 const FULL_SEQUENCE = {
   materialise: 720,
@@ -74,9 +74,10 @@ function setFormationWithheld(withheld: boolean) {
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
   const runtime = bridge();
   const map = runtime.__r3TerrainMap;
-  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? runtime.__r3FormationMiniatures?.pieces ?? [];
-  if (!map) return undefined;
+  const renderedPieces = runtime.__r3FormationMiniatures?.pieces;
+  if (!map || !renderedPieces?.length) return undefined;
 
+  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? renderedPieces;
   const rect = map.getContainer().getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return undefined;
 
@@ -96,10 +97,19 @@ function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined
   };
 }
 
+function terrainRendererStatus() {
+  return document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null;
+}
+
+function physicalFormationStatus() {
+  return document.querySelector('[data-physical-formations]')?.getAttribute('data-physical-formations') ?? null;
+}
+
 function rendererUnavailable() {
   const params = new URLSearchParams(window.location.search);
   return params.get('terrain') === '0'
-    || Boolean(document.querySelector('[data-physical-formations="fallback"], .r3-terrain-compact-fallback'));
+    || physicalFormationStatus() === 'fallback'
+    || Boolean(document.querySelector('.r3-terrain-compact-fallback, .r3-terrain-fallback-notice'));
 }
 
 function awaitingFreshCampaignState() {
@@ -133,10 +143,10 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     setPhase('waiting');
     setFrame(undefined);
 
-    const startedAt = performance.now();
     let sequenceStarted = false;
     let presentationConsumed = false;
     let completed = false;
+    let readyWithoutFormationsSince: number | undefined;
     const timeouts: number[] = [];
 
     const consumePresentation = () => {
@@ -176,13 +186,26 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         finish();
         return;
       }
+
       const nextFrame = projectArrivalFrame(portalTerritory);
       if (nextFrame) {
+        readyWithoutFormationsSince = undefined;
         setFrame(nextFrame);
         beginSequence(nextFrame);
         return;
       }
-      if (performance.now() - startedAt >= READY_TIMEOUT_MS) finish();
+
+      const terrainStatus = terrainRendererStatus();
+      const formationStatus = physicalFormationStatus();
+      if (terrainStatus === 'initialising' || formationStatus === null) {
+        readyWithoutFormationsSince = undefined;
+        return;
+      }
+
+      if (formationStatus === 'ready') {
+        readyWithoutFormationsSince ??= performance.now();
+        if (performance.now() - readyWithoutFormationsSince >= READY_WITHOUT_FORMATIONS_GRACE_MS) finish();
+      }
     };
 
     refresh();
@@ -190,6 +213,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     return () => {
       window.clearInterval(interval);
       for (const timeout of timeouts) window.clearTimeout(timeout);
+      setFormationWithheld(false);
       delete bridge().__r3PortalArrival;
     };
   }, [active, onComplete, onStarted, portalTerritory]);
