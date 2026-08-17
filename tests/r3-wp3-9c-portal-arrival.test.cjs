@@ -36,11 +36,13 @@ test('arrival waits for stable terrain plus the physical renderer and derives au
   assert.doesNotMatch(arrival, /taskGroups|location\s*=|personnel\s*=|readiness\s*=|orders\s*=/);
 });
 
-test('fresh-campaign formations are withheld before the portal and revealed at materialisation', () => {
+test('fresh-campaign formations stay withheld across presentation effect refreshes and reveal at materialisation', () => {
   assert.match(arrival, /useLayoutEffect\(\(\) => \{[\s\S]*setFormationWithheld\(true\)/);
+  assert.match(arrival, /return \(\) => setFormationWithheld\(false\)/);
   assert.match(arrival, /setFormationWithheld\(false\);\s*setPhase\('materialising'\)/);
   assert.match(arrival, /const finish = \(\) => \{[\s\S]*setFormationWithheld\(false\)/);
-  assert.match(arrival, /setFormationWithheld\(false\);\s*delete bridge\(\)\.__r3PortalArrival/);
+  assert.match(arrival, /Do not clear formation withholding here/);
+  assert.doesNotMatch(arrival, /for \(const timeout of timeouts\) window\.clearTimeout\(timeout\);\s*setFormationWithheld\(false\)/);
   assert.match(miniatures, /presentationWithheld = document\.documentElement\.dataset\.r3WithholdFormations === 'true'/);
   assert.match(miniatures, /piece\.root\.visible = this\.visible && !presentationWithheld/);
   assert.match(miniatures, /presentationWithheld,/);
