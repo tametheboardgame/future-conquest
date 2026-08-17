@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
 import './portal-arrival.css';
 
 type ArrivalPhase = 'waiting' | 'opening' | 'materialising' | 'closing';
@@ -18,6 +18,7 @@ type ArrivalFrame = {
 type ArrivalMapBridge = {
   project: (point: [number, number]) => { x: number; y: number };
   getContainer: () => HTMLElement;
+  triggerRepaint?: () => void;
 };
 
 type ArrivalWindowBridge = typeof window & {
@@ -45,6 +46,7 @@ interface Props {
 
 const READY_TIMEOUT_MS = 5000;
 const POSITION_REFRESH_MS = 80;
+const FORMATION_WITHHOLD_DATASET_KEY = 'r3WithholdFormations';
 const FULL_SEQUENCE = {
   materialise: 720,
   closing: 2140,
@@ -58,6 +60,12 @@ const REDUCED_SEQUENCE = {
 
 function bridge(): ArrivalWindowBridge {
   return window as ArrivalWindowBridge;
+}
+
+function setFormationWithheld(withheld: boolean) {
+  if (withheld) document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY] = 'true';
+  else delete document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY];
+  bridge().__r3TerrainMap?.triggerRepaint?.();
 }
 
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
@@ -100,6 +108,15 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
   const [frame, setFrame] = useState<ArrivalFrame>();
   const [reducedMotion, setReducedMotion] = useState(false);
 
+  useLayoutEffect(() => {
+    if (!active) {
+      setFormationWithheld(false);
+      return;
+    }
+    setFormationWithheld(true);
+    return () => setFormationWithheld(false);
+  }, [active]);
+
   useEffect(() => {
     if (!active) {
       setPhase('waiting');
@@ -127,6 +144,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
 
     const finish = () => {
       if (completed) return;
+      setFormationWithheld(false);
       consumePresentation();
       completed = true;
       delete bridge().__r3PortalArrival;
@@ -140,7 +158,10 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
       setFrame(nextFrame);
       setPhase('opening');
       const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
-      timeouts.push(window.setTimeout(() => setPhase('materialising'), timing.materialise));
+      timeouts.push(window.setTimeout(() => {
+        setFormationWithheld(false);
+        setPhase('materialising');
+      }, timing.materialise));
       timeouts.push(window.setTimeout(() => setPhase('closing'), timing.closing));
       timeouts.push(window.setTimeout(finish, timing.complete));
     };
