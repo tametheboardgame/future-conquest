@@ -2,14 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { GeoJSONSource, type GeoJSONSourceSpecification, type Map } from 'maplibre-gl';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import { getThreatenedTerritories } from '../game/operational-clarity';
-import { STRATEGIC_NODES } from '../game/strategic-network-data';
+import { STRATEGIC_NODES, STRATEGIC_ROUTES } from '../game/strategic-network-data';
 import {
   chooseTerrainPresentationProfile,
   type TerrainPresentationProfile
 } from '../presentation/r3-terrain-config';
 import {
   buildTerrainPoliticalGeoJSON,
-  buildTerrainStrategicNodeGeoJSON
+  buildTerrainStrategicNodeGeoJSON,
+  buildTerrainStrategicRouteGeoJSON
 } from '../presentation/r3-terrain-overlay';
 import {
   applyR3StrategicInformationOverlay,
@@ -60,11 +61,6 @@ function strategicPreferences(): StrategicPreferences {
   }
 }
 
-/**
- * WP2B-D host policy around the MapLibre implementation. R3-WP5 also owns the
- * strategic information selector because it is presentation state only: the
- * selected overlay is retained locally and never enters campaign save state.
- */
 export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
   const [profile, setProfile] = useState<TerrainPresentationProfile>(browserTerrainProfile);
   const [preferences, setPreferences] = useState<StrategicPreferences>(strategicPreferences);
@@ -102,6 +98,11 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
       activeCombatTerritoryIds
     });
     const strategicData = enrichR3StrategicPoliticalGeoJSON(projectedPoliticalData, state) as unknown as GeoJSONSourceSpecification['data'];
+    const strategicRouteData = buildTerrainStrategicRouteGeoJSON(
+      STRATEGIC_NODES,
+      STRATEGIC_ROUTES,
+      state
+    ) as unknown as GeoJSONSourceSpecification['data'];
     const strategicNodeData = enrichR3StrategicNodeGeoJSON(
       buildTerrainStrategicNodeGeoJSON(STRATEGIC_NODES, state),
       state
@@ -115,15 +116,16 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
         return;
       }
       const territorySource = map.getSource('campaign-territories');
+      const routeSource = map.getSource('campaign-strategic-routes');
       const nodeSource = map.getSource('campaign-strategic-nodes');
-      if (!(territorySource instanceof GeoJSONSource) || !(nodeSource instanceof GeoJSONSource)) {
+      if (!(territorySource instanceof GeoJSONSource)
+        || !(routeSource instanceof GeoJSONSource)
+        || !(nodeSource instanceof GeoJSONSource)) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
-      // GeoJSON source enrichment does not depend on terrain tiles settling. This
-      // keeps strategic data available during slow DEM/WebGL settlement while
-      // MapLibre layer styling still waits for a fully loaded style below.
       territorySource.setData(strategicData);
+      routeSource.setData(strategicRouteData);
       nodeSource.setData(strategicNodeData);
       if (!applyR3StrategicInformationOverlay(map, preferences.overlay, preferences.resource)) {
         frame = window.requestAnimationFrame(synchronise);
