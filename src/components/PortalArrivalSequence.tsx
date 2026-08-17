@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import './portal-arrival.css';
 
 type ArrivalPhase = 'waiting' | 'opening' | 'materialising' | 'closing';
+type ArrivalCompletionReason = 'completed' | 'renderer-unavailable' | 'renderer-lost' | 'no-formations';
 
 type ArrivalPoint = {
   id: string;
@@ -25,6 +26,23 @@ type FormationTargetBridge = {
   pieces: Array<{ id: string; target: readonly [number, number] }>;
 };
 
+type ArrivalLifecycleEvidence = {
+  schemaVersion: 1;
+  status: 'running' | 'completed' | 'aborted';
+  reason?: ArrivalCompletionReason;
+  reducedMotion: boolean;
+  portalTerritory?: string;
+  formationCount: number;
+  startedAt: number;
+  materialisingAt?: number;
+  closingAt?: number;
+  completedAt?: number;
+  withheldAtStart: boolean;
+  withheldAtMaterialisingBoundary?: boolean;
+  withheldAfterMaterialisingBoundary?: boolean;
+  withheldAtCompletion?: boolean;
+};
+
 type ArrivalWindowBridge = typeof window & {
   __r3TerrainMap?: ArrivalMapBridge;
   __r3TerritoryCentres?: Record<string, readonly [number, number]>;
@@ -38,6 +56,7 @@ type ArrivalWindowBridge = typeof window & {
     portal: { x: number; y: number };
     formations: ArrivalPoint[];
   };
+  __r3PortalArrivalLifecycle?: ArrivalLifecycleEvidence;
 };
 
 interface Props {
@@ -64,6 +83,10 @@ const REDUCED_SEQUENCE = {
 
 function bridge(): ArrivalWindowBridge {
   return window as ArrivalWindowBridge;
+}
+
+function formationsWithheld() {
+  return document.documentElement.dataset[FORMATION_WITHHOLD_DATASET_KEY] === 'true';
 }
 
 function setFormationWithheld(withheld: boolean) {
@@ -126,6 +149,12 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
   const [phase, setPhase] = useState<ArrivalPhase>('waiting');
   const [frame, setFrame] = useState<ArrivalFrame>();
   const [reducedMotion, setReducedMotion] = useState(false);
+  const portalTerritoryRef = useRef(portalTerritory);
+  const onStartedRef = useRef(onStarted);
+  const onCompleteRef = useRef(onComplete);
+  portalTerritoryRef.current = portalTerritory;
+  onStartedRef.current = onStarted;
+  onCompleteRef.current = onComplete;
 
   useLayoutEffect(() => {
     if (!active) {
@@ -159,50 +188,76 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     const consumePresentation = () => {
       if (presentationConsumed) return;
       presentationConsumed = true;
-      onStarted?.();
+      onStartedRef.current?.();
     };
 
-    const finish = () => {
+    const finish = (reason: ArrivalCompletionReason) => {
       if (completed) return;
       setFormationWithheld(false);
+      const lifecycle = bridge().__r3PortalArrivalLifecycle;
+      if (lifecycle?.status === 'running') {
+        lifecycle.status = reason === 'completed' ? 'completed' : 'aborted';
+        lifecycle.reason = reason;
+        lifecycle.completedAt = performance.now();
+        lifecycle.withheldAtCompletion = formationsWithheld();
+      }
       consumePresentation();
       completed = true;
       delete bridge().__r3PortalArrival;
-      onComplete();
+      onCompleteRef.current();
     };
 
     const beginSequence = (nextFrame: ArrivalFrame) => {
       if (sequenceStarted) return;
       sequenceStarted = true;
       consumePresentation();
+      const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
+      bridge().__r3PortalArrivalLifecycle = {
+        schemaVersion: 1,
+        status: 'running',
+        reducedMotion: reduced,
+        portalTerritory: portalTerritoryRef.current,
+        formationCount: nextFrame.formations.length,
+        startedAt: performance.now(),
+        withheldAtStart: formationsWithheld()
+      };
       setFrame(nextFrame);
       setPhase('opening');
-      const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
       timeouts.push(window.setTimeout(() => {
+        const lifecycle = bridge().__r3PortalArrivalLifecycle;
+        if (lifecycle?.status === 'running') {
+          lifecycle.materialisingAt = performance.now();
+          lifecycle.withheldAtMaterialisingBoundary = formationsWithheld();
+        }
         setFormationWithheld(false);
+        if (lifecycle?.status === 'running') lifecycle.withheldAfterMaterialisingBoundary = formationsWithheld();
         setPhase('materialising');
       }, timing.materialise));
-      timeouts.push(window.setTimeout(() => setPhase('closing'), timing.closing));
-      timeouts.push(window.setTimeout(finish, timing.complete));
+      timeouts.push(window.setTimeout(() => {
+        const lifecycle = bridge().__r3PortalArrivalLifecycle;
+        if (lifecycle?.status === 'running') lifecycle.closingAt = performance.now();
+        setPhase('closing');
+      }, timing.closing));
+      timeouts.push(window.setTimeout(() => finish('completed'), timing.complete));
     };
 
     const refresh = () => {
       if (completed) return;
       if (awaitingFreshCampaignState()) return;
       if (rendererUnavailable()) {
-        finish();
+        finish('renderer-unavailable');
         return;
       }
 
       if (sequenceStarted) {
-        const refreshedFrame = terrainRendererStable() ? projectArrivalFrame(portalTerritory) : undefined;
+        const refreshedFrame = terrainRendererStable() ? projectArrivalFrame(portalTerritoryRef.current) : undefined;
         if (refreshedFrame) {
           rendererLostSince = undefined;
           setFrame(refreshedFrame);
           return;
         }
         rendererLostSince ??= performance.now();
-        if (performance.now() - rendererLostSince >= RENDERER_LOSS_GRACE_MS) finish();
+        if (performance.now() - rendererLostSince >= RENDERER_LOSS_GRACE_MS) finish('renderer-lost');
         return;
       }
 
@@ -212,7 +267,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
         return;
       }
 
-      const nextFrame = projectArrivalFrame(portalTerritory);
+      const nextFrame = projectArrivalFrame(portalTerritoryRef.current);
       if (nextFrame) {
         readyWithoutFormationsSince = undefined;
         setFrame(nextFrame);
@@ -227,7 +282,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
 
       if (formationStatus === 'ready') {
         readyWithoutFormationsSince ??= performance.now();
-        if (performance.now() - readyWithoutFormationsSince >= READY_WITHOUT_FORMATIONS_GRACE_MS) finish();
+        if (performance.now() - readyWithoutFormationsSince >= READY_WITHOUT_FORMATIONS_GRACE_MS) finish('no-formations');
       }
     };
 
@@ -236,13 +291,9 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     return () => {
       window.clearInterval(interval);
       for (const timeout of timeouts) window.clearTimeout(timeout);
-      // Do not clear formation withholding here. This effect can restart while
-      // the arrival remains active, for example when the detected portal
-      // territory changes. The layout effect owns active/unmount teardown so
-      // a dependency refresh cannot expose formations before materialisation.
       delete bridge().__r3PortalArrival;
     };
-  }, [active, onComplete, onStarted, portalTerritory]);
+  }, [active]);
 
   useEffect(() => {
     if (!active || !frame) return;
