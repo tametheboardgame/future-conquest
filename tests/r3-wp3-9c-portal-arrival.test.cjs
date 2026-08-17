@@ -48,7 +48,9 @@ test('the portal is a localised technological map event rather than a global col
   assert.match(css, /repeating-linear-gradient/);
   assert.match(arrival, /TEMPORAL INSERTION GATE/);
   assert.match(arrival, /FORMATIONS MATERIALISING/);
-  assert.match(arrival, /style=\{mapStyle\}/);
+  assert.match(arrival, /const mapStyle: CSSProperties = frame \? \{/);
+  assert.match(arrival, /const mapFieldStyle: CSSProperties = phase === 'waiting'/);
+  assert.match(arrival, /className="r3-portal-map-field" style=\{mapFieldStyle\}/);
 });
 
 test('implementation remains inside the approved WP3.9C presentation-only boundary', () => {
