@@ -17,12 +17,23 @@ interface Props {
   children: ReactNode;
 }
 
+interface StartupPresentationState {
+  portalArrivalActive: boolean;
+}
+
 const GlobalSettingsContext = createContext<GlobalSettings | null>(null);
+const StartupPresentationContext = createContext<StartupPresentationState | null>(null);
 
 export function useLiveGlobalSettings(): GlobalSettings {
   const settings = useContext(GlobalSettingsContext);
   if (!settings) throw new Error('useLiveGlobalSettings must be used within StartupExperience');
   return settings;
+}
+
+export function useStartupPresentation(): StartupPresentationState {
+  const presentation = useContext(StartupPresentationContext);
+  if (!presentation) throw new Error('useStartupPresentation must be used within StartupExperience');
+  return presentation;
 }
 
 type CampaignEndingKind = 'victory' | 'defeat';
@@ -299,16 +310,17 @@ export function StartupExperience({ children }: Props) {
   const saveSummary = saved
     ? `Day ${String(saved.metadata.campaignDay).padStart(3, '0')} · ${saved.metadata.difficulty} · ${saved.metadata.formationCount} formations · ${formatSaveTime(saved.metadata.savedAt)}`
     : '';
+  const portalArrivalActive = mode === 'game' && arrivalRequested;
 
   return <>
     <div
-      className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}${mode === 'game' && arrivalRequested ? ' portal-arrival-active' : ''}`}
+      className={`startup-game-shell ${mode !== 'game' ? 'launcher-covered' : ''}${portalArrivalActive ? ' portal-arrival-active' : ''}`}
       aria-hidden={mode !== 'game'}
       inert={mode !== 'game'}
-    ><GlobalSettingsContext.Provider value={settings}>{children}<MapUxFoundations active={mode === 'game'} /></GlobalSettingsContext.Provider></div>
+    ><GlobalSettingsContext.Provider value={settings}><StartupPresentationContext.Provider value={{ portalArrivalActive }}>{children}<MapUxFoundations active={mode === 'game'} /></StartupPresentationContext.Provider></GlobalSettingsContext.Provider></div>
 
     <PortalArrivalSequence
-      active={mode === 'game' && arrivalRequested}
+      active={portalArrivalActive}
       portalTerritory={portalTerritory}
       onStarted={markPortalArrivalPlayed}
       onComplete={completePortalArrival}
