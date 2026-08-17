@@ -2,13 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { GeoJSONSource, type GeoJSONSourceSpecification, type Map } from 'maplibre-gl';
 import activeGeojson from '../assets/vertical-slice-map.json';
 import { getThreatenedTerritories } from '../game/operational-clarity';
+import { STRATEGIC_NODES } from '../game/strategic-network-data';
 import {
   chooseTerrainPresentationProfile,
   type TerrainPresentationProfile
 } from '../presentation/r3-terrain-config';
-import { buildTerrainPoliticalGeoJSON } from '../presentation/r3-terrain-overlay';
+import {
+  buildTerrainPoliticalGeoJSON,
+  buildTerrainStrategicNodeGeoJSON
+} from '../presentation/r3-terrain-overlay';
 import {
   applyR3StrategicInformationOverlay,
+  enrichR3StrategicNodeGeoJSON,
+  enrichR3StrategicPoliticalGeoJSON,
   R3_RESOURCE_METRIC_OPTIONS,
   R3_STRATEGIC_OVERLAY_OPTIONS,
   r3StrategicOverlayLegend,
@@ -91,10 +97,15 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     let disposed = false;
     const threats = getThreatenedTerritories(state);
     const activeCombatTerritoryIds = Object.values(state.operations).map(operation => operation.target);
-    const strategicData = buildTerrainPoliticalGeoJSON(terrainGeoJSON, state, {
+    const projectedPoliticalData = buildTerrainPoliticalGeoJSON(terrainGeoJSON, state, {
       threatenedTerritories: threats,
       activeCombatTerritoryIds
-    }) as unknown as GeoJSONSourceSpecification['data'];
+    });
+    const strategicData = enrichR3StrategicPoliticalGeoJSON(projectedPoliticalData, state) as unknown as GeoJSONSourceSpecification['data'];
+    const strategicNodeData = enrichR3StrategicNodeGeoJSON(
+      buildTerrainStrategicNodeGeoJSON(STRATEGIC_NODES, state),
+      state
+    ) as unknown as GeoJSONSourceSpecification['data'];
 
     const synchronise = () => {
       if (disposed) return;
@@ -103,12 +114,14 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
-      const source = map.getSource('campaign-territories');
-      if (!(source instanceof GeoJSONSource)) {
+      const territorySource = map.getSource('campaign-territories');
+      const nodeSource = map.getSource('campaign-strategic-nodes');
+      if (!(territorySource instanceof GeoJSONSource) || !(nodeSource instanceof GeoJSONSource)) {
         frame = window.requestAnimationFrame(synchronise);
         return;
       }
-      source.setData(strategicData);
+      territorySource.setData(strategicData);
+      nodeSource.setData(strategicNodeData);
       if (!applyR3StrategicInformationOverlay(map, preferences.overlay, preferences.resource)) {
         frame = window.requestAnimationFrame(synchronise);
       }
