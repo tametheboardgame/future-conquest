@@ -21,12 +21,15 @@ type ArrivalMapBridge = {
   triggerRepaint?: () => void;
 };
 
+type FormationTargetBridge = {
+  pieces: Array<{ id: string; target: readonly [number, number] }>;
+};
+
 type ArrivalWindowBridge = typeof window & {
   __r3TerrainMap?: ArrivalMapBridge;
   __r3TerritoryCentres?: Record<string, readonly [number, number]>;
-  __r3FormationMiniatures?: {
-    pieces: Array<{ id: string; target: readonly [number, number] }>;
-  };
+  __r3FormationPortalTargets?: FormationTargetBridge;
+  __r3FormationMiniatures?: FormationTargetBridge;
   __r3PortalArrival?: {
     active: boolean;
     phase: ArrivalPhase;
@@ -71,7 +74,7 @@ function setFormationWithheld(withheld: boolean) {
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
   const runtime = bridge();
   const map = runtime.__r3TerrainMap;
-  const pieces = runtime.__r3FormationMiniatures?.pieces;
+  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? runtime.__r3FormationMiniatures?.pieces;
   if (!map || !pieces?.length) return undefined;
 
   const rect = map.getContainer().getBoundingClientRect();
