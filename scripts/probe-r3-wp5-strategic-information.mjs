@@ -187,7 +187,7 @@ try {
   await selectAndExpectLegend('routes', 'Route condition');
 
   await strategicView.selectOption('resources');
-  const resourceSelect = page.getByLabel('Resource');
+  const resourceSelect = strategicControl.locator('select').nth(1);
   await resourceSelect.waitFor({ state: 'visible', timeout: 5_000 });
   await resourceSelect.selectOption('energy');
   await legend.getByText('Energy potential', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
