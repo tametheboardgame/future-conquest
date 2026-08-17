@@ -149,7 +149,7 @@ export function enrichR3StrategicPoliticalGeoJSON(
       const contact = contactByTerritory.get(territoryId);
       const allocation = territory.controller === 'player' ? state.logistics.territoryAllocations[territoryId] : undefined;
       const resource = TERRITORY_RESOURCES[territoryId];
-      const stock = resourceState[territoryId];
+      const stock = territory.controller === 'player' ? resourceState[territoryId] : undefined;
 
       return {
         ...feature,
@@ -291,7 +291,12 @@ const territoryPaint = (overlay: R3StrategicOverlay, resource: R3ResourceMetric)
         ['==', ['get', 'controller'], 'enemy'], transparent,
         ['interpolate', ['linear'], ['get', 'resistance'], 0, '#4ca67d', 25, '#91ac65', 50, '#d0b55c', 75, '#ca704a', 100, '#9a3940']
       ],
-      opacity: ['case', ['==', ['get', 'controller'], 'enemy'], 0, 0.35]
+      opacity: ['case',
+        ['==', ['get', 'controller'], 'enemy'], 0,
+        ['<=', ['get', 'garrison_personnel'], 0], 0.42,
+        ['<', ['get', 'garrison_personnel'], 800], 0.38,
+        0.32
+      ]
     };
   }
 
@@ -421,8 +426,8 @@ export function r3StrategicOverlayLegend(
     supply: { title: 'Supply and network flow', detail: 'Territory delivery ratio plus route utilisation. Thick red/orange routes are strained or overloaded.' },
     routes: { title: 'Route condition', detail: 'Healthy routes trend green; damaged, blocked and destroyed links trend amber/red. Bottlenecks are thicker.' },
     resources: { title: `${resourceLabel} potential`, detail: 'Relative local campaign resource rating from 1 to 5. Logistics hubs remain marked.' },
-    stockpiles: { title: `${resourceLabel} stockpiles`, detail: 'Current local stock level. Territories without an established stock record remain clear.' },
-    occupation: { title: 'Occupation pressure', detail: 'Controlled territory is shaded by current resistance. Enemy-held territory remains clear.' },
+    stockpiles: { title: `${resourceLabel} stockpiles`, detail: 'Current friendly-held local stocks. Enemy-held stockpiles stay hidden.' },
+    occupation: { title: 'Occupation and garrison pressure', detail: 'Colour follows resistance; stronger shading flags territory with no or thin garrison coverage.' },
     quality: { title: 'Force quality', detail: 'Personnel-weighted morale and functional-armour availability for friendly formations.' }
   };
   return legends[overlay];
