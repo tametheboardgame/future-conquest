@@ -21,18 +21,30 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
 }
 
 async function waitForArrival(page, timeout = 60000) {
-  await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout: 10000 });
-  await page.waitForFunction(() => Boolean(window.__r3PortalArrival?.active), null, { timeout });
+  await page.waitForFunction(() => {
+    const terrainStatus = document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status');
+    const map = window.__r3TerrainMap;
+    const miniatures = window.__r3FormationMiniatures;
+    return (terrainStatus === 'ready' || terrainStatus === 'warning')
+      && Boolean(map?.getContainer().isConnected)
+      && Boolean(miniatures?.pieces.length)
+      && Boolean(window.__r3PortalArrival?.active);
+  }, null, { timeout });
+  await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout: 2000 });
 }
 
 async function arrivalEvidence(page) {
+  await page.waitForFunction(() => {
+    const map = window.__r3TerrainMap;
+    return Boolean(window.__r3PortalArrival?.active && map?.getContainer().isConnected && window.__r3FormationMiniatures?.pieces.length);
+  }, null, { timeout: 1500 });
   return page.evaluate(() => {
     const arrival = window.__r3PortalArrival;
     const map = window.__r3TerrainMap;
     const miniatureEvidence = window.__r3FormationMiniatures;
     const targetEvidence = window.__r3FormationPortalTargets;
-    if (!arrival || !map) throw new Error('arrival map evidence unavailable');
-    const expectedPieces = targetEvidence?.pieces ?? miniatureEvidence?.pieces ?? [];
+    if (!arrival || !map || !miniatureEvidence?.pieces.length) throw new Error('arrival renderer evidence unavailable');
+    const expectedPieces = targetEvidence?.pieces ?? miniatureEvidence.pieces;
     const rect = map.getContainer().getBoundingClientRect();
     const expected = expectedPieces.map(piece => {
       const point = map.project([piece.target[0], piece.target[1]]);
@@ -48,10 +60,12 @@ async function arrivalEvidence(page) {
       portalTerritory: arrival.portalTerritory ?? null,
       formationCount: arrival.formations.length,
       targetFormationCount: expectedPieces.length,
-      rendererFormationCount: miniatureEvidence?.pieces.length ?? 0,
-      rendererVisibleCount: miniatureEvidence?.pieces.filter(piece => piece.visible).length ?? 0,
-      presentationWithheld: miniatureEvidence?.presentationWithheld ?? null,
+      rendererFormationCount: miniatureEvidence.pieces.length,
+      rendererVisibleCount: miniatureEvidence.pieces.filter(piece => piece.visible).length,
+      presentationWithheld: miniatureEvidence.presentationWithheld ?? null,
       domWithheld: document.documentElement.dataset.r3WithholdFormations === 'true',
+      terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
+      mapConnected: map.getContainer().isConnected,
       maxAnchorDeltaPx: deltas.length ? deltas.reduce((max, item) => Math.max(max, item.distance), 0) : null,
       deltas
     };
@@ -73,6 +87,7 @@ try {
 
   const opening = await arrivalEvidence(page);
   if (opening.reducedMotion) throw new Error('normal-motion probe unexpectedly entered reduced-motion mode');
+  if (!['ready', 'warning'].includes(opening.terrainStatus) || !opening.mapConnected) throw new Error('portal opened before the terrain renderer was stable');
   if (opening.rendererFormationCount === 0) throw new Error('portal opened before the physical formation renderer produced pieces');
   if (opening.formationCount !== opening.rendererFormationCount) throw new Error(`arrival formation count mismatch (${opening.formationCount}/${opening.rendererFormationCount})`);
   if (!opening.domWithheld) throw new Error('formation withholding was not active during portal opening');
@@ -151,7 +166,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     normal: { opening, materialising, settledRenderer },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
