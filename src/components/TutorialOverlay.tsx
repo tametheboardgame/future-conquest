@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TutorialStep } from '../game/operational-clarity';
+import { useStartupPresentation } from './StartupExperience';
 import './tutorial-explanation.css';
 
 interface Props {
@@ -208,15 +209,13 @@ function explanationStepNumber(topic: ExplanationTopic, phase: number): number {
 }
 
 export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, onSkip, onBack, onForward }: Props) {
+  const { portalArrivalActive } = useStartupPresentation();
   const cardRef = useRef<HTMLElement>(null);
   const previousStepId = useRef(step?.id);
   const [explanation, setExplanation] = useState<ExplanationProgress | null>(() => readStoredExplanation());
   const [reviewPhase, setReviewPhase] = useState<number | null>(null);
   const [tutorialSeen, setTutorialSeen] = useState(() => readFlag(TUTORIAL_SEEN_STORAGE_KEY));
   const [replayRequested, setReplayRequested] = useState(() => readFlag(TUTORIAL_REPLAY_STORAGE_KEY));
-  const [portalArrivalActive, setPortalArrivalActive] = useState(() => (
-    typeof document !== 'undefined' && Boolean(document.querySelector('.startup-game-shell.portal-arrival-active'))
-  ));
   const [position, setPosition] = useState<OverlayPosition>({
     top: VIEWPORT_MARGIN,
     left: VIEWPORT_MARGIN,
@@ -231,19 +230,6 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     setReplayRequested(false);
     setExplanation(null);
     setReviewPhase(null);
-  }, []);
-
-  useEffect(() => {
-    const shell = document.querySelector<HTMLElement>('.startup-game-shell');
-    if (!shell) {
-      setPortalArrivalActive(false);
-      return;
-    }
-    const syncPortalArrival = () => setPortalArrivalActive(shell.classList.contains('portal-arrival-active'));
-    syncPortalArrival();
-    const observer = new MutationObserver(syncPortalArrival);
-    observer.observe(shell, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
