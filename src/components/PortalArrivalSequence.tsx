@@ -39,6 +39,7 @@ type ArrivalWindowBridge = typeof window & {
 interface Props {
   active: boolean;
   portalTerritory?: string;
+  onStarted?: () => void;
   onComplete: () => void;
 }
 
@@ -90,7 +91,7 @@ function rendererUnavailable() {
     || Boolean(document.querySelector('[data-physical-formations="fallback"], .r3-terrain-compact-fallback'));
 }
 
-export function PortalArrivalSequence({ active, portalTerritory, onComplete }: Props) {
+export function PortalArrivalSequence({ active, portalTerritory, onStarted, onComplete }: Props) {
   const [phase, setPhase] = useState<ArrivalPhase>('waiting');
   const [frame, setFrame] = useState<ArrivalFrame>();
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -110,11 +111,19 @@ export function PortalArrivalSequence({ active, portalTerritory, onComplete }: P
 
     const startedAt = performance.now();
     let sequenceStarted = false;
+    let presentationConsumed = false;
     let completed = false;
     const timeouts: number[] = [];
 
+    const consumePresentation = () => {
+      if (presentationConsumed) return;
+      presentationConsumed = true;
+      onStarted?.();
+    };
+
     const finish = () => {
       if (completed) return;
+      consumePresentation();
       completed = true;
       delete bridge().__r3PortalArrival;
       onComplete();
@@ -123,6 +132,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onComplete }: P
     const beginSequence = (nextFrame: ArrivalFrame) => {
       if (sequenceStarted) return;
       sequenceStarted = true;
+      consumePresentation();
       setFrame(nextFrame);
       setPhase('opening');
       const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
@@ -153,7 +163,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onComplete }: P
       for (const timeout of timeouts) window.clearTimeout(timeout);
       delete bridge().__r3PortalArrival;
     };
-  }, [active, onComplete, portalTerritory]);
+  }, [active, onComplete, onStarted, portalTerritory]);
 
   useEffect(() => {
     if (!active || !frame) return;
