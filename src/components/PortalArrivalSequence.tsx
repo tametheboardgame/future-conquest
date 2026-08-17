@@ -15,9 +15,19 @@ type ArrivalFrame = {
   formations: ArrivalPoint[];
 };
 
+type FormationLayerImplementationBridge = {
+  visible?: boolean;
+};
+
+type CustomStyleLayerBridge = {
+  implementation?: FormationLayerImplementationBridge;
+};
+
 type ArrivalMapBridge = {
   project: (point: [number, number]) => { x: number; y: number };
   getContainer: () => HTMLElement;
+  getLayer?: (id: string) => CustomStyleLayerBridge | undefined;
+  triggerRepaint?: () => void;
 };
 
 type ArrivalWindowBridge = typeof window & {
@@ -45,6 +55,8 @@ interface Props {
 
 const READY_TIMEOUT_MS = 5000;
 const POSITION_REFRESH_MS = 80;
+const FORMATION_WITHHOLD_SETTLE_MS = 48;
+const R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures';
 const FULL_SEQUENCE = {
   materialise: 720,
   closing: 2140,
@@ -58,6 +70,10 @@ const REDUCED_SEQUENCE = {
 
 function bridge(): ArrivalWindowBridge {
   return window as ArrivalWindowBridge;
+}
+
+function formationLayerImplementation(): FormationLayerImplementationBridge | undefined {
+  return bridge().__r3TerrainMap?.getLayer?.(R3_FORMATION_MINIATURE_LAYER_ID)?.implementation;
 }
 
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
@@ -115,9 +131,33 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
 
     const startedAt = performance.now();
     let sequenceStarted = false;
+    let sequenceScheduled = false;
+    let formationsReleased = false;
     let presentationConsumed = false;
     let completed = false;
+    let controlledFormationLayer: FormationLayerImplementationBridge | undefined;
+    let originalFormationVisibility: boolean | undefined;
     const timeouts: number[] = [];
+
+    const withholdFormationVisibility = () => {
+      const layer = formationLayerImplementation();
+      if (!layer || typeof layer.visible !== 'boolean') return false;
+      if (controlledFormationLayer !== layer) {
+        controlledFormationLayer = layer;
+        originalFormationVisibility = layer.visible;
+      }
+      layer.visible = false;
+      bridge().__r3TerrainMap?.triggerRepaint?.();
+      return true;
+    };
+
+    const restoreFormationVisibility = () => {
+      if (!controlledFormationLayer || originalFormationVisibility === undefined) return;
+      controlledFormationLayer.visible = originalFormationVisibility;
+      bridge().__r3TerrainMap?.triggerRepaint?.();
+      controlledFormationLayer = undefined;
+      originalFormationVisibility = undefined;
+    };
 
     const consumePresentation = () => {
       if (presentationConsumed) return;
@@ -127,6 +167,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
 
     const finish = () => {
       if (completed) return;
+      restoreFormationVisibility();
       consumePresentation();
       completed = true;
       delete bridge().__r3PortalArrival;
@@ -134,13 +175,17 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     };
 
     const beginSequence = (nextFrame: ArrivalFrame) => {
-      if (sequenceStarted) return;
+      if (sequenceStarted || completed) return;
       sequenceStarted = true;
       consumePresentation();
       setFrame(nextFrame);
       setPhase('opening');
       const timing = reduced ? REDUCED_SEQUENCE : FULL_SEQUENCE;
-      timeouts.push(window.setTimeout(() => setPhase('materialising'), timing.materialise));
+      timeouts.push(window.setTimeout(() => {
+        formationsReleased = true;
+        restoreFormationVisibility();
+        setPhase('materialising');
+      }, timing.materialise));
       timeouts.push(window.setTimeout(() => setPhase('closing'), timing.closing));
       timeouts.push(window.setTimeout(finish, timing.complete));
     };
@@ -155,7 +200,21 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
       const nextFrame = projectArrivalFrame(portalTerritory);
       if (nextFrame) {
         setFrame(nextFrame);
-        beginSequence(nextFrame);
+        if (sequenceStarted) {
+          if (!formationsReleased) withholdFormationVisibility();
+          return;
+        }
+        if (!sequenceScheduled && withholdFormationVisibility()) {
+          sequenceScheduled = true;
+          // Keep the waiting veil up for one rendered terrain frame after the
+          // Three.js formation layer is suppressed. The portal therefore opens
+          // onto an empty arrival zone rather than revealing already-landed troops.
+          timeouts.push(window.setTimeout(() => {
+            if (completed) return;
+            withholdFormationVisibility();
+            beginSequence(nextFrame);
+          }, reduced ? 16 : FORMATION_WITHHOLD_SETTLE_MS));
+        }
         return;
       }
       if (performance.now() - startedAt >= READY_TIMEOUT_MS) finish();
@@ -166,6 +225,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     return () => {
       window.clearInterval(interval);
       for (const timeout of timeouts) window.clearTimeout(timeout);
+      restoreFormationVisibility();
       delete bridge().__r3PortalArrival;
     };
   }, [active, onComplete, onStarted, portalTerritory]);
@@ -190,6 +250,9 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     width: frame.map.width,
     height: frame.map.height
   } : { inset: 0 };
+  const mapFieldStyle: CSSProperties = phase === 'waiting'
+    ? { ...mapStyle, background: 'rgba(2, 10, 14, 0.985)', opacity: 1 }
+    : mapStyle;
 
   return <div
     className="r3-portal-arrival"
@@ -199,7 +262,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     aria-live="polite"
     aria-label={phase === 'waiting' ? 'Acquiring arrival corridor' : 'Future formations arriving through temporal insertion gate'}
   >
-    <div className="r3-portal-map-field" style={mapStyle} aria-hidden="true" />
+    <div className="r3-portal-map-field" style={mapFieldStyle} aria-hidden="true" />
 
     {frame && <>
       <div className="r3-arrival-portal" style={{ left: frame.portal.x, top: frame.portal.y }} aria-hidden="true">
