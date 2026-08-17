@@ -37,7 +37,7 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
 test('renderer failure and accessible terrain fallback settle immediately into the normal Day 1 command map', () => {
   assert.match(arrival, /READY_TIMEOUT_MS = 5000/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
-  assert.match(arrival, /data-physical-formations=\\"fallback\\"/);
+  assert.match(arrival, /data-physical-formations="fallback"/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
   assert.match(arrival, /if \(performance\.now\(\) - startedAt >= READY_TIMEOUT_MS\) finish\(\)/);
 });
@@ -54,7 +54,7 @@ test('the portal is a localised technological map event rather than a global col
 test('implementation remains inside the approved WP3.9C presentation-only boundary', () => {
   assert.match(roadmap, /R3-WP3\.9C - Portal Arrival Sequence/);
   assert.match(roadmap, /roughly 2-4 seconds/);
-  assert.match(roadmap, /at most once per newly created campaign/);
-  assert.match(roadmap, /does not alter formation coordinates/);
-  assert.match(roadmap, /renderer or effect failure must immediately settle/);
+  assert.match(roadmap, /at most once for a newly created campaign/);
+  assert.match(roadmap, /must not alter formation coordinates/);
+  assert.match(roadmap, /Renderer\/effect failure must settle immediately/);
 });
