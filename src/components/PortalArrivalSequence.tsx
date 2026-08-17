@@ -74,8 +74,8 @@ function setFormationWithheld(withheld: boolean) {
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
   const runtime = bridge();
   const map = runtime.__r3TerrainMap;
-  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? runtime.__r3FormationMiniatures?.pieces;
-  if (!map || !pieces?.length) return undefined;
+  const pieces = runtime.__r3FormationPortalTargets?.pieces ?? runtime.__r3FormationMiniatures?.pieces ?? [];
+  if (!map) return undefined;
 
   const rect = map.getContainer().getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return undefined;
