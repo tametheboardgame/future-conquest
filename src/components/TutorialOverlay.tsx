@@ -214,6 +214,9 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const [reviewPhase, setReviewPhase] = useState<number | null>(null);
   const [tutorialSeen, setTutorialSeen] = useState(() => readFlag(TUTORIAL_SEEN_STORAGE_KEY));
   const [replayRequested, setReplayRequested] = useState(() => readFlag(TUTORIAL_REPLAY_STORAGE_KEY));
+  const [portalArrivalActive, setPortalArrivalActive] = useState(() => (
+    typeof document !== 'undefined' && Boolean(document.querySelector('.startup-game-shell.portal-arrival-active'))
+  ));
   const [position, setPosition] = useState<OverlayPosition>({
     top: VIEWPORT_MARGIN,
     left: VIEWPORT_MARGIN,
@@ -228,6 +231,19 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     setReplayRequested(false);
     setExplanation(null);
     setReviewPhase(null);
+  }, []);
+
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>('.startup-game-shell');
+    if (!shell) {
+      setPortalArrivalActive(false);
+      return;
+    }
+    const syncPortalArrival = () => setPortalArrivalActive(shell.classList.contains('portal-arrival-active'));
+    syncPortalArrival();
+    const observer = new MutationObserver(syncPortalArrival);
+    observer.observe(shell, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -253,11 +269,12 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   }, [tutorialSeen]);
 
   useEffect(() => {
-    if (!step || !tutorialSeen || replayRequested) return;
+    if (portalArrivalActive || !step || !tutorialSeen || replayRequested) return;
     onSkip();
-  }, [onSkip, replayRequested, step, tutorialSeen]);
+  }, [onSkip, portalArrivalActive, replayRequested, step, tutorialSeen]);
 
   useLayoutEffect(() => {
+    if (portalArrivalActive) return;
     const previous = previousStepId.current;
     const current = step?.id;
 
@@ -285,7 +302,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
     }
 
     previousStepId.current = current;
-  }, [step?.id]);
+  }, [portalArrivalActive, step?.id]);
 
   useEffect(() => {
     try {
@@ -302,7 +319,7 @@ export function TutorialOverlay({ step, stepNumber, totalSteps, anchorSelector, 
   const displayId = currentExplanationPhase?.id ?? step?.id;
   const resolvedSelector = currentExplanationPhase?.focusSelector ?? anchorSelector;
   const explanationMode = Boolean(currentExplanationPhase);
-  const suppressAutomaticTutorial = Boolean(step && tutorialSeen && !replayRequested);
+  const suppressAutomaticTutorial = portalArrivalActive || Boolean(step && tutorialSeen && !replayRequested);
 
   const findTarget = useCallback(() => (
     resolvedSelector ? document.querySelector<HTMLElement>(resolvedSelector) : null
