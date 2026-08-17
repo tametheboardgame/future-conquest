@@ -1,4 +1,5 @@
 import type { Map, Marker } from 'maplibre-gl';
+import { TERRITORIES } from '../game/data';
 import type { GameState } from '../game/types';
 import {
   applyMovingFormationMarkers,
@@ -9,6 +10,7 @@ import {
   setBattleEventOverlayVisible,
   syncBattleEventOverlay
 } from './r3-battle-event-overlay';
+import { deriveR3FrontSegments } from './r3-map-visual-state';
 import { deriveStrategicEventCues } from './r3-strategic-event-cues';
 import {
   applyTerrainOperationalMarkerLayout as applyCoreTerrainOperationalMarkerLayout,
@@ -27,6 +29,13 @@ interface MarkerCallbacks {
   onSelectGroup?: (groupId: string) => void;
 }
 
+const syncStrategicEvents = (map: Map, state: GameState) => syncBattleEventOverlay(
+  map,
+  deriveStrategicEventCues(state),
+  terrainOperationalTerritoryCentres,
+  deriveR3FrontSegments(state.territories, TERRITORIES)
+);
+
 export function buildTerrainOperationalMarkers(map: Map, state: GameState, callbacks: MarkerCallbacks): Marker[] {
   const markers = applyMovingFormationMarkers(
     buildCoreTerrainOperationalMarkers(map, state, callbacks),
@@ -35,7 +44,7 @@ export function buildTerrainOperationalMarkers(map: Map, state: GameState, callb
     false
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
-  syncBattleEventOverlay(map, deriveStrategicEventCues(state), terrainOperationalTerritoryCentres);
+  syncStrategicEvents(map, state);
   return markers;
 }
 
@@ -52,7 +61,7 @@ export function reconcileTerrainOperationalMarkers(
     true
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
-  syncBattleEventOverlay(map, deriveStrategicEventCues(state), terrainOperationalTerritoryCentres);
+  syncStrategicEvents(map, state);
   return markers;
 }
 
