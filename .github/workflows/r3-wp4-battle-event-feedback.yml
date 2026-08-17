@@ -8,6 +8,7 @@ on:
       - 'src/presentation/r3-strategic-event-cues.ts'
       - 'src/presentation/r3-battle-event-overlay.ts'
       - 'src/presentation/r3-terrain-operational-markers.ts'
+      - 'scripts/probe-r3-wp4-battle-feedback.mjs'
       - 'tests/r3-wp4-*.test.cjs'
       - 'docs/roadmap/R3-WP4-BATTLE-FRONT-EVENT-FEEDBACK.md'
       - '.github/workflows/r3-wp4-battle-event-feedback.yml'
@@ -63,3 +64,45 @@ jobs:
         run: npm test
       - name: Prove current-engine balance authority unchanged
         run: npm run simulate:current-balance
+
+  wp4-browser-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install browser probe runtime
+        run: npm install --no-save playwright@1.62.1
+      - name: Compile deterministic game fixture
+        shell: bash
+        run: |
+          npx tsc -p tsconfig.test.json
+          printf '{"type":"commonjs"}\n' > .test-dist/package.json
+      - name: Build exact production game
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Probe active attack and concluded battle feedback
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/probe-r3-wp4-battle-feedback.mjs 2>&1 | tee wp4-browser.log
+      - name: Upload WP4 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp4-battle-feedback-${{ github.event.pull_request.head.sha }}
+          path: |
+            wp4-browser.log
+            wp4-active-attack.png
+            wp4-recent-victory.png
+          if-no-files-found: warn
