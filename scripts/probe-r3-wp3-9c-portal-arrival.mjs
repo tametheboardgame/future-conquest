@@ -13,6 +13,7 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
     localStorage.setItem('future-conquest:intro-seen:v3', 'true');
     localStorage.setItem('future-conquest-tutorial-seen-v1', 'true');
     sessionStorage.removeItem('future-conquest:r3-wp39c-arrival-played');
+    delete window.__r3PortalArrivalLifecycle;
 
     const mapIds = new WeakMap();
     let nextMapId = 1;
@@ -26,6 +27,7 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
       const miniatures = window.__r3FormationMiniatures;
       const targets = window.__r3FormationPortalTargets;
       const arrival = window.__r3PortalArrival;
+      const lifecycle = window.__r3PortalArrivalLifecycle;
       const overlay = document.querySelector('.r3-portal-arrival');
       const overlayPhase = overlay?.getAttribute('data-phase') ?? null;
       const selectedCommandView = document.querySelector('[data-command-view][aria-current="page"]')?.getAttribute('data-command-view') ?? null;
@@ -92,11 +94,12 @@ async function newCampaignPage({ terrain = true, reducedMotion = 'no-preference'
         presentationWithheld: miniatures?.presentationWithheld ?? null,
         targetFormationCount: expectedPieces.length,
         arrivalBridgePresent: Boolean(arrival),
+        lifecycle: lifecycle ? { ...lifecycle } : null,
         active: Boolean(overlay || arrival?.active),
         phase: overlayPhase ?? arrival?.phase ?? null,
-        reducedMotion: overlay?.getAttribute('data-reduced-motion') === 'true' || arrival?.reducedMotion === true,
-        portalTerritory: arrival?.portalTerritory ?? null,
-        formationCount: presentationFormations.length,
+        reducedMotion: overlay?.getAttribute('data-reduced-motion') === 'true' || arrival?.reducedMotion === true || lifecycle?.reducedMotion === true,
+        portalTerritory: arrival?.portalTerritory ?? lifecycle?.portalTerritory ?? null,
+        formationCount: presentationFormations.length || lifecycle?.formationCount || 0,
         overlayPresent: Boolean(overlay),
         overlayConnected: Boolean(overlay?.isConnected),
         overlayWidth: overlayRect?.width ?? 0,
@@ -132,9 +135,9 @@ async function lifecycleDiagnostic(page) {
   }));
 }
 
-async function waitForArrival(page, timeout = 60000, requireWithheldOpening = true) {
+async function waitForArrival(page, timeout = 60000) {
   try {
-    const handle = await page.waitForFunction((requireOpening) => {
+    const handle = await page.waitForFunction(() => {
       const snapshot = window.__r3ProbeSnapshot?.();
       if (!snapshot) return false;
       const stableTerrain = snapshot.terrainStatus === 'ready' || snapshot.terrainStatus === 'warning';
@@ -144,45 +147,73 @@ async function waitForArrival(page, timeout = 60000, requireWithheldOpening = tr
         && snapshot.overlayHeight > 0
         && snapshot.overlayDisplay !== 'none'
         && snapshot.overlayVisibility !== 'hidden';
-      const openingCorrect = !requireOpening || (
-        snapshot.phase === 'opening'
-        && snapshot.domWithheld === true
-        && snapshot.presentationWithheld === true
-        && snapshot.rendererVisibleCount === 0
-      );
       return stableTerrain
         && snapshot.mapConnected
         && snapshot.rendererFormationCount > 0
-        && snapshot.active
+        && snapshot.phase === 'opening'
+        && snapshot.domWithheld === true
+        && snapshot.presentationWithheld === true
+        && snapshot.rendererVisibleCount === 0
         && visibleOverlay
-        && openingCorrect
-        ? snapshot
-        : false;
-    }, requireWithheldOpening, { timeout, polling: 'raf' });
-    return await handle.jsonValue();
-  } catch (error) {
-    const diagnostic = await lifecycleDiagnostic(page);
-    throw new Error(`${error.message}\nR3 WP3.9C lifecycle diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
-  }
-}
-
-async function waitForMaterialising(page, timeout = 5000) {
-  try {
-    const handle = await page.waitForFunction(() => {
-      const snapshot = window.__r3ProbeSnapshot?.();
-      if (!snapshot) return false;
-      return snapshot.phase === 'materialising'
-        && snapshot.rendererFormationCount > 0
-        && snapshot.rendererVisibleCount === snapshot.rendererFormationCount
-        && snapshot.presentationWithheld === false
-        && snapshot.domWithheld === false
         ? snapshot
         : false;
     }, null, { timeout, polling: 'raf' });
     return await handle.jsonValue();
   } catch (error) {
     const diagnostic = await lifecycleDiagnostic(page);
-    throw new Error(`${error.message}\nR3 WP3.9C materialisation diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
+    throw new Error(`${error.message}\nR3 WP3.9C opening diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
+  }
+}
+
+async function waitForMaterialisationBoundary(page, timeout = 10000) {
+  try {
+    const handle = await page.waitForFunction(() => {
+      const lifecycle = window.__r3PortalArrivalLifecycle;
+      return lifecycle?.materialisingAt
+        && lifecycle.withheldAtMaterialisingBoundary === true
+        && lifecycle.withheldAfterMaterialisingBoundary === false
+        ? { ...lifecycle }
+        : false;
+    }, null, { timeout, polling: 'raf' });
+    return await handle.jsonValue();
+  } catch (error) {
+    const diagnostic = await lifecycleDiagnostic(page);
+    throw new Error(`${error.message}\nR3 WP3.9C materialisation-boundary diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
+  }
+}
+
+async function waitForFormationsVisible(page, timeout = 10000) {
+  try {
+    const handle = await page.waitForFunction(() => {
+      const lifecycle = window.__r3PortalArrivalLifecycle;
+      const miniatures = window.__r3FormationMiniatures;
+      if (!lifecycle?.materialisingAt || !miniatures?.pieces.length) return false;
+      const visible = miniatures.pieces.filter(piece => piece.visible).length;
+      return visible === miniatures.pieces.length
+        && miniatures.presentationWithheld === false
+        && document.documentElement.dataset.r3WithholdFormations !== 'true'
+        ? { count: miniatures.pieces.length, visible, withheld: miniatures.presentationWithheld }
+        : false;
+    }, null, { timeout, polling: 'raf' });
+    return await handle.jsonValue();
+  } catch (error) {
+    const diagnostic = await lifecycleDiagnostic(page);
+    throw new Error(`${error.message}\nR3 WP3.9C visible-formations diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
+  }
+}
+
+async function waitForLifecycleCompletion(page, timeout = 10000) {
+  try {
+    const handle = await page.waitForFunction(() => {
+      const lifecycle = window.__r3PortalArrivalLifecycle;
+      return lifecycle?.status === 'completed' && lifecycle.reason === 'completed' && lifecycle.completedAt
+        ? { ...lifecycle }
+        : false;
+    }, null, { timeout, polling: 'raf' });
+    return await handle.jsonValue();
+  } catch (error) {
+    const diagnostic = await lifecycleDiagnostic(page);
+    throw new Error(`${error.message}\nR3 WP3.9C completion diagnostic:\n${JSON.stringify(diagnostic, null, 2)}`);
   }
 }
 
@@ -195,6 +226,16 @@ async function assertNoReplayAfterNavigation(page) {
   if (await page.locator('.r3-portal-arrival').count()) throw new Error('arrival replayed after ordinary command-view navigation');
 }
 
+function assertLifecycleOrder(lifecycle, expectedFormationCount) {
+  if (lifecycle.formationCount !== expectedFormationCount) throw new Error(`lifecycle formation count mismatch (${lifecycle.formationCount}/${expectedFormationCount})`);
+  if (!lifecycle.withheldAtStart) throw new Error('lifecycle did not start with formations withheld');
+  if (lifecycle.withheldAtMaterialisingBoundary !== true) throw new Error('formations were not withheld immediately before materialisation');
+  if (lifecycle.withheldAfterMaterialisingBoundary !== false) throw new Error('formations remained withheld after materialisation boundary');
+  if (!(lifecycle.materialisingAt >= lifecycle.startedAt)) throw new Error('materialisation timestamp preceded sequence start');
+  if (lifecycle.closingAt !== undefined && lifecycle.closingAt < lifecycle.materialisingAt) throw new Error('closing timestamp preceded materialisation');
+  if (lifecycle.completedAt !== undefined && lifecycle.completedAt < lifecycle.materialisingAt) throw new Error('completion timestamp preceded materialisation');
+}
+
 try {
   const page = await newCampaignPage();
   const opening = await waitForArrival(page);
@@ -203,30 +244,26 @@ try {
   if (!['ready', 'warning'].includes(opening.terrainStatus) || !opening.mapConnected || !opening.overlayConnected) throw new Error('portal opened before the terrain renderer and portal DOM were stable');
   if (opening.rendererFormationCount === 0) throw new Error('portal opened before the physical formation renderer produced pieces');
   if (opening.formationCount !== opening.rendererFormationCount) throw new Error(`arrival formation count mismatch (${opening.formationCount}/${opening.rendererFormationCount})`);
-  if (!opening.domWithheld) throw new Error('formation withholding was not active during portal opening');
-  if (opening.presentationWithheld !== true) throw new Error('physical formation renderer did not report portal withholding during opening');
   if (opening.rendererVisibleCount !== 0) throw new Error(`${opening.rendererVisibleCount} formations were visible before materialisation`);
   if (opening.maxAnchorDeltaPx === null || opening.maxAnchorDeltaPx > 1.25) throw new Error(`arrival anchors diverged from renderer targets by ${opening.maxAnchorDeltaPx ?? 'unknown'}px`);
   await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/portal-opening.png` });
 
-  const materialising = await waitForMaterialising(page);
-  if (materialising.rendererVisibleCount !== materialising.rendererFormationCount) {
-    throw new Error(`only ${materialising.rendererVisibleCount}/${materialising.rendererFormationCount} formations were visible at materialisation`);
-  }
-  if (materialising.maxAnchorDeltaPx === null || materialising.maxAnchorDeltaPx > 1.25) throw new Error(`materialisation anchors diverged by ${materialising.maxAnchorDeltaPx ?? 'unknown'}px`);
-  await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/formations-materialising.png` });
+  const materialisationBoundary = await waitForMaterialisationBoundary(page);
+  assertLifecycleOrder(materialisationBoundary, opening.rendererFormationCount);
+  if (materialisationBoundary.materialisingAt - materialisationBoundary.startedAt < 650) throw new Error('normal-motion materialisation callback fired too early');
+
+  const settledRenderer = await waitForFormationsVisible(page);
+  await page.locator('.command-map-workspace').screenshot({ path: `${outputDir}/formations-materialised.png` });
+
+  const completedLifecycle = await waitForLifecycleCompletion(page);
+  assertLifecycleOrder(completedLifecycle, opening.rendererFormationCount);
+  if (completedLifecycle.completedAt - completedLifecycle.startedAt < 3000) throw new Error('normal-motion arrival completed too early');
+  if (completedLifecycle.withheldAtCompletion !== false) throw new Error('formations were still withheld at completion');
 
   await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
   if (await page.evaluate(() => Boolean(window.__r3PortalArrival))) throw new Error('arrival evidence remained active after sequence completion');
   if (await page.evaluate(() => sessionStorage.getItem('future-conquest:r3-wp39c-arrival-played')) !== 'true') throw new Error('arrival presentation marker was not consumed');
   if (await page.evaluate(() => document.documentElement.dataset.r3WithholdFormations === 'true')) throw new Error('formation withholding flag remained set after sequence completion');
-
-  const settledRenderer = await page.evaluate(() => ({
-    count: window.__r3FormationMiniatures?.pieces.length ?? 0,
-    visible: window.__r3FormationMiniatures?.pieces.filter(piece => piece.visible).length ?? 0,
-    withheld: window.__r3FormationMiniatures?.presentationWithheld ?? true
-  }));
-  if (!settledRenderer.count || settledRenderer.withheld || settledRenderer.visible !== settledRenderer.count) throw new Error('formations did not settle visible after portal completion');
 
   await assertNoReplayAfterNavigation(page);
 
@@ -241,21 +278,20 @@ try {
   await page.getByRole('button', { name: 'New campaign', exact: true }).click();
   await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
   const secondCampaign = await waitForArrival(page);
-  if (!secondCampaign.domWithheld || secondCampaign.presentationWithheld !== true || secondCampaign.rendererVisibleCount !== 0) {
+  if (secondCampaign.rendererVisibleCount !== 0 || secondCampaign.presentationWithheld !== true || secondCampaign.domWithheld !== true) {
     throw new Error('second campaign formations were visible before their portal arrival');
   }
-  await page.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 6000 });
+  const secondLifecycle = await waitForLifecycleCompletion(page);
+  assertLifecycleOrder(secondLifecycle, secondCampaign.rendererFormationCount);
   await page.close();
 
   const reducedPage = await newCampaignPage({ reducedMotion: 'reduce' });
-  const reduced = await waitForArrival(reducedPage, 60000, false);
-  const reducedStarted = Date.now();
-  if (!reduced.reducedMotion) throw new Error('reduced-motion probe did not activate reduced arrival path');
-  if (reduced.rendererFormationCount === 0) throw new Error('reduced-motion portal opened without physical formations');
-  await reducedPage.locator('.r3-portal-arrival').waitFor({ state: 'detached', timeout: 2500 });
-  const reducedElapsedMs = Date.now() - reducedStarted;
-  if (reducedElapsedMs > 2200) throw new Error(`reduced-motion arrival remained active too long (${reducedElapsedMs}ms)`);
-  if (await reducedPage.evaluate(() => document.documentElement.dataset.r3WithholdFormations === 'true')) throw new Error('reduced-motion path left formations withheld');
+  const reducedLifecycle = await waitForLifecycleCompletion(reducedPage, 60000);
+  if (!reducedLifecycle.reducedMotion) throw new Error('reduced-motion lifecycle did not activate reduced arrival path');
+  assertLifecycleOrder(reducedLifecycle, reducedLifecycle.formationCount);
+  if (reducedLifecycle.completedAt - reducedLifecycle.startedAt < 300) throw new Error('reduced-motion arrival completed implausibly early');
+  if (reducedLifecycle.withheldAtCompletion !== false) throw new Error('reduced-motion path left formations withheld');
+  const reducedRenderer = await waitForFormationsVisible(reducedPage);
   await reducedPage.close();
 
   const fallbackPage = await newCampaignPage({ terrain: false, reducedMotion: 'reduce' });
@@ -268,10 +304,10 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 9,
-    normal: { opening, materialising, settledRenderer },
-    secondCampaign,
-    reduced: { ...reduced, elapsedMs: reducedElapsedMs },
+    schemaVersion: 10,
+    normal: { opening, materialisationBoundary, completedLifecycle, settledRenderer },
+    secondCampaign: { opening: secondCampaign, lifecycle: secondLifecycle },
+    reduced: { lifecycle: reducedLifecycle, renderer: reducedRenderer },
     fallback: { settledToNormalMap: true, formationsWithheld: false }
   };
   fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
