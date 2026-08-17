@@ -1,0 +1,186 @@
+name: R3 WP3.9 integrated exit gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/reviews/R3-WP3.9-INTEGRATED-EXIT-REVIEW.md'
+      - '.github/workflows/r3-wp3-9-integrated-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run full regression suite
+        run: npm test
+      - name: Run integrated WP3.9 source contracts
+        run: |
+          node --test tests/r3-wp3-9a-map-ux-foundations.test.cjs tests/command-panel-layout.test.cjs
+          node --test tests/r3-wp3-9b-map-grading.test.cjs
+          node --test tests/r3-wp3-9b2-physical-terrain.test.cjs
+          node --test tests/r3-wp3-5-world-miniatures.test.cjs tests/r3-wp3-8a-landmark-cities.test.cjs tests/r3-wp3-8b-landmark-cities.test.cjs tests/r3-wp3-8c-landmark-cities.test.cjs tests/r3-wp3-8d-landmark-cities.test.cjs tests/r3-wp3-8e-landmark-cities.test.cjs
+          node --test tests/r3-wp3-9c-portal-arrival.test.cjs
+      - name: Build exact production game
+        run: npm run build
+      - name: Verify integrated terrain and landmark payload
+        run: |
+          test -s public/generated/r3-terrain/europe-physical-colour-v1.webp
+          test "$(stat -c%s public/generated/r3-terrain/europe-physical-colour-v1.webp)" -eq 37032
+          test -s public/generated/r3-terrain/physical-colour-tiles-manifest.json
+          test "$(find public/generated/r3-terrain/physical-colour-tiles/7 -type f -name '*.webp' | wc -l)" -eq 1023
+          test -s dist/miniatures/wp3-8e/namur-selected.gltf
+          test -s dist/miniatures/wp3-8e/chur-selected.gltf
+          test -s dist/miniatures/wp3-8e/innsbruck-selected.gltf
+          test -s dist/miniatures/wp3-8e/manifest.json
+      - name: Install browser review runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp39-integrated-preview.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/r3-wp39-integrated-preview.log
+          exit 1
+      - name: Review map-default launch and sidebar
+        run: node scripts/probe-r3-wp3-9a-map-ux-foundations.mjs
+      - name: Review multi-region map grading
+        run: node scripts/probe-r3-wp3-9b-map-grading.mjs
+      - name: Review dual-LOD physical terrain
+        run: node scripts/probe-r3-wp3-9b3-hires-physical-terrain.mjs
+      - name: Review all authored landmark passes
+        run: |
+          node scripts/probe-r3-wp3-8a-landmark-cities.mjs
+          node scripts/probe-r3-wp3-8b-landmark-cities.mjs
+          node scripts/probe-r3-wp3-8c-landmark-cities.mjs
+          node scripts/probe-r3-wp3-8d-landmark-cities.mjs
+          node scripts/probe-r3-wp3-8e-landmark-cities.mjs
+      - name: Review portal arrival lifecycle
+        run: node scripts/probe-r3-wp3-9c-portal-arrival.mjs
+      - name: Review portal-before-tutorial ordering
+        run: node scripts/probe-r3-wp3-9c-tutorial-order.mjs
+      - name: Upload integrated visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9-integrated-visual-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-9a
+            artifacts/r3-wp3-9b
+            artifacts/r3-wp3-9b3
+            artifacts/r3-wp3-8a
+            artifacts/r3-wp3-8b
+            artifacts/r3-wp3-8c
+            artifacts/r3-wp3-8d
+            artifacts/r3-wp3-8e
+            artifacts/r3-wp3-9c
+            /tmp/r3-wp39-integrated-preview.log
+          if-no-files-found: warn
+
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run performance contracts
+        run: node --test tests/r3-wp2e-*.test.cjs
+      - name: Build exact production game
+        run: npm run build
+      - name: Enforce static terrain payload budgets
+        run: node scripts/measure-r3-terrain-budget.mjs
+      - name: Install Chromium performance runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp39-performance.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/r3-wp39-performance.log
+          exit 1
+      - name: Record three exact-head performance samples
+        env:
+          R3_WP2E_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for sample in 1 2 3; do
+            export R3_WP2E_VARIANT="integrated-sample-${sample}"
+            export R3_WP2E_EVIDENCE="artifacts/r3-wp3-9-performance-sample-${sample}.json"
+            set +e
+            node scripts/run-r3-wp2e-performance.mjs
+            status=$?
+            set -e
+            if [ "$status" -eq 75 ]; then
+              echo "Sample ${sample} renderer-start failed once; retrying in a fresh Chromium process."
+              node scripts/run-r3-wp2e-performance.mjs
+            elif [ "$status" -ne 0 ]; then
+              exit "$status"
+            fi
+          done
+      - name: Upload performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9-integrated-performance-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp3-9-performance-sample-*.json
+            /tmp/r3-wp39-performance.log
+          if-no-files-found: error
+
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FC_BALANCE_RUNS_PER_START: '4'
+      FC_BALANCE_MAX_TURNS: '120'
+      FC_BALANCE_SEED_OFFSET: '1'
+    steps:
+      - name: Checkout exact review head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run deterministic regression suite
+        run: npm test
+      - name: Run current-engine balance simulation
+        run: npm run simulate:current-balance
+      - name: Trace representative stalled campaigns
+        run: node scripts/trace-current-engine-balance.mjs
+      - name: Upload balance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp3-9-integrated-balance-${{ github.event.pull_request.head.sha }}
+          path: balance-output/
+          if-no-files-found: warn
