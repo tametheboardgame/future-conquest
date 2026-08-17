@@ -4,6 +4,9 @@ import type {
   LineLayerSpecification,
   Map
 } from 'maplibre-gl';
+import { getEnemyContacts } from '../game/operational-clarity';
+import { TERRITORY_RESOURCES, type TerritoryResourceState } from '../game/territory-resources';
+import type { GameState } from '../game/types';
 
 export type R3StrategicOverlay =
   | 'control'
@@ -41,13 +44,169 @@ export const R3_RESOURCE_METRIC_OPTIONS: ReadonlyArray<{ id: R3ResourceMetric; l
   { id: 'militaryStores', label: 'Military stores' }
 ];
 
+interface GeoJSONFeatureLike {
+  type: 'Feature';
+  properties?: Record<string, unknown> | null;
+  geometry: unknown;
+}
+
+interface GeoJSONFeatureCollectionLike {
+  type: 'FeatureCollection';
+  features: GeoJSONFeatureLike[];
+}
+
+type ResourceCarrierView = GameState & {
+  territoryResources?: Record<string, TerritoryResourceState>;
+};
+
+interface FriendlyAggregate {
+  personnel: number;
+  maxPersonnel: number;
+  moraleWeighted: number;
+  supplyWeighted: number;
+  functionalArmour: number;
+  damagedArmour: number;
+  garrisonPersonnel: number;
+}
+
 const TERRITORY_LAYER_ID = 'r3-wp5-strategic-territory-overlay';
 const ROUTE_LAYER_ID = 'r3-wp5-strategic-route-overlay';
 const HUB_LAYER_ID = 'r3-wp5-strategic-hub-overlay';
-
 const transparent = 'rgba(0,0,0,0)';
 
 type PaintExpression = unknown;
+
+const clampPercent = (value: number): number => Math.max(0, Math.min(100, Math.round(value * 10) / 10));
+
+function friendlyAggregates(state: GameState): Map<string, FriendlyAggregate> {
+  const byTerritory = new Map<string, FriendlyAggregate>();
+  for (const group of Object.values(state.taskGroups)) {
+    if (group.personnel <= 0) continue;
+    const current = byTerritory.get(group.location) ?? {
+      personnel: 0,
+      maxPersonnel: 0,
+      moraleWeighted: 0,
+      supplyWeighted: 0,
+      functionalArmour: 0,
+      damagedArmour: 0,
+      garrisonPersonnel: 0
+    };
+    current.personnel += group.personnel;
+    current.maxPersonnel += group.maxPersonnel;
+    current.moraleWeighted += group.morale * group.personnel;
+    current.supplyWeighted += group.supply * group.personnel;
+    current.functionalArmour += group.functionalArmour;
+    current.damagedArmour += group.damagedArmour;
+    if (group.status === 'garrison') current.garrisonPersonnel += group.personnel;
+    byTerritory.set(group.location, current);
+  }
+  return byTerritory;
+}
+
+function friendlyMetrics(aggregate: FriendlyAggregate | undefined): {
+  personnel: number;
+  strength: number;
+  readiness: number;
+  quality: number;
+  garrison: number;
+} {
+  if (!aggregate || aggregate.personnel <= 0) {
+    return { personnel: 0, strength: -1, readiness: -1, quality: -1, garrison: 0 };
+  }
+  const morale = aggregate.moraleWeighted / aggregate.personnel;
+  const supply = aggregate.supplyWeighted / aggregate.personnel;
+  const totalArmour = aggregate.functionalArmour + aggregate.damagedArmour;
+  const armourAvailability = totalArmour > 0 ? aggregate.functionalArmour / totalArmour * 100 : morale;
+  return {
+    personnel: aggregate.personnel,
+    strength: aggregate.maxPersonnel > 0 ? clampPercent(aggregate.personnel / aggregate.maxPersonnel * 100) : 100,
+    readiness: clampPercent((morale + supply) / 2),
+    quality: clampPercent((morale + armourAvailability) / 2),
+    garrison: aggregate.garrisonPersonnel
+  };
+}
+
+/** Add WP5 strategic metrics to already-projected political geometry without mutating game state. */
+export function enrichR3StrategicPoliticalGeoJSON(
+  base: GeoJSONFeatureCollectionLike,
+  state: GameState
+): GeoJSONFeatureCollectionLike {
+  const friendlyByTerritory = friendlyAggregates(state);
+  const contactByTerritory = new Map(getEnemyContacts(state).map(contact => [contact.territoryId, contact] as const));
+  const resourceState = (state as ResourceCarrierView).territoryResources ?? {};
+
+  return {
+    type: 'FeatureCollection',
+    features: base.features.map(feature => {
+      const territoryId = typeof feature.properties?.territory_id === 'string'
+        ? feature.properties.territory_id
+        : undefined;
+      if (!territoryId) return feature;
+      const territory = state.territories[territoryId];
+      if (!territory) return feature;
+      const friendly = friendlyMetrics(friendlyByTerritory.get(territoryId));
+      const contact = contactByTerritory.get(territoryId);
+      const allocation = territory.controller === 'player' ? state.logistics.territoryAllocations[territoryId] : undefined;
+      const resource = TERRITORY_RESOURCES[territoryId];
+      const stock = resourceState[territoryId];
+
+      return {
+        ...feature,
+        properties: {
+          ...(feature.properties ?? {}),
+          friendly_personnel: friendly.personnel,
+          friendly_strength: friendly.strength,
+          friendly_readiness: friendly.readiness,
+          force_quality: friendly.quality,
+          garrison_personnel: friendly.garrison,
+          threat_estimated_min: contact?.estimatedMin ?? 0,
+          threat_estimated_max: contact?.estimatedMax ?? 0,
+          threat_confidence: contact?.confidence ?? 'none',
+          supply_ratio: allocation?.ratio ?? (territory.controller === 'player' ? (territory.supplied ? 100 : 0) : -1),
+          supply_condition: allocation?.condition ?? (territory.supplied ? 'sustained' : 'cut-off'),
+          resistance: territory.resistance,
+          legitimacy: territory.legitimacy,
+          hub_level: stock?.hubLevel ?? 0,
+          resource_food: resource?.food ?? 1,
+          resource_industry: resource?.industry ?? 1,
+          resource_energy: resource?.energy ?? 1,
+          resource_transport: resource?.transport ?? 1,
+          resource_medical: resource?.medical ?? 1,
+          resource_militaryStores: resource?.militaryStores ?? 1,
+          stock_food: stock?.stocks.food ?? -1,
+          stock_industry: stock?.stocks.industry ?? -1,
+          stock_energy: stock?.stocks.energy ?? -1,
+          stock_transport: stock?.stocks.transport ?? -1,
+          stock_medical: stock?.stocks.medical ?? -1,
+          stock_militaryStores: stock?.stocks.militaryStores ?? -1
+        }
+      };
+    })
+  };
+}
+
+/** Add resource-hub state to the existing strategic node source. */
+export function enrichR3StrategicNodeGeoJSON(
+  base: GeoJSONFeatureCollectionLike,
+  state: GameState
+): GeoJSONFeatureCollectionLike {
+  const resourceState = (state as ResourceCarrierView).territoryResources ?? {};
+  return {
+    type: 'FeatureCollection',
+    features: base.features.map(feature => {
+      const territoryId = typeof feature.properties?.territory_id === 'string'
+        ? feature.properties.territory_id
+        : undefined;
+      return {
+        ...feature,
+        properties: {
+          ...(feature.properties ?? {}),
+          hub_level: territoryId ? resourceState[territoryId]?.hubLevel ?? 0 : 0
+        }
+      };
+    })
+  };
+}
 
 const territoryPaint = (overlay: R3StrategicOverlay, resource: R3ResourceMetric): {
   colour: PaintExpression;
