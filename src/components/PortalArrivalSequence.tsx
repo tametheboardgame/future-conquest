@@ -73,7 +73,8 @@ function bridge(): ArrivalWindowBridge {
 }
 
 function formationLayerImplementation(): FormationLayerImplementationBridge | undefined {
-  return bridge().__r3TerrainMap?.getLayer?.(R3_FORMATION_MINIATURE_LAYER_ID)?.implementation;
+  const map = bridge().__r3TerrainMap as unknown as ArrivalMapBridge | undefined;
+  return map?.getLayer?.(R3_FORMATION_MINIATURE_LAYER_ID)?.implementation;
 }
 
 function projectArrivalFrame(portalTerritory?: string): ArrivalFrame | undefined {
