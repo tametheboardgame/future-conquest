@@ -1,0 +1,85 @@
+name: R3 WP5 strategic information layers gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/components/TerrainMapPrototype.tsx'
+      - 'src/presentation/r3-strategic-information-layers.ts'
+      - 'src/presentation/r3-terrain-overlay.ts'
+      - 'src/wp5-strategic-information.css'
+      - 'scripts/probe-r3-wp5-strategic-information.mjs'
+      - 'tests/r3-wp5-strategic-information-layers.test.cjs'
+      - 'docs/roadmap/R3-ROADMAP.md'
+      - 'docs/roadmap/R3-WP5-STRATEGIC-INFORMATION-LAYERS.md'
+      - '.github/workflows/r3-wp5-strategic-information-layers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  wp5-regression-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run focused WP5 contracts
+        run: node --test tests/r3-wp5-strategic-information-layers.test.cjs
+      - name: Run full regression suite
+        run: npm test
+      - name: Run terrain performance contracts
+        run: node --test tests/r3-wp2e-*.test.cjs
+      - name: Build exact production game
+        run: npm run build
+
+  wp5-browser-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install browser probe runtime
+        run: npm install --no-save playwright@1.62.1
+      - name: Compile deterministic game fixture
+        shell: bash
+        run: |
+          npx tsc -p tsconfig.test.json
+          printf '{"type":"commonjs"}\n' > .test-dist/package.json
+      - name: Build exact production game
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Probe strategic information layers
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/probe-r3-wp5-strategic-information.mjs 2>&1 | tee wp5-browser.log
+      - name: Upload WP5 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp5-strategic-information-${{ github.event.pull_request.head.sha }}
+          path: |
+            wp5-browser.log
+            wp5-strategic-information.png
+          if-no-files-found: warn

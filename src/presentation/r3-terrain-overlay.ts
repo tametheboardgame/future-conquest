@@ -184,9 +184,14 @@ export function buildTerrainStrategicRouteGeoJSON(
           name: route.name,
           route_type: route.type,
           status: routeState?.status ?? 'open',
+          route_condition: routeState?.condition ?? 100,
           bottleneck: bottleneckRouteIds.has(route.id),
           selected_supply_path: selectedRouteIds.has(route.id),
-          supply_condition: flow?.condition ?? 'idle'
+          supply_condition: flow?.condition ?? 'idle',
+          flow_condition: flow?.condition ?? 'idle',
+          flow_utilisation: flow?.utilisation ?? 0,
+          flow_used: flow?.used ?? 0,
+          flow_capacity: flow?.capacity ?? 0
         },
         geometry: {
           type: 'LineString',
