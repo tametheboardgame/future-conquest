@@ -7,7 +7,7 @@ const source = fs.readFileSync(path.join(process.cwd(), 'src/components/PortalAr
 
 test('WP3.9C withholds the physical formations until materialisation', () => {
   assert.match(source, /R3_FORMATION_MINIATURE_LAYER_ID = 'r3-wp3-5-formation-miniatures'/);
-  assert.match(source, /getLayer\?\(R3_FORMATION_MINIATURE_LAYER_ID\)\?\.implementation/);
+  assert.ok(source.includes('getLayer?.(R3_FORMATION_MINIATURE_LAYER_ID)?.implementation'));
   assert.match(source, /originalFormationVisibility = layer\.visible/);
   assert.match(source, /layer\.visible = false/);
   assert.match(source, /formationsReleased = true;\s*restoreFormationVisibility\(\);\s*setPhase\('materialising'\)/);
