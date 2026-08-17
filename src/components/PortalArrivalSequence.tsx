@@ -236,7 +236,10 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     return () => {
       window.clearInterval(interval);
       for (const timeout of timeouts) window.clearTimeout(timeout);
-      setFormationWithheld(false);
+      // Do not clear formation withholding here. This effect can restart while
+      // the arrival remains active, for example when the detected portal
+      // territory changes. The layout effect owns active/unmount teardown so
+      // a dependency refresh cannot expose formations before materialisation.
       delete bridge().__r3PortalArrival;
     };
   }, [active, onComplete, onStarted, portalTerritory]);
