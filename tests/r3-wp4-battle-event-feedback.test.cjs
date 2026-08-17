@@ -70,7 +70,7 @@ test('WP4 derives only recent public combat outcomes and avoids duplicate captur
 test('WP4 combat presentation remains visually and semantically distinct from WP3 movement', () => {
   assert.match(cueSource, /kind: 'active-attack'/);
   assert.match(overlay, /#ff7a2f/);
-  assert.match(overlay, /#ff4a23/);
+  assert.match(overlay, /#ff4d4d/);
   assert.match(overlay, /attack-chevron/);
   assert.match(overlay, /recent-victory/);
   assert.match(overlay, /recent-territory-lost/);
@@ -79,11 +79,21 @@ test('WP4 combat presentation remains visually and semantically distinct from WP
   assert.doesNotMatch(overlay, /#8fe1d4|stroke-dasharray/);
 });
 
+test('WP4 recent outcomes emphasise only current derived front segments touching the affected territory', () => {
+  assert.match(wrapper, /deriveR3FrontSegments\(state\.territories, TERRITORIES\)/);
+  assert.match(overlay, /r3-wp4-front-shift/);
+  assert.match(overlay, /segment\.fromTerritoryId !== cue\.territoryId && segment\.toTerritoryId !== cue\.territoryId/);
+  assert.match(overlay, /frontMarkGeo/);
+  assert.match(overlay, /Math\.min\(0\.24, Math\.max\(0\.08, distance \* 0\.12\)\)/);
+  assert.doesNotMatch(overlay, /historicalFront|frontHistory|previousFront/);
+});
+
 test('WP4 provides reduced-motion-safe static meaning and a non-interactive overlay', () => {
   assert.match(overlay, /battleEventMotionPolicy/);
   assert.match(overlay, /staticDirection: true/);
   assert.match(overlay, /staticTarget: true/);
   assert.match(overlay, /staticOutcome: true/);
+  assert.match(overlay, /staticFrontShift: true/);
   assert.match(overlay, /prefers-reduced-motion: reduce/);
   assert.match(overlay, /pointerEvents: 'none'/);
   assert.match(overlay, /setAttribute\('aria-hidden', 'true'\)/);
