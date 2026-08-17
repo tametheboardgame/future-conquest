@@ -79,8 +79,18 @@ export type FormationMiniatureBrowserEvidence = {
   }>;
 };
 
+export type FormationPortalTargetEvidence = {
+  pieces: Array<{
+    id: string;
+    target: FormationGeoPoint;
+  }>;
+};
+
 declare global {
-  interface Window { __r3FormationMiniatures?: FormationMiniatureBrowserEvidence }
+  interface Window {
+    __r3FormationMiniatures?: FormationMiniatureBrowserEvidence;
+    __r3FormationPortalTargets?: FormationPortalTargetEvidence;
+  }
 }
 
 const statusColours: Record<TaskGroup['status'], number> = {
@@ -410,6 +420,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     sun.position.set(-3, -4, 8);
     this.scene.add(sun);
     this.rebuild();
+    map.triggerRepaint();
   }
 
   update(state: GameState, layers: Pick<TerrainOperationalLayers, 'friendlyFormations'>) {
@@ -417,6 +428,12 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     this.visible = layers.friendlyFormations;
     this.rebuild();
     this.map?.triggerRepaint();
+  }
+
+  private publishPortalTargets() {
+    window.__r3FormationPortalTargets = {
+      pieces: [...this.pieces.entries()].map(([id, piece]) => ({ id, target: [...piece.target] }))
+    };
   }
 
   private rebuild() {
@@ -459,6 +476,7 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
       const offset = this.clusterOffsetById.get(group.id) ?? [0, 0];
       visual?.position.set(offset[0], offset[1], 0);
     }
+    this.publishPortalTargets();
   }
 
   render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput) {
@@ -525,5 +543,6 @@ export class FormationMiniaturesLayer implements CustomLayerInterface {
     for (const child of this.scene.children) if (child instanceof Object3D) child.clear();
     this.pieces.clear();
     delete window.__r3FormationMiniatures;
+    delete window.__r3FormationPortalTargets;
   }
 }
