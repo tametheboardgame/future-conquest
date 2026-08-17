@@ -6,6 +6,11 @@ import {
 } from './r3-formation-marker-presentation';
 import { syncFormationMovementRouteOverlay } from './r3-formation-route-overlay';
 import {
+  setBattleEventOverlayVisible,
+  syncBattleEventOverlay
+} from './r3-battle-event-overlay';
+import { deriveStrategicEventCues } from './r3-strategic-event-cues';
+import {
   applyTerrainOperationalMarkerLayout as applyCoreTerrainOperationalMarkerLayout,
   buildTerrainOperationalMarkers as buildCoreTerrainOperationalMarkers,
   reconcileTerrainOperationalMarkers as reconcileCoreTerrainOperationalMarkers,
@@ -30,6 +35,7 @@ export function buildTerrainOperationalMarkers(map: Map, state: GameState, callb
     false
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
+  syncBattleEventOverlay(map, deriveStrategicEventCues(state), terrainOperationalTerritoryCentres);
   return markers;
 }
 
@@ -46,6 +52,7 @@ export function reconcileTerrainOperationalMarkers(
     true
   ) as Marker[];
   syncFormationMovementRouteOverlay(map, markers);
+  syncBattleEventOverlay(map, deriveStrategicEventCues(state), terrainOperationalTerritoryCentres);
   return markers;
 }
 
@@ -58,4 +65,5 @@ export function applyTerrainOperationalMarkerLayout(
     applyCoreTerrainOperationalMarkerLayout(map, markers, layers);
   });
   syncFormationMovementRouteOverlay(map, markers);
+  setBattleEventOverlayVisible(map, layers.operations);
 }
