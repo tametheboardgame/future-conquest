@@ -25,25 +25,27 @@ async function waitForArrival(page, timeout = 60000) {
     const terrainStatus = document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status');
     const map = window.__r3TerrainMap;
     const miniatures = window.__r3FormationMiniatures;
+    const arrival = window.__r3PortalArrival;
+    const overlay = document.querySelector('.r3-portal-arrival');
+    const overlayRect = overlay?.getBoundingClientRect();
     return (terrainStatus === 'ready' || terrainStatus === 'warning')
       && Boolean(map?.getContainer().isConnected)
       && Boolean(miniatures?.pieces.length)
-      && Boolean(window.__r3PortalArrival?.active);
-  }, null, { timeout });
-  await page.locator('.r3-portal-arrival').waitFor({ state: 'visible', timeout: 2000 });
+      && Boolean(arrival?.active)
+      && Boolean(overlay && overlayRect && overlayRect.width > 0 && overlayRect.height > 0)
+      && getComputedStyle(overlay).display !== 'none'
+      && getComputedStyle(overlay).visibility !== 'hidden';
+  }, null, { timeout, polling: 'raf' });
 }
 
 async function arrivalEvidence(page) {
-  await page.waitForFunction(() => {
-    const map = window.__r3TerrainMap;
-    return Boolean(window.__r3PortalArrival?.active && map?.getContainer().isConnected && window.__r3FormationMiniatures?.pieces.length);
-  }, null, { timeout: 1500 });
   return page.evaluate(() => {
     const arrival = window.__r3PortalArrival;
     const map = window.__r3TerrainMap;
     const miniatureEvidence = window.__r3FormationMiniatures;
     const targetEvidence = window.__r3FormationPortalTargets;
-    if (!arrival || !map || !miniatureEvidence?.pieces.length) throw new Error('arrival renderer evidence unavailable');
+    const overlay = document.querySelector('.r3-portal-arrival');
+    if (!arrival || !map || !miniatureEvidence?.pieces.length || !overlay) throw new Error('arrival renderer evidence unavailable');
     const expectedPieces = targetEvidence?.pieces ?? miniatureEvidence.pieces;
     const rect = map.getContainer().getBoundingClientRect();
     const expected = expectedPieces.map(piece => {
@@ -66,6 +68,7 @@ async function arrivalEvidence(page) {
       domWithheld: document.documentElement.dataset.r3WithholdFormations === 'true',
       terrainStatus: document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? null,
       mapConnected: map.getContainer().isConnected,
+      overlayConnected: overlay.isConnected,
       maxAnchorDeltaPx: deltas.length ? deltas.reduce((max, item) => Math.max(max, item.distance), 0) : null,
       deltas
     };
@@ -87,7 +90,7 @@ try {
 
   const opening = await arrivalEvidence(page);
   if (opening.reducedMotion) throw new Error('normal-motion probe unexpectedly entered reduced-motion mode');
-  if (!['ready', 'warning'].includes(opening.terrainStatus) || !opening.mapConnected) throw new Error('portal opened before the terrain renderer was stable');
+  if (!['ready', 'warning'].includes(opening.terrainStatus) || !opening.mapConnected || !opening.overlayConnected) throw new Error('portal opened before the terrain renderer and portal DOM were stable');
   if (opening.rendererFormationCount === 0) throw new Error('portal opened before the physical formation renderer produced pieces');
   if (opening.formationCount !== opening.rendererFormationCount) throw new Error(`arrival formation count mismatch (${opening.formationCount}/${opening.rendererFormationCount})`);
   if (!opening.domWithheld) throw new Error('formation withholding was not active during portal opening');
@@ -166,7 +169,7 @@ try {
   await fallbackPage.close();
 
   const evidence = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     normal: { opening, materialising, settledRenderer },
     secondCampaign,
     reduced: { ...reduced, elapsedMs: reducedElapsedMs },
