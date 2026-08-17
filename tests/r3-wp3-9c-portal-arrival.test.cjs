@@ -20,8 +20,12 @@ test('portal arrival is requested only for fresh campaign entry and bypassed by 
   assert.doesNotMatch(startup, /writeCampaignSlot|saveGame\(|autosaveGame\(/);
 });
 
-test('arrival presentation derives every materialisation point from the authoritative rendered formation targets', () => {
-  assert.match(arrival, /__r3FormationMiniatures\?\.pieces/);
+test('arrival presentation derives every materialisation point from authoritative renderer targets available before first paint', () => {
+  assert.match(miniatures, /__r3FormationPortalTargets/);
+  assert.match(miniatures, /private publishPortalTargets\(\)/);
+  assert.match(miniatures, /pieces: \[\.\.\.this\.pieces\.entries\(\)\]\.map\(\(\[id, piece\]\) => \(\{ id, target: \[\.\.\.piece\.target\] \}\)\)/);
+  assert.match(miniatures, /this\.publishPortalTargets\(\);/);
+  assert.match(arrival, /__r3FormationPortalTargets\?\.pieces \?\? runtime\.__r3FormationMiniatures\?\.pieces/);
   assert.match(arrival, /pieces\.map\(piece => \(\{ id: piece\.id, \.\.\.project\(piece\.target\) \}\)\)/);
   assert.match(arrival, /__r3TerritoryCentres\?\.\[portalTerritory\]/);
   assert.match(arrival, /map\.project\(\[point\[0\], point\[1\]\]\)/);
@@ -36,6 +40,7 @@ test('fresh-campaign formations are withheld before the portal and revealed at m
   assert.match(miniatures, /presentationWithheld = document\.documentElement\.dataset\.r3WithholdFormations === 'true'/);
   assert.match(miniatures, /piece\.root\.visible = this\.visible && !presentationWithheld/);
   assert.match(miniatures, /presentationWithheld,/);
+  assert.match(miniatures, /map\.triggerRepaint\(\)/);
   assert.doesNotMatch(miniatures, /state\.taskGroups\[[^\]]+\]\s*=|personnel\s*=|readiness\s*=|order\s*=/);
 });
 
@@ -52,6 +57,7 @@ test('renderer failure and accessible terrain fallback settle immediately into t
   assert.match(arrival, /data-physical-formations="fallback"/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
   assert.match(arrival, /if \(performance\.now\(\) - startedAt >= READY_TIMEOUT_MS\) finish\(\)/);
+  assert.match(miniatures, /delete window\.__r3FormationPortalTargets/);
 });
 
 test('the portal is a localised technological map event rather than a global colour wash', () => {
