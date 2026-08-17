@@ -9,6 +9,7 @@ import { CampaignDefeatScreen, VictoryEndingComic } from './CampaignEndingExperi
 import { GlobalSettingsPanel } from './GlobalSettingsPanel';
 import { MapUxFoundations } from './MapUxFoundations';
 import { MotionComicIntro, type ArtworkStatus } from './MotionComicIntro';
+import { PortalArrivalSequence } from './PortalArrivalSequence';
 import './prologue-build-stamp.css';
 import './startup-launcher.css';
 
@@ -28,6 +29,8 @@ type CampaignEndingKind = 'victory' | 'defeat';
 type StartupMode = 'launcher' | 'intro' | 'game' | CampaignEndingKind;
 type SuccessfulInspection = Extract<SaveInspection, { ok: true }>;
 type IntroDestination = 'launcher' | 'campaign-map';
+
+const ARRIVAL_PRESENTATION_KEY = 'future-conquest:r3-wp39c-arrival-played';
 
 function detectPortalTerritory(): string | undefined {
   const pageText = document.body.innerText;
@@ -57,6 +60,14 @@ function browserStorage(): Storage | null {
   }
 }
 
+function browserSessionStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function findButton(label: string): HTMLButtonElement | undefined {
   return [...document.querySelectorAll<HTMLButtonElement>('button')]
     .find(button => button.textContent?.trim() === label);
@@ -68,6 +79,7 @@ function openCommandView(view: string) {
 
 export function StartupExperience({ children }: Props) {
   const [portalTerritory, setPortalTerritory] = useState<string>();
+  const [arrivalRequested, setArrivalRequested] = useState(false);
   const [mode, setMode] = useState<StartupMode>('launcher');
   const [introDestination, setIntroDestination] = useState<IntroDestination>('launcher');
   const [showSettings, setShowSettings] = useState(false);
@@ -102,6 +114,24 @@ export function StartupExperience({ children }: Props) {
     audioManager.setSettings(saved);
   }, []);
 
+  const requestPortalArrival = useCallback((freshCampaign = false) => {
+    const storage = browserSessionStorage();
+    if (freshCampaign) storage?.removeItem(ARRIVAL_PRESENTATION_KEY);
+    if (storage?.getItem(ARRIVAL_PRESENTATION_KEY) === 'true') {
+      setArrivalRequested(false);
+      return;
+    }
+    setArrivalRequested(true);
+  }, []);
+
+  const markPortalArrivalPlayed = useCallback(() => {
+    browserSessionStorage()?.setItem(ARRIVAL_PRESENTATION_KEY, 'true');
+  }, []);
+
+  const completePortalArrival = useCallback(() => {
+    setArrivalRequested(false);
+  }, []);
+
   useEffect(() => {
     audioManager.setSettings(settings);
   }, [settings]);
@@ -129,6 +159,20 @@ export function StartupExperience({ children }: Props) {
 
   useEffect(() => {
     if (mode !== 'game') return;
+    const captureCampaignFileAction = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest('button');
+      const label = button?.textContent?.trim();
+      if (label === 'New campaign') requestPortalArrival(true);
+      if (label === 'Load Manual Save' || label === 'Load Autosave') setArrivalRequested(false);
+    };
+    document.addEventListener('click', captureCampaignFileAction, true);
+    return () => document.removeEventListener('click', captureCampaignFileAction, true);
+  }, [mode, requestPortalArrival]);
+
+  useEffect(() => {
+    if (mode !== 'game') return;
     const detect = () => {
       const ending = detectCampaignEnding();
       if (!ending) {
@@ -137,6 +181,7 @@ export function StartupExperience({ children }: Props) {
       }
       if (suppressedEndingRef.current === ending) return;
       refreshSaveInspection();
+      setArrivalRequested(false);
       setShowSettings(false);
       setMode(ending);
     };
@@ -159,6 +204,7 @@ export function StartupExperience({ children }: Props) {
 
   const beginCampaign = useCallback(() => {
     void audioManager.unlock();
+    requestPortalArrival();
     const storage = browserStorage();
     const introSeen = storage?.getItem(INTRO_STORAGE_KEY) === 'true';
     if (introSeen) {
@@ -169,11 +215,12 @@ export function StartupExperience({ children }: Props) {
     setArtworkStatus('loading');
     refreshPortalTerritory();
     setMode('intro');
-  }, [openCampaignMap, refreshPortalTerritory]);
+  }, [openCampaignMap, refreshPortalTerritory, requestPortalArrival]);
 
   const continueCampaign = useCallback(() => {
     if (!saveInspection.ok) return;
     void audioManager.unlock();
+    setArrivalRequested(false);
     setMode('game');
     window.setTimeout(() => {
       openCommandView('campaign');
@@ -205,17 +252,20 @@ export function StartupExperience({ children }: Props) {
 
   const previewEnding = useCallback((ending: CampaignEndingKind) => {
     void audioManager.unlock();
+    setArrivalRequested(false);
     setShowSettings(false);
     setMode(ending);
   }, []);
 
   const reviewCampaign = useCallback((ending: CampaignEndingKind) => {
     suppressedEndingRef.current = ending;
+    setArrivalRequested(false);
     setShowSettings(false);
     setMode('game');
   }, []);
 
   const returnToTitle = useCallback(() => {
+    setArrivalRequested(false);
     setShowSettings(false);
     setMode('launcher');
   }, []);
@@ -224,6 +274,7 @@ export function StartupExperience({ children }: Props) {
     const inspection = refreshSaveInspection();
     if (!inspection.ok) return;
     suppressedEndingRef.current = 'defeat';
+    setArrivalRequested(false);
     setShowSettings(false);
     setMode('game');
     window.setTimeout(() => {
@@ -234,13 +285,14 @@ export function StartupExperience({ children }: Props) {
 
   const startNewCampaignFromDefeat = useCallback(() => {
     suppressedEndingRef.current = 'defeat';
+    requestPortalArrival(true);
     setShowSettings(false);
     setMode('game');
     window.setTimeout(() => {
       openCommandView('campaign');
       window.setTimeout(() => findButton('New campaign')?.click(), 80);
     }, 50);
-  }, []);
+  }, [requestPortalArrival]);
 
   const saved = saveInspection.ok ? saveInspection as SuccessfulInspection : null;
   const saveFailure = !saveInspection.ok ? saveInspection : null;
@@ -254,6 +306,13 @@ export function StartupExperience({ children }: Props) {
       aria-hidden={mode !== 'game'}
       inert={mode !== 'game'}
     ><GlobalSettingsContext.Provider value={settings}>{children}<MapUxFoundations active={mode === 'game'} /></GlobalSettingsContext.Provider></div>
+
+    <PortalArrivalSequence
+      active={mode === 'game' && arrivalRequested}
+      portalTerritory={portalTerritory}
+      onStarted={markPortalArrivalPlayed}
+      onComplete={completePortalArrival}
+    />
 
     {mode === 'launcher' && <section className="startup-launcher" aria-label="Future Conquest title screen">
       <div className="startup-launcher-panel">
