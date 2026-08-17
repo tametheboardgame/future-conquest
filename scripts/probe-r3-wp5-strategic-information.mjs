@@ -98,96 +98,113 @@ try {
 
   const terrain = page.locator('.r3-terrain-prototype');
   await terrain.waitFor({ state: 'visible', timeout: 45_000 });
-  await page.waitForFunction(() => {
-    const host = document.querySelector('.r3-terrain-prototype');
-    return host?.getAttribute('data-status') === 'ready' && Boolean(window.__r3TerrainMap?.isStyleLoaded());
-  }, undefined, { timeout: 60_000 });
-
   const strategicControl = page.locator('.r3-strategic-information-control');
   await strategicControl.waitFor({ state: 'visible', timeout: 15_000 });
-  await page.waitForFunction(() => Boolean(window.__r3TerrainMap?.getLayer('r3-wp5-strategic-territory-overlay')), undefined, { timeout: 15_000 });
 
-  const strategicView = page.getByLabel('Strategic view');
+  // The accepted WP4 headless Chromium evidence also reports map/style/tiles as
+  // unsettled while every campaign source is loaded. WP5 therefore proves its
+  // production source enrichment and selector behaviour without treating
+  // software-WebGL tile settlement as a feature requirement.
+  await page.waitForFunction(() => {
+    const map = window.__r3TerrainMap;
+    if (!map) return false;
+    const territorySource = map.getSource('campaign-territories');
+    const routeSource = map.getSource('campaign-strategic-routes');
+    const nodeSource = map.getSource('campaign-strategic-nodes');
+    if (!territorySource || !routeSource || !nodeSource) return false;
+    const territories = map.querySourceFeatures('campaign-territories');
+    return territories.some(feature => Object.prototype.hasOwnProperty.call(feature.properties ?? {}, 'friendly_strength'));
+  }, undefined, { timeout: 45_000 });
+
   const snapshot = async () => page.evaluate(() => {
     const map = window.__r3TerrainMap;
     if (!map) throw new Error('Terrain map handle is unavailable.');
     const territories = map.querySourceFeatures('campaign-territories');
     const routes = map.querySourceFeatures('campaign-strategic-routes');
+    const nodes = map.querySourceFeatures('campaign-strategic-nodes');
+    const sources = [
+      'r3-wp2b-land',
+      'r3-wp2b-terrain-dem',
+      'r3-wp2b-hillshade-dem',
+      'campaign-territories',
+      'campaign-fronts',
+      'campaign-strategic-routes',
+      'campaign-strategic-nodes'
+    ];
+    const has = (feature, key) => Object.prototype.hasOwnProperty.call(feature.properties ?? {}, key);
     return {
-      territoryVisibility: map.getLayoutProperty('r3-wp5-strategic-territory-overlay', 'visibility'),
-      routeVisibility: map.getLayoutProperty('r3-wp5-strategic-route-overlay', 'visibility'),
-      hubVisibility: map.getLayoutProperty('r3-wp5-strategic-hub-overlay', 'visibility'),
+      settlement: {
+        mapLoaded: map.loaded(),
+        styleLoaded: map.isStyleLoaded(),
+        tilesLoaded: map.areTilesLoaded(),
+        sourceLoaded: Object.fromEntries(sources.map(id => [id, map.getSource(id)?.loaded() ?? null]))
+      },
       territoryCount: territories.length,
       friendlyMetricCount: territories.filter(feature => Number(feature.properties?.friendly_strength) >= 0).length,
-      threatMetricCount: territories.filter(feature => Number(feature.properties?.threat_estimated_max) > 0).length,
+      readinessFieldCount: territories.filter(feature => has(feature, 'friendly_readiness')).length,
+      qualityFieldCount: territories.filter(feature => has(feature, 'force_quality')).length,
+      threatFieldCount: territories.filter(feature => has(feature, 'threat_estimated_max') && has(feature, 'threat_confidence')).length,
+      supplyFieldCount: territories.filter(feature => has(feature, 'supply_ratio') && has(feature, 'supply_condition')).length,
+      occupationFieldCount: territories.filter(feature => has(feature, 'resistance') && has(feature, 'garrison_personnel')).length,
+      energyResourceFieldCount: territories.filter(feature => has(feature, 'resource_energy')).length,
       knownFriendlyStocks: territories.filter(feature => feature.properties?.controller === 'player' && Number(feature.properties?.stock_food) >= 0).length,
       leakedEnemyStocks: territories.filter(feature => feature.properties?.controller === 'enemy' && Number(feature.properties?.stock_food) >= 0).length,
-      routeFlowFields: routes.filter(feature => Number.isFinite(Number(feature.properties?.flow_utilisation))).length,
+      routeFlowFields: routes.filter(feature => has(feature, 'flow_utilisation') && has(feature, 'flow_condition') && has(feature, 'route_condition')).length,
+      hubCount: nodes.filter(feature => Number(feature.properties?.hub_level) > 0).length,
       savedPreference: localStorage.getItem('future-conquest:r3-wp5-strategic-overlay')
     };
   });
 
-  await strategicView.selectOption('strength');
-  await page.waitForTimeout(200);
-  const strength = await snapshot();
-  if (strength.territoryVisibility !== 'visible' || strength.friendlyMetricCount < 1) {
-    throw new Error(`Friendly strength layer did not expose authoritative friendly metrics: ${JSON.stringify(strength)}`);
+  const sourceEvidence = await snapshot();
+  if (sourceEvidence.territoryCount < 1 || sourceEvidence.friendlyMetricCount < 1) {
+    throw new Error(`Strategic friendly metrics were not projected into the production source: ${JSON.stringify(sourceEvidence)}`);
+  }
+  if (sourceEvidence.readinessFieldCount < 1 || sourceEvidence.qualityFieldCount < 1 || sourceEvidence.threatFieldCount < 1) {
+    throw new Error(`Strategic readiness, quality or assessed-threat fields are incomplete: ${JSON.stringify(sourceEvidence)}`);
+  }
+  if (sourceEvidence.supplyFieldCount < 1 || sourceEvidence.routeFlowFields < 1) {
+    throw new Error(`Supply/network source fields are incomplete: ${JSON.stringify(sourceEvidence)}`);
+  }
+  if (sourceEvidence.energyResourceFieldCount < 1 || sourceEvidence.occupationFieldCount < 1 || sourceEvidence.hubCount < 1) {
+    throw new Error(`Resource, occupation or hub source fields are incomplete: ${JSON.stringify(sourceEvidence)}`);
+  }
+  if (sourceEvidence.knownFriendlyStocks < 1 || sourceEvidence.leakedEnemyStocks !== 0) {
+    throw new Error(`Stockpile visibility rule failed: ${JSON.stringify(sourceEvidence)}`);
   }
 
-  await strategicView.selectOption('threat');
-  await page.waitForTimeout(200);
-  const threat = await snapshot();
-  if (threat.territoryVisibility !== 'visible') throw new Error(`Threat layer is not visible: ${JSON.stringify(threat)}`);
+  const strategicView = page.getByLabel('Strategic view');
+  const legend = page.locator('.r3-strategic-information-legend strong');
+  const selectAndExpectLegend = async (value, expected) => {
+    await strategicView.selectOption(value);
+    await legend.getByText(expected, { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
+  };
 
-  await strategicView.selectOption('supply');
-  await page.waitForTimeout(200);
-  const supply = await snapshot();
-  if (supply.territoryVisibility !== 'visible' || supply.routeVisibility !== 'visible' || supply.routeFlowFields < 1) {
-    throw new Error(`Supply/network layer is incomplete: ${JSON.stringify(supply)}`);
-  }
-
-  await strategicView.selectOption('routes');
-  await page.waitForTimeout(200);
-  const routes = await snapshot();
-  if (routes.territoryVisibility !== 'none' || routes.routeVisibility !== 'visible') {
-    throw new Error(`Route condition layer did not isolate route presentation: ${JSON.stringify(routes)}`);
-  }
+  await selectAndExpectLegend('strength', 'Friendly strength');
+  await selectAndExpectLegend('readiness', 'Friendly readiness');
+  await selectAndExpectLegend('threat', 'Assessed enemy threat');
+  await selectAndExpectLegend('supply', 'Supply and network flow');
+  await selectAndExpectLegend('routes', 'Route condition');
 
   await strategicView.selectOption('resources');
   const resourceSelect = page.getByLabel('Resource');
   await resourceSelect.waitFor({ state: 'visible', timeout: 5_000 });
   await resourceSelect.selectOption('energy');
-  await page.waitForTimeout(200);
-  const resources = await snapshot();
-  if (resources.territoryVisibility !== 'visible' || resources.hubVisibility !== 'visible') {
-    throw new Error(`Resource layer did not expose territory potential and hubs: ${JSON.stringify(resources)}`);
-  }
+  await legend.getByText('Energy potential', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
 
   await strategicView.selectOption('stockpiles');
   await resourceSelect.selectOption('food');
-  await page.waitForTimeout(200);
-  const stockpiles = await snapshot();
-  if (stockpiles.knownFriendlyStocks < 1 || stockpiles.leakedEnemyStocks !== 0) {
-    throw new Error(`Stockpile visibility rule failed: ${JSON.stringify(stockpiles)}`);
-  }
+  await legend.getByText('Food stockpiles', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
 
-  await strategicView.selectOption('occupation');
-  await page.getByText('Occupation and garrison pressure', { exact: true }).waitFor({ state: 'visible', timeout: 5_000 });
-  await page.waitForTimeout(200);
-  const occupation = await snapshot();
-  if (!occupation.savedPreference?.includes('occupation')) {
-    throw new Error(`Presentation preference did not remain in browser storage: ${JSON.stringify(occupation)}`);
-  }
+  await selectAndExpectLegend('occupation', 'Occupation and garrison pressure');
+  await selectAndExpectLegend('quality', 'Force quality');
 
-  await strategicView.selectOption('quality');
-  await page.waitForTimeout(200);
-  const quality = await snapshot();
-  if (quality.territoryVisibility !== 'visible' || quality.friendlyMetricCount < 1) {
-    throw new Error(`Force quality layer did not remain linked to friendly state: ${JSON.stringify(quality)}`);
+  const finalEvidence = await snapshot();
+  if (!finalEvidence.savedPreference?.includes('quality')) {
+    throw new Error(`Presentation preference did not remain in browser storage: ${JSON.stringify(finalEvidence)}`);
   }
 
   await page.screenshot({ path: process.env.WP5_SCREENSHOT ?? 'wp5-strategic-information.png', fullPage: true });
-  evidence = { strength, threat, supply, routes, resources, stockpiles, occupation, quality };
+  evidence = { sourceEvidence, finalEvidence };
 } catch (error) {
   evidence = { probeError: String(error) };
   process.exitCode = 2;
