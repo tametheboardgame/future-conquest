@@ -49,6 +49,7 @@ interface Props {
 
 const POSITION_REFRESH_MS = 80;
 const READY_WITHOUT_FORMATIONS_GRACE_MS = 1500;
+const RENDERER_LOSS_GRACE_MS = 1000;
 const FORMATION_WITHHOLD_DATASET_KEY = 'r3WithholdFormations';
 const FULL_SEQUENCE = {
   materialise: 720,
@@ -152,6 +153,7 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
     let presentationConsumed = false;
     let completed = false;
     let readyWithoutFormationsSince: number | undefined;
+    let rendererLostSince: number | undefined;
     const timeouts: number[] = [];
 
     const consumePresentation = () => {
@@ -193,12 +195,17 @@ export function PortalArrivalSequence({ active, portalTerritory, onStarted, onCo
       }
 
       if (sequenceStarted) {
-        const runtime = bridge();
-        if (!runtime.__r3TerrainMap || !runtime.__r3FormationMiniatures?.pieces.length) finish();
+        const refreshedFrame = terrainRendererStable() ? projectArrivalFrame(portalTerritory) : undefined;
+        if (refreshedFrame) {
+          rendererLostSince = undefined;
+          setFrame(refreshedFrame);
+          return;
+        }
+        rendererLostSince ??= performance.now();
+        if (performance.now() - rendererLostSince >= RENDERER_LOSS_GRACE_MS) finish();
         return;
       }
 
-      const terrainStatus = terrainRendererStatus();
       const formationStatus = physicalFormationStatus();
       if (!terrainRendererStable()) {
         readyWithoutFormationsSince = undefined;
