@@ -2,7 +2,7 @@
 
 Status: APPROVED / ACTIVE PROGRAMME
 
-Last reconciled: 2026-08-15
+Last reconciled: 2026-08-17
 
 R3 is the Visualisation & Command Experience release. Its purpose is to transform the mechanically stabilised strategy game into a coherent, readable and visually distinctive grand-strategy command experience without destabilising the simulation.
 
@@ -42,7 +42,7 @@ R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP
 
 Current and future:
 
-**R3-WP3.9A -> R3-WP3.9B -> R3-WP3.9C -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
+**R3-WP3.9A -> R3-WP3.9B -> R3-WP3.9C -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP6.5 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
 
 ---
 
@@ -340,6 +340,23 @@ Status: PLANNED / BLOCKED BY EARLIER PACKAGES
 Objective: make the surrounding command interface visually coherent with the new map and reduce effort required to understand and act.
 
 Requirements include a unified panel/typography/icon/button/alert system, clearer territory/formation inspection, better alert priority, preserved deep links, consequence-proportionate confirmation, compact desktop usability, responsive/mobile behaviour, keyboard access, contrast and reduced motion.
+
+---
+
+## R3-WP6.5 - Interface Polish & Playthrough Remediation
+
+Status: **PLANNED / SCOPE INTENTIONALLY DEFERRED**
+
+Objective: perform a bounded whole-interface visual and usability once-over after WP5 and WP6, informed by the actual game state and evidence available at that point rather than by a fixed checklist written in advance.
+
+The detailed contents of WP6.5 are deliberately **not defined yet**. When the package becomes active, its scope will be built from:
+
+- issues and visual inconsistencies identified during real play-throughs;
+- interface bugs and usability friction accumulated during WP4-WP6;
+- obvious presentation inconsistencies or unfinished secondary screens exposed by the completed command UI;
+- small polish/remediation items that materially improve cohesion but do not justify reopening a major earlier work package.
+
+WP6.5 is intended as a focused polish/remediation pass, not another interface redesign. It must not introduce major new mechanics, reopen the accepted physical-map architecture or expand into unrelated feature work unless separately approved. Its detailed acceptance criteria will be written when the package starts, based on the evidence and backlog that exist then.
 
 ---
 
