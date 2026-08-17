@@ -4,6 +4,7 @@ const fs = require('node:fs');
 
 const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
 const arrival = fs.readFileSync('src/components/PortalArrivalSequence.tsx', 'utf8');
+const miniatures = fs.readFileSync('src/presentation/r3-formation-miniatures-layer.ts', 'utf8');
 const css = fs.readFileSync('src/components/portal-arrival.css', 'utf8');
 const roadmap = fs.readFileSync('docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md', 'utf8');
 
@@ -25,6 +26,17 @@ test('arrival presentation derives every materialisation point from the authorit
   assert.match(arrival, /__r3TerritoryCentres\?\.\[portalTerritory\]/);
   assert.match(arrival, /map\.project\(\[point\[0\], point\[1\]\]\)/);
   assert.doesNotMatch(arrival, /taskGroups|location\s*=|personnel\s*=|readiness\s*=|orders\s*=/);
+});
+
+test('fresh-campaign formations are withheld before the portal and revealed at materialisation', () => {
+  assert.match(arrival, /useLayoutEffect\(\(\) => \{[\s\S]*setFormationWithheld\(true\)/);
+  assert.match(arrival, /setFormationWithheld\(false\);\s*setPhase\('materialising'\)/);
+  assert.match(arrival, /const finish = \(\) => \{[\s\S]*setFormationWithheld\(false\)/);
+  assert.match(arrival, /return \(\) => setFormationWithheld\(false\)/);
+  assert.match(miniatures, /presentationWithheld = document\.documentElement\.dataset\.r3WithholdFormations === 'true'/);
+  assert.match(miniatures, /piece\.root\.visible = this\.visible && !presentationWithheld/);
+  assert.match(miniatures, /presentationWithheld,/);
+  assert.doesNotMatch(miniatures, /state\.taskGroups\[[^\]]+\]\s*=|personnel\s*=|readiness\s*=|order\s*=/);
 });
 
 test('normal arrival duration stays inside the approved two-to-four-second presentation budget', () => {
