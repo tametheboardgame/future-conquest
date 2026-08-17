@@ -61,12 +61,16 @@ test('normal arrival duration stays inside the approved two-to-four-second prese
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('renderer failure and map-lifecycle loss settle safely without an arbitrary startup race', () => {
+test('renderer failure and transient map-lifecycle loss settle safely without an arbitrary startup race', () => {
   assert.match(arrival, /READY_WITHOUT_FORMATIONS_GRACE_MS = 1500/);
+  assert.match(arrival, /RENDERER_LOSS_GRACE_MS = 1000/);
   assert.match(arrival, /params\.get\('terrain'\) === '0'/);
   assert.match(arrival, /physicalFormationStatus\(\) === 'fallback'/);
   assert.match(arrival, /if \(rendererUnavailable\(\)\) \{[\s\S]{0,80}finish\(\)/);
-  assert.match(arrival, /if \(sequenceStarted\) \{[\s\S]*!runtime\.__r3TerrainMap \|\| !runtime\.__r3FormationMiniatures\?\.pieces\.length\) finish\(\)/);
+  assert.match(arrival, /if \(sequenceStarted\) \{[\s\S]*const refreshedFrame = terrainRendererStable\(\) \? projectArrivalFrame\(portalTerritory\) : undefined/);
+  assert.match(arrival, /rendererLostSince = undefined;\s*setFrame\(refreshedFrame\)/);
+  assert.match(arrival, /rendererLostSince \?\?= performance\.now\(\)/);
+  assert.match(arrival, /performance\.now\(\) - rendererLostSince >= RENDERER_LOSS_GRACE_MS\) finish\(\)/);
   assert.match(arrival, /formationStatus === 'ready'/);
   assert.doesNotMatch(arrival, /READY_TIMEOUT_MS/);
   assert.match(miniatures, /delete window\.__r3FormationPortalTargets/);
