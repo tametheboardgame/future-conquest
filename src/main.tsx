@@ -33,6 +33,7 @@ import './responsive-command-fit.css';
 import './r3-wp6-command-ui.css';
 import './r3-wp6-pictorial-details.css';
 import './r3-wp6-command-ui-refinements.css';
+import './r3-wp6-secondary-ui.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 import { installR3MapVisualGrading } from './presentation/r3-map-visual-grading';
 
