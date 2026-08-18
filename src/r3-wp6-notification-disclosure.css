@@ -1,0 +1,73 @@
+/* R3-WP6 notification disclosure.
+ * Warnings float over the command surface, can be dismissed immediately,
+ * and return only when their underlying warning content changes.
+ */
+
+.operational-alert-strip,
+.adviser-alert-strip,
+.enemy-action-alert {
+  padding-right: 42px !important;
+}
+
+.operational-alert-strip[hidden],
+.adviser-alert-strip[hidden],
+.enemy-action-alert[hidden] {
+  display: none !important;
+}
+
+.wp6-alert-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border: 1px solid rgba(151, 205, 207, .42);
+  border-radius: 3px;
+  background: rgba(4, 15, 20, .88);
+  color: #b7d9dd;
+  font: 500 18px/1 IBM Plex Sans, sans-serif;
+  cursor: pointer;
+  opacity: .72;
+}
+
+.wp6-alert-dismiss:hover,
+.wp6-alert-dismiss:focus-visible {
+  border-color: rgba(124, 232, 224, .78);
+  color: #e3fffb;
+  opacity: 1;
+}
+
+.wp6-alert-dismiss:focus-visible {
+  outline: 2px solid rgba(124, 232, 224, .85);
+  outline-offset: 2px;
+}
+
+.enemy-action-alert .wp6-alert-dismiss {
+  border-color: rgba(255, 137, 126, .48);
+  color: #ffd0ca;
+}
+
+.enemy-action-alert .wp6-alert-dismiss:hover,
+.enemy-action-alert .wp6-alert-dismiss:focus-visible {
+  border-color: rgba(255, 137, 126, .9);
+  color: #fff1ee;
+}
+
+@media (max-width: 760px) {
+  .wp6-alert-dismiss {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .operational-alert-strip,
+  .adviser-alert-strip,
+  .enemy-action-alert {
+    padding-right: 46px !important;
+  }
+}
