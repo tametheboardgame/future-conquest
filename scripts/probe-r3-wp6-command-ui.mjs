@@ -76,7 +76,7 @@ function assertMapFirstShell(evidence) {
   assert(mapSurface, 'map surface missing');
   assert(evidence.topbar.height <= 54, `topbar still too tall: ${evidence.topbar.height}px`);
   assert(evidence.metrics.height <= 46, `metrics still too tall: ${evidence.metrics.height}px`);
-  assert(evidence.navigation.width <= 74, `navigation rail still too wide: ${evidence.navigation.width}px`);
+  assert(evidence.navigation.width <= 104, `navigation rail exceeded bounded WP6.6 width: ${evidence.navigation.width}px`);
   assert(evidence.mapPanel.y <= 125, `map starts too low in first viewport: ${evidence.mapPanel.y}px`);
   assert(mapSurface.height >= evidence.mapPanel.height - 4, `map does not fill primary stage: surface ${mapSurface.height}px / panel ${evidence.mapPanel.height}px`);
   if (evidence.terrain) assert(evidence.terrain.height >= evidence.mapPanel.height - 4, `terrain does not fill primary stage: terrain ${evidence.terrain.height}px / panel ${evidence.mapPanel.height}px`);
