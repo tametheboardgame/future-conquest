@@ -170,7 +170,6 @@ try {
 
   evidence.specialistSweep = await specialistSweep();
 
-  await page.locator('[data-command-view="campaign"]').click();
   await page.getByRole('button', { name: 'Restart tutorial', exact: true }).click();
   await page.evaluate(() => document.querySelector('[data-command-view="map"]')?.click());
   await page.locator('.tutorial-overlay').waitFor({ state: 'visible', timeout: 10000 });
