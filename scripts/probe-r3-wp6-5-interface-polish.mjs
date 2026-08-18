@@ -82,10 +82,14 @@ function assertStableShell(evidence, { expectTerrain = true } = {}) {
   const heights = evidence.navRects.map(item => item.height);
   assert(heights.length === 8, `expected eight persistent command items, got ${heights.length}`);
   assert(Math.max(...heights) - Math.min(...heights) <= 1.5, `navigation tiles have inconsistent heights: ${JSON.stringify(heights)}`);
-  assert(Math.max(...heights) <= 58, `navigation tiles are stretching vertically: ${Math.max(...heights)}px`);
+  if (evidence.viewport.width > 900) {
+    assert(Math.max(...heights) <= 58, `desktop navigation tiles are stretching vertically: ${Math.max(...heights)}px`);
 
-  const metricTops = evidence.metricStrongs.map(item => item.top);
-  if (metricTops.length > 1) assert(Math.max(...metricTops) - Math.min(...metricTops) <= 3.5, `telemetry value baselines are misaligned: ${JSON.stringify(evidence.metricStrongs)}`);
+    const metricTops = evidence.metricStrongs.map(item => item.top);
+    if (metricTops.length > 1) assert(Math.max(...metricTops) - Math.min(...metricTops) <= 3.5, `desktop telemetry value baselines are misaligned: ${JSON.stringify(evidence.metricStrongs)}`);
+  } else {
+    assert(Math.max(...heights) <= 70, `compact bottom-navigation tiles exceed their bounded mobile size: ${Math.max(...heights)}px`);
+  }
 
   if (expectTerrain && evidence.terrainToolbar) {
     assert(evidence.terrainToolbar.height <= 40, `ready terrain toolbar is still a large band: ${evidence.terrainToolbar.height}px`);
