@@ -104,7 +104,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .map-context-panel.wp39a-sidebar-collapsed > * {
+  .map-context-panel.wp39a-sidebar-collapsed > *,
+  .map-context-panel.wp39a-sidebar-collapsed .quick-command > :not(.quick-command-heading),
+  .map-context-panel.wp39a-sidebar-collapsed .quick-command-heading > :not(.map-ux-sidebar-toggle) {
     display: revert;
   }
 

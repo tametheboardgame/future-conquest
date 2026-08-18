@@ -3,6 +3,17 @@
   --wp66-rail-control-width: 84px;
 }
 
+/* WP6.5 styled the old collapse control as an external edge tab. WP6.6 moves the
+   same control into the context-panel header, so explicitly neutralise that older
+   transform and restore complete button geometry in the final cascade. */
+.map-ux-sidebar-toggle {
+  position: static;
+  transform: none;
+  border-right: 1px solid #4f8f91;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .24);
+}
+
 @media (min-width: 901px) {
   .command-navigation {
     width: var(--wp6-rail-width);
