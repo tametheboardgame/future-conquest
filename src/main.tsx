@@ -36,6 +36,7 @@ import './r3-wp6-command-ui-refinements.css';
 import './r3-wp6-secondary-ui.css';
 import './r3-wp6-notification-disclosure.css';
 import './r3-wp6-accessibility.css';
+import './r3-wp6-5-interface-polish.css';
 import { installMapTrackpadGuard } from './map-trackpad-guard';
 import { installR3MapVisualGrading } from './presentation/r3-map-visual-grading';
 import { installWp6NotificationDisclosure } from './wp6-notification-disclosure';

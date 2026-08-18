@@ -1,0 +1,62 @@
+name: R3 WP6.5 interface polish gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/main.tsx'
+      - 'src/r3-wp6-5-interface-polish.css'
+      - 'src/components/TutorialOverlay.tsx'
+      - 'src/components/TerrainMapPrototype.tsx'
+      - 'src/components/TerrainMapPrototypeImpl.tsx'
+      - 'src/components/MapUxFoundations.tsx'
+      - 'src/components/GlobalSettingsPanel.tsx'
+      - 'src/components/CommandNavigation.tsx'
+      - 'scripts/probe-r3-wp6-5-interface-polish.mjs'
+      - 'tests/r3-wp6-5-interface-polish.test.cjs'
+      - 'docs/roadmap/R3-WP6.5-*'
+      - '.github/workflows/r3-wp6-5-interface-polish.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  interface-polish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run WP6.5 source contracts
+        run: node --test tests/r3-wp6-5-interface-polish.test.cjs
+      - name: Run engine regression suite
+        run: npm test
+      - name: Build production game
+        run: npm run build
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp6-5-preview.log 2>&1 &
+      - name: Probe interface polish acceptance
+        run: node scripts/probe-r3-wp6-5-interface-polish.mjs
+      - name: Upload WP6.5 visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp6-5-interface-polish-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp6-5
+            /tmp/r3-wp6-5-preview.log
+          if-no-files-found: warn
