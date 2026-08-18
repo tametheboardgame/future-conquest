@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { TERRITORIES } from '../game/data';
 import { estimateCombatFigure, operationCurrentFriendlyStrength } from '../game/combat-reports';
 import { getEnemyContacts } from '../game/operational-clarity';
@@ -24,13 +25,19 @@ const outcomeLabel: Record<CombatReport['outcome'], string> = {
 };
 
 export function CombatAfterActionAlert({ report, onReview }: AlertProps) {
-  return <section className={`combat-report-alert ${report.outcome}`} aria-live="polite" data-wp5-after-action-alert="true">
+  const [dismissedReportId, setDismissedReportId] = useState('');
+  if (dismissedReportId === report.id) return null;
+
+  return <section className={`combat-report-alert ${report.outcome}`} aria-live="polite" data-wp5-after-action-alert="true" data-wp6-popup="after-action">
     <div>
       <small>AFTER-ACTION REPORT · DAY {String(report.turn).padStart(3, '0')}</small>
       <strong>{outcomeLabel[report.outcome]} · {TERRITORIES[report.territoryId].centre}</strong>
       <span>{formatNumber(report.playerStartingPersonnel)} committed → {formatNumber(report.playerEndingPersonnel)} active · {formatNumber(report.playerKilled)} killed · {formatNumber(report.playerWounded)} wounded</span>
     </div>
-    <button type="button" onClick={onReview}>Review battle report</button>
+    <div className="combat-report-alert-actions">
+      <button type="button" onClick={onReview}>Review battle report</button>
+      <button type="button" className="combat-report-dismiss" aria-label="Dismiss after-action report" title="Dismiss" onClick={() => setDismissedReportId(report.id)}>×</button>
+    </div>
   </section>;
 }
 
