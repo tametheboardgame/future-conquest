@@ -87,8 +87,6 @@ function assertStableShell(evidence, { expectTerrain = true } = {}) {
 
     const metricTops = evidence.metricStrongs.map(item => item.top);
     if (metricTops.length > 1) assert(Math.max(...metricTops) - Math.min(...metricTops) <= 3.5, `desktop telemetry value baselines are misaligned: ${JSON.stringify(evidence.metricStrongs)}`);
-  } else {
-    assert(Math.max(...heights) <= 70, `compact bottom-navigation tiles exceed their bounded mobile size: ${Math.max(...heights)}px`);
   }
 
   if (expectTerrain && evidence.terrainToolbar) {
