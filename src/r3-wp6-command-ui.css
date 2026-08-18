@@ -1,0 +1,445 @@
+/* R3-WP6 Command UI/UX Overhaul
+ * Map-first desktop shell, progressive disclosure and pictorial command cards.
+ * Presentation only: no simulation or save-state authority belongs here.
+ */
+
+:root {
+  --wp6-shell-gap: 7px;
+  --wp6-rail-width: 70px;
+  --wp6-glass: rgba(6, 19, 26, .88);
+  --wp6-glass-strong: rgba(6, 19, 26, .96);
+  --wp6-line: rgba(104, 170, 178, .34);
+  --wp6-text-muted: #86a0aa;
+  --wp6-accent: #70d7d0;
+}
+
+@media (min-width: 901px) {
+  .command-app-shell {
+    width: 100%;
+    max-width: none;
+    padding: 6px 10px 16px;
+  }
+
+  /* The campaign map is the product surface. Runtime programme/debug prose no
+     longer consumes the first screenful. */
+  .command-topbar {
+    height: 48px;
+    min-height: 48px;
+    gap: 12px;
+    padding: 0 6px;
+    border-bottom-color: rgba(76, 127, 138, .38);
+  }
+
+  .command-topbar .eyebrow {
+    display: none;
+  }
+
+  .command-topbar h1 {
+    font-size: 22px;
+    letter-spacing: .105em;
+  }
+
+  .topbar-command-actions {
+    gap: 8px;
+  }
+
+  .global-resolve {
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: 9px;
+    letter-spacing: .055em;
+    border-radius: 2px;
+  }
+
+  .turn-block {
+    gap: 6px;
+  }
+
+  .turn-block span {
+    font-size: 8px;
+  }
+
+  .turn-block strong {
+    font-size: 23px;
+  }
+
+  .turn-block em {
+    padding: 3px 5px;
+    font-size: 8px;
+  }
+
+  /* One-line command telemetry. It remains visible, but does not read as a
+     second dashboard above the actual game. */
+  .command-metrics {
+    grid-template-columns: 1fr 1fr 1.25fr .8fr .8fr 2fr;
+    min-height: 38px;
+    margin: 5px 0 var(--wp6-shell-gap);
+    border-color: rgba(56, 104, 116, .48);
+    background: rgba(56, 104, 116, .48);
+  }
+
+  .command-metrics > div,
+  .command-metrics > button {
+    min-height: 38px;
+    padding: 5px 9px;
+    justify-content: center;
+    background: rgba(7, 24, 32, .92);
+  }
+
+  .command-metrics span {
+    font-size: 7px;
+    line-height: 1.1;
+    letter-spacing: .06em;
+  }
+
+  .command-metrics strong {
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .command-metrics .escalation {
+    grid-template-columns: 1fr 26px;
+    gap: 2px 7px;
+  }
+
+  .command-metrics .meter {
+    height: 4px;
+  }
+
+  /* Alerts are command notifications, not page sections. They leave the
+     document flow and sit over the command surface. Detailed content expands
+     on hover/focus; after-action cards also have an explicit dismiss action. */
+  .operational-alert-strip,
+  .enemy-action-alert,
+  .adviser-alert-strip,
+  .combat-report-alert {
+    position: fixed;
+    right: 18px;
+    z-index: 80;
+    width: min(430px, calc(100vw - 120px));
+    min-height: 48px;
+    max-height: 58px;
+    margin: 0;
+    padding: 8px 10px;
+    overflow: hidden;
+    border-width: 1px;
+    background: var(--wp6-glass-strong);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .42);
+    backdrop-filter: blur(10px);
+    transition: max-height .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+
+  .operational-alert-strip { top: 98px; }
+  .enemy-action-alert { top: 162px; }
+  .adviser-alert-strip { top: 226px; }
+  .combat-report-alert { top: 290px; }
+
+  .operational-alert-strip:hover,
+  .operational-alert-strip:focus-within,
+  .enemy-action-alert:hover,
+  .enemy-action-alert:focus-within,
+  .adviser-alert-strip:hover,
+  .adviser-alert-strip:focus-within,
+  .combat-report-alert:hover,
+  .combat-report-alert:focus-within {
+    z-index: 90;
+    max-height: min(330px, 70vh);
+    overflow-y: auto;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .56);
+  }
+
+  .adviser-warning-list {
+    max-height: 230px;
+    overflow-y: auto;
+  }
+
+  .combat-report-alert-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .combat-report-alert .combat-report-dismiss {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(181, 213, 218, .35);
+    background: rgba(5, 18, 24, .72);
+    color: #cce0e4;
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  /* Permanent navigation remains discoverable, but becomes an icon rail. */
+  .command-workspace {
+    grid-template-columns: var(--wp6-rail-width) minmax(0, 1fr);
+    gap: var(--wp6-shell-gap);
+  }
+
+  .command-navigation {
+    top: 94px;
+    min-height: calc(100vh - 106px);
+    border-color: var(--wp6-line);
+    background: rgba(5, 19, 26, .94);
+  }
+
+  .command-brand {
+    min-height: 50px;
+  }
+
+  .command-brand strong {
+    font-size: 20px;
+  }
+
+  .command-brand span {
+    font-size: 6px;
+  }
+
+  .command-nav-items button {
+    min-height: 61px;
+    gap: 2px;
+    padding: 7px 3px 6px;
+  }
+
+  .command-nav-icon {
+    display: grid;
+    place-items: center;
+    height: 25px;
+    color: #829ca7;
+    transition: color .12s ease, transform .12s ease;
+  }
+
+  .command-nav-items button:hover .command-nav-icon,
+  .command-nav-items button:focus-visible .command-nav-icon,
+  .command-nav-items button.active .command-nav-icon {
+    color: #e8fffc;
+    transform: translateY(-1px);
+  }
+
+  .command-nav-code {
+    display: none;
+  }
+
+  .command-nav-label {
+    max-width: 64px;
+    overflow: hidden;
+    font-size: 6.8px;
+    line-height: 1.1;
+    letter-spacing: .02em;
+    text-overflow: ellipsis;
+  }
+
+  .command-nav-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    min-width: 16px;
+    padding: 1px 3px;
+    border: 1px solid rgba(82, 145, 155, .68);
+    border-radius: 8px;
+    background: #091b23;
+    color: #9afff3;
+    font: 500 7px IBM Plex Mono, monospace;
+    text-align: center;
+  }
+
+  .command-nav-footer {
+    min-height: 28px;
+    font-size: 6px;
+  }
+
+  /* Reclaimed navigation/panel space belongs to the map. */
+  .command-map-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    gap: var(--wp6-shell-gap);
+  }
+
+  .map-panel {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .map-heading {
+    position: absolute;
+    z-index: 32;
+    top: 8px;
+    left: 8px;
+    right: 66px;
+    min-height: 38px;
+    padding: 7px 10px;
+    border: 1px solid rgba(71, 128, 139, .48);
+    border-radius: 3px;
+    background: rgba(5, 19, 25, .82);
+    box-shadow: 0 7px 24px rgba(0, 0, 0, .26);
+    backdrop-filter: blur(7px);
+    pointer-events: none;
+  }
+
+  .map-heading p {
+    max-width: 46%;
+    font-size: 9px;
+  }
+
+  .map-heading .legend {
+    max-width: 52%;
+    overflow: hidden;
+    font-size: 7px;
+    text-overflow: ellipsis;
+  }
+
+  .map-heading .legend span {
+    width: 6px;
+    height: 6px;
+    margin-left: 4px;
+  }
+
+  .map-context-panel {
+    max-height: calc(100vh - 106px);
+  }
+
+  /* Secondary workspaces remain dense but stop competing with the map shell. */
+  .command-view {
+    min-height: calc(100vh - 106px);
+    padding: 14px;
+  }
+
+  .command-view-header {
+    min-height: 54px;
+    margin: -14px -14px 12px;
+    padding: 9px 14px;
+  }
+
+  .command-view-header h2 {
+    font-size: 23px;
+  }
+
+  .command-view-header > p {
+    max-width: 520px;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  /* Engineering projects get a visual first read. The art is intentionally a
+     schematic board-piece treatment; route-specific authored art can replace
+     it without changing project state or controls. */
+  .infrastructure-active-card::before {
+    content: '';
+    display: block;
+    height: 104px;
+    margin: -1px -1px 10px;
+    border-bottom: 1px solid rgba(100, 157, 168, .36);
+    background-color: #0b222a;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 180'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop stop-color='%23172f39'/%3E%3Cstop offset='1' stop-color='%2308171e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='600' height='180' fill='url(%23s)'/%3E%3Cpath d='M0 138 C115 108 186 113 280 133 S472 152 600 116' fill='none' stroke='%23395058' stroke-width='42'/%3E%3Cpath d='M0 138 C115 108 186 113 280 133 S472 152 600 116' fill='none' stroke='%23a4b6b8' stroke-width='3' stroke-dasharray='18 13' opacity='.78'/%3E%3Cpath d='M230 145 L275 72 L325 72 L374 143' fill='none' stroke='%238ba4a7' stroke-width='9'/%3E%3Cpath d='M260 104 H342' stroke='%238ba4a7' stroke-width='7'/%3E%3Cpath d='M270 72 L300 34 L330 72' fill='none' stroke='%236ed7cf' stroke-width='4' opacity='.85'/%3E%3Ccircle cx='300' cy='34' r='6' fill='%23d7fffa'/%3E%3Cpath d='M70 83h95M432 73h103' stroke='%235a737a' stroke-width='5'/%3E%3C/svg%3E");
+    background-position: center;
+    background-size: cover;
+    opacity: .92;
+  }
+
+  .infrastructure-active-card.upgrade-card::before {
+    filter: saturate(.8) brightness(1.1);
+  }
+}
+
+/* Pictorial formation cards apply at every layout size. */
+.formation-roster .task-group-list button {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: stretch;
+  padding: 6px 7px;
+}
+
+.formation-roster-portrait {
+  position: relative;
+  display: block !important;
+  width: 52px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid rgba(92, 145, 154, .5);
+  background: #071820;
+}
+
+.formation-roster-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 28% center;
+  filter: saturate(.72) contrast(1.05) brightness(.84);
+}
+
+.formation-roster-portrait > i {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 100%;
+  background: linear-gradient(0deg, rgba(214, 65, 56, .62), rgba(227, 151, 62, .18));
+  pointer-events: none;
+}
+
+.formation-roster-portrait.ready { border-color: rgba(97, 202, 177, .54); }
+.formation-roster-portrait.warning,
+.formation-roster-portrait.worn { border-color: rgba(222, 166, 70, .66); }
+.formation-roster-portrait.critical { border-color: rgba(226, 81, 73, .82); }
+
+.formation-roster-copy {
+  min-width: 0;
+  align-self: center;
+}
+
+.formation-roster-copy > strong,
+.formation-roster-copy > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formation-condition-line {
+  display: grid !important;
+  grid-template-columns: auto minmax(42px, 1fr);
+  gap: 6px !important;
+  align-items: center;
+  margin-top: 4px;
+  color: #809aa4;
+  font: 500 7px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+}
+
+.formation-condition-line > i {
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  background: #293c43;
+}
+
+.formation-condition-line > i > b {
+  display: block;
+  height: 100%;
+  background: #63c9ba;
+}
+
+@media (max-width: 900px) {
+  .formation-roster .task-group-list button {
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+  }
+
+  .formation-roster-portrait {
+    width: 46px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-nav-icon,
+  .operational-alert-strip,
+  .enemy-action-alert,
+  .adviser-alert-strip,
+  .combat-report-alert {
+    transition: none !important;
+  }
+}
