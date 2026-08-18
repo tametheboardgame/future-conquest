@@ -8,6 +8,8 @@ export interface MusicTrack {
   gain: number;
 }
 
+export type MusicContext = 'title' | 'prologue' | 'game' | 'tension' | 'combat' | 'victory' | 'defeat';
+
 const discoveredUrls = import.meta.glob('../assets/music/*.mp3', {
   eager: true,
   query: '?url',
@@ -63,6 +65,22 @@ export const MUSIC_TRACK_OPTIONS = Object.values(MUSIC_TRACKS)
     return left.label.localeCompare(right.label);
   });
 
+const MUSIC_CONTEXT_TRACK_IDS: Record<MusicContext, string[]> = {
+  title: [DEFAULT_MUSIC_TRACK_ID],
+  prologue: ['protocol-zero', DEFAULT_MUSIC_TRACK_ID],
+  game: ['protocol-zero', DEFAULT_MUSIC_TRACK_ID],
+  tension: ['rising-tension', 'protocol-zero', DEFAULT_MUSIC_TRACK_ID],
+  combat: ['combat-i', 'combat-ii', 'rising-tension'],
+  victory: [DEFAULT_MUSIC_TRACK_ID, 'protocol-zero'],
+  defeat: ['rising-tension', 'protocol-zero', DEFAULT_MUSIC_TRACK_ID]
+};
+
 export function resolveMusicTrackId(id: string | undefined): string {
   return id && MUSIC_TRACKS[id] ? id : DEFAULT_MUSIC_TRACK_ID;
+}
+
+export function musicPlaylistForContext(context: MusicContext): MusicTrack[] {
+  const tracks = MUSIC_CONTEXT_TRACK_IDS[context]
+    .flatMap(id => MUSIC_TRACKS[id] ? [MUSIC_TRACKS[id]] : []);
+  return tracks.length > 0 ? tracks : [defaultTrack];
 }
