@@ -8,11 +8,13 @@
   height: 118px;
   margin: -15px -17px 12px;
   border-bottom: 1px solid rgba(98, 155, 164, .4);
-  background:
-    linear-gradient(90deg, rgba(5, 18, 24, .02), rgba(5, 18, 24, .34) 58%, rgba(5, 18, 24, .92)),
-    linear-gradient(0deg, rgba(5, 18, 24, .74), transparent 56%),
-    url('../docs/art/reference/canon-armour-and-male-general.webp') 24% 42% / cover no-repeat;
-  filter: saturate(.76) contrast(1.04) brightness(.88);
+  background-color: #08151b;
+  background-image:
+    linear-gradient(90deg, rgba(5, 18, 24, .02), rgba(5, 18, 24, .24) 58%, rgba(5, 18, 24, .94)),
+    linear-gradient(0deg, rgba(5, 18, 24, .66), transparent 58%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 220'%3E%3Crect width='720' height='220' fill='%2308151b'/%3E%3Cg opacity='.18' stroke='%235d737b' stroke-width='1'%3E%3Cpath d='M0 44h720M0 88h720M0 132h720M0 176h720M90 0v220M180 0v220M270 0v220M360 0v220M450 0v220M540 0v220M630 0v220'/%3E%3C/g%3E%3Cg transform='translate(96 4)'%3E%3Cpath d='m126 44 24-17 26 17 5 32-15 20h-34l-15-20z' fill='%2326333d' stroke='%2373848a' stroke-width='3'/%3E%3Cpath d='M132 61h15m8 0h17' stroke='%2374dcea' stroke-width='4'/%3E%3Cpath d='m104 97 30-15 17 22-16 34-38-7zM171 104l17-22 31 15 8 34-39 7z' fill='%2326333d' stroke='%2373848a' stroke-width='3'/%3E%3Cpath d='m130 94 21-10 24 10 12 50-19 35h-38l-18-35z' fill='%23151d23' stroke='%2373848a' stroke-width='3'/%3E%3Cpath d='m150 92 2 80M121 124h57M128 146h44' stroke='%2358636a' stroke-width='2'/%3E%3Cpath d='m103 125-25 42 16 11 33-47M207 125l31 33-14 17-43-44' fill='none' stroke='%2326333d' stroke-width='12'/%3E%3Cpath d='m78 160 18-7 18 39-18 19-21-11zM222 153l18 4 7 39-22 11-15-19z' fill='%23151d23' stroke='%2373848a' stroke-width='3'/%3E%3Cpath d='M92 139 224 176l-8 17-135-39z' fill='%23070b0e' stroke='%2358636a' stroke-width='3'/%3E%3Cpath d='m138 177-11 42h24l8-35 9 35h24l-12-42' fill='%2326333d' stroke='%2373848a' stroke-width='3'/%3E%3C/g%3E%3Cg transform='translate(360 48) scale(.63)' opacity='.42'%3E%3Cpath d='m126 44 24-17 26 17 5 32-15 20h-34l-15-20zM104 97l30-15 17 22-16 34-38-7zM171 104l17-22 31 15 8 34-39 7zM130 94l21-10 24 10 12 50-19 35h-38l-18-35z' fill='%2326333d' stroke='%2373848a' stroke-width='3'/%3E%3Cpath d='M92 139 224 176l-8 17-135-39z' fill='%23070b0e' stroke='%2358636a' stroke-width='3'/%3E%3C/g%3E%3Cpath d='M474 48h168M474 70h120M474 126h132M474 148h94' stroke='%2358636a' stroke-width='3' opacity='.48'/%3E%3Cpath d='M474 92h148' stroke='%2374dcea' stroke-width='2' opacity='.65'/%3E%3Ccircle cx='463' cy='92' r='4' fill='%2374dcea'/%3E%3C/svg%3E");
+  background-position: center;
+  background-size: cover;
 }
 
 .selected-formation-card,
