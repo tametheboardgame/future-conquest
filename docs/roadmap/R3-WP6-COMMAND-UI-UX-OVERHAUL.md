@@ -1,6 +1,6 @@
 # R3-WP6 - Command UI/UX Overhaul
 
-Status: **ACTIVE / DIRECTION APPROVED / SECONDARY PASS IN PROGRESS**
+Status: **ACTIVE / IMPLEMENTATION COMPLETE / FINAL PRODUCT-OWNER REVIEW PENDING**
 
 Started: 2026-08-18
 
@@ -29,20 +29,22 @@ The visual direction is more pictorial and object-led:
 
 Live visual review on 2026-08-18 accepted the first map-first hierarchy pass as **“a LOT better”** and approved continuing the direction through the remainder of WP6.
 
-The follow-up instruction is explicit: **menus must become more icon based as well as the wider interface becoming more pictorial.** This is now a locked WP6 requirement, not optional polish.
+The follow-up instruction is explicit: **menus must become more icon based as well as the wider interface becoming more pictorial.** This is a locked WP6 requirement, not optional polish.
 
-The second implementation pass therefore extends the accepted language into the specialist workspaces:
+The second implementation pass extended the accepted language into the specialist workspaces:
 
-- Logistics and Infrastructure internal mode menus become icon-first controls with small retained text captions and badges;
-- summary telemetry gains pictographic category cues so it can be scanned before reading labels;
+- Logistics and Infrastructure internal mode menus became icon-first controls with small retained text captions and badges;
+- summary telemetry gained pictographic category cues so it can be scanned before reading labels;
 - Logistics uses source, route, stockpile, formation and territory imagery to explain supply state;
-- Operations receives direction/target and formation imagery;
-- Territory Administration becomes a set of visual map dossiers rather than visually identical text cards;
-- Intelligence panels gain persistent category pictograms;
-- Campaign control gains a recognisable command/archive visual identity;
+- Operations received direction/target and formation imagery;
+- Territory Administration became a set of visual map dossiers rather than visually identical text cards;
+- Intelligence panels gained persistent category pictograms;
+- Campaign control gained a recognisable command/archive visual identity;
 - visible captions and accessible button names remain present so icon use does not reduce discoverability or accessibility.
 
-PR #173 remains draft until the complete WP6 pass has received another product-owner visual review.
+A second live review then described the propagated interface as **“looking really good”** and approved continuing into final WP6 cleanup.
+
+PR #173 remains draft until the completed WP6 pass receives final product-owner acceptance.
 
 ## UX principles
 
@@ -59,7 +61,7 @@ PR #173 remains draft until the complete WP6 pass has received another product-o
 
 ### WP6-A - Map-first shell and navigation
 
-Initial implementation in this branch.
+Implemented.
 
 - remove the runtime programme/work-package sentence from the visual header;
 - reduce title/day/resolve chrome to one compact command bar;
@@ -71,47 +73,53 @@ Initial implementation in this branch.
 
 ### WP6-B - Notification and alert model
 
-Started in the initial implementation; completion follows live review of WP6-A.
+Implemented.
 
 - logistics, adviser, enemy-action and battle notifications stop pushing the map down the page;
-- notification cards default to a compact summary and expand on hover/focus or explicit activation;
-- after-action reports gain explicit dismissal while remaining available from Operations/Combat Reporting;
-- introduce a consistent notification priority model so routine advisory information cannot visually compete with immediate combat/supply danger;
-- if a notification centre/tray is required after live review, it should provide recall without recreating a permanent top-of-page dashboard.
+- notification cards default to a compact summary and expand on hover/focus where supporting detail exists;
+- after-action reports have explicit dismissal while remaining available from Operations/Combat Reporting;
+- logistics, adviser and enemy-action warnings have accessible dismissal controls;
+- a dismissed warning remains quiet only for that continuous warning episode;
+- changed warning content reappears automatically, and an identical warning that genuinely clears and later recurs is treated as a new episode;
+- routine advisory information no longer permanently competes with immediate combat/supply danger.
+
+A separate permanent notification centre was not added because the owning specialist workspaces already retain the recoverable detailed information and a new tray would risk recreating the dashboard density WP6 removes.
 
 ### WP6-C - Pictorial formations and force inspection
 
-Initial roster and inspection treatment begins in this branch.
+Implemented.
 
 - formation cards use a UI-scale powered-infantry schematic derived from the approved visual design bible rather than a generic military icon;
 - the schematic preserves the written canon's modular hard plates, visible flexible under-suit, segmented optics, restrained cyan sensor role and separately carried compact weapon;
 - armour damage is communicated visually as well as numerically;
 - personnel, supply, morale/readiness and current status remain available without requiring a second screen;
-- selected-formation inspection evolves towards a formation portrait/miniature plus condition zones rather than a pure definition list;
+- selected-formation inspection uses a formation portrait/miniature plus condition cues rather than a pure definition list;
 - damaged armour presentation uses the established modular/cannibalised Future Conquest armour language rather than generic red warning boxes.
 
 ### WP6-D - Pictorial infrastructure, logistics and operations
 
-Second-pass implementation now extends this slice beyond Infrastructure.
+Implemented.
 
 - engineering project cards receive a visual object/corridor header before numerical detail;
 - the Infrastructure overview receives distinct pictorial repair, construction and interdiction cards so the action is recognisable before the explanatory copy is read;
 - Infrastructure and Logistics internal menus use pictograms as the primary recognition cue while retaining short text captions;
-- authored visual families should distinguish road, rail, bridge/crossing, tunnel, mountain route, port/air/logistics hub and damaged/repairing/upgraded state;
-- logistics uses route flow, source, stockpile, formation and territory imagery rather than relying primarily on text tables;
-- operation/battle cards use formation/territory/object imagery where it improves recognition without obscuring authoritative numbers.
+- visual families distinguish repair, construction, route/network and interdiction state at UI scale;
+- Logistics uses route flow, source, stockpile, formation and territory imagery rather than relying primarily on text tables;
+- Operations uses formation/territory/object imagery where it improves recognition without obscuring authoritative numbers;
+- Territories, Intelligence and Campaign carry the same object-led visual language.
 
 ### WP6-E - Secondary-screen coherence and responsive/accessibility pass
 
-In progress after approval of the first hierarchy pass.
+Implemented.
 
-- unify panel, button, tab, icon, progress, condition and alert language across Forces, Operations, Territories, Infrastructure, Logistics, Intelligence and Campaign;
-- make specialist menus icon-first where a stable pictogram exists, retaining a small visible caption rather than relying on unexplained icon-only controls;
-- add pictorial recognition cues to Operations, Territories, Intelligence and Campaign without altering their authoritative data;
-- remove duplicated explanatory prose where the interface already communicates the same state;
-- retain explanations through contextual help where genuinely useful;
-- validate keyboard focus order, screen-reader names, contrast, 1366×768 desktop fit, larger desktop layouts, compact/touch layouts and reduced motion;
-- preserve deep/contextual links and consequence-proportionate confirmation.
+- panel, button, tab, icon, progress, condition and alert language is coherent across Forces, Operations, Territories, Infrastructure, Logistics, Intelligence and Campaign;
+- specialist menus are icon-first where a stable pictogram exists, retaining a small visible caption rather than relying on unexplained icon-only controls;
+- Operations, Territories, Intelligence and Campaign have pictorial recognition cues without altering authoritative data;
+- duplicated explanatory prose is visually de-emphasised where the interface already communicates the state;
+- explanations remain available where genuinely useful;
+- icon-led controls have a strong `:focus-visible` treatment including forced-colours support;
+- exact-head browser validation covers keyboard activation, visible focus, reduced motion, desktop fit, 640 px compact/touch-oriented layout, navigation target sizes and specialist-menu fit;
+- deep/contextual links and consequence-proportionate confirmation remain intact.
 
 R3-WP6.5 remains the later bounded whole-interface polish/remediation package. It must not be consumed by avoidable work that belongs to WP6 itself.
 
@@ -125,20 +133,36 @@ The inherited repository copy of `docs/art/reference/canon-armour-and-male-gener
 
 WP6 therefore does **not** silently replace or redefine that canonical reference. Runtime formation imagery is a deliberately schematic UI interpretation of `docs/art/visual-design-bible-v1.md` and `docs/art/canon-generation-prompt-v1.md`. Recovering/recommitting the correct canonical binary should be treated as a separate art-asset integrity repair with the existing manifest remaining authoritative.
 
-## Current implementation target
+## Final implementation state
 
-The first WP6 build established the hierarchy. The current continuation propagates that language through specialist workspaces before another product-owner review:
+The completed implementation now provides:
 
-- map begins near the top of the first desktop viewport rather than after several stacked information bands;
-- the terrain/map surface fills the reclaimed primary command stage rather than leaving a dead strip beneath it;
-- alerts are removed from normal document flow and behave as compact command notifications over the map while the map is active;
-- left navigation is pictographic and narrower;
-- map instruction/legend is an over-map HUD;
-- formation roster and selected-formation inspection use canon-derived powered-armour schematics plus visual damage state;
-- active engineering cards and the Infrastructure overview use pictorial corridor/repair/build/interdiction treatments;
-- Infrastructure and Logistics tabs are icon-first menus with retained labels and badges;
-- Logistics, Operations, Territories, Intelligence and Campaign gain pictorial scanning cues while keeping the same operational information available;
-- exact-head browser evidence now captures the specialist workspaces as well as the map, Forces and Infrastructure.
+- a map that begins near the top of the first desktop viewport and fills the reclaimed primary command stage;
+- compact top-level command/status chrome rather than a stacked dashboard;
+- pictographic primary navigation and icon-first specialist menus;
+- an over-map instruction/legend HUD;
+- dismissible, recoverable command warnings that no longer consume document flow;
+- pictorial formation inspection with armour/damage state;
+- pictorial infrastructure repair/build/interdiction treatments;
+- visual scanning cues across Logistics, Operations, Territories, Intelligence and Campaign;
+- strong keyboard focus and compact-layout behaviour without hiding the primary command categories;
+- the same operational information and simulation authority as before WP6.
+
+The legacy WP2E terrain performance benchmark was also corrected during final validation. WP6 intentionally makes the production map physically larger, which caused the old benchmark to compare different visible tile footprints and falsely report additional terrain requests as a renderer regression. The benchmark now fixes the MapLibre test surface to 1100×600 for both exact base and exact head while leaving camera, LOD, sources, tiles and renderer behaviour unchanged. Exact-head evidence records and asserts the benchmark geometry. With geometry normalised, base and WP6 head requested the same 66 terrain tiles, the same 55 unique tiles and the same transferred bytes, and the existing strict performance budgets passed without being loosened.
+
+## Validation at implementation-complete head
+
+Before final product-owner acceptance:
+
+- production build passes;
+- R3-WP6 source contracts pass;
+- exact-head browser review passes at 1900×829 and 1366×768;
+- Command Map, Forces, Infrastructure, Logistics, Operations, Territories, Intelligence and Campaign visual evidence is captured;
+- notification dismissal/change/recurrence browser probe passes;
+- keyboard focus, activation, control-target and 640×900 compact-layout browser probe passes;
+- R3-WP3.9B map visual grading passes;
+- normalised R3-WP2E exact-head terrain performance/regression gate passes with unchanged substantive regression limits;
+- no simulation, balance, route topology, save-schema, geographic authority or hidden-information rule has changed.
 
 ## Acceptance criteria
 
@@ -156,8 +180,10 @@ WP6 is complete only when all of the following are true:
 - existing map selection, right-sidebar collapse, route/order issue, End Day, combat reporting, logistics, engineering, save/load and contextual navigation behaviours remain functional;
 - no simulation, balance, save-schema, deterministic or geographic-authority change is introduced;
 - production build and repository regressions pass;
-- exact-head browser review covers at least 1366×768 and a larger desktop viewport, plus keyboard/reduced-motion checks;
+- exact-head browser review covers at least 1366×768 and a larger desktop viewport, plus keyboard/reduced-motion and compact-layout checks;
 - product-owner live visual review accepts the completed WP6 hierarchy before merge.
+
+All technical acceptance criteria are satisfied at implementation-complete state. The final item, product-owner acceptance before merge, remains deliberately open.
 
 ## Out of scope
 
