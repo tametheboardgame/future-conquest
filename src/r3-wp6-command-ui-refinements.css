@@ -16,6 +16,12 @@
     min-height: 0;
   }
 
+  /* Difficulty is available from Campaign/settings and does not need to consume
+     scarce permanent command-bar space. */
+  .command-topbar .turn-block > em {
+    display: none;
+  }
+
   /* The operating instruction remains available elsewhere in the command UI;
      the persistent over-map HUD only needs the symbol legend. */
   .map-heading {
