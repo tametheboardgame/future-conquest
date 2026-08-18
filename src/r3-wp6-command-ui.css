@@ -23,6 +23,7 @@
   /* The campaign map is the product surface. Runtime programme/debug prose no
      longer consumes the first screenful. */
   .command-topbar {
+    flex: 0 0 48px;
     height: 48px;
     min-height: 48px;
     gap: 12px;
