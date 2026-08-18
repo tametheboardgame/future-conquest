@@ -29,7 +29,7 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   assert.match(css, /\.command-workspace[\s\S]*grid-template-columns:\s*var\(--wp6-rail-width\)/);
   assert.match(refinements, /\.map-panel[\s\S]*grid-template-rows:\s*minmax\(0, 1fr\)/);
   assert.match(refinements, /\.map-panel > \.r3-terrain-prototype-shell[\s\S]*height:\s*100%/);
-  assert.match(secondary, /Secondary command-surface pass/);
+  assert.match(secondary, /secondary command-surface pass/);
 });
 
 test('WP6 alert cards no longer consume desktop document flow', () => {
