@@ -1,0 +1,40 @@
+/* R3-WP6 pictorial detail layer. Kept separate from shell geometry so the
+   imagery can be iterated without destabilising command layout. */
+
+.selected-formation-card::before,
+.map-context-panel .selected-group::before {
+  content: '';
+  display: block;
+  height: 118px;
+  margin: -15px -17px 12px;
+  border-bottom: 1px solid rgba(98, 155, 164, .4);
+  background:
+    linear-gradient(90deg, rgba(5, 18, 24, .02), rgba(5, 18, 24, .34) 58%, rgba(5, 18, 24, .92)),
+    linear-gradient(0deg, rgba(5, 18, 24, .74), transparent 56%),
+    url('../docs/art/reference/canon-armour-and-male-general.webp') 24% 42% / cover no-repeat;
+  filter: saturate(.76) contrast(1.04) brightness(.88);
+}
+
+.selected-formation-card,
+.map-context-panel .selected-group {
+  overflow: hidden;
+}
+
+.selected-formation-card dl,
+.map-context-panel .selected-group dl {
+  position: relative;
+}
+
+/* Health/status rows read as instrumentation rather than a spreadsheet. */
+.selected-formation-card dl > div,
+.map-context-panel .selected-group dl > div {
+  min-height: 29px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .selected-formation-card::before,
+  .map-context-panel .selected-group::before {
+    height: 96px;
+  }
+}
