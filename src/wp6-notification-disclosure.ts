@@ -37,7 +37,7 @@ function addDismissControl(alert: HTMLElement, label: string, signature: string)
   };
 }
 
-function reconcileAlert(alert: HTMLElement, label: string): void {
+function reconcileAlert(alert: HTMLElement, label: string): string {
   const signature = alertSignature(alert);
   const previousSignature = alert.dataset.wp6AlertSignature;
 
@@ -51,12 +51,24 @@ function reconcileAlert(alert: HTMLElement, label: string): void {
 
   alert.dataset.wp6NotificationManaged = 'true';
   addDismissControl(alert, label, signature);
+  return signature;
 }
 
 function reconcileNotifications(): void {
   syncQueued = false;
+  const presentSignatures = new Set<string>();
+
   for (const config of MANAGED_ALERTS) {
-    document.querySelectorAll<HTMLElement>(config.selector).forEach(alert => reconcileAlert(alert, config.label));
+    document.querySelectorAll<HTMLElement>(config.selector).forEach(alert => {
+      presentSignatures.add(reconcileAlert(alert, config.label));
+    });
+  }
+
+  // Dismissal belongs to one continuous warning episode, not forever. If the
+  // condition actually disappears from the DOM, an identical warning that
+  // returns later is a new episode and deserves the player's attention again.
+  for (const signature of dismissedSignatures) {
+    if (!presentSignatures.has(signature)) dismissedSignatures.delete(signature);
   }
 }
 
