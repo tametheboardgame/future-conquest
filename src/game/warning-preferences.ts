@@ -58,7 +58,7 @@ export function normaliseWarningPreferences(value: Partial<WarningPreferences> |
     : DEFAULT_WARNING_PREFERENCES.warningMode;
   const suppressedWarningIds = Array.isArray(value?.suppressedWarningIds)
     ? [...new Set(value.suppressedWarningIds.filter(isWarningId))]
-      .filter(id => WARNING_DEFINITIONS[id].suppressible && WARNING_DEFINITIONS[id].severity !== 'critical')
+      .filter(id => WARNING_DEFINITIONS[id].suppressible)
     : [];
   return { warningMode, suppressedWarningIds };
 }
