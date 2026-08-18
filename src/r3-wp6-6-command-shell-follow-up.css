@@ -1,0 +1,151 @@
+:root {
+  --wp6-rail-width: 100px;
+  --wp66-rail-control-width: 84px;
+}
+
+@media (min-width: 901px) {
+  .command-navigation {
+    width: var(--wp6-rail-width);
+  }
+
+  .command-nav-items button {
+    width: var(--wp66-rail-control-width);
+    max-width: var(--wp66-rail-control-width);
+    padding-inline: 7px;
+  }
+
+  .command-nav-label {
+    max-width: 78px;
+    line-height: 1.1;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+}
+
+.logistics-flow-steps {
+  gap: 10px;
+}
+
+.logistics-flow-steps article {
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  overflow: visible;
+}
+
+.logistics-flow-steps article > b {
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  line-height: 1;
+}
+
+.logistics-flow-steps article > div {
+  min-width: 0;
+}
+
+.logistics-flow-steps strong {
+  display: block;
+  line-height: 1.15;
+}
+
+.logistics-flow-steps p {
+  overflow-wrap: anywhere;
+}
+
+.warning-preferences-settings {
+  scroll-margin-block: 24px;
+}
+
+.warning-suppression-review {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.warning-suppression-review > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.warning-suppression-review > div b {
+  color: #dcebed;
+  font: 600 10px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+}
+
+.warning-suppression-review > div small,
+.wp66-warning-protected {
+  color: #849ba3;
+  font: 500 8px IBM Plex Mono, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.wp66-warning-preference-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #304b55;
+}
+
+.wp66-warning-preference-actions button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #4a6570;
+  background: #10262f;
+  color: #c9dadd;
+  font: 600 9px IBM Plex Mono, monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.wp66-warning-preference-actions button:hover,
+.wp66-warning-preference-actions button:focus-visible {
+  border-color: #8ff9ed;
+  color: #effffc;
+}
+
+.wp66-warning-preference-actions button:disabled {
+  opacity: .65;
+  cursor: default;
+}
+
+.supply-warning-backdrop[data-wp66-auto-resolving='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 1200px) {
+  .logistics-flow-steps article {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .logistics-flow-steps article > b {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --wp6-rail-width: 72px;
+  }
+}
+
+@media (forced-colors: active) {
+  .map-ux-sidebar-toggle,
+  .wp66-warning-preference-actions button {
+    border: 1px solid ButtonText;
+  }
+}
