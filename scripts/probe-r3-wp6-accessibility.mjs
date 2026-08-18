@@ -85,7 +85,46 @@ try {
   const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   assert(reducedMotion, 'reduced-motion browser preference was not active');
 
-  console.log(JSON.stringify({ primary, primaryFocus, specialist, focusEvidence, reducedMotion }, null, 2));
+  await page.setViewportSize({ width: 640, height: 900 });
+  await page.waitForTimeout(250);
+  const compact = await page.evaluate(() => {
+    const nav = document.querySelector('.command-navigation');
+    const navBox = nav?.getBoundingClientRect();
+    const buttons = [...document.querySelectorAll('.command-navigation [data-command-view]')].map(node => {
+      const box = node.getBoundingClientRect();
+      const label = node.querySelector('.command-nav-label');
+      return {
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+        labelDisplay: label ? getComputedStyle(label).display : 'missing'
+      };
+    });
+    return {
+      viewport: { width: innerWidth, height: innerHeight },
+      documentFits: document.documentElement.scrollWidth <= innerWidth + 1,
+      navPosition: nav ? getComputedStyle(nav).position : 'missing',
+      navBottom: navBox ? Math.round(innerHeight - navBox.bottom) : null,
+      navWidth: navBox ? Math.round(navBox.width) : null,
+      buttonCount: buttons.length,
+      buttons,
+      specialistFits: (() => {
+        const tabs = document.querySelector('.logistics-tabs');
+        if (!tabs) return false;
+        const box = tabs.getBoundingClientRect();
+        return box.left >= -1 && box.right <= innerWidth + 1;
+      })()
+    };
+  });
+
+  assert(compact.documentFits, `compact layout causes document-level horizontal overflow: ${JSON.stringify(compact)}`);
+  assert(compact.navPosition === 'fixed' && Math.abs(compact.navBottom ?? 999) <= 1, `compact primary navigation is not pinned to the bottom: ${JSON.stringify(compact)}`);
+  assert(compact.navWidth === 640, `compact navigation does not span the viewport: ${JSON.stringify(compact)}`);
+  assert(compact.buttonCount === 8, `compact navigation lost command views: ${compact.buttonCount}`);
+  assert(compact.buttons.every(item => item.width >= 64 && item.height >= 54), `compact command target is too small: ${JSON.stringify(compact.buttons)}`);
+  assert(compact.buttons.every(item => item.labelDisplay !== 'none'), '640px compact navigation unexpectedly hid its short captions');
+  assert(compact.specialistFits, 'compact specialist tabs extend beyond the visible workspace');
+
+  console.log(JSON.stringify({ primary, primaryFocus, specialist, focusEvidence, reducedMotion, compact }, null, 2));
 } finally {
   await browser.close();
 }
