@@ -14,6 +14,14 @@ const INITIAL_SETTLE_MINIMUM_MS = 250;
 const CAMERA_SETTLE_MINIMUM_MS = 950;
 const SETTLEMENT_TIMEOUT_MS = 45_000;
 const TERRAIN_TILE_PATH = '/generated/r3-terrain/tiles/';
+// The terrain benchmark must compare the renderer, not the amount of screen
+// real estate a surrounding UI happens to give it. WP6 deliberately enlarges
+// the production map, so both exact base and exact head are measured through
+// the same fixed benchmark surface. The workflow copies this head-owned probe
+// into the base checkout before either measurement.
+const BENCHMARK_MAP_WIDTH = 1100;
+const BENCHMARK_MAP_HEIGHT = 600;
+const BENCHMARK_DIMENSION_TOLERANCE = 2;
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
@@ -70,6 +78,50 @@ await page.addInitScript(() => {
 const started = performance.now();
 const query = tileCancellation === 'cancel' ? '?terrain=1&tileCancellation=cancel' : '?terrain=1';
 await page.goto(`${origin}/${query}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+
+// Normalise only the benchmark's map geometry. This deliberately does not
+// change terrain camera, LOD, source, tile or renderer behaviour. Keeping the
+// map heading out of layout flow also prevents old/new command chrome from
+// changing the measured MapLibre host dimensions.
+await page.addStyleTag({ content: `
+  .command-map-workspace {
+    grid-template-columns: ${BENCHMARK_MAP_WIDTH}px minmax(0, 1fr) !important;
+    align-items: start !important;
+  }
+  .map-panel {
+    display: block !important;
+    position: relative !important;
+    width: ${BENCHMARK_MAP_WIDTH}px !important;
+    min-width: ${BENCHMARK_MAP_WIDTH}px !important;
+    max-width: ${BENCHMARK_MAP_WIDTH}px !important;
+    height: ${BENCHMARK_MAP_HEIGHT}px !important;
+    min-height: ${BENCHMARK_MAP_HEIGHT}px !important;
+    max-height: ${BENCHMARK_MAP_HEIGHT}px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  .map-panel > .map-heading {
+    position: absolute !important;
+    z-index: 50 !important;
+  }
+  .map-panel > .r3-terrain-prototype-shell,
+  .r3-terrain-prototype-shell {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+  }
+  .r3-terrain-prototype {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    box-sizing: border-box !important;
+  }
+` });
+
 await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
 await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 15_000 });
 await page.locator('[data-command-view="map"]').click();
@@ -104,6 +156,30 @@ await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prot
 await page.waitForFunction(() => document.querySelector('.r3-terrain-prototype')?.getAttribute('data-overlay-lod') === 'campaign');
 await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const firstUsefulPaintMs = performance.now() - started;
+
+const benchmarkSurface = await page.evaluate(() => {
+  const panel = document.querySelector('.map-panel');
+  const prototype = document.querySelector('.r3-terrain-prototype');
+  const canvas = document.querySelector('.r3-terrain-prototype-canvas canvas');
+  const dimensions = node => {
+    if (!(node instanceof Element)) return null;
+    const box = node.getBoundingClientRect();
+    return {
+      width: Math.round(box.width * 10) / 10,
+      height: Math.round(box.height * 10) / 10
+    };
+  };
+  return {
+    panel: dimensions(panel),
+    prototype: dimensions(prototype),
+    canvas: dimensions(canvas)
+  };
+});
+const benchmarkWidthDelta = Math.abs((benchmarkSurface.prototype?.width ?? 0) - BENCHMARK_MAP_WIDTH);
+const benchmarkHeightDelta = Math.abs((benchmarkSurface.prototype?.height ?? 0) - BENCHMARK_MAP_HEIGHT);
+if (benchmarkWidthDelta > BENCHMARK_DIMENSION_TOLERANCE || benchmarkHeightDelta > BENCHMARK_DIMENSION_TOLERANCE) {
+  throw new Error(`terrain benchmark surface drifted from ${BENCHMARK_MAP_WIDTH}x${BENCHMARK_MAP_HEIGHT}: ${JSON.stringify(benchmarkSurface)}`);
+}
 
 /**
  * Build-neutral settlement rule used identically for WP2D base and WP2E head:
@@ -178,13 +254,18 @@ const declaredBytes = requests.reduce((sum, request) => sum + (Number.isFinite(r
 const transferredBytes = resourceEntries.reduce((sum, entry) => sum + entry.transferSize, 0);
 const encodedBodyBytes = resourceEntries.reduce((sum, entry) => sum + entry.encodedBodySize, 0);
 const evidence = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   buildSha,
   variant,
   tileCancellation,
   measuredAt: new Date().toISOString(),
   browser: await browser.version(),
   viewport: { width: 1600, height: 1000 },
+  benchmarkSurface: {
+    requested: { width: BENCHMARK_MAP_WIDTH, height: BENCHMARK_MAP_HEIGHT },
+    measured: benchmarkSurface,
+    normalisedAcrossBuilds: true
+  },
   cacheMode: 'cold-disabled',
   usefulPaint: {
     requiresRendererReady: true,
