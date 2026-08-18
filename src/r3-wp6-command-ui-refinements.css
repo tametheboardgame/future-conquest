@@ -1,8 +1,14 @@
 /* R3-WP6 hierarchy refinements validated against exact-head browser captures. */
 
 @media (min-width: 901px) {
-  /* The terrain should use the command stage, not stop at its historical
-     minimum-height and leave a dead strip below the primary interaction. */
+  /* The map is now the only in-flow row. The heading is an absolute HUD, so
+     leaving the historical auto row in place reserved a large dead strip. */
+  .map-panel {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .map-panel > .r3-terrain-prototype-shell,
+  .map-panel > .r3-terrain-prototype-shell > .r3-terrain-prototype,
   .map-panel > .europe-map-frame,
   .map-panel > .europe-map-frame > .r3-terrain-prototype-shell,
   .map-panel > .europe-map-frame > .r3-terrain-prototype-shell > .r3-terrain-prototype {
@@ -61,8 +67,8 @@
     gap: 2px;
   }
 
-  /* Overview choices need to communicate the object being acted on before the
-     player reads the implementation detail. */
+  /* Overview choices communicate the object being acted on before the player
+     reads implementation detail. */
   .infrastructure-choice-card {
     overflow: hidden;
   }
@@ -89,4 +95,88 @@
   .infrastructure-choice-card.interdict-choice::before {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 150'%3E%3Crect width='620' height='150' fill='%231f171a'/%3E%3Cpath d='M0 116C121 91 196 94 285 111s195 23 335-7' fill='none' stroke='%23483b3e' stroke-width='34'/%3E%3Cpath d='M0 116C121 91 196 94 285 111s195 23 335-7' fill='none' stroke='%23b6aaa7' stroke-width='3' stroke-dasharray='18 13' opacity='.5'/%3E%3Cpath d='m220 124 46-59h64M350 65h48l43 59' fill='none' stroke='%238e7775' stroke-width='8'/%3E%3Cpath d='m317 48 10 19 21-7-10 20 18 12-22 2 1 22-14-17-17 14 5-22-21-6 20-9z' fill='%23e76758' opacity='.92'/%3E%3Cpath d='M283 94 310 78m45 17 27-17' stroke='%23ffb069' stroke-width='5'/%3E%3C/svg%3E");
   }
+}
+
+/* The committed armour reference binary is not used at runtime here. These
+   silhouettes are deliberately schematic and follow the written visual canon:
+   modular plates, visible under-suit joints, segmented optics and a separate
+   compact weapon. */
+.formation-armour-miniature {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.formation-armour-miniature .formation-portrait-ground {
+  fill: #0d252d;
+}
+
+.formation-armour-miniature .formation-portrait-depth {
+  fill: #52636a;
+}
+
+.formation-armour-miniature .under-suit,
+.formation-armour-miniature .under-suit.limb {
+  fill: #111a20;
+  stroke: #526069;
+  stroke-width: .8;
+}
+
+.formation-armour-miniature .armour-plate {
+  stroke: #718087;
+  stroke-width: 1;
+  stroke-linejoin: bevel;
+}
+
+.formation-armour-miniature .armour-seam {
+  fill: none;
+  stroke: #849198;
+  stroke-width: .7;
+  opacity: .65;
+}
+
+.formation-armour-miniature .sensor-optic {
+  fill: none;
+  stroke: #74dcea;
+  stroke-width: 1.5;
+  opacity: .82;
+}
+
+.formation-armour-miniature .weapon {
+  fill: #0a0e11;
+  stroke: #6b7478;
+  stroke-width: 1;
+}
+
+.formation-armour-miniature .weapon-detail {
+  fill: none;
+  stroke: #96a4a8;
+  stroke-width: 1;
+}
+
+.formation-armour-miniature .armour-damage {
+  fill: none;
+  stroke: #d29b4d;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.formation-armour-miniature .armour-damage.heavy {
+  stroke: #ed6e5e;
+  stroke-width: 2;
+}
+
+.formation-armour-miniature .formation-readiness-scan {
+  stroke: #65c8bc;
+  stroke-width: 1.2;
+  opacity: .8;
+}
+
+.formation-roster-portrait.warning .formation-readiness-scan,
+.formation-roster-portrait.worn .formation-readiness-scan {
+  stroke: #dda64d;
+}
+
+.formation-roster-portrait.critical .formation-readiness-scan {
+  stroke: #e65f56;
 }
