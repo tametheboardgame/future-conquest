@@ -4,6 +4,7 @@
  */
 
 :root {
+  --wp6-rail-width: 72px;
   --wp65-rail-tile: 56px;
   --wp65-header-control: 34px;
 }
@@ -148,7 +149,9 @@
 }
 
 /* Stable icon rail. WP9/WP6 previously allowed eight grid rows to stretch to fill
-   the whole viewport; bounded tiles keep optical size constant and centre the rail. */
+   the whole viewport; bounded tiles keep optical size constant and centre the rail.
+   The 72px rail also preserves WP6's >=54px interactive-target contract after the
+   stable scrollbar gutter is reserved. */
 @media (min-width: 901px) {
   .command-workspace {
     align-items: stretch;
