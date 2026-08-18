@@ -11,6 +11,7 @@ on:
       - 'src/r3-wp6-command-ui-refinements.css'
       - 'src/r3-wp6-secondary-ui.css'
       - 'src/r3-wp6-notification-disclosure.css'
+      - 'src/r3-wp6-accessibility.css'
       - 'src/wp6-notification-disclosure.ts'
       - 'src/components/CommandNavigation.tsx'
       - 'src/components/FormationRoster.tsx'
