@@ -14,7 +14,7 @@ test('WP6 icon rail keeps visible labels and hover titles', () => {
   assert.match(nav, /aria-current=/);
 });
 
-test('WP6 map-first stylesheet is loaded last and reclaims desktop chrome', () => {
+test('WP6 map-first stylesheet is loaded after the established command fit layer', () => {
   const main = read('src/main.tsx');
   const css = read('src/r3-wp6-command-ui.css');
   assert.ok(main.indexOf("./r3-wp6-command-ui.css") > main.indexOf("./responsive-command-fit.css"));
@@ -35,12 +35,18 @@ test('WP6 alert cards no longer consume desktop document flow', () => {
   assert.match(reports, /setDismissedReportId\(report\.id\)/);
 });
 
-test('WP6 formation roster uses canonical armour art and visual condition state', () => {
+test('WP6 formation surfaces use canonical armour art and visual condition state', () => {
+  const main = read('src/main.tsx');
   const roster = read('src/components/FormationRoster.tsx');
+  const detailCss = read('src/r3-wp6-pictorial-details.css');
   assert.match(roster, /canon-armour-and-male-general\.webp/);
   assert.match(roster, /function armourCondition/);
   assert.match(roster, /formation-roster-portrait/);
   assert.match(roster, /formation-condition-line/);
+  assert.ok(main.indexOf("./r3-wp6-pictorial-details.css") > main.indexOf("./r3-wp6-command-ui.css"));
+  assert.match(detailCss, /canon-armour-and-male-general\.webp/);
+  assert.match(detailCss, /\.selected-formation-card::before/);
+  assert.match(detailCss, /\.map-context-panel \.selected-group::before/);
 });
 
 test('WP6 infrastructure cards have a pictorial project treatment', () => {
