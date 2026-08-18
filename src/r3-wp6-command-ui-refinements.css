@@ -1,0 +1,92 @@
+/* R3-WP6 hierarchy refinements validated against exact-head browser captures. */
+
+@media (min-width: 901px) {
+  /* The terrain should use the command stage, not stop at its historical
+     minimum-height and leave a dead strip below the primary interaction. */
+  .map-panel > .europe-map-frame,
+  .map-panel > .europe-map-frame > .r3-terrain-prototype-shell,
+  .map-panel > .europe-map-frame > .r3-terrain-prototype-shell > .r3-terrain-prototype {
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* Put command notifications over the map when the map is the active view,
+     leaving the formation inspector usable. */
+  .command-app-shell:has(.command-map-workspace) .operational-alert-strip,
+  .command-app-shell:has(.command-map-workspace) .enemy-action-alert,
+  .command-app-shell:has(.command-map-workspace) .adviser-alert-strip,
+  .command-app-shell:has(.command-map-workspace) .combat-report-alert {
+    right: 365px;
+  }
+
+  .operational-alert-strip {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+    width: min(380px, calc(100vw - 130px));
+  }
+
+  .operational-alert-strip > div:first-child {
+    min-width: 0;
+  }
+
+  .operational-alert-strip > div:first-child strong,
+  .operational-alert-strip > div:first-child small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .operational-alert-strip .supply-diagnostic-copy {
+    display: none;
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+
+  .operational-alert-strip > button {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    padding: 6px 8px;
+    border: 1px solid rgba(112, 215, 208, .4);
+    background: rgba(19, 62, 64, .72);
+    color: #dff8f4;
+    font: 600 7px IBM Plex Mono, monospace;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .operational-alert-strip:hover .supply-diagnostic-copy,
+  .operational-alert-strip:focus-within .supply-diagnostic-copy {
+    display: grid;
+    gap: 2px;
+  }
+
+  /* Overview choices need to communicate the object being acted on before the
+     player reads the implementation detail. */
+  .infrastructure-choice-card {
+    overflow: hidden;
+  }
+
+  .infrastructure-choice-card::before {
+    content: '';
+    display: block;
+    height: 78px;
+    margin: -15px -17px 12px;
+    border-bottom: 1px solid rgba(102, 160, 169, .34);
+    background-color: #0a1f27;
+    background-position: center;
+    background-size: cover;
+  }
+
+  .infrastructure-choice-card.repair-choice::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 150'%3E%3Crect width='620' height='150' fill='%230a2028'/%3E%3Cpath d='M0 117C122 84 188 89 285 112s194 28 335-10' fill='none' stroke='%2343575e' stroke-width='34'/%3E%3Cpath d='M0 117C122 84 188 89 285 112s194 28 335-10' fill='none' stroke='%23bdc7c3' stroke-width='3' stroke-dasharray='18 13' opacity='.64'/%3E%3Cpath d='m246 123 37-58h58l40 58M270 85h86' fill='none' stroke='%237f999c' stroke-width='8'/%3E%3Cpath d='m306 65 24-38 27 38M330 27v54M330 37h56' fill='none' stroke='%23e2b85c' stroke-width='4'/%3E%3Cpath d='m380 54-16 28h32z' fill='%23e2b85c' opacity='.9'/%3E%3Cpath d='M286 109h24m12 0h27' stroke='%23ff856c' stroke-width='7'/%3E%3C/svg%3E");
+  }
+
+  .infrastructure-choice-card.build-choice::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 150'%3E%3Crect width='620' height='150' fill='%230a2028'/%3E%3Cpath d='M0 119h620' stroke='%23394950' stroke-width='34'/%3E%3Cpath d='M0 119h620' stroke='%23d0d4c9' stroke-width='3' stroke-dasharray='22 12' opacity='.7'/%3E%3Cpath d='M210 120V72h200v48M232 72l78-45 78 45M254 72l56-32 56 32' fill='none' stroke='%237fc9c0' stroke-width='7'/%3E%3Cpath d='M210 93h200M255 72v48M310 42v78M365 72v48' stroke='%237fc9c0' stroke-width='4'/%3E%3Ccircle cx='310' cy='27' r='6' fill='%23d9fff8'/%3E%3C/svg%3E");
+  }
+
+  .infrastructure-choice-card.interdict-choice::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 620 150'%3E%3Crect width='620' height='150' fill='%231f171a'/%3E%3Cpath d='M0 116C121 91 196 94 285 111s195 23 335-7' fill='none' stroke='%23483b3e' stroke-width='34'/%3E%3Cpath d='M0 116C121 91 196 94 285 111s195 23 335-7' fill='none' stroke='%23b6aaa7' stroke-width='3' stroke-dasharray='18 13' opacity='.5'/%3E%3Cpath d='m220 124 46-59h64M350 65h48l43 59' fill='none' stroke='%238e7775' stroke-width='8'/%3E%3Cpath d='m317 48 10 19 21-7-10 20 18 12-22 2 1 22-14-17-17 14 5-22-21-6 20-9z' fill='%23e76758' opacity='.92'/%3E%3Cpath d='M283 94 310 78m45 17 27-17' stroke='%23ffb069' stroke-width='5'/%3E%3C/svg%3E");
+  }
+}
