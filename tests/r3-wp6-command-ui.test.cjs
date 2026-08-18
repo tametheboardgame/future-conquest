@@ -18,8 +18,10 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   const main = read('src/main.tsx');
   const css = read('src/r3-wp6-command-ui.css');
   const refinements = read('src/r3-wp6-command-ui-refinements.css');
+  const secondary = read('src/r3-wp6-secondary-ui.css');
   assert.ok(main.indexOf("./r3-wp6-command-ui.css") > main.indexOf("./responsive-command-fit.css"));
   assert.ok(main.indexOf("./r3-wp6-command-ui-refinements.css") > main.indexOf("./r3-wp6-pictorial-details.css"));
+  assert.ok(main.indexOf("./r3-wp6-secondary-ui.css") > main.indexOf("./r3-wp6-command-ui-refinements.css"));
   assert.match(css, /--wp6-rail-width:\s*70px/);
   assert.match(css, /\.command-topbar[\s\S]*height:\s*48px/);
   assert.match(css, /\.command-topbar \.eyebrow[\s\S]*display:\s*none/);
@@ -27,6 +29,7 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   assert.match(css, /\.command-workspace[\s\S]*grid-template-columns:\s*var\(--wp6-rail-width\)/);
   assert.match(refinements, /\.map-panel[\s\S]*grid-template-rows:\s*minmax\(0, 1fr\)/);
   assert.match(refinements, /\.map-panel > \.r3-terrain-prototype-shell[\s\S]*height:\s*100%/);
+  assert.match(secondary, /Secondary command-surface pass/);
 });
 
 test('WP6 alert cards no longer consume desktop document flow', () => {
@@ -69,8 +72,37 @@ test('WP6 infrastructure cards have pictorial project and action treatments', ()
   assert.match(refinements, /\.interdict-choice::before[\s\S]*data:image\/svg\+xml/);
 });
 
+test('WP6 specialist menus are icon-first without removing visible labels', () => {
+  const secondary = read('src/r3-wp6-secondary-ui.css');
+  const logistics = read('src/components/LogisticsCommand.tsx');
+  const infrastructure = read('src/components/InfrastructureCommand.tsx');
+  assert.match(secondary, /\.logistics-tabs,[\s\S]*\.infrastructure-tabs/);
+  assert.match(secondary, /\.logistics-tabs button::before,[\s\S]*\.infrastructure-tabs button::before/);
+  assert.match(secondary, /--wp6-icon-formation:/);
+  assert.match(secondary, /--wp6-icon-territory:/);
+  assert.match(secondary, /--wp6-icon-repair:/);
+  assert.match(secondary, /--wp6-icon-interdict:/);
+  assert.match(logistics, /<nav className="logistics-tabs" aria-label="Logistics sections">/);
+  assert.match(logistics, /<span>\{tab\.label\}<\/span>/);
+  assert.match(infrastructure, /<nav className="infrastructure-tabs" aria-label="Infrastructure command modes">/);
+  assert.match(infrastructure, /<span>\{tab\.label\}<\/span>/);
+});
+
+test('WP6 secondary workspaces have pictorial recognition cues', () => {
+  const secondary = read('src/r3-wp6-secondary-ui.css');
+  assert.match(secondary, /\.logistics-health-panel::before/);
+  assert.match(secondary, /\.operation-command-card::before/);
+  assert.match(secondary, /\.territory-command-card::before/);
+  assert.match(secondary, /\.intelligence-command-grid > \.view-panel::before/);
+  assert.match(secondary, /\.campaign-controls-panel::before/);
+  assert.match(secondary, /\.logistics-flow-steps article:nth-child\(1\) > b/);
+});
+
 test('WP6 reduced-motion behaviour disables new disclosure animation', () => {
   const css = read('src/r3-wp6-command-ui.css');
+  const secondary = read('src/r3-wp6-secondary-ui.css');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /transition:\s*none !important/);
+  assert.match(secondary, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(secondary, /transition:\s*none !important/);
 });
