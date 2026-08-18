@@ -20,10 +20,12 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   const refinements = read('src/r3-wp6-command-ui-refinements.css');
   const secondary = read('src/r3-wp6-secondary-ui.css');
   const notifications = read('src/r3-wp6-notification-disclosure.css');
+  const accessibility = read('src/r3-wp6-accessibility.css');
   assert.ok(main.indexOf("./r3-wp6-command-ui.css") > main.indexOf("./responsive-command-fit.css"));
   assert.ok(main.indexOf("./r3-wp6-command-ui-refinements.css") > main.indexOf("./r3-wp6-pictorial-details.css"));
   assert.ok(main.indexOf("./r3-wp6-secondary-ui.css") > main.indexOf("./r3-wp6-command-ui-refinements.css"));
   assert.ok(main.indexOf("./r3-wp6-notification-disclosure.css") > main.indexOf("./r3-wp6-secondary-ui.css"));
+  assert.ok(main.indexOf("./r3-wp6-accessibility.css") > main.indexOf("./r3-wp6-notification-disclosure.css"));
   assert.match(css, /--wp6-rail-width:\s*70px/);
   assert.match(css, /\.command-topbar[\s\S]*height:\s*48px/);
   assert.match(css, /\.command-topbar \.eyebrow[\s\S]*display:\s*none/);
@@ -33,6 +35,7 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   assert.match(refinements, /\.map-panel > \.r3-terrain-prototype-shell[\s\S]*height:\s*100%/);
   assert.match(secondary, /secondary command-surface pass/);
   assert.match(notifications, /notification disclosure/);
+  assert.match(accessibility, /final accessibility pass/);
 });
 
 test('WP6 alert cards no longer consume desktop document flow', () => {
@@ -63,6 +66,15 @@ test('WP6 operational warnings dismiss until their underlying content changes', 
   assert.match(css, /\.wp6-alert-dismiss/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /\[hidden\][\s\S]*display:\s*none !important/);
+});
+
+test('WP6 icon-led controls retain a strong visible keyboard focus treatment', () => {
+  const accessibility = read('src/r3-wp6-accessibility.css');
+  assert.match(accessibility, /\.command-nav-items button:focus-visible/);
+  assert.match(accessibility, /\.logistics-tabs button:focus-visible/);
+  assert.match(accessibility, /\.infrastructure-tabs button:focus-visible/);
+  assert.match(accessibility, /outline:\s*2px solid/);
+  assert.match(accessibility, /@media \(forced-colors: active\)/);
 });
 
 test('WP6 formation surfaces use canon-derived schematics and visual damage state', () => {
