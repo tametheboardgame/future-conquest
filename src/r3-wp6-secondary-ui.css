@@ -1,0 +1,370 @@
+/* R3-WP6 secondary command-surface pass.
+ * Icon-first menus and pictorial recognition cues for the specialist workspaces.
+ * Presentation only: all simulation state remains owned by the existing components.
+ */
+
+:root {
+  --wp6-icon-overview: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Crect x='4' y='4' width='9' height='9' rx='1'/%3E%3Crect x='19' y='4' width='9' height='9' rx='1'/%3E%3Crect x='4' y='19' width='9' height='9' rx='1'/%3E%3Cpath d='M19 23.5h9M23.5 19v9'/%3E%3C/svg%3E");
+  --wp6-icon-formation: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M11 7l5-3 5 3 2 7-3 3v9h-8v-9l-3-3 2-7Z'/%3E%3Cpath d='M12 10h8M13 15h6M9 28h14'/%3E%3C/svg%3E");
+  --wp6-icon-territory: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M5 8l8-3 6 4 8-2v17l-8 3-6-4-8 2V8Z'/%3E%3Cpath d='M13 5v18M19 9v18'/%3E%3C/svg%3E");
+  --wp6-icon-diagnostics: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Ccircle cx='16' cy='16' r='11'/%3E%3Cpath d='M8 17h5l2-7 3 13 2-6h4M16 3v3M16 26v3'/%3E%3C/svg%3E");
+  --wp6-icon-repair: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M4 23h24M7 23V15h18v8M10 15l6-7 6 7M12 23v-8M20 23v-8'/%3E%3Cpath d='M24 5l3 3-7 7-4 1 1-4 7-7Z'/%3E%3C/svg%3E");
+  --wp6-icon-upgrade: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M4 25h24M7 25V17h18v8M10 17l6-6 6 6M12 25v-8M20 25v-8'/%3E%3Cpath d='M16 12V3M12 7l4-4 4 4'/%3E%3C/svg%3E");
+  --wp6-icon-interdict: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23ef8276' stroke-width='2'%3E%3Ccircle cx='16' cy='16' r='10'/%3E%3Ccircle cx='16' cy='16' r='4'/%3E%3Cpath d='M16 2v7M16 23v7M2 16h7M23 16h7M7 7l18 18'/%3E%3C/svg%3E");
+  --wp6-icon-history: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M7 10H3V6'/%3E%3Cpath d='M4 9a12 12 0 1 1-1 9'/%3E%3Cpath d='M16 8v9l6 3'/%3E%3C/svg%3E");
+  --wp6-icon-source: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M5 26V11l8 4v-4l8 4V7h6v19H5Z'/%3E%3Cpath d='M9 20h3M15 20h3M21 20h3'/%3E%3C/svg%3E");
+  --wp6-icon-route: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Ccircle cx='7' cy='23' r='3'/%3E%3Ccircle cx='25' cy='9' r='3'/%3E%3Cpath d='M10 23c7 0 5-14 12-14M14 23h4M18 9h4'/%3E%3C/svg%3E");
+  --wp6-icon-stock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M5 10l11-5 11 5-11 5-11-5Z'/%3E%3Cpath d='M5 10v12l11 5 11-5V10M16 15v12'/%3E%3C/svg%3E");
+  --wp6-icon-operation: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Ccircle cx='21' cy='11' r='6'/%3E%3Ccircle cx='21' cy='11' r='2'/%3E%3Cpath d='M4 26c3-8 7-11 13-12M11 21l6-7-9-1'/%3E%3C/svg%3E");
+  --wp6-icon-intelligence: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M3 16s5-8 13-8 13 8 13 8-5 8-13 8S3 16 3 16Z'/%3E%3Ccircle cx='16' cy='16' r='4'/%3E%3C/svg%3E");
+  --wp6-icon-campaign: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%2370d7d0' stroke-width='2'%3E%3Cpath d='M7 28V4M8 6h16l-3 6 3 6H8'/%3E%3Cpath d='M4 28h12'/%3E%3C/svg%3E");
+}
+
+/* Icon-first specialist menus. The text remains as a visible caption and
+   accessible button name, while recognition is led by the pictogram. */
+.logistics-tabs,
+.infrastructure-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(76px, 1fr);
+  gap: 5px;
+}
+
+.logistics-tabs button,
+.infrastructure-tabs button {
+  position: relative;
+  display: grid;
+  grid-template-rows: 29px auto;
+  place-items: center;
+  min-height: 62px;
+  padding: 6px 6px 5px;
+  overflow: visible;
+  border: 1px solid rgba(78, 137, 147, .32);
+  background: linear-gradient(180deg, rgba(9, 29, 37, .88), rgba(6, 20, 27, .92));
+  color: #8eaab2;
+  text-align: center;
+}
+
+.logistics-tabs button::before,
+.infrastructure-tabs button::before {
+  content: '';
+  width: 25px;
+  height: 25px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: .72;
+  filter: saturate(.8);
+}
+
+.logistics-tabs button:hover::before,
+.logistics-tabs button:focus-visible::before,
+.logistics-tabs button.active::before,
+.infrastructure-tabs button:hover::before,
+.infrastructure-tabs button:focus-visible::before,
+.infrastructure-tabs button.active::before {
+  opacity: 1;
+  filter: none;
+}
+
+.logistics-tabs button > span,
+.infrastructure-tabs button > span {
+  font: 600 7px/1.1 IBM Plex Mono, monospace;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.logistics-tabs button > b,
+.infrastructure-tabs button > b {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  min-width: 16px;
+  padding: 1px 4px;
+  border: 1px solid rgba(102, 215, 207, .45);
+  border-radius: 8px;
+  background: rgba(4, 16, 22, .9);
+  color: #bffcf4;
+  font: 600 7px IBM Plex Mono, monospace;
+}
+
+.logistics-tabs button:nth-child(1)::before,
+.infrastructure-tabs button:nth-child(1)::before { background-image: var(--wp6-icon-overview); }
+.logistics-tabs button:nth-child(2)::before { background-image: var(--wp6-icon-formation); }
+.logistics-tabs button:nth-child(3)::before { background-image: var(--wp6-icon-territory); }
+.logistics-tabs button:nth-child(4)::before { background-image: var(--wp6-icon-diagnostics); }
+.infrastructure-tabs button:nth-child(2)::before { background-image: var(--wp6-icon-repair); }
+.infrastructure-tabs button:nth-child(3)::before { background-image: var(--wp6-icon-upgrade); }
+.infrastructure-tabs button:nth-child(4)::before { background-image: var(--wp6-icon-interdict); }
+.infrastructure-tabs button:nth-child(5)::before { background-image: var(--wp6-icon-history); }
+.infrastructure-tabs button:nth-child(4) > b { border-color: rgba(239, 130, 118, .45); color: #ffb4aa; }
+
+/* Summary telemetry becomes icon-led rather than another miniature spreadsheet. */
+.logistics-priority-summary > div,
+.infrastructure-summary-strip > div,
+.territory-summary-strip > div {
+  position: relative;
+  min-height: 55px;
+  padding-left: 45px;
+}
+
+.logistics-priority-summary > div::before,
+.infrastructure-summary-strip > div::before,
+.territory-summary-strip > div::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 25px;
+  height: 25px;
+  transform: translateY(-50%);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: .68;
+}
+
+.logistics-priority-summary > div:nth-child(1)::before { background-image: var(--wp6-icon-source); }
+.logistics-priority-summary > div:nth-child(2)::before { background-image: var(--wp6-icon-stock); }
+.logistics-priority-summary > div:nth-child(3)::before { background-image: var(--wp6-icon-route); }
+.logistics-priority-summary > div:nth-child(4)::before { background-image: var(--wp6-icon-diagnostics); }
+.infrastructure-summary-strip > div:nth-child(1)::before { background-image: var(--wp6-icon-repair); }
+.infrastructure-summary-strip > div:nth-child(2)::before { background-image: var(--wp6-icon-upgrade); }
+.infrastructure-summary-strip > div:nth-child(3)::before { background-image: var(--wp6-icon-repair); }
+.infrastructure-summary-strip > div:nth-child(4)::before { background-image: var(--wp6-icon-route); }
+.territory-summary-strip > div:nth-child(1)::before { background-image: var(--wp6-icon-territory); }
+.territory-summary-strip > div:nth-child(2)::before { background-image: var(--wp6-icon-diagnostics); }
+.territory-summary-strip > div:nth-child(3)::before { background-image: var(--wp6-icon-route); }
+.territory-summary-strip > div:nth-child(4)::before { background-image: var(--wp6-icon-interdict); }
+
+/* Logistics itself now explains the supply model through object recognition.
+   Existing prose and numerical authority remain intact beneath the pictograms. */
+.logistics-flow-steps article > b {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(96, 182, 180, .34);
+  border-radius: 3px;
+  background-color: rgba(7, 27, 34, .82);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 27px 27px;
+  color: transparent;
+  font-size: 0;
+}
+.logistics-flow-steps article:nth-child(1) > b { background-image: var(--wp6-icon-source); }
+.logistics-flow-steps article:nth-child(2) > b { background-image: var(--wp6-icon-route); }
+.logistics-flow-steps article:nth-child(3) > b { background-image: var(--wp6-icon-stock); }
+
+.logistics-health-panel,
+.logistics-reserve-panel,
+.logistics-bottleneck-panel,
+.formation-priority-panel,
+.administration-priority-panel,
+.logistics-diagnostics-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.logistics-health-panel::before {
+  content: '';
+  display: block;
+  height: 78px;
+  margin: -1px -1px 12px;
+  border-bottom: 1px solid rgba(91, 157, 163, .28);
+  background:
+    linear-gradient(90deg, rgba(5, 20, 26, .2), rgba(5, 20, 26, .82)),
+    var(--wp6-icon-route) 14% 50% / 54px 54px no-repeat,
+    var(--wp6-icon-stock) 33% 50% / 48px 48px no-repeat,
+    linear-gradient(135deg, #0a2930, #071820 62%, #071219);
+}
+
+.logistics-priority-card {
+  position: relative;
+  padding-left: 54px;
+}
+.logistics-priority-card::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  background: var(--wp6-icon-formation) center / contain no-repeat;
+  opacity: .7;
+}
+.administration-priority-panel .logistics-priority-card::before {
+  background-image: var(--wp6-icon-territory);
+}
+.logistics-priority-card.starved::before {
+  filter: sepia(1) saturate(3) hue-rotate(315deg);
+  opacity: 1;
+}
+
+/* Operations receive an immediate direction/target picture before the figures. */
+.operation-command-card {
+  overflow: hidden;
+}
+.operation-command-card::before {
+  content: '';
+  display: block;
+  height: 72px;
+  margin: -1px -1px 10px;
+  border-bottom: 1px solid rgba(88, 149, 159, .3);
+  background:
+    var(--wp6-icon-operation) 12% 50% / 48px 48px no-repeat,
+    linear-gradient(90deg, rgba(10, 46, 53, .9), rgba(8, 27, 34, .85) 58%, rgba(6, 20, 26, .96));
+}
+.available-forces-panel .compact-formation-list button {
+  position: relative;
+  padding-left: 43px;
+}
+.available-forces-panel .compact-formation-list button::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 25px;
+  height: 25px;
+  transform: translateY(-50%);
+  background: var(--wp6-icon-formation) center / contain no-repeat;
+  opacity: .62;
+}
+
+/* Territory administration becomes a set of small map dossiers rather than
+   visually identical text cards. */
+.territory-command-card {
+  overflow: hidden;
+}
+.territory-command-card::before {
+  content: '';
+  display: block;
+  height: 58px;
+  margin: -1px -1px 10px;
+  border-bottom: 1px solid rgba(97, 155, 163, .28);
+  background:
+    var(--wp6-icon-territory) 15px 50% / 36px 36px no-repeat,
+    repeating-linear-gradient(165deg, transparent 0 17px, rgba(123, 177, 174, .09) 18px 19px),
+    linear-gradient(100deg, rgba(13, 48, 52, .9), rgba(7, 25, 31, .96));
+}
+.territory-command-card.enemy::before {
+  background:
+    var(--wp6-icon-interdict) 15px 50% / 34px 34px no-repeat,
+    repeating-linear-gradient(165deg, transparent 0 17px, rgba(214, 99, 89, .08) 18px 19px),
+    linear-gradient(100deg, rgba(66, 27, 29, .86), rgba(22, 19, 23, .96));
+}
+
+/* Intelligence panels get a stable visual category mark. Numbers and assessed
+   confidence remain authoritative, but the player can find the panel by sight. */
+.intelligence-command-grid > .view-panel {
+  position: relative;
+}
+.intelligence-command-grid > .view-panel::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  background: var(--wp6-icon-intelligence) center / contain no-repeat;
+  opacity: .32;
+  pointer-events: none;
+}
+.intelligence-command-grid .logistics-network-panel::before { background-image: var(--wp6-icon-route); }
+.intelligence-command-grid .warning-panel::before { background-image: var(--wp6-icon-diagnostics); }
+.intelligence-command-grid .mobilisation-panel::before { background-image: var(--wp6-icon-formation); }
+.intelligence-command-grid .enemy-plan-panel::before { background-image: var(--wp6-icon-operation); }
+.intelligence-command-grid .escalation-panel::before { background-image: var(--wp6-icon-interdict); }
+
+/* Campaign control is an archive/command surface, not a generic form. */
+.campaign-controls-panel {
+  overflow: hidden;
+}
+.campaign-controls-panel::before {
+  content: '';
+  display: block;
+  height: 74px;
+  margin: -1px -1px 12px;
+  border-bottom: 1px solid rgba(95, 155, 163, .28);
+  background:
+    var(--wp6-icon-campaign) 16% 50% / 50px 50px no-repeat,
+    linear-gradient(100deg, rgba(10, 45, 52, .9), rgba(6, 21, 28, .96));
+}
+.campaign-file-actions button {
+  min-height: 52px;
+  padding-top: 28px;
+  position: relative;
+}
+.campaign-file-actions button::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translateX(-50%);
+  background: var(--wp6-icon-campaign) center / contain no-repeat;
+  opacity: .72;
+}
+
+/* Secondary-screen explanatory headers should not consume a dashboard-sized
+   block. The prose remains present, but it becomes supporting text. */
+@media (min-width: 901px) {
+  .operations-view .command-view-header,
+  .territories-view .command-view-header,
+  .infrastructure-view .command-view-header,
+  .logistics-priority-view .command-view-header,
+  .intelligence-view .command-view-header,
+  .campaign-view .command-view-header {
+    min-height: 48px;
+  }
+
+  .operations-view .command-view-header > p,
+  .territories-view .command-view-header > p,
+  .infrastructure-view .command-view-header > p,
+  .logistics-priority-view .command-view-header > p,
+  .intelligence-view .command-view-header > p,
+  .campaign-view .command-view-header > p {
+    max-width: 430px;
+    font-size: 8px;
+    line-height: 1.25;
+    opacity: .72;
+  }
+}
+
+@media (max-width: 900px) {
+  .logistics-tabs,
+  .infrastructure-tabs {
+    grid-auto-columns: minmax(68px, 1fr);
+    overflow-x: auto;
+  }
+
+  .logistics-tabs button,
+  .infrastructure-tabs button {
+    min-width: 68px;
+  }
+
+  .logistics-priority-summary > div,
+  .infrastructure-summary-strip > div,
+  .territory-summary-strip > div {
+    padding-left: 38px;
+  }
+
+  .logistics-priority-summary > div::before,
+  .infrastructure-summary-strip > div::before,
+  .territory-summary-strip > div::before {
+    left: 7px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logistics-tabs button,
+  .infrastructure-tabs button,
+  .operation-command-card,
+  .territory-command-card {
+    transition: none !important;
+  }
+}
