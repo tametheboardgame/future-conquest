@@ -28,7 +28,7 @@ test('WP7 explicitly protects the existing music system and controls', () => {
   assert.match(roadmap, /must extend, not replace, the audio system already in production/i);
   assert.match(roadmap, /global music-track picker remains available/i);
   assert.match(roadmap, /master, music and sound-effects volume controls remain available and persistent/i);
-  assert.match(roadmap, /Black Protocol Dawn remains the verified built-in default\/title track/i);
+  assert.match(roadmap, /Black Protocol Dawn`? remains the verified built-in default\/title track/i);
   assert.match(roadmap, /Manual playlist: preserves the current player-selected starting track and playlist behaviour/i);
 });
 
