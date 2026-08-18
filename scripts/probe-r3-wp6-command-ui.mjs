@@ -89,6 +89,22 @@ function assertMapFirstShell(evidence) {
   }
 }
 
+async function menuIconEvidence(selector) {
+  return page.evaluate(menuSelector => [...document.querySelectorAll(`${menuSelector} button`)].map(button => ({
+    label: button.textContent?.trim() ?? '',
+    backgroundImage: getComputedStyle(button, '::before').backgroundImage,
+    captionDisplay: getComputedStyle(button.querySelector('span') ?? button).display
+  })), selector);
+}
+
+function assertIconMenu(items, expectedCount, label) {
+  assert(items.length >= expectedCount, `${label} menu has too few items: ${items.length}`);
+  for (const item of items.slice(0, expectedCount)) {
+    assert(/data:image\/svg\+xml/.test(item.backgroundImage), `${label} item has no pictogram: ${JSON.stringify(item)}`);
+    assert(item.label.length > 0, `${label} item lost its visible/accessibility label`);
+  }
+}
+
 try {
   await page.addInitScript(() => {
     localStorage.setItem('future-conquest:intro-seen:v3', 'true');
@@ -103,10 +119,12 @@ try {
   await page.waitForTimeout(500);
 
   const evidence = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     head: process.env.GITHUB_SHA ?? null,
     captures: {},
-    shell: {}
+    shell: {},
+    specialistMenus: {},
+    specialistSurfaces: {}
   };
 
   const largeShell = await readShellEvidence();
@@ -156,15 +174,93 @@ try {
     repairChoiceArt: getComputedStyle(document.querySelector('.repair-choice') ?? document.body, '::before').backgroundImage,
     buildChoiceArt: getComputedStyle(document.querySelector('.build-choice') ?? document.body, '::before').backgroundImage,
     interdictChoiceArt: getComputedStyle(document.querySelector('.interdict-choice') ?? document.body, '::before').backgroundImage,
-    repairTab: Boolean([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Repair')),
-    upgradeTab: Boolean([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Upgrade'))
+    repairTab: Boolean([...document.querySelectorAll('button')].find(button => button.textContent?.trim().startsWith('Repair'))),
+    upgradeTab: Boolean([...document.querySelectorAll('button')].find(button => button.textContent?.trim().startsWith('Upgrade')))
   }));
+  evidence.specialistMenus.infrastructure = await menuIconEvidence('.infrastructure-tabs');
+  assertIconMenu(evidence.specialistMenus.infrastructure, 5, 'Infrastructure');
   assert(evidence.infrastructure.choiceCards >= 3, 'pictorial infrastructure choice cards missing');
   assert(/data:image\/svg\+xml/.test(evidence.infrastructure.repairChoiceArt), 'repair choice art missing');
   assert(/data:image\/svg\+xml/.test(evidence.infrastructure.buildChoiceArt), 'construction choice art missing');
   assert(/data:image\/svg\+xml/.test(evidence.infrastructure.interdictChoiceArt), 'interdiction choice art missing');
   await page.screenshot({ path: `${outputDir}/infrastructure-1366x768.png`, fullPage: false });
   evidence.captures.infrastructure = 'infrastructure-1366x768.png';
+
+  await page.locator('[data-command-view="logistics"]').click();
+  await page.locator('.logistics-priority-view').waitFor({ state: 'visible', timeout: 10000 });
+  evidence.specialistMenus.logistics = await menuIconEvidence('.logistics-tabs');
+  assertIconMenu(evidence.specialistMenus.logistics, 4, 'Logistics');
+  evidence.specialistSurfaces.logistics = await page.evaluate(() => ({
+    healthArt: getComputedStyle(document.querySelector('.logistics-health-panel') ?? document.body, '::before').backgroundImage,
+    flowIcons: [...document.querySelectorAll('.logistics-flow-steps article > b')].map(node => getComputedStyle(node).backgroundImage),
+    summaryIcons: [...document.querySelectorAll('.logistics-priority-summary > div')].map(node => getComputedStyle(node, '::before').backgroundImage)
+  }));
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.logistics.healthArt), 'logistics health panel has no pictorial cue');
+  assert(evidence.specialistSurfaces.logistics.flowIcons.length >= 3 && evidence.specialistSurfaces.logistics.flowIcons.every(value => /data:image\/svg\+xml/.test(value)), 'supply-flow pictograms missing');
+  await page.screenshot({ path: `${outputDir}/logistics-1366x768.png`, fullPage: false });
+  evidence.captures.logistics = 'logistics-1366x768.png';
+
+  await page.locator('[data-command-view="operations"]').click();
+  await page.locator('.operations-view').waitFor({ state: 'visible', timeout: 10000 });
+  evidence.specialistSurfaces.operations = await page.evaluate(() => {
+    const operation = document.querySelector('.operation-command-card');
+    const available = document.querySelector('.available-forces-panel .compact-formation-list button');
+    return {
+      operationCount: document.querySelectorAll('.operation-command-card').length,
+      operationArt: operation ? getComputedStyle(operation, '::before').backgroundImage : null,
+      availableFormationArt: available ? getComputedStyle(available, '::before').backgroundImage : null
+    };
+  });
+  if (evidence.specialistSurfaces.operations.operationCount > 0) {
+    assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.operations.operationArt), 'operation card pictogram missing');
+  }
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.operations.availableFormationArt ?? ''), 'available formation pictogram missing');
+  await page.screenshot({ path: `${outputDir}/operations-1366x768.png`, fullPage: false });
+  evidence.captures.operations = 'operations-1366x768.png';
+
+  await page.locator('[data-command-view="territories"]').click();
+  await page.locator('.territories-view').waitFor({ state: 'visible', timeout: 10000 });
+  evidence.specialistSurfaces.territories = await page.evaluate(() => {
+    const card = document.querySelector('.territory-command-card');
+    return {
+      cardCount: document.querySelectorAll('.territory-command-card').length,
+      firstCardArt: card ? getComputedStyle(card, '::before').backgroundImage : null,
+      summaryIcons: [...document.querySelectorAll('.territory-summary-strip > div')].map(node => getComputedStyle(node, '::before').backgroundImage)
+    };
+  });
+  assert(evidence.specialistSurfaces.territories.cardCount > 0, 'territory dossier cards missing');
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.territories.firstCardArt ?? ''), 'territory dossier pictogram missing');
+  await page.screenshot({ path: `${outputDir}/territories-1366x768.png`, fullPage: false });
+  evidence.captures.territories = 'territories-1366x768.png';
+
+  await page.locator('[data-command-view="intelligence"]').click();
+  await page.locator('.intelligence-view').waitFor({ state: 'visible', timeout: 10000 });
+  evidence.specialistSurfaces.intelligence = await page.evaluate(() => {
+    const panel = document.querySelector('.intelligence-command-grid > .view-panel');
+    return {
+      panelCount: document.querySelectorAll('.intelligence-command-grid > .view-panel').length,
+      firstPanelIcon: panel ? getComputedStyle(panel, '::before').backgroundImage : null
+    };
+  });
+  assert(evidence.specialistSurfaces.intelligence.panelCount > 0, 'intelligence panels missing');
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.intelligence.firstPanelIcon ?? ''), 'intelligence category pictogram missing');
+  await page.screenshot({ path: `${outputDir}/intelligence-1366x768.png`, fullPage: false });
+  evidence.captures.intelligence = 'intelligence-1366x768.png';
+
+  await page.locator('[data-command-view="campaign"]').click();
+  await page.locator('.campaign-view').waitFor({ state: 'visible', timeout: 10000 });
+  evidence.specialistSurfaces.campaign = await page.evaluate(() => {
+    const panel = document.querySelector('.campaign-controls-panel');
+    const action = document.querySelector('.campaign-file-actions button');
+    return {
+      controlsArt: panel ? getComputedStyle(panel, '::before').backgroundImage : null,
+      actionIcon: action ? getComputedStyle(action, '::before').backgroundImage : null
+    };
+  });
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.campaign.controlsArt ?? ''), 'campaign control pictogram missing');
+  assert(/data:image\/svg\+xml/.test(evidence.specialistSurfaces.campaign.actionIcon ?? ''), 'campaign action pictogram missing');
+  await page.screenshot({ path: `${outputDir}/campaign-1366x768.png`, fullPage: false });
+  evidence.captures.campaign = 'campaign-1366x768.png';
 
   const fatalConsoleErrors = consoleErrors.filter(message => !/favicon|Failed to load resource.*404/i.test(message));
   evidence.consoleErrors = fatalConsoleErrors;
