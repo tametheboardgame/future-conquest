@@ -8,6 +8,18 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function keyboardFocus(selector, maxTabs = 48) {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  for (let attempt = 0; attempt < maxTabs; attempt += 1) {
+    await page.keyboard.press('Tab');
+    const matched = await page.evaluate(target => document.activeElement?.matches(target) ?? false, selector);
+    if (matched) return;
+  }
+  throw new Error(`keyboard tab order did not reach ${selector}`);
+}
+
 try {
   await page.addInitScript(() => {
     localStorage.setItem('future-conquest:intro-seen:v3', 'true');
@@ -39,18 +51,21 @@ try {
   }
 
   const forces = page.locator('[data-command-view="forces"]');
-  await forces.focus();
+  await keyboardFocus('[data-command-view="forces"]');
   const primaryFocus = await forces.evaluate(node => ({
+    focused: document.activeElement === node,
+    focusVisible: node.matches(':focus-visible'),
     outlineStyle: getComputedStyle(node).outlineStyle,
     outlineWidth: getComputedStyle(node).outlineWidth
   }));
+  assert(primaryFocus.focused && primaryFocus.focusVisible, `primary navigation was not reached by keyboard focus: ${JSON.stringify(primaryFocus)}`);
   assert(primaryFocus.outlineStyle !== 'none' && parseFloat(primaryFocus.outlineWidth) >= 1, `primary keyboard focus is not visible: ${JSON.stringify(primaryFocus)}`);
   await page.keyboard.press('Enter');
   await page.locator('.forces-view').waitFor({ state: 'visible', timeout: 5000 });
   assert(await forces.getAttribute('aria-current') === 'page', 'keyboard activation did not update primary navigation state');
 
   const logistics = page.locator('[data-command-view="logistics"]');
-  await logistics.focus();
+  await keyboardFocus('[data-command-view="logistics"]');
   await page.keyboard.press('Enter');
   await page.locator('.logistics-priority-view').waitFor({ state: 'visible', timeout: 5000 });
 
@@ -70,14 +85,15 @@ try {
     assert(item.width >= 68 && item.height >= 54, `specialist control is too small: ${item.label} ${item.width}x${item.height}`);
   }
 
-  const formationsTab = page.locator('.logistics-tabs button').filter({ hasText: 'Formations' }).first();
-  await formationsTab.focus();
+  const formationsTab = page.locator('.logistics-tabs button:nth-child(2)');
+  await keyboardFocus('.logistics-tabs button:nth-child(2)');
   const focusEvidence = await formationsTab.evaluate(node => ({
     focused: document.activeElement === node,
+    focusVisible: node.matches(':focus-visible'),
     outlineStyle: getComputedStyle(node).outlineStyle,
     outlineWidth: getComputedStyle(node).outlineWidth
   }));
-  assert(focusEvidence.focused, 'specialist keyboard focus was not retained');
+  assert(focusEvidence.focused && focusEvidence.focusVisible, `specialist control was not reached by keyboard focus: ${JSON.stringify(focusEvidence)}`);
   assert(focusEvidence.outlineStyle !== 'none' && parseFloat(focusEvidence.outlineWidth) >= 1, `specialist keyboard focus is not visible: ${JSON.stringify(focusEvidence)}`);
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => [...document.querySelectorAll('.logistics-tabs button')].some(button => button.getAttribute('aria-current') === 'page' && button.textContent?.includes('Formations')));
