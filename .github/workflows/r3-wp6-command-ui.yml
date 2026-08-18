@@ -1,0 +1,71 @@
+name: R3 WP6 command UI visual gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/main.tsx'
+      - 'src/r3-wp6-command-ui.css'
+      - 'src/r3-wp6-pictorial-details.css'
+      - 'src/r3-wp6-command-ui-refinements.css'
+      - 'src/r3-wp6-secondary-ui.css'
+      - 'src/r3-wp6-notification-disclosure.css'
+      - 'src/r3-wp6-accessibility.css'
+      - 'src/wp6-notification-disclosure.ts'
+      - 'src/components/CommandNavigation.tsx'
+      - 'src/components/FormationRoster.tsx'
+      - 'src/components/CombatReports.tsx'
+      - 'src/components/LogisticsCommand.tsx'
+      - 'src/components/InfrastructureCommand.tsx'
+      - 'scripts/probe-r3-wp6-command-ui.mjs'
+      - 'scripts/probe-r3-wp6-notifications.mjs'
+      - 'scripts/probe-r3-wp6-accessibility.mjs'
+      - 'tests/r3-wp6-command-ui.test.cjs'
+      - 'docs/roadmap/R3-WP6-COMMAND-UI-UX-OVERHAUL.md'
+      - '.github/workflows/r3-wp6-command-ui.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  command-ui-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run WP6 source contracts
+        run: node --test tests/r3-wp6-command-ui.test.cjs
+      - name: Build production game
+        run: npm run build
+      - name: Install browser probe runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start exact production preview
+        run: npm run preview -- --host 127.0.0.1 > /tmp/r3-wp6-preview.log 2>&1 &
+      - name: Probe map-first shell and pictorial workspaces
+        run: node scripts/probe-r3-wp6-command-ui.mjs
+      - name: Probe dismissible warning disclosure
+        run: node scripts/probe-r3-wp6-notifications.mjs
+      - name: Probe keyboard access and command targets
+        run: node scripts/probe-r3-wp6-accessibility.mjs
+      - name: Upload WP6 visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp6-command-ui-${{ github.event.pull_request.head.sha }}
+          path: |
+            artifacts/r3-wp6
+            /tmp/r3-wp6-preview.log
+          if-no-files-found: warn
