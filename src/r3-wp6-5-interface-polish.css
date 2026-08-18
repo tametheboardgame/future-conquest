@@ -51,15 +51,30 @@
   right: 6px;
   bottom: 4px;
   z-index: 12;
+  max-width: min(440px, calc(100% - 132px));
 }
 
 .r3-terrain-prototype .maplibregl-ctrl-attrib {
-  max-width: min(760px, calc(100% - 16px));
+  max-width: 100% !important;
+  padding: 2px 4px;
+  border: 1px solid rgba(164, 214, 209, .12);
   border-radius: 3px;
-  background: rgba(3, 11, 14, .74);
-  color: rgba(216, 229, 225, .72);
-  font-size: 8px;
-  line-height: 1.25;
+  background: rgba(3, 11, 14, .82);
+  box-shadow: none;
+  color: rgba(216, 229, 225, .68);
+  font-size: 7px;
+  line-height: 1.2;
+  text-align: right;
+  white-space: normal !important;
+}
+
+.r3-terrain-prototype .maplibregl-ctrl-attrib-inner {
+  display: block;
+  white-space: normal !important;
+}
+
+.r3-terrain-prototype .maplibregl-ctrl-attrib a {
+  color: inherit;
 }
 
 .r3-terrain-map-key {
