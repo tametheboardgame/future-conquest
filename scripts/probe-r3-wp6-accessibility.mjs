@@ -40,6 +40,11 @@ try {
 
   const forces = page.locator('[data-command-view="forces"]');
   await forces.focus();
+  const primaryFocus = await forces.evaluate(node => ({
+    outlineStyle: getComputedStyle(node).outlineStyle,
+    outlineWidth: getComputedStyle(node).outlineWidth
+  }));
+  assert(primaryFocus.outlineStyle !== 'none' && parseFloat(primaryFocus.outlineWidth) >= 1, `primary keyboard focus is not visible: ${JSON.stringify(primaryFocus)}`);
   await page.keyboard.press('Enter');
   await page.locator('.forces-view').waitFor({ state: 'visible', timeout: 5000 });
   assert(await forces.getAttribute('aria-current') === 'page', 'keyboard activation did not update primary navigation state');
@@ -67,20 +72,20 @@ try {
 
   const formationsTab = page.locator('.logistics-tabs button').filter({ hasText: 'Formations' }).first();
   await formationsTab.focus();
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => [...document.querySelectorAll('.logistics-tabs button')].some(button => button.getAttribute('aria-current') === 'page' && button.textContent?.includes('Formations')));
-
   const focusEvidence = await formationsTab.evaluate(node => ({
     focused: document.activeElement === node,
     outlineStyle: getComputedStyle(node).outlineStyle,
     outlineWidth: getComputedStyle(node).outlineWidth
   }));
-  assert(focusEvidence.focused, 'specialist keyboard focus was lost after activation');
+  assert(focusEvidence.focused, 'specialist keyboard focus was not retained');
+  assert(focusEvidence.outlineStyle !== 'none' && parseFloat(focusEvidence.outlineWidth) >= 1, `specialist keyboard focus is not visible: ${JSON.stringify(focusEvidence)}`);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => [...document.querySelectorAll('.logistics-tabs button')].some(button => button.getAttribute('aria-current') === 'page' && button.textContent?.includes('Formations')));
 
   const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   assert(reducedMotion, 'reduced-motion browser preference was not active');
 
-  console.log(JSON.stringify({ primary, specialist, focusEvidence, reducedMotion }, null, 2));
+  console.log(JSON.stringify({ primary, primaryFocus, specialist, focusEvidence, reducedMotion }, null, 2));
 } finally {
   await browser.close();
 }
