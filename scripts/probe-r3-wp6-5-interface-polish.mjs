@@ -217,14 +217,23 @@ try {
   evidence.captures.compact = 'command-map-640x900.png';
 
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.locator('.global-settings-toggle').focus();
+  await page.evaluate(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+  });
+  let settingsReachedByKeyboard = false;
+  for (let index = 0; index < 160; index += 1) {
+    await page.keyboard.press('Tab');
+    settingsReachedByKeyboard = await page.locator('.global-settings-toggle').evaluate(node => document.activeElement === node);
+    if (settingsReachedByKeyboard) break;
+  }
   const focusEvidence = await page.evaluate(() => {
     const node = document.querySelector('.global-settings-toggle');
     const style = node ? getComputedStyle(node) : null;
     return { active: document.activeElement === node, outlineStyle: style?.outlineStyle ?? '', outlineWidth: style?.outlineWidth ?? '' };
   });
-  assert(focusEvidence.active, 'Settings control is not keyboard focusable');
-  assert(focusEvidence.outlineStyle !== 'none' && focusEvidence.outlineWidth !== '0px', `Settings focus indicator missing: ${JSON.stringify(focusEvidence)}`);
+  assert(settingsReachedByKeyboard && focusEvidence.active, 'Settings control is not reachable by keyboard Tab navigation');
+  assert(focusEvidence.outlineStyle !== 'none' && focusEvidence.outlineWidth !== '0px', `Settings keyboard focus indicator missing: ${JSON.stringify(focusEvidence)}`);
   evidence.focus = focusEvidence;
 
   fs.writeFileSync(`${outputDir}/evidence.json`, `${JSON.stringify(evidence, null, 2)}\n`);
