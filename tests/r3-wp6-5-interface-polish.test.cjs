@@ -30,10 +30,11 @@ test('terrain keeps one visible attribution treatment and compacts the ready HUD
   assert.match(css, /data-status='ready'[\s\S]*r3-terrain-prototype-toolbar\s*>\s*span[\s\S]*display:\s*none/);
 });
 
-test('sidebar, settings, telemetry and primary rail have bounded geometry', () => {
+test('sidebar, settings, telemetry and primary rail have bounded accessible geometry', () => {
   assert.match(css, /map-ux-sidebar-toggle[\s\S]*transform:\s*translateX\(-100%\)/);
   assert.match(css, /global-settings-toggle[\s\S]*--wp65-header-control/);
   assert.match(css, /button\.network-supply-metric[\s\S]*display:\s*flex[\s\S]*flex-direction:\s*column/);
+  assert.match(css, /--wp6-rail-width:\s*72px/);
   assert.match(css, /--wp65-rail-tile:\s*56px/);
   assert.match(css, /command-nav-items button[\s\S]*max-height:\s*var\(--wp65-rail-tile\)/);
 });
