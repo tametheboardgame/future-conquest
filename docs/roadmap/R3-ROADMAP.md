@@ -2,19 +2,19 @@
 
 Status: APPROVED / ACTIVE PROGRAMME
 
-Last reconciled: 2026-08-17
+Last reconciled: 2026-08-18
 
 R3 is the Visualisation & Command Experience release. Its purpose is to transform the mechanically stabilised strategy game into a coherent, readable and visually distinctive grand-strategy command experience without destabilising the simulation.
 
 ## CURRENT PACKAGE - READ THIS FIRST
 
-**R3-WP3.9A - Map UX Foundations is APPROVED / NEXT and blocks WP4.**
+**R3-WP6.6 - Command Shell Follow-up Polish & Warning Preferences is APPROVED / NEXT.**
 
-Authoritative map-tightening programme: `docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md`.
+Authoritative package detail: `docs/roadmap/R3-WP6.6-COMMAND-SHELL-FOLLOW-UP.md`.
 
-The deployed MapLibre/Three.js physical-map architecture, canonical future-soldier miniatures, end-of-day operational movement beat and first authored landmark pass across all 15 current city/capital nodes are now the accepted production baseline. Product-owner live review on 2026-08-15 confirmed that the result is visually strong, while identifying a final map-tightening sequence before WP4: make the map the default command surface and allow the right command sidebar to collapse, remove the unwanted green/dingy grading that mutes terrain and miniatures, then add the new-campaign portal arrival sequence.
+R3-WP4, WP5, WP6 and WP6.5 are now merged on the accepted physical-map baseline. Product-owner live review after WP6.5 confirmed the command shell is substantially improved while identifying four bounded follow-up issues: the left navigation rail is slightly too cramped, the `How Supply Works` cards need alignment correction, the right context-panel collapse control should sit inside the panel header, and repetitive logistics/end-turn warnings need persistent player preference controls with a route to Settings.
 
-No worker, scheduled supervisor, future chat or autonomous development process should start or resume R3-WP4 until **WP3.9A, WP3.9B and WP3.9C** are implemented, deployed and accepted together in the integrated physical-map review. The old WP4 PR #137 remains closed/unmerged historical reference material only.
+WP6.6 owns those findings. It is a focused UI/presentation and warning-preference package, not another interface redesign. No worker, scheduled supervisor, future chat or autonomous development process should start R3-WP7 until WP6.6 is implemented, deployed and product-owner accepted.
 
 ---
 
@@ -38,11 +38,11 @@ No worker, scheduled supervisor, future chat or autonomous development process s
 
 Completed history:
 
-R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate -> R3-WP3.5 + production hotfix -> R3-WP3.6 -> R3-WP3.7 -> R3-WP3.8A -> R3-WP3.8B -> R3-WP3.8C -> R3-WP3.8D -> R3-WP3.8E
+R3-WP1 -> R3-WP2 -> R3-WP2B -> R3-WP2C -> R3-WP2D -> R3-WP2E -> R3-WP2F -> R3-WP2G -> R3-WP2H -> R3-WP2I -> post-WP2I fixes -> R3-WP3 -> Production Coherence Recovery -> R3 Stabilisation Gate -> R3-WP3.5 + production hotfix -> R3-WP3.6 -> R3-WP3.7 -> R3-WP3.8A -> R3-WP3.8B -> R3-WP3.8C -> R3-WP3.8D -> R3-WP3.8E -> R3-WP3.9A -> R3-WP3.9B/B2/B3 -> R3-WP3.9C -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP6.5
 
 Current and future:
 
-**R3-WP3.9A -> R3-WP3.9B -> R3-WP3.9C -> integrated physical-map review -> R3-WP4 -> R3-WP5 -> R3-WP6 -> R3-WP6.5 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
+**R3-WP6.6 -> R3-WP7 -> R3-WP8 -> R3-WP9 -> integrated R3 review -> human visual/UX playtest -> small R3.5 remediation if required.**
 
 ---
 
@@ -258,111 +258,145 @@ All 15 current city/capital nodes now have authored Campaign/Selected miniatures
 
 # R3-WP3.9 - Map Tightening Programme
 
-Status: **APPROVED / QUEUED / WP4 BLOCKING**
+Status: **COMPLETE / MERGED / DEPLOYED / INTEGRATED REVIEW ACCEPTED**
 
 Authoritative detail: `docs/roadmap/R3-WP3.9-MAP-TIGHTENING.md`.
 
-WP3.9 is the final pre-WP4 tightening sequence identified during product-owner review of the integrated physical map.
+WP3.9 completed the final pre-WP4 tightening sequence identified during product-owner review of the integrated physical map. The programme ultimately included the original A/B/C packages plus the approved B2/B3 physical-colour refinements and an integrated exit review before WP4 resumed.
 
 ### R3-WP3.9A - Map UX Foundations
 
 - BEGIN CAMPAIGN defaults directly to the Map / Command Map view.
 - The right command/formation/intelligence sidebar gains an accessible collapse/expand control.
 - Collapsing the sidebar returns the reclaimed width to the map and preserves selection/context.
-- Map resize/reflow, keyboard access, compact layouts and `?terrain=0` fallback must remain stable.
+- Map resize/reflow, keyboard access, compact layouts and `?terrain=0` fallback remain stable.
 
-### R3-WP3.9B - Map Visual Clarity and Grading
+### R3-WP3.9B / B2 / B3 - Map Visual Clarity and Physical Colour
 
-- Remove the unwanted uniform green/teal/dingy cast currently muting the real terrain and authored miniatures.
-- Keep the overall presentation restrained and military rather than bright, saturated or arcade-like.
-- Audit terrain colour treatment, CSS/translucent overlays, fog/haze, Three.js lighting/material response and strategic overlay opacity before changing values.
-- Preserve border, route, front, label, threat and control readability across lowland and Alpine views.
+- removed the unwanted uniform green/teal/dingy cast that muted terrain and miniatures;
+- moved ownership primarily to clear controller-border treatment rather than broad political wash;
+- added self-hosted physical terrain colour while retaining Copernicus GLO-30 as elevation authority;
+- added higher-resolution local physical-colour LOD for Selected/local camera use;
+- preserved operational border, route, front, label, threat and control readability.
 
 ### R3-WP3.9C - Portal Arrival Sequence
 
-- On the first command-map presentation of a new campaign, show an active arrival portal, stage the future troops appearing/arriving at their existing authoritative anchors, then close the portal.
-- The full sequence occurs at most once for a newly created campaign and does not replay on ordinary map re-entry or established-save loading.
-- Target a short 2-4 second presentation beat with reduced-motion and renderer-failure safe settling.
-- The portal sequence is presentation only and cannot alter positions, personnel, readiness, territory state, simulation timing or saves.
+- first command-map presentation of a new campaign now stages the future formations through the arrival portal at unchanged authoritative anchors;
+- ordinary map re-entry and established-save loading do not replay the opening beat;
+- portal and tutorial sequencing was corrected during integration so portal arrival occurs before the first-time tutorial;
+- the sequence remains presentation-only and does not alter positions, personnel, readiness, territory state, simulation timing or saves.
 
 ---
 
 ## Integrated physical-map refinement gate
 
-Before WP4 may resume, the product owner must accept the integrated deployed result of:
+Status: **COMPLETE / ACCEPTED**
+
+The accepted integrated physical-map baseline contains:
 
 - WP3.6 canonical future-soldier miniatures;
 - WP3.7 end-of-day movement presentation;
 - WP3.8A-E bespoke landmark cities;
 - WP3.9A default-map and collapsible-sidebar UX;
-- WP3.9B cleaner map grading/visual clarity;
+- WP3.9B/B2/B3 cleaned and physically coloured terrain grading;
 - WP3.9C new-campaign portal arrival sequence.
 
-The gate must also confirm that real terrain, all 15 authored cities, infrastructure, labels, routes, borders, fronts and physical formations remain readable and that geographic anchoring, performance, accessibility, fallback, saves, determinism and balance remain intact.
+The integrated exit review confirmed that real terrain, all 15 authored cities, infrastructure, labels, routes, borders, fronts and physical formations remained readable and that geographic anchoring, performance, accessibility, fallback, saves, determinism and balance remained intact. PR #169 records the accepted integrated exit review.
 
 ---
 
 ## R3-WP4 - Battle, Front & Strategic Event Feedback
 
-Status: **BLOCKED BY WP3.9 MAP TIGHTENING AND INTEGRATED PHYSICAL-MAP REVIEW**
+Status: **COMPLETE / MERGED (#171)**
 
-Old PR #137 is CLOSED/UNMERGED reference material only. A fresh WP4 implementation must start from the accepted physical-map-refinement `main`, not from obsolete branches.
+WP4 made attacks, counterattacks, captures, retreats and major campaign changes visible on the map without turning the game into tactical spectacle.
 
-Objective: make attacks, counterattacks, captures, retreats and major campaign changes visible on the map without turning the game into tactical spectacle.
-
-Key requirements:
+Delivered behaviour includes:
 
 - movement and combat read differently;
 - attacks/counterattacks have clear direction;
-- front-line changes, capture, retreat, reinforcement, isolation and critical supply disruption receive concise cues;
-- restrained impacts/smoke/fire may be used where readable at campaign scale;
-- effects interact with the final accepted physical-piece architecture;
-- after-action reports remain the authoritative detailed explanation;
-- effects never expose hidden information or block simulation timing;
-- reduced-motion behaviour is supported.
+- concise recent victory, capture, withdrawal, repelled-counterattack and territory-loss acknowledgements;
+- temporary emphasis of relevant current front segments;
+- presentation remains derived from authoritative visible game state;
+- reduced-motion support and deterministic simulation authority remain intact.
 
 ---
 
 ## R3-WP5 - Strategic Information Layers
 
-Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+Status: **COMPLETE / MERGED (#172)**
 
-Objective: make the map the primary strategic information surface through coherent overlays tied to authoritative simulation state.
+WP5 made the map the primary strategic information surface through coherent overlays tied to authoritative simulation state.
 
-Target layers include political control, friendly strength/readiness, assessed enemy threat, supply/network flow, route condition, Food/Industry/Energy/Transport/Medical/Military Stores, local stockpiles, logistics hubs, occupation/garrison pressure and force-quality information where useful.
+Delivered layers include political control, friendly strength/readiness, assessed enemy threat, supply/network flow, route condition, Food/Industry/Energy/Transport/Medical/Military Stores, local stockpiles, logistics hubs, occupation/garrison pressure and friendly force quality. Enemy information remains constrained to the existing player-visible assessment path.
 
 ---
 
 ## R3-WP6 - Command UI/UX Overhaul
 
-Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+Status: **COMPLETE / MERGED (#173) / VISUALLY ACCEPTED**
 
-Objective: make the surrounding command interface visually coherent with the new map and reduce effort required to understand and act.
+WP6 made the map the main command interface, substantially reduced permanent chrome and propagated an icon-first/pictorial design language through specialist workspaces.
 
-Requirements include a unified panel/typography/icon/button/alert system, clearer territory/formation inspection, better alert priority, preserved deep links, consequence-proportionate confirmation, compact desktop usability, responsive/mobile behaviour, keyboard access, contrast and reduced motion.
+Delivered changes include:
+
+- compressed title/day/resolve chrome and global telemetry;
+- compact permanent left command rail;
+- map-first workspace geometry;
+- pictorial/icon-first treatment across Forces, Infrastructure, Logistics, Operations, Territories, Intelligence and Campaign;
+- dismissible/recoverable transient warnings and reports;
+- keyboard, focus, compact/touch and reduced-motion support;
+- preserved simulation, balance, geography, save and hidden-information authority.
 
 ---
 
-## R3-WP6.5 - Interface Polish & Playthrough Remediation
+## R3-WP6.5 - Interface Polish & Visual Consistency Remediation
 
-Status: **PLANNED / SCOPE INTENTIONALLY DEFERRED**
+Status: **COMPLETE / MERGED (#174) / VISUALLY ACCEPTED**
 
-Objective: perform a bounded whole-interface visual and usability once-over after WP5 and WP6, informed by the actual game state and evidence available at that point rather than by a fixed checklist written in advance.
+WP6.5 converted the earlier deferred polish placeholder into a bounded post-WP6 interface correction pass.
 
-The detailed contents of WP6.5 are deliberately **not defined yet**. When the package becomes active, its scope will be built from:
+Delivered changes include:
 
-- issues and visual inconsistencies identified during real play-throughs;
-- interface bugs and usability friction accumulated during WP4-WP6;
-- obvious presentation inconsistencies or unfinished secondary screens exposed by the completed command UI;
-- small polish/remediation items that materially improve cohesion but do not justify reopening a major earlier work package.
+- action-driven tutorial flow without a misleading visible Forward button;
+- content-driven tutorial sizing and constrained-layout scroll behaviour;
+- one compliant visible Copernicus/MapLibre attribution treatment;
+- compact ready-state terrain HUD rather than a large 3D title band;
+- improved Settings anchoring and top telemetry alignment;
+- bounded/centred primary navigation tile geometry;
+- right-sidebar collapse control attachment improvements;
+- whole-interface containment and visual-consistency sweep across specialist views.
 
-WP6.5 is intended as a focused polish/remediation pass, not another interface redesign. It must not introduce major new mechanics, reopen the accepted physical-map architecture or expand into unrelated feature work unless separately approved. Its detailed acceptance criteria will be written when the package starts, based on the evidence and backlog that exist then.
+Exact-head source, regression, build, browser, accessibility, map-grading and terrain-performance gates were green before merge.
+
+---
+
+## R3-WP6.6 - Command Shell Follow-up Polish & Warning Preferences
+
+Status: **APPROVED / NEXT**
+
+Authoritative detail: `docs/roadmap/R3-WP6.6-COMMAND-SHELL-FOLLOW-UP.md`.
+
+Objective: resolve four concrete live-review findings after WP6.5 without reopening the broader command-interface redesign.
+
+Scope:
+
+- modestly widen/refine the left command rail so labels/icons/badges no longer feel cramped while keeping the map dominant;
+- correct the icon/title/body alignment of the Logistics `How Supply Works` cards;
+- move the right context-panel collapse/expand control fully inside the panel header, recomposing the title/header row around it;
+- add persistent, reversible warning preferences, including a per-warning `Don't show this warning again` path for suppressible logistics advisories and a direct `Warning settings` route into Settings;
+- represent warning severity/suppressibility explicitly so critical/game-protective warnings cannot be accidentally hidden by broad advisory suppression;
+- keep warning preference state outside deterministic simulation authority and preserve existing campaign-save compatibility.
+
+WP6.6 remains a presentation/UX package with a small UI-preference state surface. It must not alter logistics calculations, end-turn outcomes, combat, balance, geography, hidden information or deterministic resolution.
+
+Acceptance requires exact-head browser evidence for the rail, supply cards, panel header, warning modal, Settings warning preferences, persistence and a non-suppressible critical-warning fixture, plus inherited WP6/WP6.5 accessibility and regression gates and final product-owner live visual acceptance.
 
 ---
 
 ## R3-WP7 - Audio, Music & Atmosphere
 
-Status: PLANNED / BLOCKED BY EARLIER PACKAGES
+Status: PLANNED / BLOCKED BY WP6.6
 
 Objective: add music, UI/order/movement/battle cues and restrained atmosphere without making gameplay dependent on audio.
 
@@ -394,6 +428,6 @@ Final validation includes presentation regressions, full repository tests, produ
 
 ## R3 product-owner handoff
 
-Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether the canonical future-soldier miniatures and landmark cities feel satisfying without becoming busy, whether the end-of-day movement beat makes the campaign feel physically alive, whether the opening portal sequence gives the campaign an appropriate arrival moment, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems and whether the whole game feels cohesive.
+Human review should ultimately judge whether the real-terrain direction feels like a coherent grand-strategy physical relief/war-game command table, whether ownership/fronts/forces remain immediately understandable above geography, whether the canonical future-soldier miniatures and landmark cities feel satisfying without becoming busy, whether the end-of-day movement beat makes the campaign feel physically alive, whether the opening portal sequence gives the campaign an appropriate arrival moment, whether battle feedback communicates events clearly, whether strategic information prioritises the right problems, whether warning controls remain helpful without becoming intrusive, and whether the whole game feels cohesive.
 
 Small findings from final R3 review should become an R3.5 remediation pass before selecting the next major simulation/content direction.
