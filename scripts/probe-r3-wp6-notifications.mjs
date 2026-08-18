@@ -63,7 +63,29 @@ try {
   assert(changed.dismissed === null, 'changed warning retained dismissed state');
   assert(changed.text?.includes('Synthetic logistics warning B'), 'changed warning content was lost');
 
-  console.log(JSON.stringify({ initial, changed }, null, 2));
+  await alert.locator('.wp6-alert-dismiss').click();
+  await page.waitForFunction(() => document.querySelector('.wp6-notification-probe')?.hidden === true);
+  await page.evaluate(() => document.querySelector('.wp6-notification-probe')?.remove());
+  await page.waitForTimeout(50);
+  await page.evaluate(() => {
+    const alert = document.createElement('section');
+    alert.className = 'operational-alert-strip warning wp6-notification-probe';
+    alert.setAttribute('aria-live', 'polite');
+    alert.textContent = 'Synthetic logistics warning B';
+    document.body.append(alert);
+  });
+
+  const recurring = page.locator('.wp6-notification-probe');
+  await recurring.locator('.wp6-alert-dismiss').waitFor({ state: 'visible', timeout: 5000 });
+  const recurrence = await recurring.evaluate(node => ({
+    hidden: node.hidden,
+    dismissed: node.getAttribute('data-wp6-dismissed'),
+    text: node.textContent
+  }));
+  assert(recurrence.hidden === false, 'a warning that cleared and later recurred remained permanently dismissed');
+  assert(recurrence.dismissed === null, 'a new warning episode inherited the old dismissal marker');
+
+  console.log(JSON.stringify({ initial, changed, recurrence }, null, 2));
 } finally {
   await browser.close();
 }
