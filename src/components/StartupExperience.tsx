@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { audioManager } from '../audio/audio-manager';
+import { installCampaignAudioDirector } from '../audio/campaign-audio-director';
 import { BUILD_LABEL, BUILD_TIME } from '../generated/build-info';
 import { TERRITORIES } from '../game/data';
 import { loadGlobalSettings, saveGlobalSettings, type GlobalSettings } from '../game/global-settings';
@@ -153,10 +154,21 @@ export function StartupExperience({ children }: Props) {
       audioManager.requestMusic('title');
     } else if (mode === 'intro') {
       audioManager.requestMusic('prologue');
+    } else if (mode === 'victory') {
+      audioManager.requestMusic('victory');
+      void audioManager.playSfx('victory');
+    } else if (mode === 'defeat') {
+      audioManager.requestMusic('defeat');
+      void audioManager.playSfx('defeat');
     } else {
       audioManager.requestMusic('game');
     }
   }, [mode, refreshSaveInspection]);
+
+  useEffect(() => {
+    if (mode !== 'game') return;
+    return installCampaignAudioDirector();
+  }, [mode]);
 
   useEffect(() => {
     const initialDetection = window.setTimeout(refreshPortalTerritory, 50);
