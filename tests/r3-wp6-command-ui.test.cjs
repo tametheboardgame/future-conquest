@@ -19,9 +19,11 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   const css = read('src/r3-wp6-command-ui.css');
   const refinements = read('src/r3-wp6-command-ui-refinements.css');
   const secondary = read('src/r3-wp6-secondary-ui.css');
+  const notifications = read('src/r3-wp6-notification-disclosure.css');
   assert.ok(main.indexOf("./r3-wp6-command-ui.css") > main.indexOf("./responsive-command-fit.css"));
   assert.ok(main.indexOf("./r3-wp6-command-ui-refinements.css") > main.indexOf("./r3-wp6-pictorial-details.css"));
   assert.ok(main.indexOf("./r3-wp6-secondary-ui.css") > main.indexOf("./r3-wp6-command-ui-refinements.css"));
+  assert.ok(main.indexOf("./r3-wp6-notification-disclosure.css") > main.indexOf("./r3-wp6-secondary-ui.css"));
   assert.match(css, /--wp6-rail-width:\s*70px/);
   assert.match(css, /\.command-topbar[\s\S]*height:\s*48px/);
   assert.match(css, /\.command-topbar \.eyebrow[\s\S]*display:\s*none/);
@@ -30,6 +32,7 @@ test('WP6 map-first styles load last and reclaim the complete command stage', ()
   assert.match(refinements, /\.map-panel[\s\S]*grid-template-rows:\s*minmax\(0, 1fr\)/);
   assert.match(refinements, /\.map-panel > \.r3-terrain-prototype-shell[\s\S]*height:\s*100%/);
   assert.match(secondary, /secondary command-surface pass/);
+  assert.match(notifications, /notification disclosure/);
 });
 
 test('WP6 alert cards no longer consume desktop document flow', () => {
@@ -43,6 +46,23 @@ test('WP6 alert cards no longer consume desktop document flow', () => {
   assert.match(reports, /data-wp6-popup="after-action"/);
   assert.match(reports, /aria-label="Dismiss after-action report"/);
   assert.match(reports, /setDismissedReportId\(report\.id\)/);
+});
+
+test('WP6 operational warnings dismiss until their underlying content changes', () => {
+  const main = read('src/main.tsx');
+  const disclosure = read('src/wp6-notification-disclosure.ts');
+  const css = read('src/r3-wp6-notification-disclosure.css');
+  assert.match(main, /installWp6NotificationDisclosure/);
+  assert.match(disclosure, /dismissedSignatures/);
+  assert.match(disclosure, /alertSignature/);
+  assert.match(disclosure, /Dismiss until this warning changes/);
+  assert.match(disclosure, /MutationObserver/);
+  assert.match(disclosure, /characterData:\s*true/);
+  assert.match(disclosure, /alert\.hidden = dismissed/);
+  assert.match(disclosure, /Dismiss \$\{label\}/);
+  assert.match(css, /\.wp6-alert-dismiss/);
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /\[hidden\][\s\S]*display:\s*none !important/);
 });
 
 test('WP6 formation surfaces use canon-derived schematics and visual damage state', () => {
