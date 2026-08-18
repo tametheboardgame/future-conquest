@@ -19,6 +19,7 @@ on:
       - 'src/components/InfrastructureCommand.tsx'
       - 'scripts/probe-r3-wp6-command-ui.mjs'
       - 'scripts/probe-r3-wp6-notifications.mjs'
+      - 'scripts/probe-r3-wp6-accessibility.mjs'
       - 'tests/r3-wp6-command-ui.test.cjs'
       - 'docs/roadmap/R3-WP6-COMMAND-UI-UX-OVERHAUL.md'
       - '.github/workflows/r3-wp6-command-ui.yml'
@@ -56,6 +57,8 @@ jobs:
         run: node scripts/probe-r3-wp6-command-ui.mjs
       - name: Probe dismissible warning disclosure
         run: node scripts/probe-r3-wp6-notifications.mjs
+      - name: Probe keyboard access and command targets
+        run: node scripts/probe-r3-wp6-accessibility.mjs
       - name: Upload WP6 visual evidence
         if: always()
         uses: actions/upload-artifact@v4
