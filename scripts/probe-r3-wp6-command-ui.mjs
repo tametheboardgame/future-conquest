@@ -4,7 +4,6 @@ import { chromium } from 'playwright';
 const origin = process.env.R3_WP6_ORIGIN ?? 'http://127.0.0.1:4173';
 const outputDir = process.env.R3_WP6_ARTIFACTS ?? 'artifacts/r3-wp6';
 fs.mkdirSync(outputDir, { recursive: true });
-fs.copyFileSync('docs/art/reference/canon-armour-and-male-general.webp', `${outputDir}/canon-armour-reference.webp`);
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1900, height: 829 }, reducedMotion: 'reduce' });
@@ -28,6 +27,8 @@ async function readShellEvidence() {
       return {
         x: Math.round(box.x * 10) / 10,
         y: Math.round(box.y * 10) / 10,
+        right: Math.round(box.right * 10) / 10,
+        bottom: Math.round(box.bottom * 10) / 10,
         width: Math.round(box.width * 10) / 10,
         height: Math.round(box.height * 10) / 10,
         display: style.display,
@@ -67,17 +68,18 @@ async function readShellEvidence() {
 }
 
 function assertMapFirstShell(evidence) {
+  const mapSurface = evidence.terrainShell ?? evidence.mapFrame ?? evidence.terrain;
   assert(evidence.topbar, 'command topbar missing');
   assert(evidence.metrics, 'command metrics missing');
   assert(evidence.navigation, 'command navigation missing');
   assert(evidence.mapPanel, 'map panel missing');
-  assert(evidence.mapFrame, 'map frame missing');
+  assert(mapSurface, 'map surface missing');
   assert(evidence.topbar.height <= 54, `topbar still too tall: ${evidence.topbar.height}px`);
   assert(evidence.metrics.height <= 46, `metrics still too tall: ${evidence.metrics.height}px`);
   assert(evidence.navigation.width <= 74, `navigation rail still too wide: ${evidence.navigation.width}px`);
   assert(evidence.mapPanel.y <= 125, `map starts too low in first viewport: ${evidence.mapPanel.y}px`);
-  assert(evidence.mapFrame.height >= evidence.mapPanel.height - 4, `map does not fill primary stage: frame ${evidence.mapFrame.height}px / panel ${evidence.mapPanel.height}px`);
-  assert(evidence.terrain?.height >= evidence.mapPanel.height - 4, `terrain does not fill primary stage: terrain ${evidence.terrain?.height}px / panel ${evidence.mapPanel.height}px`);
+  assert(mapSurface.height >= evidence.mapPanel.height - 4, `map does not fill primary stage: surface ${mapSurface.height}px / panel ${evidence.mapPanel.height}px`);
+  if (evidence.terrain) assert(evidence.terrain.height >= evidence.mapPanel.height - 4, `terrain does not fill primary stage: terrain ${evidence.terrain.height}px / panel ${evidence.mapPanel.height}px`);
   assert(evidence.eyebrow?.display === 'none', `runtime programme eyebrow is still visible: ${JSON.stringify(evidence.eyebrow)}`);
   assert(evidence.mapHeading?.position === 'absolute', `map heading is not an over-map HUD: ${JSON.stringify(evidence.mapHeading)}`);
   for (const alert of evidence.alertGeometry) {
@@ -101,9 +103,9 @@ try {
   await page.waitForTimeout(500);
 
   const evidence = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     head: process.env.GITHUB_SHA ?? null,
-    captures: { canonicalArmour: 'canon-armour-reference.webp' },
+    captures: {},
     shell: {}
   };
 
@@ -123,33 +125,26 @@ try {
 
   await page.locator('[data-command-view="forces"]').click();
   await page.locator('.formation-roster').waitFor({ state: 'visible', timeout: 10000 });
-  await page.waitForFunction(() => {
-    const portraits = [...document.querySelectorAll('.formation-roster-portrait img')];
-    return portraits.length > 0 && portraits.every(image => image.complete && image.naturalWidth > 0);
-  }, null, { timeout: 10000 });
+  await page.locator('.formation-armour-miniature').first().waitFor({ state: 'visible', timeout: 10000 });
   evidence.formations = await page.evaluate(() => {
-    const image = document.querySelector('.formation-roster-portrait img');
-    const imageStyle = image ? getComputedStyle(image) : null;
-    const imageBox = image?.getBoundingClientRect();
+    const miniature = document.querySelector('.formation-armour-miniature');
+    const miniatureBox = miniature?.getBoundingClientRect();
+    const selected = document.querySelector('.selected-formation-card');
     return {
       portraitCount: document.querySelectorAll('.formation-roster-portrait').length,
-      canonicalImageCount: document.querySelectorAll('.formation-roster-portrait img').length,
-      selectedCardArt: getComputedStyle(document.querySelector('.selected-formation-card') ?? document.body, '::before').backgroundImage,
-      firstPortrait: image && imageStyle && imageBox ? {
-        naturalWidth: image.naturalWidth,
-        naturalHeight: image.naturalHeight,
-        width: Math.round(imageBox.width * 10) / 10,
-        height: Math.round(imageBox.height * 10) / 10,
-        display: imageStyle.display,
-        opacity: imageStyle.opacity,
-        visibility: imageStyle.visibility,
-        objectPosition: imageStyle.objectPosition,
-        filter: imageStyle.filter
+      miniatureCount: document.querySelectorAll('.formation-armour-miniature').length,
+      damageMarkCount: document.querySelectorAll('.formation-armour-miniature .armour-damage').length,
+      selectedCardArt: getComputedStyle(selected ?? document.body, '::before').backgroundImage,
+      firstMiniature: miniature && miniatureBox ? {
+        width: Math.round(miniatureBox.width * 10) / 10,
+        height: Math.round(miniatureBox.height * 10) / 10
       } : null
     };
   });
   assert(evidence.formations.portraitCount > 0, 'formation portrait cards were not rendered');
-  assert(evidence.formations.firstPortrait?.width > 20 && evidence.formations.firstPortrait?.height > 20, `formation portrait image collapsed: ${JSON.stringify(evidence.formations.firstPortrait)}`);
+  assert(evidence.formations.miniatureCount === evidence.formations.portraitCount, 'formation miniatures do not match portrait cards');
+  assert(evidence.formations.firstMiniature?.width > 20 && evidence.formations.firstMiniature?.height > 20, `formation miniature collapsed: ${JSON.stringify(evidence.formations.firstMiniature)}`);
+  assert(/data:image\/svg\+xml/.test(evidence.formations.selectedCardArt), 'selected formation inspection is not pictorial');
   await page.screenshot({ path: `${outputDir}/forces-1366x768.png`, fullPage: false });
   evidence.captures.forces = 'forces-1366x768.png';
 
@@ -165,6 +160,9 @@ try {
     upgradeTab: Boolean([...document.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Upgrade'))
   }));
   assert(evidence.infrastructure.choiceCards >= 3, 'pictorial infrastructure choice cards missing');
+  assert(/data:image\/svg\+xml/.test(evidence.infrastructure.repairChoiceArt), 'repair choice art missing');
+  assert(/data:image\/svg\+xml/.test(evidence.infrastructure.buildChoiceArt), 'construction choice art missing');
+  assert(/data:image\/svg\+xml/.test(evidence.infrastructure.interdictChoiceArt), 'interdiction choice art missing');
   await page.screenshot({ path: `${outputDir}/infrastructure-1366x768.png`, fullPage: false });
   evidence.captures.infrastructure = 'infrastructure-1366x768.png';
 
