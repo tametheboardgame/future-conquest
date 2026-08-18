@@ -1,5 +1,15 @@
+import { useEffect, useState } from 'react';
 import { MUSIC_TRACK_OPTIONS, resolveMusicTrackId } from '../audio/music-library';
 import { ASSISTANCE_LEVELS, type AssistanceLevel, type GlobalSettings } from '../game/global-settings';
+import {
+  DEFAULT_WARNING_PREFERENCES,
+  WARNING_DEFINITIONS,
+  WARNING_MODE_OPTIONS,
+  loadWarningPreferences,
+  saveWarningPreferences,
+  type WarningMode,
+  type WarningPreferences
+} from '../game/warning-preferences';
 
 interface Props {
   settings: GlobalSettings;
@@ -13,8 +23,22 @@ interface Props {
 const percentage = (value: number) => `${Math.round(value * 100)}%`;
 
 export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVictory, onPreviewDefeat, onReturnToTitle }: Props) {
+  const [warningPreferences, setWarningPreferences] = useState<WarningPreferences>(() => loadWarningPreferences());
+
+  useEffect(() => {
+    const refresh = () => setWarningPreferences(loadWarningPreferences());
+    window.addEventListener('future-conquest:warning-preferences-changed', refresh);
+    return () => window.removeEventListener('future-conquest:warning-preferences-changed', refresh);
+  }, []);
+
   const updateVolume = (key: 'masterVolume' | 'musicVolume' | 'sfxVolume', value: string) => {
     onChange({ ...settings, [key]: Number(value) });
+  };
+
+  const updateWarningPreferences = (next: WarningPreferences) => {
+    const saved = saveWarningPreferences(next);
+    setWarningPreferences(saved);
+    window.dispatchEvent(new CustomEvent('future-conquest:warning-preferences-changed'));
   };
 
   const toggleFullscreen = async () => {
@@ -50,6 +74,17 @@ export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVict
         <p className="settings-future-copy">These preferences persist on this device and are not stored in campaign save files.</p>
         <label className="settings-mute"><input type="checkbox" checked={settings.autosaveEnabled} onChange={event => onChange({ ...settings, autosaveEnabled: event.target.checked })} />Autosave after each resolved day</label>
         <label className="settings-track-picker"><span><b>Assistance</b><small>Player preference</small></span><select value={settings.assistanceLevel} onChange={event => onChange({ ...settings, assistanceLevel: event.target.value as AssistanceLevel })}>{ASSISTANCE_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}</select></label>
+      </div>
+
+      <div className="settings-section warning-preferences-settings" id="warning-preferences-settings">
+        <div className="settings-section-heading"><div><p className="launcher-kicker">WARNING PREFERENCES</p><h3>Warnings &amp; advisories</h3></div></div>
+        <p className="settings-future-copy">Repeat advisory warnings can be reduced or suppressed. Critical and operationally mandatory warnings always remain enabled.</p>
+        <label className="settings-track-picker"><span><b>Warning mode</b><small>Global player preference</small></span><select value={warningPreferences.warningMode} onChange={event => updateWarningPreferences({ ...warningPreferences, warningMode: event.target.value as WarningMode })}>{WARNING_MODE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+        <div className="warning-suppression-review">
+          <div><b>Suppressed warnings</b><small>{warningPreferences.suppressedWarningIds.length ? `${warningPreferences.suppressedWarningIds.length} suppressed` : 'None suppressed'}</small></div>
+          {warningPreferences.suppressedWarningIds.map(id => <button type="button" key={id} className="settings-secondary" onClick={() => updateWarningPreferences({ ...warningPreferences, suppressedWarningIds: warningPreferences.suppressedWarningIds.filter(item => item !== id) })}>Restore · {WARNING_DEFINITIONS[id].label}</button>)}
+          <button type="button" className="settings-secondary" disabled={warningPreferences.warningMode === DEFAULT_WARNING_PREFERENCES.warningMode && warningPreferences.suppressedWarningIds.length === 0} onClick={() => updateWarningPreferences({ ...DEFAULT_WARNING_PREFERENCES, suppressedWarningIds: [] })}>Reset warning preferences</button>
+        </div>
       </div>
 
       <div className="settings-section">

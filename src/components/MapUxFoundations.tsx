@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './map-ux-foundations.css';
 
 interface Props {
@@ -10,8 +11,6 @@ interface TerrainResizeHandle {
 }
 
 type TerrainWindow = Window & { __r3TerrainMap?: TerrainResizeHandle };
-
-type TogglePosition = { top: number; left: number };
 
 const PANEL_ID = 'command-map-context-panel';
 const DESKTOP_QUERY = '(min-width: 901px)';
@@ -25,23 +24,17 @@ function mapContextPanel(): HTMLElement | null {
   return document.querySelector<HTMLElement>('.map-context-panel');
 }
 
-function samePosition(current: TogglePosition | null, next: TogglePosition): boolean {
-  return Boolean(current && Math.abs(current.top - next.top) < 0.5 && Math.abs(current.left - next.left) < 0.5);
-}
-
 export function MapUxFoundations({ active }: Props) {
-  // Deliberately session-only: leaving/re-entering views retains the player's
-  // preference, while a fresh browser session starts with the command panel open.
+  // Deliberately session-only: a fresh browser session starts expanded and this
+  // presentation preference never becomes campaign/save state.
   const [collapsed, setCollapsed] = useState(false);
   const [available, setAvailable] = useState(false);
-  const [togglePosition, setTogglePosition] = useState<TogglePosition | null>(null);
+  const [toggleHost, setToggleHost] = useState<HTMLElement | null>(null);
   const settleTimerRef = useRef<number | undefined>(undefined);
 
   const resizeRenderedMap = useCallback(() => {
     const resize = () => {
       (window as TerrainWindow).__r3TerrainMap?.resize();
-      // The SVG/DOM fallback and any future responsive map host can use the same
-      // ordinary resize signal without depending on MapLibre diagnostics.
       window.dispatchEvent(new Event('resize'));
     };
     window.requestAnimationFrame(resize);
@@ -53,12 +46,13 @@ export function MapUxFoundations({ active }: Props) {
     const workspace = mapWorkspace();
     const panel = mapContextPanel();
     const desktop = window.matchMedia(DESKTOP_QUERY).matches;
-    const canControl = Boolean(active && workspace && panel && desktop);
+    const host = panel?.querySelector<HTMLElement>('.quick-command-heading') ?? null;
+    const canControl = Boolean(active && workspace && panel && host && desktop);
 
     setAvailable(current => current === canControl ? current : canControl);
 
     if (!workspace || !panel) {
-      setTogglePosition(null);
+      setToggleHost(null);
       return;
     }
 
@@ -66,21 +60,14 @@ export function MapUxFoundations({ active }: Props) {
     const shouldCollapse = Boolean(active && desktop && collapsed);
     workspace.classList.toggle('wp39a-sidebar-collapsed', shouldCollapse);
     panel.classList.toggle('wp39a-sidebar-collapsed', shouldCollapse);
-    panel.inert = shouldCollapse;
-    if (shouldCollapse) panel.setAttribute('aria-hidden', 'true');
-    else panel.removeAttribute('aria-hidden');
+    panel.dataset.sidebarCollapsed = String(shouldCollapse);
 
-    if (!canControl) {
-      setTogglePosition(null);
-      return;
-    }
-
-    const rect = panel.getBoundingClientRect();
-    const next = {
-      top: Math.max(8, Math.round(rect.top + 18)),
-      left: Math.max(14, Math.round(rect.left))
-    };
-    setTogglePosition(current => samePosition(current, next) ? current : next);
+    // WP6.6 keeps the collapse control inside the panel header. The historical
+    // WP3.9A whole-panel inert/aria-hidden treatment cannot be used here because
+    // it would also disable the in-header control needed to expand the panel.
+    panel.inert = false;
+    panel.removeAttribute('aria-hidden');
+    setToggleHost(canControl ? host : null);
   }, [active, collapsed]);
 
   useEffect(() => {
@@ -108,14 +95,13 @@ export function MapUxFoundations({ active }: Props) {
     if (active) resizeRenderedMap();
   }, [active, collapsed, reconcileLayout, resizeRenderedMap]);
 
-  if (!available || !togglePosition) return null;
+  if (!available || !toggleHost) return null;
 
   const expanded = !collapsed;
-  return <button
+  return createPortal(<button
     type="button"
     className="map-ux-sidebar-toggle"
     data-map-sidebar-toggle
-    style={{ top: togglePosition.top, left: togglePosition.left }}
     aria-controls={PANEL_ID}
     aria-expanded={expanded}
     aria-label={expanded ? 'Collapse command sidebar' : 'Expand command sidebar'}
@@ -123,5 +109,5 @@ export function MapUxFoundations({ active }: Props) {
     onClick={() => setCollapsed(current => !current)}
   >
     <span aria-hidden="true">{expanded ? '›' : '‹'}</span>
-  </button>;
+  </button>, toggleHost);
 }

@@ -36,13 +36,15 @@ test('collapse returns sidebar width to the map and explicitly resizes the accel
   assert.match(ux, /RESIZE_SETTLE_MS = 190/);
 });
 
-test('sidebar control exposes keyboard/accessibility state and removes hidden panel content from interaction', () => {
+test('sidebar control exposes keyboard/accessibility state while keeping its in-header expand control operable', () => {
+  assert.match(ux, /createPortal/);
+  assert.match(ux, /querySelector<HTMLElement>\('\.quick-command-heading'\)/);
   assert.match(ux, /aria-controls=\{PANEL_ID\}/);
   assert.match(ux, /aria-expanded=\{expanded\}/);
   assert.match(ux, /Collapse command sidebar/);
   assert.match(ux, /Expand command sidebar/);
-  assert.match(ux, /panel\.inert = shouldCollapse/);
-  assert.match(ux, /panel\.setAttribute\('aria-hidden', 'true'\)/);
+  assert.match(ux, /panel\.inert = false/);
+  assert.doesNotMatch(ux, /panel\.setAttribute\('aria-hidden', 'true'\)/);
   assert.match(css, /\.map-ux-sidebar-toggle:focus-visible\s*\{[^}]*outline:/s);
 });
 

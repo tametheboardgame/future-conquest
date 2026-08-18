@@ -24,8 +24,8 @@ test('R3 programme records terrain completion and the approved physical-map refi
   assert.ok(wp2b >= 0 && wp2c > wp2b && wp2d > wp2c && wp2e > wp2d && wp3 > wp2e);
   assert.ok(recovery > wp3 && stabilisation > recovery && wp35 > stabilisation);
   assert.ok(wp36 > wp35 && wp37 > wp36 && wp38 > wp37 && wp4 > wp38);
-  assert.match(status, /R3-WP3\.6 - Future Soldier Army Miniatures.*ACTIVE/s);
-  assert.match(status, /R3-WP4 is blocked by the approved physical-map refinement sequence/i);
+  assert.match(status, /R3 Visualisation & Command Experience is now in \*\*R3-WP6\.6 - Command Shell Follow-up Polish & Warning Preferences\*\*/);
+  assert.match(status, /R3-WP3\.9 integrated physical-map tightening and exit review completed before WP4 resumed/i);
   assert.match(refinement, /R3-WP3\.6 - Future Soldier Army Miniatures/);
   assert.match(refinement, /R3-WP3\.7 - End-of-Day Operational Movement Beat/);
   assert.match(refinement, /R3-WP3\.8A - Landmark Cities Pass 1/);

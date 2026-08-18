@@ -31,12 +31,28 @@ async function layoutEvidence(page) {
     const group = document.querySelector('.selected-formation-card h2');
     const territory = document.querySelector('.territory-card h3');
     if (!(workspace instanceof HTMLElement) || !(map instanceof HTMLElement) || !(panel instanceof HTMLElement)) throw new Error('map workspace unavailable');
+
+    const hiddenWhenCollapsed = [
+      ...panel.querySelectorAll(':scope > :not(.quick-command)'),
+      ...panel.querySelectorAll('.quick-command > :not(.quick-command-heading)'),
+      ...panel.querySelectorAll('.quick-command-heading > :not(.map-ux-sidebar-toggle)')
+    ];
+    const collapsedContentHidden = hiddenWhenCollapsed.every(node => getComputedStyle(node).display === 'none');
+    const sidebarToggle = panel.querySelector('[data-map-sidebar-toggle]');
+    const sidebarToggleVisible = sidebarToggle instanceof HTMLElement
+      && getComputedStyle(sidebarToggle).display !== 'none'
+      && sidebarToggle.getBoundingClientRect().width > 0
+      && sidebarToggle.getBoundingClientRect().height > 0;
+
     return {
       collapsed: workspace.classList.contains('wp39a-sidebar-collapsed'),
       mapWidth: map.getBoundingClientRect().width,
       panelWidth: panel.getBoundingClientRect().width,
       panelHidden: panel.getAttribute('aria-hidden'),
       panelInert: panel.inert,
+      collapsedContentHidden,
+      sidebarToggleVisible,
+      sidebarToggleExpanded: sidebarToggle?.getAttribute('aria-expanded') ?? null,
       rendererWidth: terrainCanvas instanceof HTMLElement ? terrainCanvas.getBoundingClientRect().width : svg instanceof SVGElement ? svg.getBoundingClientRect().width : null,
       selectedGroup: group?.textContent?.trim() ?? '',
       selectedTerritory: territory?.textContent?.trim() ?? ''
@@ -48,7 +64,8 @@ function requireGrowth(before, after, label) {
   if (!after.collapsed) throw new Error(`${label}: sidebar did not enter collapsed state`);
   if (after.panelWidth > 60) throw new Error(`${label}: collapsed sidebar remained too wide (${after.panelWidth})`);
   if (after.mapWidth - before.mapWidth < 220) throw new Error(`${label}: map did not reclaim enough width (${before.mapWidth} -> ${after.mapWidth})`);
-  if (after.panelHidden !== 'true' || !after.panelInert) throw new Error(`${label}: collapsed command content remained exposed to accessibility/keyboard interaction`);
+  if (!after.collapsedContentHidden) throw new Error(`${label}: collapsed command content remained visible/interactable`);
+  if (!after.sidebarToggleVisible || after.sidebarToggleExpanded !== 'false') throw new Error(`${label}: in-header expand control was not operable in collapsed state`);
   if (before.selectedGroup !== after.selectedGroup || before.selectedTerritory !== after.selectedTerritory) throw new Error(`${label}: selection context changed during collapse`);
   if (before.rendererWidth !== null && after.rendererWidth !== null && after.rendererWidth - before.rendererWidth < 180) throw new Error(`${label}: renderer did not resize with reclaimed map width`);
 }
@@ -115,7 +132,7 @@ try {
   await fallbackPage.locator('.command-map-workspace').screenshot({ path: `${outputDir}/svg-fallback-sidebar-collapsed.png` });
 
   const evidence = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     defaultView: 'map',
     terrain: { before, collapsed, returned, expanded, compact },
     svgFallback: { before: fallbackBefore, collapsed: fallbackCollapsed }
