@@ -20,6 +20,14 @@ function intersects(a, b, tolerance = 0) {
   return a.left < b.right - tolerance && a.right > b.left + tolerance && a.top < b.bottom - tolerance && a.bottom > b.top + tolerance;
 }
 
+function contains(outer, inner, tolerance = 0) {
+  if (!outer || !inner) return false;
+  return inner.left >= outer.left - tolerance
+    && inner.right <= outer.right + tolerance
+    && inner.top >= outer.top - tolerance
+    && inner.bottom <= outer.bottom + tolerance;
+}
+
 async function shellEvidence() {
   return page.evaluate(() => {
     const rect = selector => {
@@ -61,6 +69,7 @@ async function shellEvidence() {
       terrainToolbar: rect('.r3-terrain-prototype-toolbar'),
       terrainToolbarTitle: rect('.r3-terrain-prototype-toolbar > span'),
       mapContext: rect('.map-context-panel'),
+      sidebarHeader: rect('.map-context-panel .quick-command-heading'),
       sidebarToggle: rect('.map-ux-sidebar-toggle'),
       visibleAttributions: attributionNodes.filter(visible).length,
       attributionGeometry: attributionNodes.filter(visible).map(node => {
@@ -97,8 +106,10 @@ function assertStableShell(evidence, { expectTerrain = true } = {}) {
   }
 
   if (evidence.mapContext && evidence.sidebarToggle) {
-    assert(Math.abs(evidence.sidebarToggle.right - evidence.mapContext.left) <= 2.5,
-      `sidebar toggle is detached from panel edge: ${JSON.stringify({ toggle: evidence.sidebarToggle, panel: evidence.mapContext })}`);
+    assert(contains(evidence.mapContext, evidence.sidebarToggle, 2.5),
+      `sidebar toggle escapes the context panel: ${JSON.stringify({ toggle: evidence.sidebarToggle, panel: evidence.mapContext })}`);
+    assert(evidence.sidebarHeader && contains(evidence.sidebarHeader, evidence.sidebarToggle, 2.5),
+      `sidebar toggle is not contained by the panel header: ${JSON.stringify({ toggle: evidence.sidebarToggle, header: evidence.sidebarHeader })}`);
   }
 }
 
@@ -146,7 +157,7 @@ try {
   await page.waitForFunction(() => ['ready', 'warning'].includes(document.querySelector('.r3-terrain-prototype')?.getAttribute('data-status') ?? ''), null, { timeout: 45000 });
   await page.waitForTimeout(900);
 
-  const evidence = { schemaVersion: 1, head: process.env.GITHUB_SHA ?? null, captures: {}, shell: {}, specialistSweep: {}, tutorial: {} };
+  const evidence = { schemaVersion: 2, head: process.env.GITHUB_SHA ?? null, captures: {}, shell: {}, specialistSweep: {}, tutorial: {} };
 
   evidence.shell.large = await capture('command-map-1900x829', 1900, 829);
   evidence.captures.large = 'command-map-1900x829.png';
@@ -159,8 +170,6 @@ try {
   await page.waitForTimeout(260);
   const collapsed = await shellEvidence();
   assertStableShell(collapsed);
-  assert(collapsed.mapContext && collapsed.sidebarToggle && Math.abs(collapsed.sidebarToggle.right - collapsed.mapContext.left) <= 2.5,
-    'collapsed sidebar toggle detached from panel edge');
   evidence.shell.collapsed = collapsed;
   await page.locator('[data-map-sidebar-toggle]').click();
   await page.waitForTimeout(240);
