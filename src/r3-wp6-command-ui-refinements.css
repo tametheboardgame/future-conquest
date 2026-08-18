@@ -16,14 +16,46 @@
     min-height: 0;
   }
 
+  /* The operating instruction remains available elsewhere in the command UI;
+     the persistent over-map HUD only needs the symbol legend. */
+  .map-heading {
+    right: auto;
+    min-height: 28px;
+    padding: 5px 8px;
+  }
+
+  .map-heading > p {
+    display: none;
+  }
+
+  .map-heading .legend {
+    max-width: none;
+    white-space: nowrap;
+  }
+
+  /* Once terrain is healthy, keep implementation/source wording out of the
+     primary command surface. Warning/initialising text remains visible. */
+  .r3-terrain-prototype[data-status="ready"] .r3-terrain-prototype-toolbar > span {
+    font-size: 0;
+  }
+
+  .r3-terrain-prototype[data-status="ready"] .r3-terrain-prototype-toolbar > span > strong {
+    font-size: 9px;
+  }
+
   /* Put command notifications over the map when the map is the active view,
-     leaving the formation inspector usable. */
+     leaving the formation inspector and camera/layer controls usable. */
   .command-app-shell:has(.command-map-workspace) .operational-alert-strip,
   .command-app-shell:has(.command-map-workspace) .enemy-action-alert,
   .command-app-shell:has(.command-map-workspace) .adviser-alert-strip,
   .command-app-shell:has(.command-map-workspace) .combat-report-alert {
     right: 365px;
   }
+
+  .command-app-shell:has(.command-map-workspace) .operational-alert-strip { top: 182px; }
+  .command-app-shell:has(.command-map-workspace) .enemy-action-alert { top: 246px; }
+  .command-app-shell:has(.command-map-workspace) .adviser-alert-strip { top: 310px; }
+  .command-app-shell:has(.command-map-workspace) .combat-report-alert { top: 374px; }
 
   .operational-alert-strip {
     grid-template-columns: minmax(0, 1fr) auto;
