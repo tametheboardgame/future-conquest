@@ -65,7 +65,7 @@ try {
     assert(item.width >= 68 && item.height >= 54, `specialist control is too small: ${item.label} ${item.width}x${item.height}`);
   }
 
-  const formationsTab = page.getByRole('button', { name: /Formations/ }).filter({ visible: true }).last();
+  const formationsTab = page.locator('.logistics-tabs button').filter({ hasText: 'Formations' }).first();
   await formationsTab.focus();
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => [...document.querySelectorAll('.logistics-tabs button')].some(button => button.getAttribute('aria-current') === 'page' && button.textContent?.includes('Formations')));
