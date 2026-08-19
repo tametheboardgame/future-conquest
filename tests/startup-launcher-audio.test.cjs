@@ -74,17 +74,20 @@ test('music library keeps Black Protocol Dawn and auto-discovers drop-in MP3 tra
   assert.match(packageJson, /"build:audio": "node scripts\/build-audio-assets\.mjs"/);
 });
 
-test('music continues into gameplay and cycles through the complete library', () => {
+test('manual music mode preserves the existing complete-library playlist while adaptive music follows campaign context', () => {
   const audio = fs.readFileSync('src/audio/audio-manager.ts', 'utf8');
   const library = fs.readFileSync('src/audio/music-library.ts', 'utf8');
   const startup = fs.readFileSync('src/components/StartupExperience.tsx', 'utf8');
 
-  assert.match(audio, /game: 'playlist'/);
-  assert.match(audio, /MUSIC_TRACK_OPTIONS\.findIndex/);
-  assert.match(audio, /\(currentIndex \+ 1\) % MUSIC_TRACK_OPTIONS\.length/);
+  assert.match(audio, /this\.settings\.musicMode === 'manual'/);
+  assert.match(audio, /resolveMusicTrackId\(this\.settings\.musicTrackId\)/);
+  assert.match(audio, /\? musicPlaylistForContext\(this\.currentContext\)[\s\S]*: MUSIC_TRACK_OPTIONS/);
+  assert.match(audio, /playlist\.findIndex/);
+  assert.match(audio, /\(currentIndex \+ 1\) % playlist\.length/);
   assert.match(audio, /addEventListener\('ended'/);
   assert.match(audio, /playNextTrack\(\)/);
-  assert.match(audio, /previousTrack !== nextTrack[\s\S]*playTrack\(nextTrack, 350\)/);
+  assert.match(library, /game:\s*\['protocol-zero', DEFAULT_MUSIC_TRACK_ID\]/);
+  assert.match(library, /combat:\s*\['combat-i', 'combat-ii', 'rising-tension'\]/);
   assert.match(library, /loop: false/);
   assert.match(startup, /audioManager\.requestMusic\('game'\)/);
   assert.doesNotMatch(startup, /else \{\s*audioManager\.stopMusic\(\)/);
