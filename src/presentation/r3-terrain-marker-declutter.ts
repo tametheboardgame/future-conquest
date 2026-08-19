@@ -1,4 +1,4 @@
-import { DeterministicSpatialGrid } from '../game/spatial-grid';
+import { DeterministicSpatialGrid } from '../game/spatial-grid.ts';
 
 export type TerrainMarkerLod = 'theatre' | 'campaign' | 'local';
 
