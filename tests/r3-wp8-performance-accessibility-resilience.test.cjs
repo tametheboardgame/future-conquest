@@ -7,11 +7,11 @@ const markerDeclutterSource = readFileSync('src/presentation/r3-terrain-marker-d
 const terrainHostSource = readFileSync('src/components/TerrainMapPrototype.tsx', 'utf8');
 const accessibilityCss = readFileSync('src/r3-wp8-accessibility.css', 'utf8');
 
-test('spatial grid preserves insertion order while limiting neighbourhood scans', () => {
+test('spatial grid keeps 250k items local instead of degrading to all-pairs scans', () => {
   const grid = new DeterministicSpatialGrid(64);
   const points = [];
-  for (let y = 0; y < 100; y += 1) {
-    for (let x = 0; x < 100; x += 1) {
+  for (let y = 0; y < 500; y += 1) {
+    for (let x = 0; x < 500; x += 1) {
       const point = { id: `${x}:${y}`, x: x * 80, y: y * 80 };
       points.push(point);
       grid.insert(point);
@@ -19,7 +19,7 @@ test('spatial grid preserves insertion order while limiting neighbourhood scans'
   }
 
   let inspected = 0;
-  for (let index = 0; index < points.length; index += 10) {
+  for (let index = 0; index < points.length; index += 250) {
     const point = points[index];
     const found = grid.someNearby(point.x, point.y, 48, candidate => {
       inspected += 1;
@@ -28,6 +28,7 @@ test('spatial grid preserves insertion order while limiting neighbourhood scans'
     assert.equal(found, true);
   }
 
+  assert.equal(points.length, 250000);
   assert.ok(inspected < 10000, `expected localised scans, inspected ${inspected} candidates`);
 });
 
