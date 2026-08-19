@@ -35,7 +35,7 @@ test('WP9 orchestrates regression, visual, persistence, performance and campaign
 
 test('WP9 browser continuity follows the real launcher and campaign save controls', () => {
   assert.match(probe, /BEGIN CAMPAIGN/);
-  assert.match(probe, /data-command-view=\\"campaign\\"/);
+  assert.match(probe, /data-command-view="campaign"/);
   assert.match(probe, /New campaign difficulty/);
   assert.match(probe, /selectOption\('hard'\)/);
   assert.match(probe, /Manual Save/);
