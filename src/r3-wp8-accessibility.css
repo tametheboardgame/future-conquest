@@ -1,0 +1,62 @@
+.r3-terrain-prototype-shell :is(button, select, [tabindex]):focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(5, 10, 12, 0.92);
+}
+
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-enemy-contact {
+  outline: 3px dashed currentColor;
+  outline-offset: 2px;
+}
+
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-enemy-contact.confirmed {
+  outline-style: double;
+  outline-width: 5px;
+}
+
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-task-group-marker.selected,
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-territory-label.selected {
+  outline: 4px double currentColor;
+  outline-offset: 3px;
+}
+
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-threat-marker,
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-operation-marker {
+  outline: 3px dotted currentColor;
+  outline-offset: 3px;
+}
+
+.r3-terrain-prototype-shell[data-colour-blind-assist="true"] .r3-terrain-threat-marker::after {
+  content: "!";
+  position: absolute;
+  inset: -8px -8px auto auto;
+  min-width: 1rem;
+  min-height: 1rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: #0a1012;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.r3-terrain-prototype-shell[data-reduced-motion="true"] *,
+.r3-terrain-prototype-shell[data-reduced-motion="true"] *::before,
+.r3-terrain-prototype-shell[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r3-terrain-prototype-shell *,
+  .r3-terrain-prototype-shell *::before,
+  .r3-terrain-prototype-shell *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

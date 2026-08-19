@@ -12,6 +12,9 @@ export interface GlobalSettings {
   musicMode: MusicMode;
   autosaveEnabled: boolean;
   assistanceLevel: AssistanceLevel;
+  reducedMotion: boolean;
+  motionScale: number;
+  colourBlindAssist: boolean;
 }
 
 export const ASSISTANCE_LEVELS = ['Full Guidance', 'Recommended', 'Critical Only', 'Off'] as const;
@@ -25,10 +28,13 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   musicTrackId: DEFAULT_MUSIC_TRACK_ID,
   musicMode: 'adaptive',
   autosaveEnabled: true,
-  assistanceLevel: 'Recommended'
+  assistanceLevel: 'Recommended',
+  reducedMotion: false,
+  motionScale: 1,
+  colourBlindAssist: false
 };
 
-const clampVolume = (value: unknown, fallback: number) => (
+const clampUnit = (value: unknown, fallback: number) => (
   typeof value === 'number' && Number.isFinite(value)
     ? Math.max(0, Math.min(1, value))
     : fallback
@@ -41,9 +47,9 @@ export function normaliseGlobalSettings(value: Partial<GlobalSettings> | undefin
   const migratedMusicMode: MusicMode = musicTrackId !== DEFAULT_MUSIC_TRACK_ID ? 'manual' : DEFAULT_GLOBAL_SETTINGS.musicMode;
 
   return {
-    masterVolume: clampVolume(value?.masterVolume, DEFAULT_GLOBAL_SETTINGS.masterVolume),
-    musicVolume: clampVolume(value?.musicVolume, DEFAULT_GLOBAL_SETTINGS.musicVolume),
-    sfxVolume: clampVolume(value?.sfxVolume, DEFAULT_GLOBAL_SETTINGS.sfxVolume),
+    masterVolume: clampUnit(value?.masterVolume, DEFAULT_GLOBAL_SETTINGS.masterVolume),
+    musicVolume: clampUnit(value?.musicVolume, DEFAULT_GLOBAL_SETTINGS.musicVolume),
+    sfxVolume: clampUnit(value?.sfxVolume, DEFAULT_GLOBAL_SETTINGS.sfxVolume),
     muted: typeof value?.muted === 'boolean' ? value.muted : DEFAULT_GLOBAL_SETTINGS.muted,
     musicTrackId,
     musicMode: MUSIC_MODES.includes(value?.musicMode as MusicMode)
@@ -52,7 +58,10 @@ export function normaliseGlobalSettings(value: Partial<GlobalSettings> | undefin
     autosaveEnabled: typeof value?.autosaveEnabled === 'boolean' ? value.autosaveEnabled : DEFAULT_GLOBAL_SETTINGS.autosaveEnabled,
     assistanceLevel: ASSISTANCE_LEVELS.includes(value?.assistanceLevel as AssistanceLevel)
       ? value?.assistanceLevel as AssistanceLevel
-      : DEFAULT_GLOBAL_SETTINGS.assistanceLevel
+      : DEFAULT_GLOBAL_SETTINGS.assistanceLevel,
+    reducedMotion: typeof value?.reducedMotion === 'boolean' ? value.reducedMotion : DEFAULT_GLOBAL_SETTINGS.reducedMotion,
+    motionScale: clampUnit(value?.motionScale, DEFAULT_GLOBAL_SETTINGS.motionScale),
+    colourBlindAssist: typeof value?.colourBlindAssist === 'boolean' ? value.colourBlindAssist : DEFAULT_GLOBAL_SETTINGS.colourBlindAssist
   };
 }
 

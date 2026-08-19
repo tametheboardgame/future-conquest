@@ -69,12 +69,9 @@ jobs:
           await page.goto('http://127.0.0.1:4173/?terrain=1', { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
           await page.locator('.startup-game-shell').waitFor({ state: 'visible', timeout: 10000 });
-          await page.waitForFunction(
-            () => document.querySelector('[data-command-view="campaign"]')?.getAttribute('aria-current') === 'page',
-            null,
-            { timeout: 5000 }
-          );
-          await page.locator('[data-command-view="map"]').click();
+          // New campaigns intentionally land on Command Map. Validate the current
+          // map-first startup contract instead of waiting for the retired Campaign-first state.
+          await page.locator('[data-command-view="map"][aria-current="page"]').waitFor({ state: 'visible', timeout: 10000 });
           await page.locator('.command-map-workspace').waitFor({ state: 'visible', timeout: 10000 });
           await page.locator('.r3-terrain-prototype[data-status="ready"], .r3-terrain-prototype[data-status="warning"]').first().waitFor({ state: 'visible', timeout: 30000 });
           await page.locator('.r3-terrain-task-group-marker').first().waitFor({ state: 'attached', timeout: 10000 });

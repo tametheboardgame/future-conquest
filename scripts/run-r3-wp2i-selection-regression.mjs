@@ -35,6 +35,10 @@ async function findAndSaveNaturalDusseldorfCampaign() {
     await page.goto(`${origin}/?terrain=1`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'BEGIN CAMPAIGN', exact: true }).click();
     await page.locator('.startup-game-shell').waitFor({ state: 'visible' });
+    // BEGIN CAMPAIGN intentionally lands on Map. This setup needs the Campaign
+    // file controls, so explicitly open Campaign before looking for Manual Save.
+    await page.locator('[data-command-view="map"][aria-current="page"]').waitFor({ state: 'visible' });
+    await page.locator('[data-command-view="campaign"]').click();
     await page.locator('[data-command-view="campaign"][aria-current="page"]').waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'Manual Save', exact: true }).waitFor({ state: 'visible' });
 
