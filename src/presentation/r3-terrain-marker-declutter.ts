@@ -1,3 +1,5 @@
+import { DeterministicSpatialGrid } from '../game/spatial-grid';
+
 export type TerrainMarkerLod = 'theatre' | 'campaign' | 'local';
 
 export type TerrainMarkerKind =
@@ -79,6 +81,8 @@ const RULES: Record<TerrainMarkerKind, TerrainMarkerRule> = {
   'recent-threat': { priority: 320, radius: 22, minimumLod: 'campaign' }
 };
 
+const MAX_MARKER_RADIUS = Math.max(...Object.values(RULES).map(rule => rule.radius));
+
 export const terrainMarkerLodForZoom = (zoom: number): TerrainMarkerLod => (
   zoom < 4.8 ? 'theatre' : zoom < 6.4 ? 'campaign' : 'local'
 );
@@ -110,35 +114,40 @@ export function visibleTerrainMarkerIds(
       return priorityDifference || a.id.localeCompare(b.id);
     });
 
-  const accepted: TerrainMarkerCandidate[] = [];
   const visible = new Set<string>();
   const spacing = LOD_SPACING[lod];
+  const scale = terrainMarkerScaleForLod(lod);
+  const maximumCollisionDistance = MAX_MARKER_RADIUS * 2 * scale * spacing;
+  const accepted = new DeterministicSpatialGrid<TerrainMarkerCandidate>(maximumCollisionDistance);
 
   for (const candidate of eligible) {
     const rule = RULES[candidate.kind];
     if (rule.protected) {
-      accepted.push(candidate);
+      accepted.insert(candidate);
       visible.add(candidate.id);
       continue;
     }
 
-    const radius = rule.radius * terrainMarkerScaleForLod(lod);
+    const radius = rule.radius * scale;
     if (reservedRects.some(rect => intersectsReservedRect(candidate, radius, rect))) {
       continue;
     }
 
-    const blocked = accepted.some(other => {
-      const otherRule = RULES[other.kind];
-      const dx = candidate.x - other.x;
-      const dy = candidate.y - other.y;
-      const minimumSeparation = (rule.radius + otherRule.radius)
-        * terrainMarkerScaleForLod(lod)
-        * spacing;
-      return (dx * dx) + (dy * dy) < minimumSeparation * minimumSeparation;
-    });
+    const blocked = accepted.someNearby(
+      candidate.x,
+      candidate.y,
+      maximumCollisionDistance,
+      other => {
+        const otherRule = RULES[other.kind];
+        const dx = candidate.x - other.x;
+        const dy = candidate.y - other.y;
+        const minimumSeparation = (rule.radius + otherRule.radius) * scale * spacing;
+        return (dx * dx) + (dy * dy) < minimumSeparation * minimumSeparation;
+      }
+    );
 
     if (!blocked) {
-      accepted.push(candidate);
+      accepted.insert(candidate);
       visible.add(candidate.id);
     }
   }
