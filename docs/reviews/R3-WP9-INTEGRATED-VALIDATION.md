@@ -4,7 +4,7 @@
 
 **In progress.**
 
-R3-WP9 is the final R3 player-facing audit and release gate. It begins from `main` after R3-WP8 merged on 19 August 2026. The starting main revision was `4af2d2d04c3a29d9e155948594fdb4c2ccfa73a6`.
+R3-WP9 is the final R3 player-facing audit and release gate. It begins from `main` after R3-WP8 merged on 19 August 2026. The starting main revision was `984f1ea1e65338e0c7a92aa5cb9d1227e729fbf4`.
 
 This work package is deliberately validation-led. It must not change simulation rules, balance authority, campaign outcomes or save semantics merely to make presentation checks pass. Any blocker found by the integrated gate should be fixed as a focused defect and revalidated against the same gate.
 
