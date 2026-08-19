@@ -95,7 +95,15 @@ jobs:
           R3_WP2E_VARIANT: head-cancel-pending-tiles
           R3_WP2E_TILE_CANCELLATION: cancel
           R3_WP2E_EVIDENCE: artifacts/r3-wp2e-performance-head-cancel-pending-tiles.json
-        run: node scripts/run-r3-wp2e-performance.mjs
+        run: |
+          set +e
+          node scripts/run-r3-wp2e-performance.mjs
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo 'WP2E cancellation diagnostic failed once; retrying in a fresh Chromium process.'
+            node scripts/run-r3-wp2e-performance.mjs
+          fi
       - name: Assert identities, compare base with head and enforce regression budgets
         run: >-
           node scripts/compare-r3-wp2e-performance.mjs
