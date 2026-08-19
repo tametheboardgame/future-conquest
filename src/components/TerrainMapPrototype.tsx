@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { GeoJSONSource, type GeoJSONSourceSpecification, type Map } from 'maplibre-gl';
 import activeGeojson from '../assets/vertical-slice-map.json';
+import { useLiveGlobalSettings } from './StartupExperience';
 import { getThreatenedTerritories } from '../game/operational-clarity';
 import { STRATEGIC_NODES, STRATEGIC_ROUTES } from '../game/strategic-network-data';
 import {
   chooseTerrainPresentationProfile,
+  terrainCameraForProfile,
+  terrainCameraPreset,
+  type TerrainCameraPreset,
   type TerrainPresentationProfile
 } from '../presentation/r3-terrain-config';
 import {
@@ -22,8 +26,10 @@ import {
   type R3ResourceMetric,
   type R3StrategicOverlay
 } from '../presentation/r3-strategic-information-layers';
+import { terrainOperationalTerritoryCentres } from '../presentation/r3-terrain-operational-markers';
 import '../wp3-5-physical-overlay.css';
 import '../wp5-strategic-information.css';
+import '../r3-wp8-accessibility.css';
 import {
   TerrainMapPrototypeImpl,
   prewarmTerrainRuntime,
@@ -64,12 +70,16 @@ function strategicPreferences(): StrategicPreferences {
 export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
   const [profile, setProfile] = useState<TerrainPresentationProfile>(browserTerrainProfile);
   const [preferences, setPreferences] = useState<StrategicPreferences>(strategicPreferences);
+  const { reducedMotion, motionScale, colourBlindAssist } = useLiveGlobalSettings();
   const { onFallback, state } = props;
   const legend = useMemo(
     () => r3StrategicOverlayLegend(preferences.overlay, preferences.resource),
     [preferences]
   );
   const showResourceSelector = preferences.overlay === 'resources' || preferences.overlay === 'stockpiles';
+  const effectiveMotionScale = reducedMotion ? 0 : motionScale;
+  const motionDurationMs = Math.round(850 * effectiveMotionScale);
+  const motionStyle = { '--r3-wp8-motion-duration': `${motionDurationMs}ms` } as CSSProperties;
 
   useEffect(() => {
     const refreshProfile = () => setProfile(browserTerrainProfile());
@@ -148,11 +158,63 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
     };
   }, [profile, state, preferences]);
 
+  const moveCamera = (id: TerrainCameraPreset['id'], forceImmediate = false) => {
+    if (profile === 'svg-fallback') return false;
+    const map = (window as TerrainWindow).__r3TerrainMap;
+    if (!map) return false;
+    const preset = terrainCameraPreset(id);
+    const profiled = terrainCameraForProfile(preset, profile);
+    const selectedCentre = state.selectedTerritory
+      ? terrainOperationalTerritoryCentres[state.selectedTerritory]
+      : undefined;
+    const center = id === 'selected' && selectedCentre ? selectedCentre : profiled.center;
+    const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    map.easeTo({
+      center: [center[0], center[1]],
+      zoom: profiled.zoom,
+      pitch: profiled.pitch,
+      bearing: profiled.bearing,
+      duration: forceImmediate || reducedMotion || systemReducedMotion ? 0 : motionDurationMs
+    });
+    return true;
+  };
+
+  const handleCameraClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const button = (event.target as HTMLElement).closest('.r3-terrain-prototype-toolbar button');
+    if (!(button instanceof HTMLButtonElement)) return;
+    const id = button.textContent?.trim() as TerrainCameraPreset['id'] | undefined;
+    if (!id || !['theatre', 'campaign', 'selected'].includes(id)) return;
+    const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reducedMotion && !systemReducedMotion && motionScale === 1) return;
+    if (!moveCamera(id)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleKeyDownCapture = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    if (moveCamera('theatre', true)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onFallback('Terrain camera recovery requested; using the stable SVG command map.');
+  };
+
   if (profile === 'svg-fallback') {
     return <div className="r3-terrain-compact-fallback" role="status">Loading compact 2D command map…</div>;
   }
 
-  return <div className="r3-terrain-prototype-shell" data-terrain-profile={profile}>
+  return <div
+    className="r3-terrain-prototype-shell"
+    data-terrain-profile={profile}
+    data-reduced-motion={reducedMotion ? 'true' : 'false'}
+    data-motion-scale={effectiveMotionScale.toFixed(1)}
+    data-colour-blind-assist={colourBlindAssist ? 'true' : 'false'}
+    style={motionStyle}
+    onClickCapture={handleCameraClickCapture}
+    onKeyDownCapture={handleKeyDownCapture}
+  >
     <button
       type="button"
       className="r3-terrain-use-svg"
@@ -189,6 +251,7 @@ export function TerrainMapPrototype(props: TerrainMapPrototypeProps) {
       <div className="r3-strategic-information-legend" aria-live="polite">
         <strong>{legend.title}</strong>
         <span>{legend.detail}</span>
+        {colourBlindAssist && <small>Colour-blind assist active: hostile, selected and warning markers use reinforced non-colour cues.</small>}
       </div>
     </aside>
   </div>;
