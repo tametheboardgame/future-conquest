@@ -90,9 +90,12 @@ export function GlobalSettingsPanel({ settings, onChange, onClose, onPreviewVict
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-heading"><div><p className="launcher-kicker">DISPLAY</p><h3>Screen</h3></div></div>
+        <div className="settings-section-heading"><div><p className="launcher-kicker">DISPLAY &amp; ACCESSIBILITY</p><h3>Screen and motion</h3></div></div>
         <button type="button" className="settings-secondary" onClick={toggleFullscreen}>Toggle fullscreen</button>
-        <p className="settings-future-copy">Graphics quality, UI scale, animation controls and additional accessibility options will live here as those systems are added.</p>
+        <label className="settings-mute"><input type="checkbox" checked={settings.reducedMotion} onChange={event => onChange({ ...settings, reducedMotion: event.target.checked })} />Reduce non-essential map motion</label>
+        <label className="settings-slider"><span><b>Motion intensity</b><output>{percentage(settings.motionScale)}</output></span><input aria-label="Motion intensity" type="range" min="0" max="1" step="0.1" value={settings.motionScale} disabled={settings.reducedMotion} onChange={event => onChange({ ...settings, motionScale: Number(event.target.value) })} /></label>
+        <label className="settings-mute"><input type="checkbox" checked={settings.colourBlindAssist} onChange={event => onChange({ ...settings, colourBlindAssist: event.target.checked })} />Colour-blind map assist</label>
+        <p className="settings-future-copy">Reduced motion suppresses decorative map animation. Colour-blind assist reinforces hostile, selected and warning markers with non-colour outlines and patterns so colour is not the only interaction cue.</p>
       </div>
 
       {(onPreviewVictory || onPreviewDefeat) && <div className="settings-section ending-preview-settings">
