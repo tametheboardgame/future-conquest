@@ -1,0 +1,148 @@
+name: R3 WP9 visual polish and integrated validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  R3_WP9_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  regression-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact validation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.R3_WP9_REF }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Compile deterministic game fixture
+        shell: bash
+        run: |
+          npx tsc -p tsconfig.test.json
+          printf '{"type":"commonjs"}\n' > .test-dist/package.json
+      - name: Run WP9 continuity, readability and resilience contracts
+        run: |
+          node --test tests/persistence.test.cjs tests/persistence-ui.test.cjs tests/map-session-mobile-readability.test.cjs tests/r3-wp2f-reduced-motion-layout-frame.test.cjs
+          node --test tests/r3-wp4-battle-event-feedback.test.cjs tests/r3-wp5-strategic-information-layers.test.cjs tests/r3-wp6-command-ui.test.cjs tests/r3-wp6-5-interface-polish.test.cjs tests/r3-wp6-6-command-shell-follow-up.test.cjs tests/r3-wp7-audio-music-atmosphere.test.cjs tests/r3-wp8-performance-accessibility-resilience.test.cjs tests/r3-wp9-integrated-validation.test.cjs
+      - name: Run full regression suite
+        run: npm test
+      - name: Run terrain performance contracts
+        run: node --test tests/r3-wp2e-*.test.cjs
+      - name: Build exact production game
+        run: npm run build
+      - name: Enforce terrain payload budgets
+        run: node scripts/measure-r3-terrain-budget.mjs
+
+  integrated-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout exact validation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.R3_WP9_REF }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Compile deterministic game fixture
+        shell: bash
+        run: |
+          npx tsc -p tsconfig.test.json
+          printf '{"type":"commonjs"}\n' > .test-dist/package.json
+      - name: Build exact production game
+        run: npm run build
+      - name: Install browser review runtime
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Review battle and strategic information presentation
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/probe-r3-wp4-battle-feedback.mjs 2>&1 | tee wp9-wp4-browser.log
+          node scripts/probe-r3-wp5-strategic-information.mjs 2>&1 | tee wp9-wp5-browser.log
+      - name: Start exact production preview
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/r3-wp9-preview.log 2>&1 &
+          for i in {1..45}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/r3-wp9-preview.log
+          exit 1
+      - name: Review map-first shell, notifications and keyboard access
+        run: |
+          node scripts/probe-r3-wp6-command-ui.mjs
+          node scripts/probe-r3-wp6-notifications.mjs
+          node scripts/probe-r3-wp6-accessibility.mjs
+      - name: Review desktop, compact and reduced-motion presentation
+        run: node scripts/probe-r3-wp6-5-interface-polish.mjs
+      - name: Validate browser save, reload and continue continuity
+        env:
+          R3_WP9_REF: ${{ env.R3_WP9_REF }}
+        run: node scripts/probe-r3-wp9-session-continuity.mjs
+      - name: Upload integrated WP9 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp9-integrated-browser-${{ env.R3_WP9_REF }}
+          path: |
+            artifacts/r3-wp6
+            artifacts/r3-wp6-5
+            artifacts/r3-wp9
+            wp4-active-attack.png
+            wp4-recent-victory.png
+            wp5-strategic-information.png
+            wp9-wp4-browser.log
+            wp9-wp5-browser.log
+            /tmp/r3-wp9-preview.log
+          if-no-files-found: warn
+
+  campaign-traces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      FC_BALANCE_RUNS_PER_START: '4'
+      FC_BALANCE_MAX_TURNS: '120'
+      FC_BALANCE_SEED_OFFSET: '1'
+    steps:
+      - name: Checkout exact validation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.R3_WP9_REF }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run current-engine representative campaign simulations
+        run: npm run simulate:current-balance
+      - name: Trace representative stalled campaigns
+        run: node scripts/trace-current-engine-balance.mjs
+      - name: Upload campaign trace evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-wp9-campaign-traces-${{ env.R3_WP9_REF }}
+          path: balance-output/
+          if-no-files-found: warn
