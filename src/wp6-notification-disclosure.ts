@@ -14,11 +14,11 @@ function normaliseText(value: string | null | undefined): string {
 
 function alertSignature(alert: HTMLElement): string {
   const clone = alert.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll('.wp6-alert-dismiss').forEach(node => node.remove());
+  clone.querySelectorAll('.wp6-alert-dismiss, .r4-alert-preference-actions').forEach(node => node.remove());
   return `${alert.className}|${normaliseText(clone.textContent)}`;
 }
 
-function addDismissControl(alert: HTMLElement, label: string, signature: string): void {
+function addDismissControl(alert: HTMLElement, label: string): void {
   let button = alert.querySelector<HTMLButtonElement>(':scope > .wp6-alert-dismiss');
   if (!button) {
     button = document.createElement('button');
@@ -31,7 +31,7 @@ function addDismissControl(alert: HTMLElement, label: string, signature: string)
   button.setAttribute('aria-label', `Dismiss ${label}`);
   button.title = 'Dismiss until this warning changes';
   button.onclick = () => {
-    dismissedSignatures.add(signature);
+    dismissedSignatures.add(alertSignature(alert));
     alert.hidden = true;
     alert.dataset.wp6Dismissed = 'true';
   };
@@ -50,7 +50,7 @@ function reconcileAlert(alert: HTMLElement, label: string): string {
   }
 
   alert.dataset.wp6NotificationManaged = 'true';
-  addDismissControl(alert, label, signature);
+  addDismissControl(alert, label);
   return signature;
 }
 
