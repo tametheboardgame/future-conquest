@@ -42,10 +42,13 @@ function addDismissControl(alert: HTMLElement, label: string): void {
 
   button.setAttribute('aria-label', `Dismiss ${label}`);
   button.title = 'Dismiss until this warning changes';
-  button.onclick = event => {
-    event.stopPropagation();
-    dismissAlertEpisode(alert);
-  };
+  if (button.dataset.wp6DismissBound !== 'true') {
+    button.dataset.wp6DismissBound = 'true';
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      dismissAlertEpisode(alert);
+    });
+  }
 }
 
 function reconcileAlert(alert: HTMLElement, label: string): string {
