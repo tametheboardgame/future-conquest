@@ -257,7 +257,7 @@ try {
     const panel = document.querySelector('.campaign-controls-panel');
     const action = document.querySelector('.campaign-file-actions button');
     return {
-      controlsArt: panel ? getComputedStyle(panel, '::before').backgroundImage,
+      controlsArt: panel ? getComputedStyle(panel, '::before').backgroundImage : null,
       actionIcon: action ? getComputedStyle(action, '::before').backgroundImage : null
     };
   });
