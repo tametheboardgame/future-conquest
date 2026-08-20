@@ -246,7 +246,6 @@ function syncAlerts(): void {
       }
     });
   }
-
   syncAlertSettingsControl(preferences);
 }
 
@@ -327,7 +326,7 @@ function ensureCutOffExplainer(card: HTMLElement): void {
     explainer.append(heading, copy, steps, actions);
     const condition = card.querySelector('.supply-condition.cut-off');
     const row = condition?.closest('div');
-    if (row) row.insertAdjacentElement('afterend', explainer);
+    if (row && card.contains(row)) row.insertAdjacentElement('afterend', explainer);
     else card.append(explainer);
   }
 }
