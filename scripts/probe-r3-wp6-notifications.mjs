@@ -156,7 +156,20 @@ try {
   assert(cutOffEvidence.buttons.includes('Fix in Logistics'), 'cut-off warning cannot open Logistics recovery controls');
 
   await dismiss.click();
-  await page.waitForFunction(() => document.querySelector('.wp6-notification-probe')?.hidden === true);
+  await page.waitForTimeout(100);
+  const afterDismissClick = await alert.evaluate(node => ({
+    hidden: node.hidden,
+    wp6Dismissed: node.getAttribute('data-wp6-dismissed'),
+    wp6DismissedSignature: node.getAttribute('data-wp6-dismissed-signature'),
+    wp6AlertSignature: node.getAttribute('data-wp6-alert-signature'),
+    r4Managed: node.getAttribute('data-r4-alert-managed'),
+    r4PreferenceHidden: node.getAttribute('data-r4-preference-hidden'),
+    r4ViewHidden: node.getAttribute('data-r4-view-hidden'),
+    dismissConnected: node.querySelector('.wp6-alert-dismiss')?.isConnected,
+    outerHTML: node.outerHTML
+  }));
+  console.log('AFTER_DISMISS_CLICK', JSON.stringify(afterDismissClick));
+  assert(afterDismissClick.hidden === true, `dismiss click did not hide the warning: ${JSON.stringify(afterDismissClick)}`);
 
   await page.evaluate(() => {
     const alert = document.querySelector('.wp6-notification-probe');
