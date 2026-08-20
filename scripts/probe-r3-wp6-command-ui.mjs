@@ -60,7 +60,9 @@ async function readShellEvidence() {
           right: Math.round(box.right * 10) / 10,
           top: Math.round(box.top * 10) / 10,
           width: Math.round(box.width * 10) / 10,
-          height: Math.round(box.height * 10) / 10
+          height: Math.round(box.height * 10) / 10,
+          maxHeight: style.maxHeight,
+          overflow: style.overflow
         };
       })
     };
@@ -84,7 +86,9 @@ function assertMapFirstShell(evidence) {
   assert(evidence.mapHeading?.position === 'absolute', `map heading is not an over-map HUD: ${JSON.stringify(evidence.mapHeading)}`);
   for (const alert of evidence.alertGeometry) {
     assert(alert.position === 'fixed', `alert still consumes document flow: ${JSON.stringify(alert)}`);
-    assert(alert.height <= 62, `alert is not compact by default: ${JSON.stringify(alert)}`);
+    assert(alert.height <= 120, `collapsed alert is too tall: ${JSON.stringify(alert)}`);
+    assert(alert.maxHeight === 'none', `alert still uses hard height clipping: ${JSON.stringify(alert)}`);
+    assert(alert.overflow === 'visible', `alert still clips its contents: ${JSON.stringify(alert)}`);
     if (evidence.mapContext) assert(alert.right <= evidence.mapContext.x - 4, `map alert obscures context panel: ${JSON.stringify(alert)}`);
   }
 }
@@ -253,7 +257,7 @@ try {
     const panel = document.querySelector('.campaign-controls-panel');
     const action = document.querySelector('.campaign-file-actions button');
     return {
-      controlsArt: panel ? getComputedStyle(panel, '::before').backgroundImage : null,
+      controlsArt: panel ? getComputedStyle(panel, '::before').backgroundImage,
       actionIcon: action ? getComputedStyle(action, '::before').backgroundImage : null
     };
   });
