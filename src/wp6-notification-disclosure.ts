@@ -14,11 +14,23 @@ function normaliseText(value: string | null | undefined): string {
 
 function alertSignature(alert: HTMLElement): string {
   const clone = alert.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll('.wp6-alert-dismiss').forEach(node => node.remove());
+  clone.querySelectorAll('.wp6-alert-dismiss, .r4-alert-preference-actions').forEach(node => node.remove());
   return `${alert.className}|${normaliseText(clone.textContent)}`;
 }
 
-function addDismissControl(alert: HTMLElement, label: string, signature: string): void {
+function keepDismissed(alert: HTMLElement): void {
+  if (alert.dataset.wp6Dismissed !== 'true') alert.dataset.wp6Dismissed = 'true';
+  if (!alert.hidden) alert.hidden = true;
+}
+
+function dismissAlertEpisode(alert: HTMLElement): void {
+  const signature = alertSignature(alert);
+  dismissedSignatures.add(signature);
+  alert.dataset.wp6DismissedSignature = signature;
+  keepDismissed(alert);
+}
+
+function addDismissControl(alert: HTMLElement, label: string): void {
   let button = alert.querySelector<HTMLButtonElement>(':scope > .wp6-alert-dismiss');
   if (!button) {
     button = document.createElement('button');
@@ -30,27 +42,44 @@ function addDismissControl(alert: HTMLElement, label: string, signature: string)
 
   button.setAttribute('aria-label', `Dismiss ${label}`);
   button.title = 'Dismiss until this warning changes';
-  button.onclick = () => {
-    dismissedSignatures.add(signature);
-    alert.hidden = true;
-    alert.dataset.wp6Dismissed = 'true';
-  };
+  if (button.dataset.wp6DismissBound !== 'true') {
+    button.dataset.wp6DismissBound = 'true';
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      dismissAlertEpisode(alert);
+    });
+  }
 }
 
 function reconcileAlert(alert: HTMLElement, label: string): string {
   const signature = alertSignature(alert);
   const previousSignature = alert.dataset.wp6AlertSignature;
+  const episodeSignature = alert.dataset.wp6DismissedSignature;
+
+  if (episodeSignature && episodeSignature !== signature) {
+    dismissedSignatures.delete(episodeSignature);
+    delete alert.dataset.wp6DismissedSignature;
+    if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
+  }
+
+  const currentEpisodeSignature = alert.dataset.wp6DismissedSignature;
+  const dismissed = currentEpisodeSignature === signature || dismissedSignatures.has(signature);
 
   if (previousSignature !== signature) {
     alert.dataset.wp6AlertSignature = signature;
-    const dismissed = dismissedSignatures.has(signature);
     alert.hidden = dismissed;
     if (dismissed) alert.dataset.wp6Dismissed = 'true';
-    else delete alert.dataset.wp6Dismissed;
+    else if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
+  }
+
+  if (dismissed) {
+    alert.dataset.wp6DismissedSignature = signature;
+    dismissedSignatures.add(signature);
+    keepDismissed(alert);
   }
 
   alert.dataset.wp6NotificationManaged = 'true';
-  addDismissControl(alert, label, signature);
+  addDismissControl(alert, label);
   return signature;
 }
 
@@ -88,6 +117,6 @@ export function installWp6NotificationDisclosure(): void {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['class']
+    attributeFilter: ['class', 'hidden', 'data-wp6-dismissed']
   });
 }

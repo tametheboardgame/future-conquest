@@ -1,0 +1,55 @@
+/* Keep passive map alerts usable without allowing their rectangular overlay boxes
+ * to steal pointer input from map controls underneath. Expanded alerts remain
+ * conventional interactive panels. */
+
+body[data-r4-command-view='map'] .operational-alert-strip,
+body[data-r4-command-view='map'] .enemy-action-alert,
+body[data-r4-command-view='map'] .adviser-alert-strip,
+body[data-r4-command-view='map'] .combat-report-alert {
+  pointer-events: none;
+}
+
+body[data-r4-command-view='map'] .operational-alert-strip button,
+body[data-r4-command-view='map'] .operational-alert-strip input,
+body[data-r4-command-view='map'] .operational-alert-strip label,
+body[data-r4-command-view='map'] .operational-alert-strip a,
+body[data-r4-command-view='map'] .enemy-action-alert button,
+body[data-r4-command-view='map'] .enemy-action-alert input,
+body[data-r4-command-view='map'] .enemy-action-alert label,
+body[data-r4-command-view='map'] .enemy-action-alert a,
+body[data-r4-command-view='map'] .adviser-alert-strip button,
+body[data-r4-command-view='map'] .adviser-alert-strip input,
+body[data-r4-command-view='map'] .adviser-alert-strip label,
+body[data-r4-command-view='map'] .adviser-alert-strip a,
+body[data-r4-command-view='map'] .combat-report-alert button,
+body[data-r4-command-view='map'] .combat-report-alert input,
+body[data-r4-command-view='map'] .combat-report-alert label,
+body[data-r4-command-view='map'] .combat-report-alert a,
+body[data-r4-command-view='map'] .r4-alert-preference-actions {
+  pointer-events: auto;
+}
+
+@media (min-width: 901px) {
+  /* Keep passive alerts away from the terrain layer/camera controls in the
+     upper-right corner. Stack them from the lower-left of the map instead. */
+  body[data-r4-command-view='map'] .operational-alert-strip:not([data-r4-expanded='true']),
+  body[data-r4-command-view='map'] .enemy-action-alert:not([data-r4-expanded='true']),
+  body[data-r4-command-view='map'] .adviser-alert-strip:not([data-r4-expanded='true']),
+  body[data-r4-command-view='map'] .combat-report-alert:not([data-r4-expanded='true']) {
+    left: 128px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(20px + (var(--r4-alert-stack-index, 0) * 112px)) !important;
+  }
+
+  body[data-r4-command-view='map'] .operational-alert-strip[data-r4-expanded='true'],
+  body[data-r4-command-view='map'] .enemy-action-alert[data-r4-expanded='true'],
+  body[data-r4-command-view='map'] .adviser-alert-strip[data-r4-expanded='true'],
+  body[data-r4-command-view='map'] .combat-report-alert[data-r4-expanded='true'] {
+    left: 128px !important;
+    right: auto !important;
+    top: 108px !important;
+    bottom: auto !important;
+    pointer-events: auto;
+  }
+}
