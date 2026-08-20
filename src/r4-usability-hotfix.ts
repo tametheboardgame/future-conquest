@@ -23,6 +23,10 @@ let syncQueued = false;
 
 const normaliseText = (value: string | null | undefined) => (value ?? '').replace(/\s+/g, ' ').trim();
 
+function setText(node: Element | null, value: string): void {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
 function loadAlertPreferences(): AlertPreferences {
   try {
     const raw = window.localStorage.getItem(ALERT_PREFERENCES_KEY);
@@ -115,8 +119,11 @@ function ensurePreferenceActions(alert: HTMLElement, kind: ManagedAlertKind, pre
   const detailsButton = actions.querySelector<HTMLButtonElement>('.r4-alert-details');
   if (detailsButton) {
     const expanded = alert.dataset.r4Expanded === 'true';
-    detailsButton.textContent = expanded ? 'Collapse' : 'Details';
-    detailsButton.setAttribute('aria-expanded', String(expanded));
+    setText(detailsButton, expanded ? 'Collapse' : 'Details');
+    const ariaExpanded = String(expanded);
+    if (detailsButton.getAttribute('aria-expanded') !== ariaExpanded) {
+      detailsButton.setAttribute('aria-expanded', ariaExpanded);
+    }
     detailsButton.onclick = event => {
       event.stopPropagation();
       alert.dataset.r4Expanded = alert.dataset.r4Expanded === 'true' ? 'false' : 'true';
@@ -184,13 +191,12 @@ function syncAlertSettingsControl(preferences: AlertPreferences): void {
   }
 
   const summary = settings.querySelector('summary');
-  if (summary) {
-    summary.textContent = preferences.muteAll
-      ? 'Alerts off'
-      : preferences.suppressedKeys.length > 0
-        ? `Alerts · ${preferences.suppressedKeys.length} hidden`
-        : 'Alerts';
-  }
+  const summaryText = preferences.muteAll
+    ? 'Alerts off'
+    : preferences.suppressedKeys.length > 0
+      ? `Alerts · ${preferences.suppressedKeys.length} hidden`
+      : 'Alerts';
+  setText(summary, summaryText);
 
   const muteInput = settings.querySelector<HTMLInputElement>('input[type="checkbox"]');
   if (muteInput) {
@@ -215,7 +221,8 @@ function syncAlertSettingsControl(preferences: AlertPreferences): void {
 function syncAlerts(): void {
   const preferences = loadAlertPreferences();
   const mapActive = isMapViewActive();
-  document.body.dataset.r4CommandView = mapActive ? 'map' : 'other';
+  const commandView = mapActive ? 'map' : 'other';
+  if (document.body.dataset.r4CommandView !== commandView) document.body.dataset.r4CommandView = commandView;
 
   let stackIndex = 0;
   for (const config of MANAGED_ALERTS) {
@@ -225,13 +232,16 @@ function syncAlerts(): void {
       const suppressed = preferences.suppressedKeys.includes(preferenceKey);
       const episodeDismissed = alert.dataset.wp6Dismissed === 'true';
       const hidden = !mapActive || preferences.muteAll || suppressed || episodeDismissed;
-      alert.hidden = hidden;
+      if (alert.hidden !== hidden) alert.hidden = hidden;
       alert.dataset.r4AlertManaged = 'true';
       alert.dataset.r4PreferenceKey = preferenceKey;
       alert.dataset.r4ViewHidden = !mapActive ? 'true' : 'false';
       alert.dataset.r4PreferenceHidden = preferences.muteAll || suppressed ? 'true' : 'false';
       if (!hidden) {
-        alert.style.setProperty('--r4-alert-stack-index', String(stackIndex));
+        const index = String(stackIndex);
+        if (alert.style.getPropertyValue('--r4-alert-stack-index') !== index) {
+          alert.style.setProperty('--r4-alert-stack-index', index);
+        }
         stackIndex += 1;
       }
     });
@@ -256,12 +266,15 @@ function syncFormationSelectors(): void {
     if (selectorsEnabled) {
       if (marker.hidden) marker.hidden = false;
       marker.dataset.r4FormationSelectable = 'true';
-      marker.style.pointerEvents = 'auto';
+      if (marker.style.pointerEvents !== 'auto') marker.style.pointerEvents = 'auto';
       const label = marker.getAttribute('aria-label');
-      if (label) marker.title = `Select ${label}`;
+      if (label) {
+        const title = `Select ${label}`;
+        if (marker.title !== title && marker.dataset.r4CutOffTitle !== 'true') marker.title = title;
+      }
     } else {
       delete marker.dataset.r4FormationSelectable;
-      marker.style.removeProperty('pointer-events');
+      if (marker.style.pointerEvents) marker.style.removeProperty('pointer-events');
     }
   });
 }
@@ -296,9 +309,9 @@ function ensureCutOffExplainer(card: HTMLElement): void {
     const heading = document.createElement('strong');
     heading.textContent = 'CUT OFF · SUPPLY DELIVERY BELOW 15%';
     const copy = document.createElement('p');
-    copy.textContent = 'This formation is receiving less than 15% of its supply demand. It may be physically present on the map but cannot sustain normal operations until a viable supply path exists.';
+    copy.textContent = 'Cut off means this formation is receiving less than 15% of its supply demand. It is a logistics condition, not automatically the reason a specific order control is disabled. Active orders, recovery state, blocked corridors or an out-of-range target can separately prevent an order.';
     const steps = document.createElement('ol');
-    steps.innerHTML = '<li>Show strategic routes and trace a path back through controlled territory.</li><li>Secure any unsecured territory on that path.</li><li>Repair or reopen blocked and destroyed routes in Infrastructure.</li><li>If the network is merely overloaded, raise this formation’s logistics priority or improve hub/source capacity.</li>';
+    steps.innerHTML = '<li>Show strategic routes and trace a path back through controlled territory.</li><li>Secure any unsecured territory on that path.</li><li>Repair or reopen blocked and destroyed routes in Infrastructure.</li><li>If the network is overloaded, raise this formation’s logistics priority or improve hub/source capacity.</li>';
 
     const actions = document.createElement('div');
     const routesButton = document.createElement('button');
@@ -355,36 +368,39 @@ function syncCutOffMapBanner(card: HTMLElement | null, cutOff: boolean): void {
   const throughput = selectedFormationThroughput(card);
   const heading = banner.querySelector('strong');
   const detail = banner.querySelector('span');
-  if (heading) heading.textContent = `CUT OFF · ${name}`;
-  if (detail) detail.textContent = throughput && throughput !== '—'
-    ? `Delivered throughput ${throughput}. Less than 15% of required supply is reaching this formation.`
-    : 'Less than 15% of required supply is reaching this formation.';
+  setText(heading, `CUT OFF · ${name}`);
+  setText(detail, throughput && throughput !== '—'
+    ? `Delivered throughput ${throughput}. Less than 15% of required supply is reaching this formation. Use the route view to find the break or bottleneck.`
+    : 'Less than 15% of required supply is reaching this formation. Use the route view to find the break or bottleneck.');
 }
 
 function syncCutOffClarity(): void {
   const selectedCard = document.querySelector<HTMLElement>('.selected-group.selected-formation-card');
   const cutOff = Boolean(selectedCard?.querySelector('.supply-condition.cut-off'));
+  const title = 'CUT OFF: less than 15% of required supply is being delivered. Select for recovery guidance.';
 
   document.querySelectorAll<HTMLElement>('.r3-terrain-task-group-marker').forEach(marker => {
-    marker.classList.remove('r4-cut-off');
-    if (marker.dataset.r4CutOffTitle === 'true') {
-      marker.removeAttribute('title');
-      delete marker.dataset.r4CutOffTitle;
+    const shouldMarkCutOff = cutOff && marker.classList.contains('selected');
+    marker.classList.toggle('r4-cut-off', shouldMarkCutOff);
+
+    if (shouldMarkCutOff) {
+      if (marker.title !== title) marker.title = title;
+      marker.dataset.r4CutOffTitle = 'true';
+      if (marker.getAttribute('aria-description') !== 'Cut off. Less than fifteen percent of required supply is being delivered.') {
+        marker.setAttribute('aria-description', 'Cut off. Less than fifteen percent of required supply is being delivered.');
+      }
+    } else {
+      if (marker.dataset.r4CutOffTitle === 'true') {
+        marker.removeAttribute('title');
+        delete marker.dataset.r4CutOffTitle;
+      }
+      if (marker.hasAttribute('aria-description')) marker.removeAttribute('aria-description');
     }
-    marker.removeAttribute('aria-description');
   });
 
-  if (cutOff) {
-    document.querySelectorAll<HTMLElement>('.r3-terrain-task-group-marker.selected').forEach(marker => {
-      marker.classList.add('r4-cut-off');
-      marker.title = 'CUT OFF: less than 15% of required supply is being delivered. Select for recovery guidance.';
-      marker.dataset.r4CutOffTitle = 'true';
-      marker.setAttribute('aria-description', 'Cut off. Less than fifteen percent of required supply is being delivered.');
-    });
-  }
-
   if (selectedCard && cutOff) ensureCutOffExplainer(selectedCard);
-  selectedCard?.querySelector<HTMLElement>('.r4-cut-off-explainer')?.toggleAttribute('hidden', !cutOff);
+  const explainer = selectedCard?.querySelector<HTMLElement>('.r4-cut-off-explainer');
+  if (explainer && explainer.hidden === cutOff) explainer.hidden = !cutOff;
   syncCutOffMapBanner(selectedCard, cutOff);
 }
 
