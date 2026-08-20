@@ -21,8 +21,11 @@ test('passive campaign alerts are composed rather than clipped and expose persis
   assert.match(source, /Mute all passive alerts/);
   assert.match(source, /Show all alerts again/);
   assert.match(source, /r4-alert-details/);
-  assert.match(source, /document\.body\.dataset\.r4CommandView = mapActive \? 'map' : 'other'/);
+  assert.match(source, /const commandView = mapActive \? 'map' : 'other'/);
+  assert.match(source, /document\.body\.dataset\.r4CommandView !== commandView/);
   assert.match(source, /const hidden = !mapActive \|\| preferences\.muteAll \|\| suppressed \|\| episodeDismissed/);
+  assert.match(source, /if \(alert\.hidden !== hidden\) alert\.hidden = hidden/);
+  assert.match(source, /function setText\(/);
   assert.match(css, /max-height:\s*none\s*!important/);
   assert.match(css, /body\[data-r4-command-view='other'\][\s\S]*\.combat-report-alert/);
   assert.match(css, /\.r4-alert-preference-actions\s*\{[\s\S]*display:\s*flex\s*!important/);
@@ -45,6 +48,7 @@ test('cut-off formations expose an immediate map warning and concrete recovery p
   const source = read('src/r4-usability-hotfix.ts');
   const css = read('src/r4-usability-hotfix.css');
   assert.match(source, /CUT OFF · SUPPLY DELIVERY BELOW 15%/);
+  assert.match(source, /logistics condition, not automatically the reason a specific order control is disabled/);
   assert.match(source, /trace a path back through controlled territory/);
   assert.match(source, /Secure any unsecured territory/);
   assert.match(source, /Repair or reopen blocked and destroyed routes/);
@@ -52,6 +56,7 @@ test('cut-off formations expose an immediate map warning and concrete recovery p
   assert.match(source, /Show supply routes/);
   assert.match(source, /Fix in Logistics/);
   assert.match(source, /r4-cut-off-map-banner/);
+  assert.match(source, /classList\.toggle\('r4-cut-off', shouldMarkCutOff\)/);
   assert.match(css, /\.r4-cut-off-map-banner\s*\{/);
   assert.match(css, /\.r3-terrain-task-group-marker\.r4-cut-off::after[\s\S]*content:\s*'CUT OFF'/);
 });
