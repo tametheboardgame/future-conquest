@@ -72,17 +72,21 @@ function reconcileAlert(alert: HTMLElement, label: string): string {
   }
 
   const currentEpisodeSignature = alert.dataset.wp6DismissedSignature;
-  if (currentEpisodeSignature === signature || dismissedSignatures.has(signature)) {
+  const dismissed = currentEpisodeSignature === signature || dismissedSignatures.has(signature);
+
+  if (previousSignature !== signature) {
+    alert.dataset.wp6AlertSignature = signature;
+    alert.hidden = dismissed;
+    if (dismissed) alert.dataset.wp6Dismissed = 'true';
+    else if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
+  }
+
+  if (dismissed) {
     alert.dataset.wp6DismissedSignature = signature;
     dismissedSignatures.add(signature);
     keepDismissed(alert);
-  } else if (previousSignature !== signature) {
-    alert.dataset.wp6AlertSignature = signature;
-    if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
-    if (alert.hidden) alert.hidden = false;
   }
 
-  if (alert.dataset.wp6AlertSignature !== signature) alert.dataset.wp6AlertSignature = signature;
   alert.dataset.wp6NotificationManaged = 'true';
   addDismissControl(alert, label);
   return signature;
