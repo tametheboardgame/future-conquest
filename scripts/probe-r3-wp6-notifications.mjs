@@ -155,8 +155,43 @@ try {
   assert(cutOffEvidence.buttons.includes('Show supply routes'), 'cut-off warning cannot expose supply routes');
   assert(cutOffEvidence.buttons.includes('Fix in Logistics'), 'cut-off warning cannot open Logistics recovery controls');
 
+  const preDismissGeometry = await dismiss.evaluate(button => {
+    const rect = button.getBoundingClientRect();
+    const centreX = rect.left + rect.width / 2;
+    const centreY = rect.top + rect.height / 2;
+    const hit = document.elementFromPoint(centreX, centreY);
+    return {
+      pointerEvents: getComputedStyle(button).pointerEvents,
+      display: getComputedStyle(button).display,
+      visibility: getComputedStyle(button).visibility,
+      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      hit: hit instanceof Element ? `${hit.tagName}.${hit.className}` : null,
+      hitOuterHTML: hit instanceof Element ? hit.outerHTML : null
+    };
+  });
+
+  await page.evaluate(() => {
+    window.__wp6ClickTrace = [];
+    const describe = value => value instanceof Element ? `${value.tagName}.${value.className}` : String(value);
+    const record = label => event => {
+      window.__wp6ClickTrace.push({
+        label,
+        target: describe(event.target),
+        currentTarget: describe(event.currentTarget),
+        phase: event.eventPhase,
+        defaultPrevented: event.defaultPrevented
+      });
+    };
+    document.addEventListener('click', record('document-capture'), true);
+    document.addEventListener('click', record('document-bubble'));
+    const button = document.querySelector('.wp6-notification-probe .wp6-alert-dismiss');
+    button?.addEventListener('click', record('button-capture'), true);
+    button?.addEventListener('click', record('button-bubble'));
+  });
+
   await dismiss.click();
   await page.waitForTimeout(100);
+  const clickTrace = await page.evaluate(() => window.__wp6ClickTrace ?? []);
   const afterDismissClick = await alert.evaluate(node => ({
     hidden: node.hidden,
     wp6Dismissed: node.getAttribute('data-wp6-dismissed'),
@@ -166,10 +201,13 @@ try {
     r4PreferenceHidden: node.getAttribute('data-r4-preference-hidden'),
     r4ViewHidden: node.getAttribute('data-r4-view-hidden'),
     dismissConnected: node.querySelector('.wp6-alert-dismiss')?.isConnected,
+    dismissBound: node.querySelector('.wp6-alert-dismiss')?.getAttribute('data-wp6-dismiss-bound'),
     outerHTML: node.outerHTML
   }));
+  console.log('PRE_DISMISS_GEOMETRY', JSON.stringify(preDismissGeometry));
+  console.log('CLICK_TRACE', JSON.stringify(clickTrace));
   console.log('AFTER_DISMISS_CLICK', JSON.stringify(afterDismissClick));
-  assert(afterDismissClick.hidden === true, `dismiss click did not hide the warning: ${JSON.stringify(afterDismissClick)}`);
+  assert(afterDismissClick.hidden === true, `dismiss click did not hide the warning: ${JSON.stringify({ preDismissGeometry, clickTrace, afterDismissClick })}`);
 
   await page.evaluate(() => {
     const alert = document.querySelector('.wp6-notification-probe');
