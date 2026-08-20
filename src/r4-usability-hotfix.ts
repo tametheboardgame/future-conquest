@@ -235,24 +235,24 @@ function ensureCutOffExplainer(card: HTMLElement): void {
 function syncCutOffClarity(): void {
   const selectedCard = document.querySelector<HTMLElement>('.selected-group.selected-formation-card');
   const cutOff = Boolean(selectedCard?.querySelector('.supply-condition.cut-off'));
+  const title = 'CUT OFF: supply delivery is below 15%. Select for recovery guidance.';
 
   document.querySelectorAll<HTMLElement>('.r3-terrain-task-group-marker').forEach(marker => {
-    marker.classList.remove('r4-cut-off');
-    if (marker.dataset.r4CutOffTitle === 'true') {
-      marker.removeAttribute('title');
-      delete marker.dataset.r4CutOffTitle;
-    }
-    marker.removeAttribute('aria-description');
-  });
+    const shouldMarkCutOff = cutOff && marker.classList.contains('selected');
+    marker.classList.toggle('r4-cut-off', shouldMarkCutOff);
 
-  if (cutOff) {
-    document.querySelectorAll<HTMLElement>('.r3-terrain-task-group-marker.selected').forEach(marker => {
-      marker.classList.add('r4-cut-off');
-      marker.title = 'CUT OFF: supply delivery is below 15%. Select for recovery guidance.';
+    if (shouldMarkCutOff) {
+      if (marker.title !== title) marker.title = title;
       marker.dataset.r4CutOffTitle = 'true';
       marker.setAttribute('aria-description', 'Cut off. Supply delivery is below fifteen percent.');
-    });
-  }
+    } else {
+      if (marker.dataset.r4CutOffTitle === 'true') {
+        marker.removeAttribute('title');
+        delete marker.dataset.r4CutOffTitle;
+      }
+      marker.removeAttribute('aria-description');
+    }
+  });
 
   if (selectedCard && cutOff) ensureCutOffExplainer(selectedCard);
   selectedCard?.querySelector<HTMLElement>('.r4-cut-off-explainer')?.toggleAttribute('hidden', !cutOff);
