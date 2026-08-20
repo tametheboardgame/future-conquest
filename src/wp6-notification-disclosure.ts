@@ -7,6 +7,7 @@ const MANAGED_ALERTS = [
 const dismissedSignatures = new Set<string>();
 let observer: MutationObserver | null = null;
 let syncQueued = false;
+let delegatedDismissInstalled = false;
 
 function normaliseText(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
@@ -30,11 +31,34 @@ function addDismissControl(alert: HTMLElement, label: string): void {
 
   button.setAttribute('aria-label', `Dismiss ${label}`);
   button.title = 'Dismiss until this warning changes';
-  button.onclick = () => {
-    dismissedSignatures.add(alertSignature(alert));
-    alert.hidden = true;
-    alert.dataset.wp6Dismissed = 'true';
-  };
+}
+
+function dismissAlertEpisode(alert: HTMLElement): void {
+  dismissedSignatures.add(alertSignature(alert));
+  alert.dataset.wp6Dismissed = 'true';
+  alert.hidden = true;
+
+  // R4 also reconciles the hidden state of passive alerts. Reassert the
+  // episode dismissal after the current click task so the legacy WP6 control
+  // remains authoritative even when both managers react to the same mutation.
+  queueMicrotask(() => {
+    if (alert.dataset.wp6Dismissed === 'true') alert.hidden = true;
+  });
+}
+
+function installDelegatedDismissHandler(): void {
+  if (delegatedDismissInstalled) return;
+  delegatedDismissInstalled = true;
+  document.addEventListener('click', event => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLButtonElement>('.wp6-alert-dismiss');
+    if (!button) return;
+    const alert = button.parentElement;
+    if (!(alert instanceof HTMLElement)) return;
+    if (!MANAGED_ALERTS.some(config => alert.matches(config.selector))) return;
+    dismissAlertEpisode(alert);
+  }, true);
 }
 
 function reconcileAlert(alert: HTMLElement, label: string): string {
@@ -47,6 +71,11 @@ function reconcileAlert(alert: HTMLElement, label: string): string {
     alert.hidden = dismissed;
     if (dismissed) alert.dataset.wp6Dismissed = 'true';
     else delete alert.dataset.wp6Dismissed;
+  } else if (alert.dataset.wp6Dismissed === 'true' || dismissedSignatures.has(signature)) {
+    // A same-content warning that was dismissed must stay dismissed even when
+    // another presentation manager performs its own reconciliation pass.
+    alert.dataset.wp6Dismissed = 'true';
+    alert.hidden = true;
   }
 
   alert.dataset.wp6NotificationManaged = 'true';
@@ -81,6 +110,7 @@ function queueReconcile(): void {
 export function installWp6NotificationDisclosure(): void {
   if (observer || typeof document === 'undefined') return;
 
+  installDelegatedDismissHandler();
   reconcileNotifications();
   observer = new MutationObserver(queueReconcile);
   observer.observe(document.documentElement, {
