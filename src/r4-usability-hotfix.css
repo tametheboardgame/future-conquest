@@ -7,40 +7,35 @@
   .adviser-alert-strip,
   .combat-report-alert {
     box-sizing: border-box;
-    width: min(500px, calc(100vw - 120px));
-    max-height: 68px !important;
-    overflow: hidden !important;
+    width: min(510px, calc(100vw - 120px));
+    max-height: none !important;
+    overflow: visible !important;
+    top: calc(108px + (var(--r4-alert-stack-index, 0) * 96px)) !important;
+    right: 18px !important;
   }
 
-  /* A collapsed alert is now a deliberate summary, rather than a taller card
-     whose lower content happens to be clipped by max-height. */
-  .operational-alert-strip:not(:hover):not(:focus-within) .supply-diagnostic-copy,
-  .adviser-alert-strip:not(:hover):not(:focus-within) .adviser-warning-list,
-  .combat-report-alert:not(:hover):not(:focus-within) > div:first-child > span,
-  .operational-alert-strip:not(:hover):not(:focus-within) .r4-alert-preference-actions,
-  .enemy-action-alert:not(:hover):not(:focus-within) .r4-alert-preference-actions,
-  .adviser-alert-strip:not(:hover):not(:focus-within) .r4-alert-preference-actions,
-  .combat-report-alert:not(:hover):not(:focus-within) .r4-alert-preference-actions {
+  /* Collapsed alerts are composed summaries. Nothing is physically clipped. */
+  .operational-alert-strip:not([data-r4-expanded='true']) .supply-diagnostic-copy span,
+  .adviser-alert-strip:not([data-r4-expanded='true']) .adviser-warning-list,
+  .adviser-alert-strip:not([data-r4-expanded='true']) > small,
+  .combat-report-alert:not([data-r4-expanded='true']) > div:first-child > span {
     display: none !important;
   }
 
-  .operational-alert-strip:hover,
-  .operational-alert-strip:focus-within,
-  .enemy-action-alert:hover,
-  .enemy-action-alert:focus-within,
-  .adviser-alert-strip:hover,
-  .adviser-alert-strip:focus-within,
-  .combat-report-alert:hover,
-  .combat-report-alert:focus-within {
-    z-index: 96;
-    max-height: min(520px, calc(100vh - 120px)) !important;
+  .operational-alert-strip[data-r4-expanded='true'],
+  .enemy-action-alert[data-r4-expanded='true'],
+  .adviser-alert-strip[data-r4-expanded='true'],
+  .combat-report-alert[data-r4-expanded='true'] {
+    z-index: 98 !important;
+    top: 108px !important;
+    max-height: calc(100vh - 128px) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
   }
 
-  .adviser-alert-strip:hover .adviser-warning-list,
-  .adviser-alert-strip:focus-within .adviser-warning-list {
-    max-height: min(390px, calc(100vh - 220px));
+  .adviser-alert-strip[data-r4-expanded='true'] .adviser-warning-list {
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .enemy-action-alert {
@@ -69,12 +64,15 @@
     white-space: nowrap;
   }
 
-  .combat-report-alert:hover > div:first-child > strong,
-  .combat-report-alert:focus-within > div:first-child > strong {
+  .combat-report-alert[data-r4-expanded='true'] > div:first-child > strong {
     white-space: normal;
   }
 }
 
+body[data-r4-command-view='other'] .operational-alert-strip,
+body[data-r4-command-view='other'] .adviser-alert-strip,
+body[data-r4-command-view='other'] .enemy-action-alert,
+body[data-r4-command-view='other'] .combat-report-alert,
 .operational-alert-strip[hidden],
 .adviser-alert-strip[hidden],
 .enemy-action-alert[hidden],
@@ -84,77 +82,150 @@
 
 .r4-alert-preference-actions {
   grid-column: 1 / -1;
-  display: flex;
+  display: flex !important;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px 10px;
+  gap: 6px 9px;
   width: 100%;
-  margin-top: 8px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(133, 184, 190, .22);
-  font: 500 9px IBM Plex Mono, monospace;
-  letter-spacing: .015em;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(133, 184, 190, .28);
+  font: 500 8px IBM Plex Mono, monospace;
+  letter-spacing: .01em;
 }
 
 .r4-alert-suppress {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: #d3e3e6;
+  gap: 5px;
+  color: #e2eef0;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .r4-alert-suppress input {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   margin: 0;
   accent-color: #73d8cf;
 }
 
+.r4-alert-details,
 .r4-alert-mute-all,
-.r4-alert-restore-control {
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid rgba(132, 194, 188, .46);
+.r4-alert-settings-panel button {
+  min-height: 26px;
+  padding: 4px 7px;
+  border: 1px solid rgba(132, 194, 188, .48);
   border-radius: 3px;
-  background: rgba(5, 20, 26, .92);
-  color: #d9f1ed;
+  background: rgba(5, 20, 26, .96);
+  color: #e3f4f1;
   font: 600 8px IBM Plex Mono, monospace;
-  letter-spacing: .035em;
+  letter-spacing: .025em;
   cursor: pointer;
 }
 
+.r4-alert-details:hover,
+.r4-alert-details:focus-visible,
 .r4-alert-mute-all:hover,
 .r4-alert-mute-all:focus-visible,
-.r4-alert-restore-control:hover,
-.r4-alert-restore-control:focus-visible {
+.r4-alert-settings-panel button:hover,
+.r4-alert-settings-panel button:focus-visible {
   border-color: #8fe1d4;
-  color: #f0fffd;
+  color: #fff;
   outline: 2px solid rgba(143, 225, 212, .28);
   outline-offset: 1px;
 }
 
-.r4-alert-restore-control {
+.r4-alert-mute-all {
+  border-color: rgba(224, 174, 85, .58);
   color: #f1c983;
-  border-color: rgba(224, 174, 85, .55);
 }
 
-/* WP3.5 intentionally made DOM formation markers invisible once the physical
- * miniatures were ready. That left the visible 3D pieces without an obvious,
- * accurately discoverable pointer target, especially for newly mobilised
- * formations. Keep a tiny identity/select chip beside every physical piece. */
-.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector {
+/* An always-visible control makes global alert suppression discoverable even
+   when no alert happens to be on screen. */
+.r4-alert-settings {
+  position: relative;
+  z-index: 140;
+  flex: 0 0 auto;
+}
+
+.r4-alert-settings > summary {
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 5px 8px;
+  border: 1px solid rgba(132, 194, 188, .4);
+  border-radius: 3px;
+  background: rgba(5, 20, 26, .94);
+  color: #d8efec;
+  font: 600 8px IBM Plex Mono, monospace;
+  list-style: none;
+  cursor: pointer;
+}
+
+.r4-alert-settings > summary::-webkit-details-marker { display: none; }
+
+.r4-alert-settings[open] > summary {
+  border-color: #8fe1d4;
+  color: #fff;
+}
+
+.r4-alert-settings-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 290px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(132, 194, 188, .48);
+  background: rgba(4, 15, 20, .98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .52);
+}
+
+.r4-alert-settings-panel label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #e3f0f1;
+  font-size: 10px;
+}
+
+.r4-alert-settings-panel input {
+  width: 15px;
+  height: 15px;
+  accent-color: #73d8cf;
+}
+
+.r4-alert-settings-panel small {
+  color: #829ba2;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.r4-alert-settings-panel button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+/* Physical formations are board pieces, but the DOM marker remains the proven
+   selection authority. Keep a clearly visible, generous hit target beside each
+   miniature and do not let map decluttering hide it. */
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector,
+.r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector[hidden] {
   display: grid !important;
-  opacity: .92 !important;
-  width: calc(31px * var(--r3-marker-scale));
-  min-width: calc(31px * var(--r3-marker-scale));
-  min-height: calc(22px * var(--r3-marker-scale));
-  height: calc(22px * var(--r3-marker-scale));
-  padding: 2px 3px;
+  opacity: .98 !important;
+  width: calc(46px * var(--r3-marker-scale));
+  min-width: calc(46px * var(--r3-marker-scale));
+  min-height: calc(30px * var(--r3-marker-scale));
+  height: calc(30px * var(--r3-marker-scale));
+  padding: 3px 5px;
   border-width: 1px;
   border-radius: 4px;
-  background: rgba(5, 27, 32, .9);
-  box-shadow: 0 3px 9px rgba(0, 0, 0, .62);
+  background: rgba(4, 26, 31, .96);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .7);
+  pointer-events: auto !important;
+  z-index: 22 !important;
 }
 
 .r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector span {
@@ -162,9 +233,9 @@
 }
 
 .r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector strong {
-  font-size: 6.5px;
+  font-size: 8px;
   line-height: 1;
-  letter-spacing: .02em;
+  letter-spacing: .03em;
   white-space: nowrap;
 }
 
@@ -173,13 +244,13 @@
 .r3-terrain-prototype[data-physical-formations='ready'] .r3-terrain-task-group-marker.r4-formation-selector.selected {
   opacity: 1 !important;
   border-color: #effffc;
-  box-shadow: 0 0 0 2px rgba(102, 245, 226, .34), 0 4px 12px rgba(0, 0, 0, .68);
+  box-shadow: 0 0 0 3px rgba(102, 245, 226, .4), 0 5px 15px rgba(0, 0, 0, .75);
 }
 
 .r3-terrain-task-group-marker.r4-cut-off {
   border-color: #ff765f !important;
   color: #fff1ec;
-  box-shadow: 0 0 0 3px rgba(255, 88, 65, .3), 0 5px 14px rgba(0, 0, 0, .7) !important;
+  box-shadow: 0 0 0 4px rgba(255, 88, 65, .34), 0 5px 16px rgba(0, 0, 0, .76) !important;
 }
 
 .r3-terrain-task-group-marker.r4-cut-off::after {
@@ -188,24 +259,91 @@
   left: 50%;
   bottom: calc(100% + 3px);
   transform: translateX(-50%);
-  padding: 2px 4px;
-  border: 1px solid rgba(255, 118, 95, .82);
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 118, 95, .9);
   border-radius: 2px;
-  background: rgba(54, 13, 12, .94);
+  background: rgba(58, 11, 10, .98);
   color: #ffd8d0;
-  font: 700 6px IBM Plex Mono, monospace;
+  font: 700 7px IBM Plex Mono, monospace;
   letter-spacing: .055em;
   white-space: nowrap;
   pointer-events: none;
 }
 
+.r4-cut-off-map-banner {
+  position: absolute;
+  z-index: 46;
+  top: 60px;
+  left: 14px;
+  width: min(430px, calc(100% - 90px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 105, 82, .72);
+  border-left: 4px solid #ff6952;
+  background: rgba(42, 11, 12, .96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .48);
+  color: #ffe6df;
+}
+
+.r4-cut-off-map-banner > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.r4-cut-off-map-banner small {
+  color: #d78f82;
+  font: 600 7px IBM Plex Mono, monospace;
+  letter-spacing: .08em;
+}
+
+.r4-cut-off-map-banner strong {
+  color: #ffb19f;
+  font-size: 12px;
+}
+
+.r4-cut-off-map-banner span {
+  color: #e6c9c3;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.r4-cut-off-map-banner > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.r4-cut-off-map-banner button,
+.r4-cut-off-explainer button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid rgba(220, 151, 132, .58);
+  background: rgba(27, 17, 18, .94);
+  color: #ffe1da;
+  font: inherit;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.r4-cut-off-map-banner button:hover,
+.r4-cut-off-map-banner button:focus-visible,
+.r4-cut-off-explainer button:hover,
+.r4-cut-off-explainer button:focus-visible {
+  border-color: #ff9d86;
+  outline: 2px solid rgba(255, 157, 134, .28);
+  outline-offset: 1px;
+}
+
 .r4-cut-off-explainer {
   grid-column: 1 / -1;
   margin: 8px 0 2px;
-  padding: 9px 10px;
-  border: 1px solid rgba(255, 105, 82, .58);
+  padding: 10px;
+  border: 1px solid rgba(255, 105, 82, .62);
   border-left: 3px solid #ff6952;
-  background: rgba(57, 17, 16, .48);
+  background: rgba(57, 17, 16, .52);
   color: #e7d8d5;
 }
 
@@ -223,6 +361,14 @@
   line-height: 1.45;
 }
 
+.r4-cut-off-explainer ol {
+  margin: 8px 0 0 18px;
+  padding: 0;
+  color: #dec7c2;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .r4-cut-off-explainer > div {
   display: flex;
   flex-wrap: wrap;
@@ -230,31 +376,22 @@
   margin-top: 8px;
 }
 
-.r4-cut-off-explainer button {
-  min-height: 30px;
-  padding: 5px 8px;
-  border: 1px solid rgba(220, 151, 132, .5);
-  background: rgba(27, 17, 18, .88);
-  color: #ffe1da;
-  font: inherit;
-  font-size: 9px;
-  cursor: pointer;
-}
-
-.r4-cut-off-explainer button:hover,
-.r4-cut-off-explainer button:focus-visible {
-  border-color: #ff9d86;
-  outline: 2px solid rgba(255, 157, 134, .28);
-  outline-offset: 1px;
-}
-
 @media (max-width: 900px) {
   .r4-alert-preference-actions {
-    font-size: 10px;
+    font-size: 9px;
   }
 
+  .r4-alert-details,
   .r4-alert-mute-all,
-  .r4-alert-restore-control {
+  .r4-alert-settings-panel button {
     min-height: 34px;
+  }
+
+  .r4-cut-off-map-banner {
+    position: fixed;
+    top: 78px;
+    right: 8px;
+    left: 8px;
+    width: auto;
   }
 }
