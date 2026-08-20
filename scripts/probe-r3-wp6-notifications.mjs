@@ -74,13 +74,13 @@ try {
   await page.waitForFunction(() => document.querySelector('.wp6-notification-probe')?.hidden === false);
   await settings.locator('summary').click();
 
-  await page.getByRole('button', { name: 'Forces', exact: true }).click();
+  await page.locator('[data-command-view="forces"]').click();
   await page.locator('.forces-view').waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('.wp6-notification-probe')?.hidden === true);
   const offMapDisplay = await alert.evaluate(node => getComputedStyle(node).display);
   assert(offMapDisplay === 'none', `passive alert remained visible away from the Command Map: ${offMapDisplay}`);
 
-  await page.getByRole('button', { name: 'Command map', exact: true }).click();
+  await page.locator('[data-command-view="map"]').click();
   await page.locator('.command-map-workspace').waitFor({ state: 'visible' });
   await page.waitForFunction(() => document.querySelector('.wp6-notification-probe')?.hidden === false);
 
