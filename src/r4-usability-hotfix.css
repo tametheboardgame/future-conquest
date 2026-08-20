@@ -7,11 +7,10 @@
   .adviser-alert-strip,
   .combat-report-alert {
     box-sizing: border-box;
-    width: min(510px, calc(100vw - 120px));
+    width: min(500px, calc(100vw - 120px));
     max-height: none !important;
     overflow: visible !important;
-    top: calc(108px + (var(--r4-alert-stack-index, 0) * 96px)) !important;
-    right: 18px !important;
+    top: calc(108px + (var(--r4-alert-stack-index, 0) * 112px)) !important;
   }
 
   /* Collapsed alerts are composed summaries. Nothing is physically clipped. */
