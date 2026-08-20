@@ -7,7 +7,6 @@ const MANAGED_ALERTS = [
 const dismissedSignatures = new Set<string>();
 let observer: MutationObserver | null = null;
 let syncQueued = false;
-let delegatedDismissInstalled = false;
 
 function normaliseText(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
@@ -17,20 +16,6 @@ function alertSignature(alert: HTMLElement): string {
   const clone = alert.cloneNode(true) as HTMLElement;
   clone.querySelectorAll('.wp6-alert-dismiss, .r4-alert-preference-actions').forEach(node => node.remove());
   return `${alert.className}|${normaliseText(clone.textContent)}`;
-}
-
-function addDismissControl(alert: HTMLElement, label: string): void {
-  let button = alert.querySelector<HTMLButtonElement>(':scope > .wp6-alert-dismiss');
-  if (!button) {
-    button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'wp6-alert-dismiss';
-    button.textContent = '×';
-    alert.append(button);
-  }
-
-  button.setAttribute('aria-label', `Dismiss ${label}`);
-  button.title = 'Dismiss until this warning changes';
 }
 
 function keepDismissed(alert: HTMLElement): void {
@@ -45,19 +30,22 @@ function dismissAlertEpisode(alert: HTMLElement): void {
   keepDismissed(alert);
 }
 
-function installDelegatedDismissHandler(): void {
-  if (delegatedDismissInstalled) return;
-  delegatedDismissInstalled = true;
-  document.addEventListener('click', event => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const button = target.closest<HTMLButtonElement>('.wp6-alert-dismiss');
-    if (!button) return;
-    const alert = button.parentElement;
-    if (!(alert instanceof HTMLElement)) return;
-    if (!MANAGED_ALERTS.some(config => alert.matches(config.selector))) return;
+function addDismissControl(alert: HTMLElement, label: string): void {
+  let button = alert.querySelector<HTMLButtonElement>(':scope > .wp6-alert-dismiss');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'wp6-alert-dismiss';
+    button.textContent = '×';
+    alert.append(button);
+  }
+
+  button.setAttribute('aria-label', `Dismiss ${label}`);
+  button.title = 'Dismiss until this warning changes';
+  button.onclick = event => {
+    event.stopPropagation();
     dismissAlertEpisode(alert);
-  }, true);
+  };
 }
 
 function reconcileAlert(alert: HTMLElement, label: string): string {
@@ -119,7 +107,6 @@ function queueReconcile(): void {
 export function installWp6NotificationDisclosure(): void {
   if (observer || typeof document === 'undefined') return;
 
-  installDelegatedDismissHandler();
   reconcileNotifications();
   observer = new MutationObserver(queueReconcile);
   observer.observe(document.documentElement, {
