@@ -33,17 +33,16 @@ function addDismissControl(alert: HTMLElement, label: string): void {
   button.title = 'Dismiss until this warning changes';
 }
 
-function dismissAlertEpisode(alert: HTMLElement): void {
-  dismissedSignatures.add(alertSignature(alert));
-  alert.dataset.wp6Dismissed = 'true';
-  alert.hidden = true;
+function keepDismissed(alert: HTMLElement): void {
+  if (alert.dataset.wp6Dismissed !== 'true') alert.dataset.wp6Dismissed = 'true';
+  if (!alert.hidden) alert.hidden = true;
+}
 
-  // R4 also reconciles the hidden state of passive alerts. Reassert the
-  // episode dismissal after the current click task so the legacy WP6 control
-  // remains authoritative even when both managers react to the same mutation.
-  queueMicrotask(() => {
-    if (alert.dataset.wp6Dismissed === 'true') alert.hidden = true;
-  });
+function dismissAlertEpisode(alert: HTMLElement): void {
+  const signature = alertSignature(alert);
+  dismissedSignatures.add(signature);
+  alert.dataset.wp6DismissedSignature = signature;
+  keepDismissed(alert);
 }
 
 function installDelegatedDismissHandler(): void {
@@ -64,20 +63,26 @@ function installDelegatedDismissHandler(): void {
 function reconcileAlert(alert: HTMLElement, label: string): string {
   const signature = alertSignature(alert);
   const previousSignature = alert.dataset.wp6AlertSignature;
+  const episodeSignature = alert.dataset.wp6DismissedSignature;
 
-  if (previousSignature !== signature) {
-    alert.dataset.wp6AlertSignature = signature;
-    const dismissed = dismissedSignatures.has(signature);
-    alert.hidden = dismissed;
-    if (dismissed) alert.dataset.wp6Dismissed = 'true';
-    else delete alert.dataset.wp6Dismissed;
-  } else if (alert.dataset.wp6Dismissed === 'true' || dismissedSignatures.has(signature)) {
-    // A same-content warning that was dismissed must stay dismissed even when
-    // another presentation manager performs its own reconciliation pass.
-    alert.dataset.wp6Dismissed = 'true';
-    alert.hidden = true;
+  if (episodeSignature && episodeSignature !== signature) {
+    dismissedSignatures.delete(episodeSignature);
+    delete alert.dataset.wp6DismissedSignature;
+    if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
   }
 
+  const currentEpisodeSignature = alert.dataset.wp6DismissedSignature;
+  if (currentEpisodeSignature === signature || dismissedSignatures.has(signature)) {
+    alert.dataset.wp6DismissedSignature = signature;
+    dismissedSignatures.add(signature);
+    keepDismissed(alert);
+  } else if (previousSignature !== signature) {
+    alert.dataset.wp6AlertSignature = signature;
+    if (alert.dataset.wp6Dismissed === 'true') delete alert.dataset.wp6Dismissed;
+    if (alert.hidden) alert.hidden = false;
+  }
+
+  if (alert.dataset.wp6AlertSignature !== signature) alert.dataset.wp6AlertSignature = signature;
   alert.dataset.wp6NotificationManaged = 'true';
   addDismissControl(alert, label);
   return signature;
@@ -118,6 +123,6 @@ export function installWp6NotificationDisclosure(): void {
     subtree: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['class']
+    attributeFilter: ['class', 'hidden', 'data-wp6-dismissed']
   });
 }
